@@ -52,6 +52,28 @@ python -m src.main --txt-file samples\examples.txt --source forum --return-all-s
 
 # Exempel: magasin/artikel med längre maxlängd
 python -m src.main --text "Lång artikeltext..." --datatype article --return-all-scores
+
+# Lexikon (valfritt): blanda modell med svenskt lexikon
+# Prova med samples/lexicon_sample.csv och 30% lexikonvikt
+python -m src.main --txt-file samples\examples.txt --source forum \
+  --return-all-scores --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
+  --output outputs\predictions_lex.csv
+
+# REST API-anrop med lexikon
+curl -X POST \
+  http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": [
+      "Det här var fantastiskt!",
+      "Riktigt dålig service."
+    ],
+    "source": "forum",
+    "datatype": "post",
+    "return_all_scores": true,
+    "lexicon_file": "samples/lexicon_sample.csv",
+    "lexicon_weight": 0.3
+  }'
 ```
 
 ## Minimal modul-användning
@@ -112,7 +134,9 @@ En lättvikts-API byggd med FastAPI finns i `src/api.py`.
     ],
     "source": "forum",
     "datatype": "post",
-    "return_all_scores": true
+    "return_all_scores": true,
+    "lexicon_file": "samples/lexicon_sample.csv",
+    "lexicon_weight": 0.3
   }
   ```
 
@@ -143,10 +167,6 @@ docker run --rm -v hf_cache:/cache/hf -v sentiment_outputs:/app/outputs sv-senti
 - `samples/examples.txt` – Exempeltexter på svenska
 - `outputs/` – Skapas automatiskt vid export (git-ignorerad)
 
-## Noteringar om kvalitet och etik
-- Den valda modellen är tränad för sociala medier och fungerar ofta bra även för forum. För högsta kvalitet krävs ev. finslipning/träning på Flashback-lik data.
-- Denna v0 skrapar inte data. Om du vill skrapa Flashback, säkerställ att juridiska/etiska aspekter (GDPR, ToS, robots.txt) hanteras korrekt.
-- Första körningen laddar ner modellen från Hugging Face (~hundratals MB), vilket kan ta några minuter.
 
 ## Nästa steg
 - (Valfritt) Lägg till enkel utvärdering på etiketterad testdata

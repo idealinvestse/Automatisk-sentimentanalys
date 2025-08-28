@@ -11,6 +11,7 @@ from rich.table import Table
 from .sentiment import load as load_sentiment
 from .profiles import resolve_profile
 from .clean import clean_texts
+from .lexicon import load_lexicon, score_text, scalar_to_dist, blend_distributions
 
 console = Console()
 
@@ -71,6 +72,12 @@ def main(
     ),
     profile: Optional[str] = typer.Option(
         None, "--profile", help="Profil att använda (åsidolägger datatype/source). T.ex. 'forum', 'magazine'"
+    ),
+    lexicon_file: Optional[str] = typer.Option(
+        None, "--lexicon-file", help="Sökväg till svenskt lexikon (CSV/TSV) med kolumner term|word och polarity|score|sentiment"
+    ),
+    lexicon_weight: float = typer.Option(
+        0.0, "--lexicon-weight", min=0.0, max=1.0, help="Vikt för lexikon-blandning [0..1]. 0=inaktiverad"
     ),
 ):
     """Kör svensk sentimentanalys från text, .txt eller .csv"""
@@ -157,10 +164,21 @@ def main(
         console.print(f"[red]Fel under inferens: {e}[/red]")
         raise typer.Exit(code=2)
 
-    # 5) Paketera resultat
+    # 5) Lexikon (valfritt)
+    lex = None
+    use_lex = lexicon_file is not None and lexicon_weight > 0.0
+    if use_lex:
+        try:
+            lex = load_lexicon(lexicon_file)
+            console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
+        except Exception as e:
+            console.print(f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan lexikon.[/yellow]")
+            use_lex = False
+
+    # 6) Paketera resultat
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
     rows = []
-    if return_all_scores and results and isinstance(results[0], list):
+    if results and isinstance(results[0], list):
         # Expand to per-class columns
         for t, inner in zip(texts, results):
             # inner: List[{"label": 'negativ|neutral|positiv', 'score': float}]
@@ -168,6 +186,11 @@ def main(
             # Ensure keys
             for k in ["negativ", "neutral", "positiv"]:
                 scores.setdefault(k, 0.0)
+            # Optional blending with lexicon
+            if use_lex and lex is not None:
+                s_scalar = score_text(t, lex)
+                ln, le, lp = scalar_to_dist(s_scalar)
+                scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
             # Top prediction
             top_label = max(scores.items(), key=lambda kv: kv[1])[0]
             top_score = scores[top_label]
@@ -184,10 +207,34 @@ def main(
             })
     else:
         for t, r in zip(texts, results):
+            label = r.get("label")
+            score = float(r.get("score", 0.0))
+            # If lexicon blending is requested but we don't have a full distribution,
+            # approximate a distribution from the top-1 by placing mass on the label.
+            neg = neu = pos = 0.0
+            if label == "negativ":
+                neg = score
+            elif label == "neutral":
+                neu = score
+            else:
+                pos = score
+            # Normalize to sum=1 if score<1 (heuristic)
+            ssum = neg + neu + pos
+            if ssum <= 0:
+                neu = 1.0
+                ssum = 1.0
+            model_dist = {"negativ": neg/ssum, "neutral": neu/ssum, "positiv": pos/ssum}
+            if use_lex and lex is not None:
+                s_scalar = score_text(t, lex)
+                ln, le, lp = scalar_to_dist(s_scalar)
+                blended = blend_distributions(model_dist, (ln, le, lp), lexicon_weight)
+                # update label/score by top of blended
+                label = max(blended.items(), key=lambda kv: kv[1])[0]
+                score = float(blended[label])
             rows.append({
                 "text": t,
-                "label": r.get("label"),
-                "score": float(r.get("score", 0.0)),
+                "label": label,
+                "score": score,
                 "model": chosen_model,
                 "profile": profile_name,
                 "timestamp": now_iso,
