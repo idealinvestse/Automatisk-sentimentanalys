@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+.venv/
+venv/
+
+# Git
+.git/
+.gitignore
+
+# Local caches and data
+outputs/
+.cache/
+.cache_dir/
+.cache/*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model cache (use volume instead)
+/cache/

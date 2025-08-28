@@ -9,6 +9,8 @@ import pandas as pd
 from rich.console import Console
 from rich.table import Table
 from .sentiment import load as load_sentiment
+from .profiles import resolve_profile
+from .clean import clean_texts
 
 console = Console()
 
@@ -42,8 +44,8 @@ def main(
     text_column: str = typer.Option(
         "text", help="Kolumnnamn i CSV som innehåller text"
     ),
-    model: str = typer.Option(
-        DEFAULT_MODEL, "--model", help="Hugging Face-modell att använda"
+    model: Optional[str] = typer.Option(
+        None, "--model", help="Hugging Face-modell att använda (standard väljs via profil)"
     ),
     batch_size: int = typer.Option(16, help="Batch-storlek för inferens"),
     max_rows: Optional[int] = typer.Option(
@@ -51,6 +53,24 @@ def main(
     ),
     output: Optional[str] = typer.Option(
         None, help="Spara resultat till CSV (t.ex. outputs/predictions.csv)"
+    ),
+    device: Optional[str] = typer.Option(
+        "auto", help="Enhet: 'auto' (default), 'cpu', 'cuda', 'cuda:0', 'mps'"
+    ),
+    return_all_scores: bool = typer.Option(
+        False, "--return-all-scores", help="Returnera sannolikheter för alla klasser"
+    ),
+    max_length: Optional[int] = typer.Option(
+        None, help="Max token-längd vid inferens (om ej satt används profilens)"
+    ),
+    datatype: Optional[str] = typer.Option(
+        None, "--datatype", help="Datatyp: t.ex. 'post', 'comment', 'article', 'review'"
+    ),
+    source: Optional[str] = typer.Option(
+        None, "--source", help="Källa: t.ex. 'forum', 'magazine', 'news', 'social'"
+    ),
+    profile: Optional[str] = typer.Option(
+        None, "--profile", help="Profil att använda (åsidolägger datatype/source). T.ex. 'forum', 'magazine'"
     ),
 ):
     """Kör svensk sentimentanalys från text, .txt eller .csv"""
@@ -102,33 +122,76 @@ def main(
         console.print("[red]Inga texter att analysera.[/red]")
         raise typer.Exit(code=1)
 
-    # 2) Ladda modell
-    console.print(f"[green]Laddar modell:[/green] {model}")
+    # 2) Välj profil och förbered
+    profile_name, spec = resolve_profile(datatype=datatype, source=source, profile=profile)
+    chosen_model = model or spec.get("model", DEFAULT_MODEL)
+    resolved_max_length = max_length or spec.get("max_length", 256)
+
+    # Rengör texter enligt profil
+    texts = clean_texts(texts, spec.get("cleaning", {}))
+
+    # 3) Ladda modell
+    console.print(f"[green]Profil:[/green] {profile_name}")
+    console.print(f"[green]Laddar modell:[/green] {chosen_model}")
     try:
-        sp = load_sentiment(model)
+        sp = load_sentiment(
+            chosen_model,
+            device=device,
+            return_all_scores=return_all_scores,
+            max_length=resolved_max_length,
+        )
     except Exception as e:
-        console.print(f"[red]Kunde inte ladda modellen '{model}': {e}[/red]")
+        console.print(f"[red]Kunde inte ladda modellen '{chosen_model}': {e}[/red]")
         raise typer.Exit(code=2)
 
-    # 3) Kör inferens
+    # 4) Kör inferens
     console.print(f"[green]Analyserar {len(texts)} texter...[/green]")
     try:
-        results = sp.analyze(texts, batch_size=batch_size)
+        results = sp.analyze(
+            texts,
+            batch_size=batch_size,
+            return_all_scores=return_all_scores,
+            max_length=resolved_max_length,
+        )
     except Exception as e:
         console.print(f"[red]Fel under inferens: {e}[/red]")
         raise typer.Exit(code=2)
 
-    # 4) Paketera resultat
+    # 5) Paketera resultat
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
     rows = []
-    for t, r in zip(texts, results):
-        rows.append({
-            "text": t,
-            "label": r.get("label"),
-            "score": float(r.get("score", 0.0)),
-            "model": model,
-            "timestamp": now_iso,
-        })
+    if return_all_scores and results and isinstance(results[0], list):
+        # Expand to per-class columns
+        for t, inner in zip(texts, results):
+            # inner: List[{"label": 'negativ|neutral|positiv', 'score': float}]
+            scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+            # Ensure keys
+            for k in ["negativ", "neutral", "positiv"]:
+                scores.setdefault(k, 0.0)
+            # Top prediction
+            top_label = max(scores.items(), key=lambda kv: kv[1])[0]
+            top_score = scores[top_label]
+            rows.append({
+                "text": t,
+                "label": top_label,
+                "score": float(top_score),
+                "negativ": scores["negativ"],
+                "neutral": scores["neutral"],
+                "positiv": scores["positiv"],
+                "model": chosen_model,
+                "profile": profile_name,
+                "timestamp": now_iso,
+            })
+    else:
+        for t, r in zip(texts, results):
+            rows.append({
+                "text": t,
+                "label": r.get("label"),
+                "score": float(r.get("score", 0.0)),
+                "model": chosen_model,
+                "profile": profile_name,
+                "timestamp": now_iso,
+            })
     out_df = pd.DataFrame(rows)
 
     # 5) Output

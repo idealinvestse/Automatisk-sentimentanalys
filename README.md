@@ -13,9 +13,17 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 2) Uppgradera pip och installera beroenden
+# 2) Uppgradera pip
 python -m pip install -U pip
-pip install -r requirements.txt
+
+# Alternativ A: Minimal modul (endast inferens)
+pip install -r requirements-min.txt
+
+# Alternativ B: CLI (modul + kommandoradsverktyg)
+pip install -r requirements-min.txt -r requirements-cli.txt
+
+# (Kompatibilitet) Allt-i-ett
+# pip install -r requirements.txt
 ```
 
 ## Körningsexempel
@@ -31,6 +39,19 @@ python -m src.main --csv-file path\till\data.csv --text-column kommentar --outpu
 
 # Välj annan modell (om du vill experimentera)
 python -m src.main --text "Det här är dåligt" --model cardiffnlp/twitter-xlm-roberta-base-sentiment
+
+# Fulla klass-sannolikheter (negativ/neutral/positiv) + auto-enhet
+python -m src.main --text "Det här var otroligt bra!" --return-all-scores --device auto
+
+# Batch med fulla sannolikheter och kortare maxlängd
+python -m src.main --txt-file samples\examples.txt --return-all-scores --max-length 256 --output outputs\predictions_all.csv
+
+# Profiler (automatisk anpassning efter datatyp/källa)
+# Exempel: forum-innehåll med rensning av användarnamn/hashtags
+python -m src.main --txt-file samples\examples.txt --source forum --return-all-scores --output outputs\predictions_forum.csv
+
+# Exempel: magasin/artikel med längre maxlängd
+python -m src.main --text "Lång artikeltext..." --datatype article --return-all-scores
 ```
 
 ## Minimal modul-användning
@@ -49,8 +70,71 @@ for r in results:
     print(r)
 
 # 2) Egen instans + annan modell (valfritt)
-sp = load("cardiffnlp/twitter-xlm-roberta-base-sentiment")
+# Auto-enhet (cuda/mps/cpu), fulla sannolikheter
+sp = load("cardiffnlp/twitter-xlm-roberta-base-sentiment", device="auto", return_all_scores=True, max_length=256)
 print(sp.analyze(["Vet inte riktigt... "]))
+
+# 3) Direkt med parametrar via hjälpfunktionen
+probs = analyze(["Toppen!", "Uselt..."], device="auto", return_all_scores=True, max_length=256)
+print(probs[0])
+```
+
+## Profiler och datatyper
+- __Tillgängliga profiler__: `default`, `forum`, `magazine`, `news`, `social`, `review`.
+- __Automatiska val__:
+  - Modell: `cardiffnlp/twitter-xlm-roberta-base-sentiment` (standard i alla profiler nu)
+  - `max_length`: 256 för forum/social/review, 512 för magazine/news
+  - Rensning per profil: ta bort URL:er, ev. HTML, användarnamn, hashtags, normalisera whitespace, m.m.
+- __Mapping__ (förenklad):
+  - `--source forum|flashback|reddit` -> `forum`
+  - `--source magazine` -> `magazine`
+  - `--source news|newspaper` -> `news`
+  - `--source twitter|x|social|blog` -> `social`
+  - `--datatype post|comment` -> `forum`, `--datatype article|story` -> `news`, `--datatype review` -> `review`
+- __Åsidosättningar__: du kan alltid sätta `--profile forum` eller välja `--model` och `--max-length` manuellt.
+
+## REST API
+En lättvikts-API byggd med FastAPI finns i `src/api.py`.
+
+- __Start lokalt__ (utanför Docker):
+  ```powershell
+  pip install -r requirements-min.txt -r requirements-api.txt
+  uvicorn src.api:app --host 0.0.0.0 --port 8000
+  ```
+  Öppna http://localhost:8000/docs för Swagger UI.
+
+- __Request-exempel (JSON)__:
+  ```json
+  {
+    "texts": [
+      "Det här var fantastiskt!",
+      "Riktigt dålig service."
+    ],
+    "source": "forum",
+    "datatype": "post",
+    "return_all_scores": true
+  }
+  ```
+
+## Docker
+Bygg och kör allt inuti en container.
+
+```powershell
+# Bygg image
+docker build -t sv-sentiment .
+
+# Skapa cache-volym för modeller (snabbare start efter första körning)
+docker volume create hf_cache
+
+# Kör API på port 8000
+docker run --rm -p 8000:8000 -v hf_cache:/cache/hf sv-sentiment
+
+# Öppna Swagger: http://localhost:8000/docs
+
+# (Valfritt) Kör CLI inuti container och spara resultat till volym
+docker volume create sentiment_outputs
+docker run --rm -v hf_cache:/cache/hf -v sentiment_outputs:/app/outputs sv-sentiment \
+  python -m src.main --txt-file samples/examples.txt --source forum --return-all-scores --output outputs/preds.csv
 ```
 
 ## Filstruktur
