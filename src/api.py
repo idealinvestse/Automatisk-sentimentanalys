@@ -14,43 +14,80 @@ from fastapi import FastAPI
 # Pydantic for data validation and serialization
 from pydantic import BaseModel, Field
 
-# Import internal modules for sentiment analysis, ASR transcription, and lexicon processing
+# Internal sentiment/ASR/lexicon modules
 from .sentiment import analyze_smart
 from .asr import transcribe as asr_transcribe
-from .lexicon import load_lexicon, score_text, scalar_to_dist, blend_distributions
+from .lexicon import (
+    load_lexicon,
+    score_text,
+    scalar_to_dist,
+    blend_distributions,
+)
 
 
-# Initialize the FastAPI application with title and version metadata
+# Initialize FastAPI app
 app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
 
 
 class AnalyzeRequest(BaseModel):
     # List of texts to analyze for sentiment
     texts: List[str] = Field(..., description="List of texts to analyze")
-    # Data type classification for profile selection (post, comment, article, review, etc.)
-    datatype: Optional[str] = Field(None, description="Data type: post, comment, article, review, ...")
-    # Source classification for profile selection (forum, magazine, news, social, etc.)
-    source: Optional[str] = Field(None, description="Source: forum, magazine, news, social, ...")
-    # Explicit profile name to use for sentiment analysis (overrides datatype/source-based selection)
-    profile: Optional[str] = Field(None, description="Explicit profile name to use")
-    # Optional model override for sentiment analysis (default selected based on profile)
-    model: Optional[str] = Field(None, description="Optional model override")
-    # Device specification for model execution (auto-detects best available device)
-    device: Optional[str] = Field("auto", description="Device: auto, cpu, cuda, cuda:0, mps")
+    # Data type classification for profile selection
+    datatype: Optional[str] = Field(
+        None,
+        description=(
+            "Data type: post, comment, article, review, ..."
+        ),
+    )
+    # Source classification for profile selection
+    source: Optional[str] = Field(
+        None,
+        description=(
+            "Source: forum, magazine, news, social, ..."
+        ),
+    )
+    # Explicit profile name to use for sentiment analysis
+    profile: Optional[str] = Field(
+        None,
+        description="Explicit profile name to use",
+    )
+    # Optional model override for sentiment analysis
+    model: Optional[str] = Field(
+        None,
+        description="Optional model override",
+    )
+    # Device specification for model execution
+    device: Optional[str] = Field(
+        "auto",
+        description="Device: auto, cpu, cuda, cuda:0, mps",
+    )
     # Batch size for processing multiple texts efficiently
     batch_size: int = Field(16, ge=1, le=128)
     # Whether to return all scores or just the top prediction
     return_all_scores: bool = Field(False)
     # Maximum text length for processing (truncates longer texts)
     max_length: Optional[int] = Field(None, ge=8, le=4096)
-    # Whether to clean text before analysis (HTML unescaping, URL removal, etc.)
+    # Whether to clean text before analysis
+    # (HTML unescaping, URL removal, etc.)
     clean: bool = Field(True)
     # Whether to normalize text (case, whitespace, etc.)
     normalize: bool = Field(True)
     # Path to Swedish lexicon file for blending with model predictions
-    lexicon_file: Optional[str] = Field(None, description="Path to Swedish lexicon (CSV/TSV) with columns term|word and polarity|score|sentiment")
-    # Blend weight for lexicon distribution [0..1] where 0 = model only, 1 = lexicon only
-    lexicon_weight: float = Field(0.0, ge=0.0, le=1.0, description="Blend weight [0..1] for lexicon distribution")
+    lexicon_file: Optional[str] = Field(
+        None,
+        description=(
+            "Path to Swedish lexicon (CSV/TSV) with columns "
+            "term|word and polarity|score|sentiment"
+        ),
+    )
+    # Blend weight for lexicon distribution [0..1]
+    # where 0 = model only, 1 = lexicon only
+    lexicon_weight: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Blend weight [0..1] for lexicon distribution",
+    )
 
 
 class AnalyzeResponse(BaseModel):
@@ -60,23 +97,30 @@ class AnalyzeResponse(BaseModel):
 
 
 class TranscribeRequest(BaseModel):
-    # Path to audio file that the server can access (must be accessible within container)
-    audio_path: str = Field(..., description="Path to audio file accessible by the server/container")
-    # ASR model to use for transcription (default is KB Large model optimized for Swedish)
+    # Path to audio file (server/container must have access)
+    audio_path: str = Field(
+        ...,
+        description=(
+            "Path to audio file accessible by the "
+            "server/container"
+        ),
+    )
+    # ASR model to use for transcription (KB Swedish large by default)
     model: str = Field("kb-whisper-large")
-    # Backend implementation for ASR (faster-whisper or Hugging Face transformers)
+    # Backend implementation (faster-whisper or transformers)
     backend: str = Field("faster", description="faster | transformers")
-    # Device specification for ASR model execution
+    # Device specification for model execution
     device: str = Field("auto")
-    # Language code for transcription (Swedish is the default and primary supported language)
+    # Language code for transcription (sv = Swedish)
     language: str = Field("sv")
-    # Beam size for decoding (higher values may improve accuracy but slow down processing)
+    # Beam size for decoding (higher = slower, maybe more accurate)
     beam_size: int = Field(5, ge=1, le=10)
-    # Whether to use Voice Activity Detection to split audio into segments
+    # Use Voice Activity Detection to split audio
     vad: bool = Field(True)
-    # Whether to include word-level timestamps in the transcription output
+    # Include word-level timestamps in the output
     word_timestamps: bool = Field(True)
-    # Length of audio chunks in seconds for processing (affects memory usage and accuracy)
+    # Length of audio chunks in seconds for processing
+    # (affects memory usage and accuracy)
     chunk_length_s: int = Field(30, ge=5, le=60)
 
 
@@ -86,33 +130,42 @@ class TranscribeResponse(BaseModel):
 
 
 class AnalyzeConversationRequest(BaseModel):
-    # Path to audio file that the server can access (must be accessible within container)
-    audio_path: str = Field(..., description="Path to audio file accessible by the server/container")
+    # Path to audio file the server can access
+    audio_path: str = Field(
+        ...,
+        description=(
+            "Path to audio file accessible by the server/"
+            "container"
+        ),
+    )
     # ASR parameters
-    # ASR model to use for transcription (default is KB Large model optimized for Swedish)
+    # ASR model to use (KB Swedish large by default)
     model: str = Field("kb-whisper-large")
-    # Backend implementation for ASR (faster-whisper or Hugging Face transformers)
+    # Backend implementation (faster-whisper or transformers)
     backend: str = Field("faster")
-    # Device specification for ASR model execution
+    # Device specification for ASR execution
     device: str = Field("auto")
-    # Language code for transcription (Swedish is the default and primary supported language)
+    # Language code (sv = Swedish)
     language: str = Field("sv")
-    # Beam size for decoding (higher values may improve accuracy but slow down processing)
+    # Beam size (higher = slower, potentially more accurate)
     beam_size: int = Field(5, ge=1, le=10)
-    # Whether to use Voice Activity Detection to split audio into segments
+    # Use VAD to split audio into segments
     vad: bool = Field(True)
-    # Whether to include word-level timestamps in the transcription output
+    # Include word-level timestamps in output
     word_timestamps: bool = Field(False)
-    # Length of audio chunks in seconds for processing (affects memory usage and accuracy)
+    # Chunk length in seconds
     chunk_length_s: int = Field(30, ge=5, le=60)
     # Sentiment analysis parameters
-    # Whether to return all scores or just the top prediction for each segment
+    # Whether to return all scores or only the top prediction
     return_all_scores: bool = Field(True)
-    # Optional model override for sentiment analysis (default selected based on profile)
-    sentiment_model: Optional[str] = Field(None, description="Optional override for sentiment model")
+    # Optional model override for sentiment analysis
+    sentiment_model: Optional[str] = Field(
+        None,
+        description="Optional override for sentiment model",
+    )
     # Path to Swedish lexicon file for blending with model predictions
     lexicon_file: Optional[str] = Field(None)
-    # Blend weight for lexicon distribution [0..1] where 0 = model only, 1 = lexicon only
+    # Blend weight [0..1]; 0=model only, 1=lexicon only
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
 
 
@@ -156,29 +209,33 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
                          pattern: Optional[str] = None,
                          recursive: bool = True) -> List[str]:
     """Resolve audio file paths from various input sources.
-    
+
     This helper function handles multiple ways of specifying audio files:
     1. Explicit file paths in a list
     2. Glob patterns in the paths list
     3. Directory traversal with optional pattern matching
-    
+
     Args:
         audio_paths: List of explicit file paths or glob patterns
         directory: Base directory to scan for audio files
         pattern: Glob pattern to match files within directory
         recursive: Whether to scan subdirectories recursively
-    
+
     Returns:
-        Sorted list of absolute paths to valid audio files with deduplicated entries
+        Sorted list of absolute paths to valid audio files
+        with deduplicated entries
     """
     files: List[str] = []
-    # Process explicit paths - can be individual files, directories, or glob patterns
+    # Process explicit paths: files, directories, or glob patterns
     for p in (audio_paths or []):
         # Handle glob patterns (*, ?, []) in the path list
         if any(ch in p for ch in ["*", "?", "["]):
             for m in glob.glob(p, recursive=recursive):
-                # Validate that matched item is a file with supported audio extension
-                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
+                # Validate that matched item is a file with supported extension
+                if (
+                    os.path.isfile(m)
+                    and os.path.splitext(m)[1].lower() in AUDIO_EXTS
+                ):
                     files.append(os.path.abspath(m))
         # Handle directory paths in the path list
         elif os.path.isdir(p):
@@ -191,7 +248,10 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
                 if not recursive:
                     break
         # Handle individual file paths in the path list
-        elif os.path.isfile(p) and os.path.splitext(p)[1].lower() in AUDIO_EXTS:
+        elif (
+            os.path.isfile(p)
+            and os.path.splitext(p)[1].lower() in AUDIO_EXTS
+        ):
             files.append(os.path.abspath(p))
     # Process directory + pattern combination if directory is specified
     if directory:
@@ -199,8 +259,11 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
             # Create full path pattern and match files
             pat = os.path.join(directory, pattern)
             for m in glob.glob(pat, recursive=recursive):
-                # Validate that matched item is a file with supported audio extension
-                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
+                # Validate file has supported extension
+                if (
+                    os.path.isfile(m)
+                    and os.path.splitext(m)[1].lower() in AUDIO_EXTS
+                ):
                     files.append(os.path.abspath(m))
         else:
             # Scan entire directory for audio files
@@ -219,14 +282,14 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
 
 def _chunk(lst: List[str], size: int) -> List[List[str]]:
     """Divide a list into chunks of specified size.
-    
+
     This helper function is used for batch processing to divide files into
     manageable groups for parallel processing.
-    
+
     Args:
         lst: List to be chunked
         size: Maximum size of each chunk
-    
+
     Returns:
         List of sublists (chunks) of the original list
     """
@@ -235,15 +298,16 @@ def _chunk(lst: List[str], size: int) -> List[List[str]]:
 
 def _load_state(path: Optional[str]) -> Dict[str, Any]:
     """Load processing state from a JSON file.
-    
-    This helper function is used by the scan process endpoint to track which
-    files have already been processed, enabling incremental processing.
-    
+
+    This helper is used by the scan process endpoint to track which files
+    have already been processed, enabling incremental processing.
+
     Args:
         path: Path to the state file (can be None)
-    
+
     Returns:
-        Dictionary containing processed file information or empty dict if no state
+        Dictionary with processed file info,
+        or an empty dict if no state
     """
     # Return empty state if no path provided
     if not path:
@@ -256,7 +320,11 @@ def _load_state(path: Optional[str]) -> Dict[str, Any]:
         with open(path, "r", encoding="utf-8") as f:
             obj = json.load(f)
             # Ensure the loaded object has the expected structure
-            if isinstance(obj, dict) and "processed" in obj and isinstance(obj["processed"], dict):
+            if (
+                isinstance(obj, dict)
+                and "processed" in obj
+                and isinstance(obj["processed"], dict)
+            ):
                 return obj
     except Exception:
         # Return empty state if file reading or parsing fails
@@ -266,10 +334,10 @@ def _load_state(path: Optional[str]) -> Dict[str, Any]:
 
 def _save_state(path: Optional[str], state: Dict[str, Any]) -> None:
     """Save processing state to a JSON file.
-    
-    This helper function persists the processing state to enable incremental
+
+    This helper persists the processing state to enable incremental
     processing in subsequent runs.
-    
+
     Args:
         path: Path to the state file (can be None)
         state: Dictionary containing processed file information
@@ -288,10 +356,10 @@ def _save_state(path: Optional[str], state: Dict[str, Any]) -> None:
 @app.get("/health")
 async def health() -> Dict[str, str]:
     """Simple health check endpoint.
-    
+
     Returns a basic status response to indicate the API is running.
     Useful for monitoring and container orchestration.
-    
+
     Returns:
         Dict[str, str]: Simple status response
     """
@@ -302,14 +370,14 @@ async def health() -> Dict[str, str]:
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     """Analyze sentiment of Swedish texts.
-    
-    This endpoint processes text inputs through the sentiment analysis pipeline,
-    supporting profile-based analysis and optional lexicon blending for improved
-    accuracy with domain-specific language.
-    
+
+    This endpoint processes text inputs through the sentiment analysis
+    pipeline, supporting profile-based analysis and optional lexicon
+    blending for improved accuracy with domain-specific language.
+
     Args:
         req: AnalyzeRequest containing texts and processing parameters
-    
+
     Returns:
         AnalyzeResponse with sentiment results, metadata, and timestamp
     """
@@ -327,8 +395,12 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         max_length=req.max_length,
         clean=req.clean,
     )
-    # Optional lexicon blending - combines model predictions with lexicon-based scores
-    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
+    # Optional lexicon blending (combine model predictions with lexicon)
+    use_lex = (
+        req.lexicon_file is not None
+        and req.lexicon_weight
+        and req.lexicon_weight > 0.0
+    )
     if use_lex:
         try:
             # Load lexicon for blending
@@ -338,7 +410,10 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                 blended_results = []
                 for t, inner in zip(req.texts, results):
                     # Extract scores from model results
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+                    scores = {
+                        e.get("label"): float(e.get("score", 0.0))
+                        for e in inner
+                    }
                     # Ensure all sentiment labels are present
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
@@ -346,8 +421,12 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                     s_scalar = score_text(t, lex)
                     # Convert scalar score to distribution
                     ln, le, lp = scalar_to_dist(s_scalar)
-                    # Blend model and lexicon distributions using specified weight
-                    scores = blend_distributions(scores, (ln, le, lp), req.lexicon_weight)
+                    # Blend with lexicon (weighted)
+                    scores = blend_distributions(
+                        scores,
+                        (ln, le, lp),
+                        req.lexicon_weight,
+                    )
                     # Convert back to list of dicts preserving order
                     blended_inner = [
                         {"label": "negativ", "score": scores["negativ"]},
@@ -357,26 +436,38 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                     blended_results.append(blended_inner)
                 results = blended_results
             else:
-                # top-1 like; approximate distribution then blend and re-pick top1
+                # Approximate dist; blend; re-pick top-1
                 # Handle case where only top prediction is returned
                 blended_results = []
                 for t, r in zip(req.texts, results):
-                    # Extract label and score from model results
+                    # Extract label (score not used)
                     label = r.get("label")
-                    score = float(r.get("score", 0.0))
                     # Create distribution based on top prediction
                     neg = 1.0 if label == "negativ" else 0.0
                     neu = 1.0 if label == "neutral" else 0.0
                     pos = 1.0 if label == "positiv" else 0.0
-                    model_dist = {"negativ": neg, "neutral": neu, "positiv": pos}
+                    model_dist = {
+                        "negativ": neg,
+                        "neutral": neu,
+                        "positiv": pos,
+                    }
                     # Get lexicon-based scalar score
                     s_scalar = score_text(t, lex)
                     ln, le, lp = scalar_to_dist(s_scalar)
                     # Blend distributions
-                    scores = blend_distributions(model_dist, (ln, le, lp), req.lexicon_weight)
+                    scores = blend_distributions(
+                        model_dist,
+                        (ln, le, lp),
+                        req.lexicon_weight,
+                    )
                     # Select top label from blended scores
                     top_label = max(scores.items(), key=lambda kv: kv[1])[0]
-                    blended_results.append({"label": top_label, "score": float(scores[top_label])})
+                    blended_results.append(
+                        {
+                            "label": top_label,
+                            "score": float(scores[top_label]),
+                        }
+                    )
                 results = blended_results
         except Exception:
             # Continue with model-only results if lexicon processing fails
@@ -390,13 +481,13 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
     """Transcribe an audio file using ASR.
-    
+
     This endpoint converts speech in audio files to text using either the
     faster-whisper or Hugging Face transformers backend.
-    
+
     Args:
         req: TranscribeRequest containing audio path and ASR parameters
-    
+
     Returns:
         TranscribeResponse with transcription results and timestamp
     """
@@ -419,18 +510,23 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
 
 # Endpoint for analyzing sentiment of conversation segments
 @app.post("/analyze_conversation", response_model=AnalyzeConversationResponse)
-async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConversationResponse:
-    """Transcribe a call and run sentiment per segment using the 'call' profile.
-    
-    This endpoint combines ASR and sentiment analysis for conversation audio files.
-    It transcribes the audio, splits it into segments, and analyzes sentiment for
-    each segment using the specialized 'call' profile.
-    
+async def analyze_conversation(
+    req: AnalyzeConversationRequest,
+) -> AnalyzeConversationResponse:
+    """Transcribe a call and run sentiment per segment.
+
+    This uses the specialized 'call' profile. It combines ASR and
+    sentiment analysis for conversation audio files. It transcribes the
+    audio, splits it into segments, and analyzes sentiment for each
+    segment.
+
     Args:
-        req: AnalyzeConversationRequest containing audio path and processing parameters
-    
+        req: AnalyzeConversationRequest containing audio path and
+            processing parameters
+
     Returns:
-        AnalyzeConversationResponse with transcription, segment sentiments, metadata, and timestamp
+        AnalyzeConversationResponse with transcription, segment sentiments,
+        metadata, and timestamp
     """
     # Transcribe the conversation audio file
     tr = asr_transcribe(
@@ -450,9 +546,20 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
     # Fallback: single full transcript if no segments detected
     # This handles cases where VAD doesn't split the audio into segments
     if not texts or all(not t for t in texts):
-        texts = [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()] if segments else []
+        texts = (
+            [
+                " ".join(
+                    [
+                        s.get("text", "").strip()
+                        for s in segments
+                        if s.get("text")
+                    ]
+                ).strip()
+            ]
+            if segments
+            else []
+        )
         if not texts:
-            full = ""
             tr_texts = []
         else:
             tr_texts = texts
@@ -473,7 +580,11 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
         clean=True,
     )
     # Optional lexicon blending for improved sentiment accuracy
-    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
+    use_lex = (
+        req.lexicon_file is not None
+        and req.lexicon_weight
+        and req.lexicon_weight > 0.0
+    )
     if use_lex:
         try:
             # Load lexicon for blending
@@ -481,7 +592,10 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
             blended_results = []
             for t, inner in zip(tr_texts, results):
                 # Extract scores from model results
-                scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+                scores = {
+                    e.get("label"): float(e.get("score", 0.0))
+                    for e in inner
+                }
                 # Ensure all sentiment labels are present
                 for k in ["negativ", "neutral", "positiv"]:
                     scores.setdefault(k, 0.0)
@@ -490,7 +604,11 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
                 # Convert scalar score to distribution
                 ln, le, lp = scalar_to_dist(s_scalar)
                 # Blend model and lexicon distributions
-                scores = blend_distributions(scores, (ln, le, lp), req.lexicon_weight)
+                scores = blend_distributions(
+                    scores,
+                    (ln, le, lp),
+                    req.lexicon_weight,
+                )
                 # Package blended results
                 blended_inner = [
                     {"label": "negativ", "score": scores["negativ"]},
@@ -507,43 +625,62 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
     seg_out: List[SegmentSentiment] = []
     for idx, (t, inner) in enumerate(zip(tr_texts, results)):
         # Create scores map from analysis results
-        scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+        scores_map = {
+            e.get("label"): float(e.get("score", 0.0))
+            for e in inner
+        }
         # Ensure all sentiment labels are present in scores map
         for k in ["negativ", "neutral", "positiv"]:
             scores_map.setdefault(k, 0.0)
         # Select top sentiment label
         top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
         top_score = float(scores_map[top_label])
-        # Extract timing information from original segments
         start = None
         end = None
         if idx < len(segments):
-            start = float(segments[idx].get("start", 0.0) or 0.0) if isinstance(segments[idx].get("start"), (int, float)) else None
-            end = float(segments[idx].get("end", 0.0) or 0.0) if isinstance(segments[idx].get("end"), (int, float)) else None
-        # Create segment sentiment object
-        seg_out.append(SegmentSentiment(
-            index=idx,
-            start=start,
-            end=end,
-            text=t,
-            label=top_label,
-            score=top_score,
-            negativ=scores_map.get("negativ"),
-            neutral=scores_map.get("neutral"),
-            positiv=scores_map.get("positiv"),
-        ))
+            start = (
+                float(segments[idx].get("start", 0.0) or 0.0)
+                if isinstance(segments[idx].get("start"), (int, float))
+                else None
+            )
+            end = (
+                float(segments[idx].get("end", 0.0) or 0.0)
+                if isinstance(segments[idx].get("end"), (int, float))
+                else None
+            )
+        seg_out.append(
+            SegmentSentiment(
+                index=idx,
+                start=start,
+                end=end,
+                text=t,
+                label=top_label,
+                score=top_score,
+                negativ=scores_map.get("negativ"),
+                neutral=scores_map.get("neutral"),
+                positiv=scores_map.get("positiv"),
+            )
+        )
 
-    # Generate timestamp for response
+    # Build response
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-    return AnalyzeConversationResponse(transcript=tr, segment_sentiments=seg_out, meta=meta, timestamp=now_iso)
-
+    return AnalyzeConversationResponse(
+        transcript=tr,
+        segment_sentiments=seg_out,
+        meta=meta,
+        timestamp=now_iso,
+    )
 
 # --- Batch endpoints ---
+
 
 class BatchTranscribeRequest(BaseModel):
     audio_paths: Optional[List[str]] = None
     directory: Optional[str] = None
-    glob: Optional[str] = Field(None, description="Glob pattern within directory, e.g. **/*.wav")
+    glob: Optional[str] = Field(
+        None,
+        description="Glob pattern within directory, e.g. **/*.wav",
+    )
     recursive: bool = True
     limit: Optional[int] = Field(None, ge=1)
     workers: int = Field(1, ge=1, le=8)
@@ -568,22 +705,39 @@ class BatchTranscribeResponse(BaseModel):
     items: List[BatchTranscribeItem]
     ok: int
     failed: int
-@app.post("/batch_transcribe", response_model=BatchTranscribeResponse)
-async def batch_transcribe(req: BatchTranscribeRequest) -> BatchTranscribeResponse:
+
+
+# Alias to keep signature short
+BTResp = BatchTranscribeResponse
+
+
+@app.post(
+    "/batch_transcribe",
+    response_model=BatchTranscribeResponse,
+)
+async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
     """Transcribe multiple audio files concurrently.
-    
-    This endpoint supports processing multiple audio files in parallel using
-    ThreadPoolExecutor for improved performance. Files can be specified explicitly,
-    via a directory scan, or using glob patterns.
-    
+
+    This endpoint supports processing multiple audio files in parallel
+    using ThreadPoolExecutor for improved performance.
+    Files can be specified explicitly, via a directory scan,
+    or using glob patterns.
+
     Args:
-        req: BatchTranscribeRequest containing file paths and ASR parameters
-    
+        req: BatchTranscribeRequest containing file paths and ASR
+            parameters
+
     Returns:
-        BatchTranscribeResponse with transcriptions for all files and timestamp
+        BatchTranscribeResponse with transcriptions for all files and
+        timestamp
     """
     # Resolve audio file paths from various input methods
-    files = _resolve_audio_paths(req.audio_paths, req.directory, req.glob, req.recursive)
+    files = _resolve_audio_paths(
+        req.audio_paths,
+        req.directory,
+        req.glob,
+        req.recursive,
+    )
     if req.limit:
         files = files[: req.limit]
     items: List[BatchTranscribeItem] = []
@@ -606,7 +760,8 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BatchTranscribeRespon
         return p, tr
 
     # Process files concurrently using ThreadPoolExecutor
-    # This enables parallel processing while avoiding blocking the async event loop
+    # Enables parallel processing while avoiding blocking the async
+    # event loop
     if req.workers == 1:
         for p in files:
             try:
@@ -618,7 +773,10 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BatchTranscribeRespon
                 failed += 1
     else:
         with ThreadPoolExecutor(max_workers=req.workers) as ex:
-            futs = {ex.submit(_worker, p): p for p in files}
+            futs = {
+                ex.submit(_worker, p): p
+                for p in files
+            }
             for fut in as_completed(futs):
                 p = futs[fut]
                 try:
@@ -631,7 +789,13 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BatchTranscribeRespon
 
     # Generate timestamp for response
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-    return BatchTranscribeResponse(items=items, ok=ok, failed=failed, total=len(files), timestamp=now_iso)
+    return BatchTranscribeResponse(
+        items=items,
+        ok=ok,
+        failed=failed,
+        total=len(files),
+        timestamp=now_iso,
+    )
 
 
 class BatchAnalyzeConversationRequest(BaseModel):
@@ -672,31 +836,57 @@ class BatchAnalyzeConversationResponse(BaseModel):
     timestamp: str
 
 
-@app.post("/batch_analyze_conversation", response_model=BatchAnalyzeConversationResponse)
-async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> BatchAnalyzeConversationResponse:
+@app.post(
+    "/batch_analyze_conversation",
+    response_model=BatchAnalyzeConversationResponse,
+)
+async def batch_analyze_conversation(
+    req: BatchAnalyzeConversationRequest,
+) -> BatchAnalyzeConversationResponse:
     """Analyze sentiment for multiple conversation audio files concurrently.
-    
-    This endpoint combines ASR transcription and sentiment analysis for multiple
-    conversation audio files, processing them in parallel using ThreadPoolExecutor.
-    Each conversation is split into segments, and sentiment is analyzed per segment
-    using the specialized 'call' profile.
-    
+
+    This endpoint combines ASR transcription and sentiment analysis for
+    multiple conversation audio files. It processes them in parallel
+    using ThreadPoolExecutor. Each conversation is split into segments,
+    and sentiment is analyzed per segment using the specialized
+    'call' profile.
+
     Args:
-        req: BatchAnalyzeConversationRequest containing file paths and processing parameters
-    
+        req: BatchAnalyzeConversationRequest containing file paths and
+            processing parameters
+
     Returns:
-        BatchAnalyzeConversationResponse with sentiment analysis results for all conversations
+        BatchAnalyzeConversationResponse with sentiment analysis results
+        for all conversations
     """
     # Resolve audio file paths from various input methods
-    files = _resolve_audio_paths(req.audio_paths, req.directory, req.glob, req.recursive)
+    files = _resolve_audio_paths(
+        req.audio_paths,
+        req.directory,
+        req.glob,
+        req.recursive,
+    )
     if req.limit:
         files = files[: req.limit]
     items: List[BatchAnalyzeConversationItem] = []
     ok = 0
     failed = 0
 
-    def _worker(p: str) -> Tuple[str, Dict[str, Any], List[SegmentSentiment], Dict[str, Any]]:
-        """Worker function for processing individual conversation audio files."""
+    # Local alias to keep type annotation lines short
+    WorkerResult = Tuple[
+        str,
+        Dict[str, Any],
+        List[SegmentSentiment],
+        Dict[str, Any],
+    ]
+
+    def _worker(
+        p: str,
+    ) -> WorkerResult:
+        """Worker for processing conversation audio files.
+
+        Processes a single file: transcribe, analyze, and package.
+        """
         # Transcribe the conversation audio file
         tr = asr_transcribe(
             audio_path=p,
@@ -714,9 +904,20 @@ async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> Ba
         texts = [s.get("text", "").strip() for s in segments]
         # Fallback: single full transcript if no segments detected
         if not texts or all(not t for t in texts):
-            texts = [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()] if segments else []
+            texts = (
+                [
+                    " ".join(
+                        [
+                            s.get("text", "").strip()
+                            for s in segments
+                            if s.get("text")
+                        ]
+                    ).strip()
+                ]
+                if segments
+                else []
+            )
             if not texts:
-                full = ""
                 tr_texts = []
             else:
                 tr_texts = texts
@@ -737,18 +938,29 @@ async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> Ba
         )
 
         # Optional lexicon blending for improved sentiment accuracy
-        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
+        use_lex = (
+            req.lexicon_file is not None
+            and req.lexicon_weight
+            and req.lexicon_weight > 0.0
+        )
         if use_lex:
             try:
                 lex = load_lexicon(req.lexicon_file)
                 blended_results = []
                 for t, inner in zip(tr_texts, results):
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+                    scores = {
+                        e.get("label"): float(e.get("score", 0.0))
+                        for e in inner
+                    }
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
                     s_scalar = score_text(t, lex)
                     ln, le, lp = scalar_to_dist(s_scalar)
-                    scores = blend_distributions(scores, (ln, le, lp), req.lexicon_weight)
+                    scores = blend_distributions(
+                        scores,
+                        (ln, le, lp),
+                        req.lexicon_weight,
+                    )
                     blended_inner = [
                         {"label": "negativ", "score": scores["negativ"]},
                         {"label": "neutral", "score": scores["neutral"]},
@@ -759,10 +971,13 @@ async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> Ba
             except Exception:
                 pass
 
-        # Map sentiment analysis results back to segments with timing information
+        # Map results back to segments with timing info
         seg_out: List[SegmentSentiment] = []
         for idx, (t, inner) in enumerate(zip(tr_texts, results)):
-            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+            scores_map = {
+                e.get("label"): float(e.get("score", 0.0))
+                for e in inner
+            }
             for k in ["negativ", "neutral", "positiv"]:
                 scores_map.setdefault(k, 0.0)
             top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
@@ -770,19 +985,29 @@ async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> Ba
             start = None
             end = None
             if idx < len(segments):
-                start = float(segments[idx].get("start", 0.0) or 0.0) if isinstance(segments[idx].get("start"), (int, float)) else None
-                end = float(segments[idx].get("end", 0.0) or 0.0) if isinstance(segments[idx].get("end"), (int, float)) else None
-            seg_out.append(SegmentSentiment(
-                index=idx,
-                start=start,
-                end=end,
-                text=t,
-                label=top_label,
-                score=top_score,
-                negativ=scores_map.get("negativ"),
-                neutral=scores_map.get("neutral"),
-                positiv=scores_map.get("positiv"),
-            ))
+                start = (
+                    float(segments[idx].get("start", 0.0) or 0.0)
+                    if isinstance(segments[idx].get("start"), (int, float))
+                    else None
+                )
+                end = (
+                    float(segments[idx].get("end", 0.0) or 0.0)
+                    if isinstance(segments[idx].get("end"), (int, float))
+                    else None
+                )
+            seg_out.append(
+                SegmentSentiment(
+                    index=idx,
+                    start=start,
+                    end=end,
+                    text=t,
+                    label=top_label,
+                    score=top_score,
+                    negativ=scores_map.get("negativ"),
+                    neutral=scores_map.get("neutral"),
+                    positiv=scores_map.get("positiv"),
+                )
+            )
 
         return p, tr, seg_out, meta
 
@@ -793,14 +1018,32 @@ async def batch_analyze_conversation(req: BatchAnalyzeConversationRequest) -> Ba
         for fut in futures:
             try:
                 file, tr, segs, meta = fut.result()
-                items.append(BatchAnalyzeConversationItem(file=file, transcript=tr, segment_sentiments=segs, meta=meta))
+                items.append(
+                    BatchAnalyzeConversationItem(
+                        file=file,
+                        transcript=tr,
+                        segment_sentiments=segs,
+                        meta=meta,
+                    )
+                )
                 ok += 1
             except Exception as e:
-                items.append(BatchAnalyzeConversationItem(file=file, error=str(e)))
+                items.append(
+                    BatchAnalyzeConversationItem(
+                        file=file,
+                        error=str(e),
+                    )
+                )
                 failed += 1
 
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-    return BatchAnalyzeConversationResponse(items=items, ok=ok, failed=failed, total=len(files), timestamp=now_iso)
+    return BatchAnalyzeConversationResponse(
+        items=items,
+        ok=ok,
+        failed=failed,
+        total=len(files),
+        timestamp=now_iso,
+    )
 
 
 # --- Directory scan + small-batch processing ---
@@ -809,7 +1052,10 @@ class ScanProcessRequest(BaseModel):
     # Directory to scan for audio files
     directory: str = Field(..., description="Directory to scan")
     # Optional glob pattern to filter files within the directory
-    pattern: Optional[str] = Field(None, description="Glob pattern relative to directory (e.g., **/*.wav)")
+    pattern: Optional[str] = Field(
+        None,
+        description="Glob pattern relative to directory (e.g., **/*.wav)",
+    )
     # Whether to recursively scan subdirectories
     recursive: bool = True
     # Number of files to process in each batch
@@ -817,11 +1063,22 @@ class ScanProcessRequest(BaseModel):
     # Optional limit on the total number of files to process
     max_files: Optional[int] = Field(None, ge=1)
     # Optional JSON file to track processed files for incremental processing
-    state_file: Optional[str] = Field(None, description="Optional JSON file to track processed files")
+    state_file: Optional[str] = Field(
+        None,
+        description="Optional JSON file to track processed files",
+    )
     # Number of parallel workers to use per batch
-    workers: int = Field(1, ge=1, le=8, description="Parallel workers per batch")
+    workers: int = Field(
+        1,
+        ge=1,
+        le=8,
+        description="Parallel workers per batch",
+    )
     # Operation to perform on each file (transcribe or analyze_conversation)
-    operation: str = Field("transcribe", description="transcribe | analyze_conversation")
+    operation: str = Field(
+        "transcribe",
+        description="transcribe | analyze_conversation",
+    )
     # ASR parameters for transcription
     model: str = Field("kb-whisper-large")
     backend: str = Field("faster")
@@ -831,7 +1088,8 @@ class ScanProcessRequest(BaseModel):
     vad: bool = Field(True)
     word_timestamps: bool = Field(False)
     chunk_length_s: int = Field(30, ge=5, le=60)
-    # Sentiment analysis parameters (only used when operation=analyze_conversation)
+    # Sentiment analysis parameters (only used when
+    # operation=analyze_conversation)
     sentiment_model: Optional[str] = Field(None)
     lexicon_file: Optional[str] = Field(None)
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
@@ -867,24 +1125,33 @@ class ScanProcessResponse(BaseModel):
 
 @app.post("/scan_process", response_model=ScanProcessResponse)
 async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
-    """Process audio files in a directory with incremental scanning and small-batch processing.
-    
-    This endpoint scans a directory for audio files and processes them in small batches,
-    supporting both transcription and conversation sentiment analysis. It tracks processed
-    files in a state file to enable incremental processing, avoiding reprocessing of
+    """Process audio files with incremental scanning and batched processing.
+
+    This endpoint scans a directory for audio files and processes them
+    in small batches,
+    supporting both transcription and
+    conversation sentiment analysis.
+    It tracks processed
+    files in a state file to enable incremental processing, avoiding
+    reprocessing of
     unchanged files in subsequent runs.
-    
+
     Args:
-        req: ScanProcessRequest containing directory scanning and processing parameters
-    
+        req: ScanProcessRequest containing directory scanning and
+            processing parameters
+
     Returns:
         ScanProcessResponse with processing results for all files
     """
-    # Discover audio files in the specified directory using glob patterns if provided
-    files = _resolve_audio_paths(directory=req.directory, pattern=req.pattern, recursive=req.recursive)
-    
+    # Discover audio files in the specified directory using
+    # glob patterns if provided
+    files = _resolve_audio_paths(directory=req.directory,
+                                 pattern=req.pattern,
+                                 recursive=req.recursive)
+
     # Load processing state and filter for new or changed files only
-    # This enables incremental processing by skipping previously processed files
+    # This enables incremental processing by skipping
+    # previously processed files
     state = _load_state(req.state_file)
     processed = state.get("processed", {})
     new_files: List[str] = []
@@ -896,8 +1163,10 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             # Skip files that can't be accessed
             continue
         info = processed.get(p)
-        # Process file if it hasn't been processed before or if it's been modified
-        if not info or not isinstance(info, dict) or float(info.get("mtime", 0.0)) < float(mtime):
+        # Process file if it hasn't been processed before
+        # or if it's been modified
+        if not info or not isinstance(info, dict) or \
+           float(info.get("mtime", 0.0)) < float(mtime):
             new_files.append(p)
 
     # Apply file limit if specified
@@ -937,7 +1206,7 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         if not texts or all(not t for t in texts):
             texts = [
                 " ".join([
-                    s.get("text", "").strip() 
+                    s.get("text", "").strip()
                     for s in segments if s.get("text")
                 ]).strip()
             ] if segments else []
@@ -956,7 +1225,11 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         )
 
         # Optional lexicon blending for improved sentiment accuracy
-        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
+        use_lex = (
+            req.lexicon_file is not None
+            and req.lexicon_weight
+            and req.lexicon_weight > 0.0
+        )
         if use_lex:
             try:
                 # Load lexicon for blending
@@ -964,7 +1237,10 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                 blended_results = []
                 for t, inner in zip(texts, results):
                     # Extract scores from model results
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+                    scores = {
+                        e.get("label"): float(e.get("score", 0.0))
+                        for e in inner
+                    }
                     # Ensure all sentiment labels are present
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
@@ -973,7 +1249,11 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                     # Convert scalar score to distribution
                     ln, le, lp = scalar_to_dist(s_scalar)
                     # Blend model and lexicon distributions
-                    scores = blend_distributions(scores, (ln, le, lp), req.lexicon_weight)
+                    scores = blend_distributions(
+                        scores,
+                        (ln, le, lp),
+                        req.lexicon_weight,
+                    )
                     # Package blended results
                     blended_inner = [
                         {"label": "negativ", "score": scores["negativ"]},
@@ -990,7 +1270,10 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         seg_out: List[SegmentSentiment] = []
         for idx, (t, inner) in enumerate(zip(texts, results)):
             # Create scores map from analysis results
-            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+            scores_map = {
+                e.get("label"): float(e.get("score", 0.0))
+                for e in inner
+            }
             # Ensure all sentiment labels are present in scores map
             for k in ["negativ", "neutral", "positiv"]:
                 scores_map.setdefault(k, 0.0)
@@ -1027,21 +1310,44 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             for p in batch:
                 try:
                     # Perform requested operation (transcribe or analyze)
-                    data = _do_transcribe(p) if req.operation == "transcribe" else _do_analyze(p)
-                    items.append(ScanItem(file=p, ok=True, data=data, batch_index=bidx))
+                    data = (
+                        _do_transcribe(p)
+                        if req.operation == "transcribe"
+                        else _do_analyze(p)
+                    )
+                    items.append(
+                        ScanItem(file=p, ok=True, data=data, batch_index=bidx)
+                    )
                     ok += 1
                     # Update state with file processing information
-                    processed[p] = {"mtime": os.path.getmtime(p), "when": datetime.utcnow().isoformat() + "Z"}
+                    processed[p] = {
+                        "mtime": os.path.getmtime(p),
+                        "when": datetime.utcnow().isoformat() + "Z",
+                    }
                 except Exception as e:
                     # Record failed processing attempts
-                    items.append(ScanItem(file=p, ok=False, error=str(e), batch_index=bidx))
+                    items.append(
+                        ScanItem(
+                            file=p,
+                            ok=False,
+                            error=str(e),
+                            batch_index=bidx,
+                        )
+                    )
                     failed += 1
         else:
             # Concurrent processing using ThreadPoolExecutor
             def _wrap(pth: str):
                 """Wrapper function for concurrent processing."""
-                return (pth, (_do_transcribe(pth) if req.operation == "transcribe" else _do_analyze(pth)))
-            
+                return (
+                    pth,
+                    (
+                        _do_transcribe(pth)
+                        if req.operation == "transcribe"
+                        else _do_analyze(pth)
+                    ),
+                )
+
             with ThreadPoolExecutor(max_workers=req.workers) as ex:
                 # Submit all files in the batch for concurrent processing
                 futs = {
@@ -1052,13 +1358,30 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                     try:
                         # Extract results from completed future
                         _, data = fut.result()
-                        items.append(ScanItem(file=p, ok=True, data=data, batch_index=bidx))
+                        items.append(
+                            ScanItem(
+                                file=p,
+                                ok=True,
+                                data=data,
+                                batch_index=bidx,
+                            )
+                        )
                         ok += 1
                         # Update state with file processing information
-                        processed[p] = {"mtime": os.path.getmtime(p), "when": datetime.utcnow().isoformat() + "Z"}
+                        processed[p] = {
+                            "mtime": os.path.getmtime(p),
+                            "when": datetime.utcnow().isoformat() + "Z",
+                        }
                     except Exception as e:
                         # Record failed processing attempts
-                        items.append(ScanItem(file=p, ok=False, error=str(e), batch_index=bidx))
+                        items.append(
+                            ScanItem(
+                                file=p,
+                                ok=False,
+                                error=str(e),
+                                batch_index=bidx,
+                            )
+                        )
                         failed += 1
 
     # Persist processing state for incremental processing in future runs
@@ -1073,5 +1396,5 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         failed=failed,
         total=len(new_files),
         batches=len(batches),
-        timestamp=now_iso
+        timestamp=now_iso,
     )
