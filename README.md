@@ -9,7 +9,7 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 - (Ny) Valfritt svenskt lexikon för blending
 - (Ny) ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
   - CLI: `src/asr_cli.py` med kommandon `transcribe` och `analyze-call`
-  - REST API: `/transcribe` och `/analyze_conversation`
+  - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process`
 
 ## Installation (Windows PowerShell)
 ```powershell
@@ -139,7 +139,67 @@ curl -X POST http://localhost:8000/analyze_conversation -H "Content-Type: applic
   "lexicon_weight": 0.25
 }'
 ```
+
+#### ASR: REST API – Batch & Scan
+
+```bash
+# Batch: transkribera flera filer (filer/mappar/globbar) med parallellism
+curl -X POST http://localhost:8000/batch_transcribe -H "Content-Type: application/json" -d '{
+  "audio_paths": ["data/a.wav", "data/b.mp3"],
+  "directory": "data/calls",
+  "glob": "**/*.wav",
+  "recursive": true,
+  "limit": 50,
+  "workers": 2,
+  "model": "kb-whisper-large",
+  "backend": "faster",
+  "device": "auto",
+  "language": "sv",
+  "beam_size": 5,
+  "vad": true,
+  "word_timestamps": true
+}'
+
+# Batch: transkribera + analysera samtal per segment
+curl -X POST http://localhost:8000/batch_analyze_conversation -H "Content-Type: application/json" -d '{
+  "directory": "data/calls",
+  "glob": "**/*.wav",
+  "workers": 2,
+  "model": "kb-whisper-large",
+  "backend": "faster",
+  "language": "sv",
+  "word_timestamps": false,
+  "sentiment_model": null,
+  "lexicon_file": "samples/lexicon_sample.csv",
+  "lexicon_weight": 0.25
+}'
+
+# Skanna katalog och processa nya/uppdaterade filer i små batcher (inkrementellt)
+# - Håller koll via state_file (JSON) på senaste mtime per fil
+# - operation: "transcribe" eller "analyze_conversation"
+curl -X POST http://localhost:8000/scan_process -H "Content-Type: application/json" -d '{
+  "directory": "incoming/calls",
+  "pattern": "**/*.wav",
+  "recursive": true,
+  "batch_size": 4,
+  "workers": 2,
+  "max_files": 100,
+  "state_file": "state/scan_state.json",
+  "operation": "transcribe",
+  "model": "kb-whisper-large",
+  "backend": "faster",
+  "language": "sv",
+  "lexicon_file": null,
+  "lexicon_weight": 0.0
+}'
 ```
+
+Notera:
+- __workers__: trådar per batch (1–8) för parallell körning.
+- __state_file__: JSON som spårar `processed` filer med `mtime`; endast nya/ändrade filer körs.
+- __batch_size__: antal filer per batch; endpointen kör batchar sekventiellt men kan parallellisera inom batch.
+- __glob/pattern__: använder Python glob (t.ex. `**/*.wav`).
+
 
 ## Minimal modul-användning
 Vill du använda systemet som en liten modul i egen kod:
