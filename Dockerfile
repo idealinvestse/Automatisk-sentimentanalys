@@ -8,9 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps (minimal)
+# System deps (minimal + ffmpeg for ASR and libgomp for ctranslate2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    ffmpeg \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirement files first for better caching

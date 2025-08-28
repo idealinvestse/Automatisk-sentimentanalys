@@ -84,6 +84,20 @@ PROFILE_SPECS: Dict[str, Dict] = {
             "lowercase": False,
         },
     },
+    "call": {
+        "model": DEFAULT_MODEL,
+        "max_length": 256,
+        "cleaning": {
+            # ASR text: no HTML, but keep punctuation restoration outside cleaner
+            "unescape_html": False,
+            "strip_html": False,
+            "remove_urls": True,
+            "remove_usernames": False,
+            "remove_hashtags": False,
+            "normalize_whitespace": True,
+            "lowercase": False,
+        },
+    },
 }
 
 AVAILABLE_PROFILES = sorted(PROFILE_SPECS.keys())
@@ -99,6 +113,9 @@ SOURCE_TO_PROFILE = {
     "social": "social",
     "twitter": "social",
     "x": "social",
+    "call": "call",
+    "phone": "call",
+    "telephony": "call",
 }
 
 DATATYPE_TO_PROFILE = {
@@ -107,6 +124,8 @@ DATATYPE_TO_PROFILE = {
     "post": "forum",
     "comment": "forum",
     "review": "review",
+    "call": "call",
+    "transcript": "call",
 }
 
 

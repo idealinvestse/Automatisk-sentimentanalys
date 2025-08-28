@@ -2,10 +2,14 @@
 
 Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Transformers. Första versionen fokuserar på offline-analys (ingen scraping) och ett CLI som tar text, .txt eller .csv och producerar etikett (negativ, neutral, positiv) + sannolikhet.
 
-## Funktioner (v0)
+## Funktioner (v0–v1)
 - Enkel CLI: analysera enstaka text, en .txt med en text per rad, eller en .csv med vald kolumn
 - Svensk-kapabel modell: `cardiffnlp/twitter-xlm-roberta-base-sentiment` (multispråk, fungerar bra för forum/tweet-liknande text)
 - Output till terminal eller CSV med kolumner: text, label, score, model, timestamp
+- (Ny) Valfritt svenskt lexikon för blending
+- (Ny) ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
+  - CLI: `src/asr_cli.py` med kommandon `transcribe` och `analyze-call`
+  - REST API: `/transcribe` och `/analyze_conversation`
 
 ## Installation (Windows PowerShell)
 ```powershell
@@ -22,8 +26,13 @@ pip install -r requirements-min.txt
 # Alternativ B: CLI (modul + kommandoradsverktyg)
 pip install -r requirements-min.txt -r requirements-cli.txt
 
+# (Valfritt) API (FastAPI) – inkluderar ASR-beroenden
+pip install -r requirements-min.txt -r requirements-api.txt
+
 # (Kompatibilitet) Allt-i-ett
 # pip install -r requirements.txt
+
+# Notera (ASR): För bästa prestanda, installera ffmpeg i systemet (Dockerfilen hanterar detta).
 ```
 
 ## Körningsexempel
@@ -74,6 +83,42 @@ curl -X POST \
     "lexicon_file": "samples/lexicon_sample.csv",
     "lexicon_weight": 0.3
   }'
+
+### ASR: CLI
+```powershell
+# Transkribera ljudfil (kb-whisper-large med faster-whisper)
+python -m src.asr_cli transcribe path\till\call.wav --backend faster --language sv --output-json outputs\call_transcript.json
+
+# Alternativ backend (Transformers)
+python -m src.asr_cli transcribe path\till\call.wav --backend transformers --model openai/whisper-large-v3
+
+# Analysera samtal per segment (sentiment + ev. lexikonblending)
+python -m src.asr_cli analyze-call path\till\call.wav \
+  --backend faster --language sv \
+  --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
+  --output-csv outputs\call_segments.csv
+```
+
+### ASR: REST API
+```bash
+# Transkribera
+curl -X POST http://localhost:8000/transcribe -H "Content-Type: application/json" -d '{
+  "audio_path": "samples/call.wav",
+  "model": "kb-whisper-large",
+  "backend": "faster",
+  "language": "sv"
+}'
+
+# Analysera konversation (transkribera + sentiment per segment)
+curl -X POST http://localhost:8000/analyze_conversation -H "Content-Type: application/json" -d '{
+  "audio_path": "samples/call.wav",
+  "backend": "faster",
+  "language": "sv",
+  "return_all_scores": true,
+  "lexicon_file": "samples/lexicon_sample.csv",
+  "lexicon_weight": 0.25
+}'
+```
 ```
 
 ## Minimal modul-användning
@@ -102,7 +147,7 @@ print(probs[0])
 ```
 
 ## Profiler och datatyper
-- __Tillgängliga profiler__: `default`, `forum`, `magazine`, `news`, `social`, `review`.
+- __Tillgängliga profiler__: `default`, `forum`, `magazine`, `news`, `social`, `review`, `call`.
 - __Automatiska val__:
   - Modell: `cardiffnlp/twitter-xlm-roberta-base-sentiment` (standard i alla profiler nu)
   - `max_length`: 256 för forum/social/review, 512 för magazine/news
@@ -112,6 +157,7 @@ print(probs[0])
   - `--source magazine` -> `magazine`
   - `--source news|newspaper` -> `news`
   - `--source twitter|x|social|blog` -> `social`
+  - `--source call|phone|telephony` -> `call`
   - `--datatype post|comment` -> `forum`, `--datatype article|story` -> `news`, `--datatype review` -> `review`
 - __Åsidosättningar__: du kan alltid sätta `--profile forum` eller välja `--model` och `--max-length` manuellt.
 
@@ -163,6 +209,8 @@ docker run --rm -v hf_cache:/cache/hf -v sentiment_outputs:/app/outputs sv-senti
 
 ## Filstruktur
 - `src/main.py` – CLI och inferens
+- `src/asr.py` – ASR (Whisper) med faster-whisper/Transformers
+- `src/asr_cli.py` – CLI för transkribering och samtalsanalys
 - `requirements.txt` – Python-beroenden
 - `samples/examples.txt` – Exempeltexter på svenska
 - `outputs/` – Skapas automatiskt vid export (git-ignorerad)
