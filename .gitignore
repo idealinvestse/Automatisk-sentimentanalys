@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.ipynb_checkpoints/
+
+# Envs
+.venv/
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs (kept empty or exported CSVs)
+outputs/
