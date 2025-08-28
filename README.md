@@ -21,16 +21,36 @@ pip install -r requirements.txt
 ## Körningsexempel
 ```powershell
 # Enstaka text
-python -m src.main run --text "Vaccin är säkert och viktigt för folkhälsan."
+python -m src.main --text "Vaccin är säkert och viktigt för folkhälsan."
 
 # Från .txt (en text per rad) och spara till CSV
-python -m src.main run --txt-file samples\examples.txt --output outputs\predictions.csv
+python -m src.main --txt-file samples\examples.txt --output outputs\predictions.csv
 
 # Från .csv med kolumnnamn
-python -m src.main run --csv-file path\till\data.csv --text-column kommentar --output outputs\preds.csv
+python -m src.main --csv-file path\till\data.csv --text-column kommentar --output outputs\preds.csv
 
 # Välj annan modell (om du vill experimentera)
-python -m src.main run --text "Det här är dåligt" --model cardiffnlp/twitter-xlm-roberta-base-sentiment
+python -m src.main --text "Det här är dåligt" --model cardiffnlp/twitter-xlm-roberta-base-sentiment
+```
+
+## Minimal modul-användning
+Vill du använda systemet som en liten modul i egen kod:
+
+```python
+from src.sentiment import analyze, load
+
+# 1) Snabb enradare (cachad pipeline under huven)
+texts = [
+    "Det här var fantastiskt!",
+    "Riktigt dålig service.",
+]
+results = analyze(texts)  # [{'label': 'positiv', 'score': ...}, ...]
+for r in results:
+    print(r)
+
+# 2) Egen instans + annan modell (valfritt)
+sp = load("cardiffnlp/twitter-xlm-roberta-base-sentiment")
+print(sp.analyze(["Vet inte riktigt... "]))
 ```
 
 ## Filstruktur

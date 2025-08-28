@@ -1,38 +1,24 @@
 from __future__ import annotations
 
 import os
-import sys
 from datetime import datetime
 from typing import List, Optional
 
 import typer
 import pandas as pd
-from transformers import pipeline
 from rich.console import Console
 from rich.table import Table
+from .sentiment import load as load_sentiment
 
-app = typer.Typer(add_completion=False)
 console = Console()
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
 
 
-def load_pipeline(model_name: str):
-    try:
-        nlp = pipeline(
-            task="sentiment-analysis",
-            model=model_name,
-            tokenizer=model_name,
-        )
-        return nlp
-    except Exception as e:
-        console.print(f"[red]Kunde inte ladda modellen '{model_name}': {e}[/red]")
-        raise typer.Exit(code=2)
+# load_pipeline removed; using src.sentiment.load
 
 
-def predict(nlp, texts: List[str], batch_size: int = 16):
-    # transformers pipeline supports batching internally
-    return nlp(texts, batch_size=batch_size, truncation=True)
+# predict removed; handled inside SentimentPipeline.analyze
 
 
 def ensure_dir(path: str):
@@ -40,19 +26,10 @@ def ensure_dir(path: str):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
 
 
-def normalize_label(label: str) -> str:
-    l = str(label).strip().lower()
-    if l in {"label_0", "negative", "neg"}:
-        return "negativ"
-    if l in {"label_1", "neutral"}:
-        return "neutral"
-    if l in {"label_2", "positive", "pos"}:
-        return "positiv"
-    return label
+# normalize_label removed; normalization done in src.sentiment
 
 
-@app.command()
-def run(
+def main(
     text: Optional[str] = typer.Option(
         None, help="Analysera en enskild text"
     ),
@@ -127,12 +104,16 @@ def run(
 
     # 2) Ladda modell
     console.print(f"[green]Laddar modell:[/green] {model}")
-    nlp = load_pipeline(model)
+    try:
+        sp = load_sentiment(model)
+    except Exception as e:
+        console.print(f"[red]Kunde inte ladda modellen '{model}': {e}[/red]")
+        raise typer.Exit(code=2)
 
     # 3) Kör inferens
     console.print(f"[green]Analyserar {len(texts)} texter...[/green]")
     try:
-        results = predict(nlp, texts, batch_size=batch_size)
+        results = sp.analyze(texts, batch_size=batch_size)
     except Exception as e:
         console.print(f"[red]Fel under inferens: {e}[/red]")
         raise typer.Exit(code=2)
@@ -143,7 +124,7 @@ def run(
     for t, r in zip(texts, results):
         rows.append({
             "text": t,
-            "label": normalize_label(r.get("label")),
+            "label": r.get("label"),
             "score": float(r.get("score", 0.0)),
             "model": model,
             "timestamp": now_iso,
@@ -175,4 +156,4 @@ def run(
 
 
 if __name__ == "__main__":
-    app()
+    typer.run(main)
