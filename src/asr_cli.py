@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import glob
+import time
+import logging
 from typing import Optional, List
 
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, BarColumn, TimeElapsedColumn, TextColumn
+import pandas as pd
 
 from .asr import transcribe as asr_transcribe
 from .lexicon import load_lexicon, score_text, scalar_to_dist, blend_distributions
@@ -21,9 +26,45 @@ def ensure_dir(path: str):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
 
 
+AUDIO_EXTS = {".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".wma", ".aac"}
+
+
+def setup_logging(level: str = "INFO") -> None:
+    lvl = getattr(logging, str(level).upper(), logging.INFO)
+    logging.basicConfig(
+        level=lvl,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+
+def resolve_audio_paths(inputs: List[str]) -> List[str]:
+    files: List[str] = []
+    for inp in inputs:
+        # Expand globs
+        if any(ch in inp for ch in ["*", "?", "["]):
+            for p in glob.glob(inp, recursive=True):
+                if os.path.isfile(p) and os.path.splitext(p)[1].lower() in AUDIO_EXTS:
+                    files.append(os.path.abspath(p))
+            continue
+        # Directory -> scan
+        if os.path.isdir(inp):
+            for root, _, fnames in os.walk(inp):
+                for fn in fnames:
+                    if os.path.splitext(fn)[1].lower() in AUDIO_EXTS:
+                        files.append(os.path.abspath(os.path.join(root, fn)))
+            continue
+        # File
+        if os.path.isfile(inp) and os.path.splitext(inp)[1].lower() in AUDIO_EXTS:
+            files.append(os.path.abspath(inp))
+    # De-dup and stable sort
+    files = sorted(dict.fromkeys(files))
+    return files
+
+
 @app.command()
 def transcribe(
-    audio: str = typer.Argument(..., help="Path to audio file"),
+    inputs: List[str] = typer.Argument(..., help="Audio files, directories or globs"),
     model: str = typer.Option("kb-whisper-large", help="ASR model: kb-whisper-large | openai/whisper-large-v3"),
     backend: str = typer.Option("faster", help="Backend: faster | transformers"),
     device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
@@ -32,57 +73,99 @@ def transcribe(
     vad: bool = typer.Option(True, help="Enable VAD filter (faster-whisper)"),
     word_timestamps: bool = typer.Option(True, help="Return word timestamps if supported"),
     chunk_length_s: int = typer.Option(30, min=5, max=60, help="Chunk length (transformers)"),
-    output_json: Optional[str] = typer.Option(None, help="Optional path to save transcript JSON"),
+    output_json: Optional[str] = typer.Option(None, help="Optional path to save transcript JSON (single input)"),
+    output_dir: Optional[str] = typer.Option(None, help="Directory to save per-file JSON (multiple inputs)"),
+    log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
-    """Transcribe an audio file and print a summary."""
-    try:
-        tr = asr_transcribe(
-            audio_path=audio,
-            model=model,
-            backend=backend,
-            device=device,
-            language=language,
-            beam_size=beam_size,
-            vad=vad,
-            word_timestamps=word_timestamps,
-            chunk_length_s=chunk_length_s,
-        )
-    except Exception as e:
-        console.print(f"[red]ASR failed: {e}[/red]")
+    """Transcribe one or many audio files and print/save summaries."""
+    setup_logging(log_level)
+    files = resolve_audio_paths(inputs)
+    if not files:
+        console.print("[red]No audio files found. Provide files, directories or globs.[/red]")
         raise typer.Exit(code=1)
 
-    segs = tr.get("segments", []) or []
-    console.print(f"[green]Model:[/green] {tr.get('model')} | [green]Backend:[/green] {tr.get('backend')} | [green]Lang:[/green] {tr.get('language')}")
-    console.print(f"[green]Segments:[/green] {len(segs)} | [green]Processing time:[/green] {tr.get('processing_time'):.2f}s")
+    if len(files) > 1 and not output_dir and output_json:
+        console.print("[yellow]Multiple inputs detected; ignoring --output-json and using --output-dir=outputs/transcripts[/yellow]")
+        output_dir = os.path.join("outputs", "transcripts")
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
-    # Show first 10 segments
-    head = segs[:10]
-    if head:
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("#")
-        table.add_column("start")
-        table.add_column("end")
-        table.add_column("text")
-        for i, s in enumerate(head):
-            table.add_row(str(i), f"{s.get('start', '')}", f"{s.get('end', '')}", s.get("text", "")[:100])
-        console.print(table)
-        if len(segs) > len(head):
-            console.print(f"... showing 10 of {len(segs)} segments")
+    ok, fail = 0, 0
+    start_all = time.time()
+    console.print(f"[cyan]Found {len(files)} audio file(s). Starting transcription...[/cyan]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task("Transcribing", total=len(files))
+        for idx, path in enumerate(files, start=1):
+            progress.update(task, description=f"[{idx}/{len(files)}] {os.path.basename(path)}")
+            t0 = time.time()
+            try:
+                tr = asr_transcribe(
+                    audio_path=path,
+                    model=model,
+                    backend=backend,
+                    device=device,
+                    language=language,
+                    beam_size=beam_size,
+                    vad=vad,
+                    word_timestamps=word_timestamps,
+                    chunk_length_s=chunk_length_s,
+                )
+                ok += 1
+            except Exception as e:
+                fail += 1
+                console.print(f"[red]ASR failed for {path}: {e}[/red]")
+                progress.advance(task, 1)
+                continue
 
-    if output_json:
-        try:
-            ensure_dir(output_json)
-            with open(output_json, "w", encoding="utf-8") as f:
-                json.dump(tr, f, ensure_ascii=False, indent=2)
-            console.print(f"[green]Saved transcript:[/green] {output_json}")
-        except Exception as e:
-            console.print(f"[red]Failed to save JSON: {e}[/red]")
-            raise typer.Exit(code=1)
+            dur = tr.get("processing_time")
+            segs = tr.get("segments", []) or []
+            console.print(
+                f"[green]Done:[/green] {os.path.basename(path)} | segs={len(segs)} | time={time.time()-t0:.2f}s (ASR={dur:.2f}s)"
+            )
+
+            # Show head
+            head = segs[:5]
+            if head:
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("#")
+                table.add_column("start")
+                table.add_column("end")
+                table.add_column("text")
+                for i, s in enumerate(head):
+                    table.add_row(str(i), f"{s.get('start', '')}", f"{s.get('end', '')}", s.get("text", "")[:100])
+                console.print(table)
+
+            # Save
+            try:
+                if len(files) == 1 and output_json:
+                    ensure_dir(output_json)
+                    with open(output_json, "w", encoding="utf-8") as f:
+                        json.dump(tr, f, ensure_ascii=False, indent=2)
+                    console.print(f"[green]Saved transcript:[/green] {output_json}")
+                elif output_dir:
+                    base = os.path.splitext(os.path.basename(path))[0]
+                    out_path = os.path.join(output_dir, f"{base}.json")
+                    with open(out_path, "w", encoding="utf-8") as f:
+                        json.dump(tr, f, ensure_ascii=False, indent=2)
+                    console.print(f"[green]Saved transcript:[/green] {out_path}")
+            except Exception as e:
+                console.print(f"[red]Failed to save transcript for {path}: {e}[/red]")
+
+            progress.advance(task, 1)
+
+    console.print(f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s")
 
 
 @app.command("analyze-call")
 def analyze_call(
-    audio: str = typer.Argument(..., help="Path to audio file"),
+    inputs: List[str] = typer.Argument(..., help="Audio files, directories or globs"),
     # ASR
     model: str = typer.Option("kb-whisper-large", help="ASR model"),
     backend: str = typer.Option("faster", help="ASR backend: faster | transformers"),
@@ -96,46 +179,17 @@ def analyze_call(
     sentiment_model: Optional[str] = typer.Option(None, help="Optional override for sentiment model"),
     lexicon_file: Optional[str] = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
     lexicon_weight: float = typer.Option(0.0, min=0.0, max=1.0, help="Blend weight [0..1]"),
-    output_csv: Optional[str] = typer.Option(None, help="Save segment sentiments to CSV"),
+    output_csv: Optional[str] = typer.Option(None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"),
+    log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
-    """Transcribe the call and run per-segment sentiment using the 'call' profile."""
-    try:
-        tr = asr_transcribe(
-            audio_path=audio,
-            model=model,
-            backend=backend,
-            device=device,
-            language=language,
-            beam_size=beam_size,
-            vad=vad,
-            word_timestamps=word_timestamps,
-            chunk_length_s=chunk_length_s,
-        )
-    except Exception as e:
-        console.print(f"[red]ASR failed: {e}[/red]")
+    """Transcribe the call(s) and run per-segment sentiment using the 'call' profile."""
+    setup_logging(log_level)
+    files = resolve_audio_paths(inputs)
+    if not files:
+        console.print("[red]No audio files found. Provide files, directories or globs.[/red]")
         raise typer.Exit(code=1)
 
-    segments = tr.get("segments", []) or []
-    texts: List[str] = [s.get("text", "").strip() for s in segments]
-    if not texts or all(not t for t in texts):
-        texts = [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()] if segments else []
-        if not texts:
-            console.print("[yellow]No transcript text produced.[/yellow]")
-            raise typer.Exit(code=1)
-
-    results, meta = analyze_smart(
-        texts,
-        profile="call",
-        model_name=sentiment_model,
-        device="auto",
-        batch_size=16,
-        normalize=True,
-        return_all_scores=True,
-        max_length=None,
-        clean=True,
-    )
-
-    # Optional lexicon blending
+    # Optional lexicon
     use_lex = lexicon_file is not None and lexicon_weight > 0.0
     lex = None
     if use_lex:
@@ -146,52 +200,115 @@ def analyze_call(
             console.print(f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]")
             use_lex = False
 
-    rows = []
-    for idx, (t, inner) in enumerate(zip(texts, results)):
-        scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-        for k in ["negativ", "neutral", "positiv"]:
-            scores.setdefault(k, 0.0)
-        if use_lex and lex is not None:
-            s_scalar = score_text(t, lex)
-            ln, le, lp = scalar_to_dist(s_scalar)
-            scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
-        top_label = max(scores.items(), key=lambda kv: kv[1])[0]
-        top_score = float(scores[top_label])
-        start = float(segments[idx].get("start", 0.0) or 0.0) if idx < len(segments) else None
-        end = float(segments[idx].get("end", 0.0) or 0.0) if idx < len(segments) else None
-        rows.append({
-            "index": idx,
-            "start": start,
-            "end": end,
-            "text": t,
-            "label": top_label,
-            "score": top_score,
-            "negativ": scores.get("negativ"),
-            "neutral": scores.get("neutral"),
-            "positiv": scores.get("positiv"),
-            "model": meta.get("model"),
-            "profile": meta.get("profile"),
-        })
+    all_rows = []
+    ok, fail = 0, 0
+    start_all = time.time()
+    console.print(f"[cyan]Found {len(files)} audio file(s). Starting analyze-call...[/cyan]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task("Analyzing", total=len(files))
+        for idx_file, path in enumerate(files, start=1):
+            progress.update(task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}")
+            try:
+                tr = asr_transcribe(
+                    audio_path=path,
+                    model=model,
+                    backend=backend,
+                    device=device,
+                    language=language,
+                    beam_size=beam_size,
+                    vad=vad,
+                    word_timestamps=word_timestamps,
+                    chunk_length_s=chunk_length_s,
+                )
+            except Exception as e:
+                fail += 1
+                console.print(f"[red]ASR failed for {path}: {e}[/red]")
+                progress.advance(task, 1)
+                continue
 
-    # Show table
-    table = Table(show_header=True, header_style="bold magenta")
-    for col in ["index", "start", "end", "label", "score", "text"]:
-        table.add_column(col)
-    for r in rows[:20]:
-        table.add_row(str(r["index"]), str(r["start"]), str(r["end"]), r["label"], f"{r['score']:.3f}", r["text"][:100])
-    console.print(table)
-    if len(rows) > 20:
-        console.print(f"... showing 20 of {len(rows)} segments. Use --output-csv to save all.")
+            segments = tr.get("segments", []) or []
+            texts: List[str] = [s.get("text", "").strip() for s in segments]
+            if not texts or all(not t for t in texts):
+                texts = [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()] if segments else []
+                if not texts:
+                    console.print(f"[yellow]No transcript text produced for {path}.[/yellow]")
+                    fail += 1
+                    progress.advance(task, 1)
+                    continue
 
-    if output_csv:
+            results, meta = analyze_smart(
+                texts,
+                profile="call",
+                model_name=sentiment_model,
+                device="auto",
+                batch_size=16,
+                normalize=True,
+                return_all_scores=True,
+                max_length=None,
+                clean=True,
+            )
+
+            rows = []
+            for idx, (t, inner) in enumerate(zip(texts, results)):
+                scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
+                for k in ["negativ", "neutral", "positiv"]:
+                    scores.setdefault(k, 0.0)
+                if use_lex and lex is not None:
+                    s_scalar = score_text(t, lex)
+                    ln, le, lp = scalar_to_dist(s_scalar)
+                    scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
+                top_label = max(scores.items(), key=lambda kv: kv[1])[0]
+                top_score = float(scores[top_label])
+                start = float(segments[idx].get("start", 0.0) or 0.0) if idx < len(segments) else None
+                end = float(segments[idx].get("end", 0.0) or 0.0) if idx < len(segments) else None
+                row = {
+                    "file": path,
+                    "index": idx,
+                    "start": start,
+                    "end": end,
+                    "text": t,
+                    "label": top_label,
+                    "score": top_score,
+                    "negativ": scores.get("negativ"),
+                    "neutral": scores.get("neutral"),
+                    "positiv": scores.get("positiv"),
+                    "model": meta.get("model"),
+                    "profile": meta.get("profile"),
+                }
+                rows.append(row)
+                all_rows.append(row)
+
+            # Show preview table per file
+            table = Table(show_header=True, header_style="bold magenta")
+            for col in ["index", "start", "end", "label", "score", "text"]:
+                table.add_column(col)
+            for r in rows[:10]:
+                table.add_row(str(r["index"]), str(r["start"]), str(r["end"]), r["label"], f"{r['score']:.3f}", r["text"][:100])
+            console.print(table)
+            if len(rows) > 10:
+                console.print(f"... showing 10 of {len(rows)} segments for {os.path.basename(path)}")
+
+            ok += 1
+            progress.advance(task, 1)
+
+    # Save aggregate CSV if requested
+    if output_csv and all_rows:
         try:
             ensure_dir(output_csv)
-            import pandas as pd
-            pd.DataFrame(rows).to_csv(output_csv, index=False)
+            pd.DataFrame(all_rows).to_csv(output_csv, index=False)
             console.print(f"[green]Saved CSV:[/green] {output_csv}")
         except Exception as e:
             console.print(f"[red]Failed to save CSV: {e}[/red]")
             raise typer.Exit(code=1)
+
+    console.print(f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s")
 
 
 if __name__ == "__main__":

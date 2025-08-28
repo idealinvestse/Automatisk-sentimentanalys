@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 # Optional imports; we will guard usage
@@ -13,6 +14,8 @@ except Exception:
 
 from transformers import pipeline
 import torch
+
+logger = logging.getLogger(__name__)
 
 
 _MODEL_ALIASES = {
@@ -87,13 +90,27 @@ def transcribe(
     t0 = time.time()
     model_name = _resolve_model_name(model)
     dev_kind, cuda_idx = _normalize_device(device)
+    logger.info(
+        "ASR start | path=%s | backend=%s | model=%s | device=%s%s | lang=%s | beam=%s | vad=%s | word_ts=%s",
+        audio_path,
+        backend,
+        model_name,
+        dev_kind,
+        f":{cuda_idx}" if dev_kind == "cuda" and cuda_idx is not None else "",
+        language,
+        beam_size,
+        vad,
+        word_timestamps,
+    )
 
     if backend == "faster":
         if not _HAS_FASTER:
             raise RuntimeError("faster-whisper not installed; install 'faster-whisper' or use backend='transformers'")
         # Choose compute type
         compute_type = "float16" if dev_kind == "cuda" else ("int8" if dev_kind == "cpu" else "float32")
+        logger.debug("Loading faster-whisper model | compute_type=%s", compute_type)
         wmodel = WhisperModel(model_name, device=dev_kind, device_index=cuda_idx, compute_type=compute_type)
+        logger.debug("Model loaded: %s", model_name)
         segments_iter, info = wmodel.transcribe(
             audio_path,
             language=language,
@@ -101,8 +118,10 @@ def transcribe(
             vad_filter=vad,
             word_timestamps=word_timestamps,
         )
+        logger.info("Transcription started (faster-whisper)")
         segs: List[Dict[str, Any]] = []
         dur = getattr(info, "duration", None)
+        seg_count = 0
         for s in segments_iter:
             words = []
             if word_timestamps and getattr(s, "words", None):
@@ -124,9 +143,19 @@ def transcribe(
                 "words": words if word_timestamps else [],
                 "avg_confidence": avg_conf,
             })
-        return _to_transcript(segs, model_name, "faster", language, dur, time.time() - t0)
+            seg_count += 1
+            if logger.isEnabledFor(logging.DEBUG):
+                try:
+                    preview = getattr(s, "text", "").strip()[:80].replace("\n", " ")
+                except Exception:
+                    preview = ""
+                logger.debug("Segment %d | %s -> %s | '%s'", seg_count, getattr(s, "start", 0.0), getattr(s, "end", 0.0), preview)
+        proc = time.time() - t0
+        logger.info("ASR done (faster) | segs=%d | audio_dur=%s | proc=%.2fs", len(segs), dur, proc)
+        return _to_transcript(segs, model_name, "faster", language, dur, proc)
 
     # transformers backend
+    logger.debug("Creating transformers ASR pipeline | device=%s", f"cuda:{cuda_idx}" if dev_kind == "cuda" else dev_kind)
     asr = pipeline(
         task="automatic-speech-recognition",
         model=model_name,
@@ -138,7 +167,9 @@ def transcribe(
         "return_timestamps": "word" if word_timestamps else True,
         "chunk_length_s": chunk_length_s,
     }
+    t_call = time.time()
     out = asr(audio_path, **generate_kwargs)
+    logger.info("Transcription finished (transformers) | call_time=%.2fs", time.time() - t_call)
     # Output can be dict with 'chunks' for timestamps
     segs: List[Dict[str, Any]] = []
     dur = None
@@ -177,4 +208,6 @@ def transcribe(
             "words": [],
             "avg_confidence": None,
         })
-    return _to_transcript(segs, model_name, "transformers", language, dur, time.time() - t0)
+    proc = time.time() - t0
+    logger.info("ASR done (transformers) | segs=%d | proc=%.2fs", len(segs), proc)
+    return _to_transcript(segs, model_name, "transformers", language, dur, proc)

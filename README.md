@@ -97,6 +97,26 @@ python -m src.asr_cli analyze-call path\till\call.wav \
   --backend faster --language sv \
   --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
   --output-csv outputs\call_segments.csv
+
+# Batch-transkribering: mappar, listor och globbar
+# 1) Katalog (rekursivt)
+python -m src.asr_cli transcribe data\calls --backend faster --language sv --output-dir outputs\transcripts --log-level INFO
+
+# 2) Glob-mönster (rekursivt)
+python -m src.asr_cli transcribe "data\\calls\\**\\*.wav" --backend faster --output-dir outputs\transcripts
+
+# 3) Flera filer i en körning
+python -m src.asr_cli transcribe data\a.wav data\b.mp3 data\c.m4a --output-dir outputs\transcripts
+
+# Batch-analys av samtal med aggregerad CSV över alla filer
+python -m src.asr_cli analyze-call "data\\calls\\**\\*.wav" \
+  --backend faster --language sv \
+  --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.25 \
+  --output-csv outputs\all_call_segments.csv --log-level INFO
+
+# Loggning
+# Lägg till --log-level DEBUG för mer detaljerad logg (modell, enhet, segment mm.)
+python -m src.asr_cli transcribe path\till\call.wav --log-level DEBUG
 ```
 
 ### ASR: REST API
