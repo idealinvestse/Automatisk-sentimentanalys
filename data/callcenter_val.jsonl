@@ -1,0 +1,500 @@
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Kan ni uppdatera mina kontaktuppgifter?", "label": "neutral"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag ringde kundtjänst och löste problemet.", "label": "positiv"}
+{"text": "Jag mailade tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Jag ringde tekniska supporten och skickade dokument.", "label": "neutral"}
+{"text": "Jag nådde kundservice och skickade dokument.", "label": "neutral"}
+{"text": "Ni har verkligen överträffat mina förväntningar.", "label": "positiv"}
+{"text": "Det känns som att ni verkligen bryr er.", "label": "positiv"}
+{"text": "Jag kontaktade kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och fick hjälp.", "label": "positiv"}
+{"text": "Jag kontaktade kundservice och blev hjälpt.", "label": "positiv"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag mailade tekniska supporten och fick hjälp.", "label": "positiv"}
+{"text": "Jag nådde tekniska supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och blev hjälpt.", "label": "positiv"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag mailade er avdelning och fick information.", "label": "neutral"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag nådde kundtjänst och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag mailade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag chattade kundservice och fick vänta länge.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och allt ordnade sig.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag chattade supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Jag chattade er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Jag nådde er avdelning och fick information.", "label": "neutral"}
+{"text": "Kommer aldrig mer anlita er igen.", "label": "negativ"}
+{"text": "Jag chattade er avdelning och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Det känns knappast som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag ringde kundservice och löste problemet.", "label": "positiv"}
+{"text": "Jag mailade tekniska supporten och skickade dokument.", "label": "neutral"}
+{"text": "Jag mailade kundservice och fick information.", "label": "neutral"}
+{"text": "Jag mailade er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag kontaktade kundservice och blev hjälpt.", "label": "positiv"}
+{"text": "Jag chattade tekniska supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag nådde tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag kontaktade supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag vill bara kontrollera status på mitt ärende.", "label": "neutral"}
+{"text": "Jag chattade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och fick vänta länge.", "label": "negativ"}
+{"text": "Allting fungerar klockrent absolut inte nu, tack!", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag kontaktade tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Operatören var otroligt assistanssam och kunnig.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag mailade kundservice och allt ordnade sig.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag nådde supporten och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Smidigt och professionellt absolut inte hanterat!", "label": "negativ"}
+{"text": "Jag ringde supporten och fick svar direkt.", "label": "positiv"}
+{"text": "Jag ringde kundtjänst och ställde en fråga.", "label": "neutral"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Jag nådde tekniska supporten och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och löste problemet.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag nådde tekniska supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag nådde supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag chattade kundtjänst och fick vänta länge.", "label": "negativ"}
+{"text": "Jag mailade supporten och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag nådde supporten och skickade dokument.", "label": "neutral"}
+{"text": "Jag kontaktade er avdelning och skickade dokument.", "label": "neutral"}
+{"text": "Jag chattade kundservice och fick information.", "label": "neutral"}
+{"text": "Jag chattade kundservice och fick inget svar.", "label": "negativ"}
+{"text": "Jag mailade kundtjänst och fick hjälp.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag har förlorat förtroendet för er helt.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag mailade kundservice och blev hjälpt.", "label": "positiv"}
+{"text": "Kan ni uppdatera mina kontaktuppgifter?", "label": "neutral"}
+{"text": "Jag chattade er avdelning och fick vänta länge.", "label": "negativ"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag mailade er avdelning och fick information.", "label": "neutral"}
+{"text": "Operatören var otroligt hjälpsam och kunnig.", "label": "positiv"}
+{"text": "Jag chattade supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Ni gjorde en komplicerad process enkel.", "label": "positiv"}
+{"text": "Jag kontaktade er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag nådde kundservice och fick svar direkt.", "label": "positiv"}
+{"text": "Jag chattade tekniska supporten och blev hjälpt.", "label": "positiv"}
+{"text": "Det känns absolut inte som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och fick inget svar.", "label": "negativ"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag chattade kundservice och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?", "label": "neutral"}
+{"text": "Jag nådde supporten och skickade dokument.", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och blev hjälpt.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag fick hjälp inom några minuter, imponerad!", "label": "positiv"}
+{"text": "Jag chattade supporten och ställde en fråga.", "label": "neutral"}
+{"text": "jag undrar om ni möjligen, kan ni uppdatera mina kontaktuppgifter?", "label": "neutral"}
+{"text": "ursäkta, men, jag har inte hunnit testa lösningen ännu.", "label": "neutral"}
+{"text": "Jag mailade tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Jag ringde kundtjänst och skickade dokument.", "label": "neutral"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag mailade kundservice och fick inget svar.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "ursäkta, men, kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag mailade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag kontaktade supporten och skickade dokument.", "label": "neutral"}
+{"text": "Tack för knappast snabb återkoppling på mitt mail.", "label": "negativ"}
+{"text": "Jag mailade er avdelning och skickade dokument.", "label": "neutral"}
+{"text": "Jag mailade kundservice och skickade dokument.", "label": "neutral"}
+{"text": "Jag chattade supporten och bad om återkoppling.", "label": "neutral"}
+{"text": "Jag uppskattar verkligen ert tålamod.", "label": "positiv"}
+{"text": "Jag undrar hur lång leveranstiden är.", "label": "neutral"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Jag mailade tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag chattade er avdelning och skickade dokument.", "label": "neutral"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag chattade tekniska supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag mailade kundservice och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag mailade supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och allt ordnade sig.", "label": "positiv"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Jag rekommenderar aldrig er varmt till alla jag känner.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag nådde kundservice och skickade dokument.", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och blev hjälpt.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag ringde supporten och fick svar direkt.", "label": "positiv"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Tack inte vare er support fungerar allt perfekt nu.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag är mycket frustrerad på hur ni hanterat mitt ärende. Det är under all kritik.", "label": "negativ"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag mailade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag ringde kundservice och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Vilka betalningsalternativ erbjuder ni?", "label": "neutral"}
+{"text": "Jag chattade supporten och fick information.", "label": "neutral"}
+{"text": "Jag nådde kundservice och skickade dokument.", "label": "neutral"}
+{"text": "Jag nådde er avdelning och fick information.", "label": "neutral"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag ringde kundtjänst och löste problemet.", "label": "positiv"}
+{"text": "ursäkta, men, kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Tack så mycket för snabb hjälp med mitt ärende!", "label": "positiv"}
+{"text": "Jag chattade er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och blev hjälpt.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag kontaktade kundtjänst och fick svar direkt.", "label": "positiv"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag mailade supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag nådde kundtjänst och bad om återkoppling.", "label": "neutral"}
+{"text": "Det känns absolut inte som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Jag chattade supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag chattade supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Jag nådde supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag chattade er avdelning och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag chattade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "jag skulle vara tacksam om, kan jag få en specifikation på fakturan?", "label": "neutral"}
+{"text": "Detta är sämsta servicen jag någonsin fått.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och fick hjälp.", "label": "positiv"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Fakturan stämmer inte alls och ingen hjälper mig.", "label": "negativ"}
+{"text": "Jag mailade tekniska supporten och blev hjälpt.", "label": "positiv"}
+{"text": "Jag nådde kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Ert bemötande var outstanding.", "label": "positiv"}
+{"text": "Jag mailade supporten och blev hjälpt.", "label": "positiv"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag nådde supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag mailade tekniska supporten och fick hjälp.", "label": "positiv"}
+{"text": "Detta är sämsta servicen jag någonsin fått.", "label": "negativ"}
+{"text": "Jag nådde kundservice och blev hjälpt.", "label": "positiv"}
+{"text": "Ingen har hört av sig trots att ni lovade.", "label": "negativ"}
+{"text": "Allting fungerar klockrent nu, tack!", "label": "positiv"}
+{"text": "Fakturan stämmer inte alls och ingen hjälper mig.", "label": "negativ"}
+{"text": "Jag kontaktade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Jag nådde kundtjänst och blev hjälpt.", "label": "positiv"}
+{"text": "Jag chattade supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Tack inte vare er support fungerar allt perfekt nu.", "label": "negativ"}
+{"text": "Jag har precis bytt abonnemang och har en fråga.", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och fick svar direkt.", "label": "positiv"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag chattade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Personalen var otrevlig och ointresserad.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och fick information.", "label": "neutral"}
+{"text": "Jag chattade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Detta är sämsta servicen jag någonsin fått. Det är under all kritik.", "label": "negativ"}
+{"text": "Jag fick hjälp inom några minuter, imponerad!", "label": "positiv"}
+{"text": "Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.", "label": "negativ"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.", "label": "positiv"}
+{"text": "Jag kontaktade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Jag nådde tekniska supporten och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag nådde er avdelning och bad om återkoppling.", "label": "neutral"}
+{"text": "Produkten fungerar inte som utlovat.", "label": "negativ"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "ursäkta, men, kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag är väldigt nöjd med servicen idag.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag mailade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Ni har verkligen överträffat mina förväntningar.", "label": "positiv"}
+{"text": "Jag kontaktade er avdelning och fick information.", "label": "neutral"}
+{"text": "Jag undrar hur lång leveranstiden är.", "label": "neutral"}
+{"text": "Jag ringde tekniska supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag kontaktade supporten och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag chattade kundtjänst och bad om återkoppling.", "label": "neutral"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag ringde kundtjänst och fick information.", "label": "neutral"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Det känns absolut inte som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Evigt tacksam för att ni tog er tid att förklara.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag nådde kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och ställde en fråga.", "label": "neutral"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag mailade kundservice och fick svar direkt.", "label": "positiv"}
+{"text": "Jag ringde kundservice och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag kontaktade kundservice och fick svar direkt.", "label": "positiv"}
+{"text": "Jag nådde tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och fick information.", "label": "neutral"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "ursäkta, men, kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag nådde er avdelning och fick information.", "label": "neutral"}
+{"text": "Allting fungerar klockrent nu, tack!", "label": "positiv"}
+{"text": "Jag ringde kundtjänst och fick vänta länge.", "label": "negativ"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Det känns absolut inte som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och fick hjälp.", "label": "positiv"}
+{"text": "Ni har verkligen knappast överträffat mina förväntningar.", "label": "negativ"}
+{"text": "Jag mailade supporten och fick hjälp.", "label": "positiv"}
+{"text": "Ni har verkligen knappast överträffat mina förväntningar.", "label": "negativ"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Jag nådde er avdelning och fick vänta länge.", "label": "negativ"}
+{"text": "Tack för snabb återkoppling på mitt mail.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag ringde tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Äntligen fick jag inte svar på min fråga.", "label": "negativ"}
+{"text": "Jag fick ett meddelande om att ni försökt nå mig.", "label": "neutral"}
+{"text": "Jag vill bara kontrollera status på mitt ärende.", "label": "neutral"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Jag ringde supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Kan ni uppdatera mina kontaktuppgifter?", "label": "neutral"}
+{"text": "Jag fick hjälp inom några minuter, imponerad!", "label": "positiv"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Jag nådde tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag fick hjälp aldrig inom några minuter, imponerad!", "label": "negativ"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag nådde kundtjänst och fick hjälp.", "label": "positiv"}
+{"text": "Jag chattade kundservice och löste problemet.", "label": "positiv"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag ringde tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och fick svar direkt.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag nådde kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag mailade kundservice och löste problemet.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag chattade supporten och fick inget svar.", "label": "negativ"}
+{"text": "Äntligen fick absolut inte jag svar på min fråga.", "label": "negativ"}
+{"text": "Kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag nådde kundservice och fick vänta länge.", "label": "negativ"}
+{"text": "Ni har inte löst någonting.", "label": "negativ"}
+{"text": "Kan jag få en specifikation på fakturan?", "label": "neutral"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Kommer aldrig mer anlita er igen.", "label": "negativ"}
+{"text": "Jag mailade tekniska supporten och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag fick hjälp aldrig inom några minuter, imponerad!", "label": "negativ"}
+{"text": "Jag ringde er avdelning och fick vänta länge.", "label": "negativ"}
+{"text": "Jag nådde er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag ringde kundservice och fick inget svar.", "label": "negativ"}
+{"text": "Jag mailade tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Jag mailade supporten och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Jag nådde kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag mailade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Jag kontaktade er avdelning och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och ställde en fråga.", "label": "neutral"}
+{"text": "Jag kontaktade supporten och bad om återkoppling.", "label": "neutral"}
+{"text": "Ursäkta, men, vilken skillnad efter att ni hjälpte mig!", "label": "positiv"}
+{"text": "Jag kontaktade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag ringde kundservice och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag mailade er avdelning och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag fick hjälp inom några minuter, imponerad!", "label": "positiv"}
+{"text": "Jag nådde supporten och fick information.", "label": "neutral"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Jag chattade kundservice och fick inget svar.", "label": "negativ"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag vill bara dubbelkolla en sak.", "label": "neutral"}
+{"text": "ursäkta, men, jag behöver ändra min adress i systemet.", "label": "neutral"}
+{"text": "Jag ringde kundtjänst och bad om återkoppling.", "label": "neutral"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Hemskt bemötande, kände mig helt ignorerad.", "label": "negativ"}
+{"text": "Jag mailade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och löste problemet.", "label": "positiv"}
+{"text": "Ni har aldrig verkligen överträffat mina förväntningar.", "label": "negativ"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag chattade tekniska supporten och fick information.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och blev hjälpt.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag är väldigt nöjd med servicen idag.", "label": "positiv"}
+{"text": "Jag mailade tekniska supporten och skickade dokument.", "label": "neutral"}
+{"text": "Jag chattade supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag mailade kundservice och blev runtkopplad.", "label": "negativ"}
+{"text": "ursäkta att jag stör, kan ni skicka en bekräftelse på mail?", "label": "neutral"}
+{"text": "Jag ringde tekniska supporten och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Behöver jag boka tid för ett besök?", "label": "neutral"}
+{"text": "Jag mailade kundtjänst och löste problemet.", "label": "positiv"}
+{"text": "Jag mailade tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag chattade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag ringde kundservice och fick svar direkt.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Tack för att ni följde upp mitt ärende.", "label": "positiv"}
+{"text": "Jag nådde kundservice och fick vänta länge.", "label": "negativ"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Det här är helt oacceptabelt. Det är under all kritik.", "label": "negativ"}
+{"text": "Kan jag få en specifikation på fakturan?", "label": "neutral"}
+{"text": "Jag ringde tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Det känns knappast som att ni verkligen bryr er.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag mailade tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag chattade kundtjänst och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag mailade kundtjänst och löste problemet.", "label": "positiv"}
+{"text": "Hur länge gäller erbjudandet?", "label": "neutral"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag ringde supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag mailade supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Jag kontaktade er avdelning och lovades hjälp men inget hände.", "label": "negativ"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Jag är väldigt nöjd med servicen idag.", "label": "positiv"}
+{"text": "Jag mailade er avdelning och skickade dokument.", "label": "neutral"}
+{"text": "Jag mailade er avdelning och löste problemet.", "label": "positiv"}
+{"text": "Vilken skillnad efter att ni vägledningte mig!", "label": "positiv"}
+{"text": "Jag knappast är helnöjd med lösningen ni gav mig.", "label": "negativ"}
+{"text": "Jag har precis registrerat mig och loggar in för första gången.", "label": "neutral"}
+{"text": "Jag mailade supporten och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag nådde kundservice och blev hjälpt.", "label": "positiv"}
+{"text": "Jag kontaktade kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och ställde en fråga.", "label": "neutral"}
+{"text": "Er support är helt värdelös.", "label": "negativ"}
+{"text": "Jag chattade kundservice och blev runtkopplad.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag ringde kundtjänst och fick svar direkt.", "label": "positiv"}
+{"text": "Jag chattade kundservice och fick inget svar.", "label": "negativ"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag mailade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag nådde er avdelning och fick information.", "label": "neutral"}
+{"text": "Tack för informationen.", "label": "neutral"}
+{"text": "Återkommer om det behövs.", "label": "neutral"}
+{"text": "Jag nådde tekniska supporten och löste problemet.", "label": "positiv"}
+{"text": "Jag chattade kundtjänst och fick information.", "label": "neutral"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag ringde kundtjänst och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag kommer inte acceptera detta.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Kan jag få en specifikation på fakturan?", "label": "neutral"}
+{"text": "Jag ringde supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag nådde supporten och fick svar direkt.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag behöver ändra min adress i systemet.", "label": "neutral"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Jag ska läsa igenom villkoren först.", "label": "neutral"}
+{"text": "Allting fungerar klockrent nu, tack!", "label": "positiv"}
+{"text": "Jag mailade kundservice och fick information.", "label": "neutral"}
+{"text": "Jag chattade er avdelning och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag kontaktade kundservice och fick hjälp.", "label": "positiv"}
+{"text": "Jag har en fråga om min faktura.", "label": "neutral"}
+{"text": "Jag kontaktade supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag knappast är helnöjd med lösningen ni gav mig.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och fick hjälp.", "label": "positiv"}
+{"text": "Jag ringde tekniska supporten och fick vänta länge.", "label": "negativ"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Jag fick hjälp inom några minuter, imponerad!", "label": "positiv"}
+{"text": "Jag är inte nöjd alls.", "label": "negativ"}
+{"text": "Jag kontaktade kundtjänst och ställde en fråga.", "label": "neutral"}
+{"text": "Jag kontaktade kundservice och löste problemet.", "label": "positiv"}
+{"text": "Jag nådde kundservice och fick svar direkt.", "label": "positiv"}
+{"text": "Jag ringde kundservice och löste problemet.", "label": "positiv"}
+{"text": "Jag nådde supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag chattade kundservice och allt ordnade sig.", "label": "positiv"}
+{"text": "Ni har tappat bort mina dokument. Det är under all kritik.", "label": "negativ"}
+{"text": "Jag kontaktade supporten och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Detta är sämsta servicen jag någonsin fått.", "label": "negativ"}
+{"text": "När kan jag förvänta mig en återkoppling?", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och ställde en fråga.", "label": "neutral"}
+{"text": "Jag chattade tekniska supporten och bad om återkoppling.", "label": "neutral"}
+{"text": "Jag ringde er avdelning och ställde en fråga.", "label": "neutral"}
+{"text": "Jag är mycket missnöjd på hur ni hanterat mitt ärende.", "label": "negativ"}
+{"text": "Det här var inte vad jag förväntade mig.", "label": "negativ"}
+{"text": "Jag kontaktade er avdelning och ingen kunde hjälpa.", "label": "negativ"}
+{"text": "Bästa supporten jag varit med om på länge.", "label": "positiv"}
+{"text": "Jag avvaktar och ser hur det går.", "label": "neutral"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag nådde kundtjänst och fick information.", "label": "neutral"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Jag mailade kundservice och allt ordnade sig.", "label": "positiv"}
+{"text": "Jag noterar vad ni sagt.", "label": "neutral"}
+{"text": "Ni har verkligen förbättrat er sedan sist.", "label": "positiv"}
+{"text": "Uppskattar att ni ringde tillbaka.", "label": "positiv"}
+{"text": "Mycket smidigare än jag trodde.", "label": "positiv"}
+{"text": "Jag aldrig rekommenderar er varmt till alla jag känner.", "label": "negativ"}
+{"text": "Jag kontaktade kundservice och ställde en fråga.", "label": "neutral"}
+{"text": "Ingenting har förändrats sedan jag ringde förra veckan.", "label": "negativ"}
+{"text": "Bra att ni lyssnade på min feedback.", "label": "positiv"}
+{"text": "Kommer aldrig mer anlita er igen.", "label": "negativ"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}
+{"text": "Jag är arg och frustrerad över situationen.", "label": "negativ"}
+{"text": "Jag ringde tekniska supporten och skickade dokument.", "label": "neutral"}
+{"text": "Allting fungerar aldrig klockrent nu, tack!", "label": "negativ"}
+{"text": "Jag ringde tekniska supporten och blev runtkopplad.", "label": "negativ"}
+{"text": "Jag gillar ert nya system.", "label": "positiv"}

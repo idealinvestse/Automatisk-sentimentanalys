@@ -438,6 +438,43 @@ def asr_compare(output: str = typer.Option("reports/asr_model_comparison.json", 
     console.print(f"[green]ASR comparison saved:[/green] {output}")
 
 
+@app.command("negation")
+def evaluate_negation(
+    testset: str = typer.Option("data/test_swedish.csv", "--testset"),
+    output: str | None = typer.Option(None, "--output"),
+    backend: str = typer.Option("heuristic", "--backend"),
+):
+    """Evaluate performance specifically on negation-containing examples."""
+    from .negation import is_negated_example
+
+    df = load_testset(testset)
+    mask = df["text"].apply(is_negated_example)
+    df_neg = df[mask].copy()
+    df_no_neg = df[~mask].copy()
+    console.print(f"[cyan]Negation examples:[/cyan] {len(df_neg)}")
+    console.print(f"[cyan]Non-negation examples:[/cyan] {len(df_no_neg)}")
+    results: dict[str, Any] = {}
+    for name, subset in [("negation", df_neg), ("non_negation", df_no_neg)]:
+        if len(subset) == 0:
+            results[name] = {"n_samples": 0, "note": "no examples in subset"}
+            continue
+        metrics, _ = run_evaluation(subset, backend=backend)
+        results[name] = metrics
+    metrics_all, _ = run_evaluation(df, backend=backend)
+    results["overall"] = metrics_all
+    report = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "testset": testset,
+        "negation_evaluation": results,
+    }
+    print_results(metrics_all)
+    if output:
+        os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        console.print(f"\n[green]Negation evaluation saved:[/green] {output}")
+
+
 @app.command()
 def list_profiles():
     """Lista tillgängliga profiler."""

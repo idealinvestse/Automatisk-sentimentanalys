@@ -1,11 +1,3501 @@
-text,label,source
-Tack för snabb hjälp med mitt ärende,positiv,synthetic_callcenter
-Jag är inte nöjd med hur ni hanterade fakturan,negativ,synthetic_callcenter
-Det fungerar som förväntat just nu,neutral,synthetic_callcenter
-Kundtjänsten var hjälpsam och löste problemet direkt,positiv,synthetic_callcenter
-Jag har väntat länge och är väldigt besviken,negativ,synthetic_callcenter
-Jag vill bara kontrollera status på min beställning,neutral,synthetic_callcenter
-Det här var inte dåligt alls,positiv,synthetic_callcenter
-Jag kommer aldrig rekommendera den här tjänsten,negativ,synthetic_callcenter
-Operatören förklarade tydligt och vänligt,positiv,synthetic_callcenter
-Jag behöver mer information innan jag bestämmer mig,neutral,synthetic_callcenter
+text,label
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Finns det någon manual för den här funktionen?,neutral
+Jag är mycket besviken på hur ni hanterat mitt ärende.,negativ
+Jag ringde supporten och skickade dokument.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag är inte nöjd alls.,negativ
+Jag har stått still i över en timme i telefonkö!,negativ
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Jag chattade kundtjänst och skickade dokument.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Jag ringde kundservice och lovades hjälp men inget hände.,negativ
+"Jag undrar om ni möjligen, det var enkelt att komma fram och få service.",positiv
+Jag ringde tekniska supporten och skickade dokument.,neutral
+Jag mailade kundservice och skickade dokument.,neutral
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag chattade kundservice och fick information.,neutral
+Tack för snabb hjälp med mitt ärende!,positiv
+Tack så mycket för snabb hjälp med mitt ärende!,positiv
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag ringde kundservice och lovades hjälp men inget hände.,negativ
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag chattade tekniska supporten och skickade dokument.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag noterar vad ni sagt.,neutral
+Återkommer om det behövs.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde kundservice och allt ordnade sig.,positiv
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka. Det är under all kritik.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Ingen har hört av sig trots att ni lovade.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Återkommer om det behövs.,neutral
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Tack för informationen.,neutral
+Jag mailade tekniska supporten och blev runtkopplad.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade supporten och blev hjälpt.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde er avdelning och fick information.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag kontaktade kundservice och fick svar direkt.,positiv
+Ni har inte löst någonting.,negativ
+Ni har inte löst någonting.,negativ
+Jag ringde tekniska supporten och fick hjälp.,positiv
+Jag nådde tekniska supporten och fick inget svar.,negativ
+Jag kontaktade er avdelning och ställde en fråga.,neutral
+Jag kontaktade kundservice och skickade dokument.,neutral
+Jag chattade supporten och fick hjälp.,positiv
+Tack för informationen.,neutral
+Jag kontaktade kundservice och blev hjälpt.,positiv
+Jag chattade kundservice och fick hjälp.,positiv
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Jag ringde tekniska supporten och fick information.,neutral
+Tack för informationen.,neutral
+Jag ringde tekniska supporten och fick svar direkt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade tekniska supporten och fick information.,neutral
+Jag chattade kundservice och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+Jag knappast uppskattar verkligen ert tålamod.,negativ
+Jag mailade kundservice och blev hjälpt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+"Jag skulle vara stort tacksam om, äntligen fick jag svar på min fråga.",positiv
+Vilken skillnad efter att ni hjälpte mig!,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag mailade er avdelning och fick inget svar.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag är helnöjd knappast med lösningen ni gav mig.,negativ
+Jag nådde kundservice och löste problemet.,positiv
+Jag mailade supporten och fick inget svar.,negativ
+Jag nådde tekniska supporten och skickade dokument.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade kundservice och fick svar direkt.,positiv
+Jag har väntat i över en timme i telefonkö!,negativ
+Personalen var otrevlig och ointresserad.,negativ
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag noterar vad ni sagt.,neutral
+Jag noterar vad ni sagt.,neutral
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag nådde kundtjänst och blev hjälpt.,positiv
+Jag mailade er avdelning och bad om återkoppling.,neutral
+"jag undrar om ni möjligen, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag chattade er avdelning och fick svar direkt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag nådde kundservice och fick svar direkt.,positiv
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag chattade kundtjänst och fick vänta länge.,negativ
+Jag mailade kundservice och allt ordnade sig.,positiv
+Jag är helnöjd med lösningen ni gav mig.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Bästa supporten jag varit med om på länge.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Ni har inte löst någonting.,negativ
+Jag är inte nöjd alls.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag är så glad att jag ringde er.,positiv
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde kundtjänst och bad om återkoppling.,neutral
+Jag kommer inte acceptera detta.,negativ
+Ert bemötande var outstanding.,positiv
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag nådde er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade er avdelning och fick information.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag är inte nöjd alls.,negativ
+Jag kontaktade tekniska supporten och allt ordnade sig.,positiv
+Tack för informationen.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag nådde supporten och ingen kunde hjälpa.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Tack för informationen.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag chattade kundtjänst och skickade dokument.,neutral
+Kan ni bekräfta att ni tagit emot min beställning?,neutral
+Jag ringde er avdelning och lovades hjälp men inget hände.,negativ
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag kontaktade er avdelning och löste problemet.,positiv
+Jag nådde er avdelning och fick hjälp.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag aldrig rekommenderar er varmt till alla jag känner.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade er avdelning och fick inget svar.,negativ
+Jag nådde er avdelning och lovades hjälp men inget hände.,negativ
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Tack så mycket för att ni tog er tid att förklara.,positiv
+Jag absolut inte känner mig trygg som kund hos er.,negativ
+Mycket smidigare än jag trodde.,positiv
+Finns det någon manual för den här funktionen?,neutral
+Jag kontaktade er avdelning och löste problemet.,positiv
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för informationen.,neutral
+Jag mailade supporten och bad om återkoppling.,neutral
+Ni har inte löst någonting.,negativ
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag är inte nöjd alls.,negativ
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag mailade er avdelning och fick information.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Det känns knappast som att ni verkligen bryr er.,negativ
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag är inte nöjd alls.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag nådde supporten och allt ordnade sig.,positiv
+Jag ringde supporten och allt ordnade sig.,positiv
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag behöver ändra min adress i systemet.,neutral
+Jag känner mig trygg som kund hos er.,positiv
+Jag chattade supporten och fick information.,neutral
+Jag behöver ändra min adress i systemet.,neutral
+Återkommer om det behövs.,neutral
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag kommer inte acceptera detta.,negativ
+Återkommer om det behövs.,neutral
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Jag ringde er avdelning och fick hjälp.,positiv
+Ni har inte löst någonting.,negativ
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag absolut inte uppskattar verkligen ert tålamod.,negativ
+Jag mailade tekniska supporten och fick inget svar.,negativ
+Jag har blivit feldebiterad tre månader i rad.,negativ
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag nådde kundservice och fick information.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Jag kommer inte acceptera detta.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag mailade er avdelning och fick information.,neutral
+Jag ringde supporten och fick svar direkt.,positiv
+Jag ringde kundservice och bad om återkoppling.,neutral
+Smidigt och professionellt hanterat!,positiv
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag chattade kundservice och ingen kunde hjälpa.,negativ
+Hur länge gäller erbjudandet?,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade supporten och blev runtkopplad.,negativ
+Tack för informationen.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade er avdelning och fick information.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag nådde supporten och skickade dokument.,neutral
+Jag chattade kundtjänst och fick vänta länge.,negativ
+Jag chattade tekniska supporten och fick vänta länge.,negativ
+Ert bemötande var outstanding.,positiv
+"Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.",positiv
+Jag gillar ert nya system.,positiv
+Mycket smidigare än jag trodde.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade supporten och fick svar direkt.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag ringde kundtjänst och fick vänta länge.,negativ
+Jag gillar ert nya system.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag kontaktade kundservice och fick svar direkt.,positiv
+Jag nådde tekniska supporten och bad om återkoppling.,neutral
+Jag kontaktade kundservice och lovades hjälp men inget hände.,negativ
+Har ni öppet på lördagar?,neutral
+Jag chattade tekniska supporten och fick svar direkt.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag ringde kundtjänst och fick inget svar.,negativ
+"Jag undrar om ni möjligen, kundtjänsten var mycket tillmötesgående och professionell.",positiv
+Kan jag få en specifikation på fakturan?,neutral
+Jag nådde kundservice och allt ordnade sig.,positiv
+Kommer aldrig mer anlita er igen.,negativ
+Jag ska precis skicka in dokumenten ni bad om.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag gillar ert nya system.,positiv
+Jag gillar ert nya system.,positiv
+Jag chattade kundservice och ställde en fråga.,neutral
+Det här är helt oacceptabelt.,negativ
+Jag gillar ert nya system.,positiv
+"Jag skulle vara tusen tacksam om, jag är helnöjd med lösningen ni gav mig.",positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag nådde tekniska supporten och bad om återkoppling.,neutral
+Jag är inte nöjd alls.,negativ
+"jag skulle vara tacksam om, jag har inte hunnit testa lösningen ännu.",neutral
+"Ursäkta, men, jag uppskattar verkligen ert tålamod.",positiv
+Jag kommer inte acceptera detta.,negativ
+Jag ringde tekniska supporten och ingen kunde hjälpa.,negativ
+Jag mailade kundtjänst och fick information.,neutral
+Jag är väldigt nöjd med servicen idag.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag chattade kundtjänst och skickade dokument.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Jag kontaktade kundservice och skickade dokument.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Mycket smidigare än jag trodde.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Ni har inte löst någonting.,negativ
+Hur länge gäller erbjudandet?,neutral
+Jag kontaktade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag chattade kundservice och fick information.,neutral
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag mailade kundservice och fick hjälp.,positiv
+Jag gillar ert nya system.,positiv
+Jag ringde supporten och blev runtkopplad.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag ringde kundservice och skickade dokument.,neutral
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Jag nådde supporten och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag chattade kundservice och blev runtkopplad.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag kontaktade er avdelning och löste problemet.,positiv
+Jag mailade kundservice och fick svar direkt.,positiv
+Jag mailade kundtjänst och allt ordnade sig.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag nådde tekniska supporten och bad om återkoppling.,neutral
+"Jag undrar om ni möjligen, ert bemötande var outstanding.",positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade kundservice och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och lovades hjälp men inget hände.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag nådde kundservice och lovades hjälp men inget hände.,negativ
+Jag nådde er avdelning och fick information.,neutral
+Mycket smidigare än jag trodde.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag är mycket missnöjd på hur ni hanterat mitt ärende.,negativ
+Jag mailade kundservice och fick svar direkt.,positiv
+Jag är inte nöjd alls.,negativ
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag noterar vad ni sagt.,neutral
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Jag är inte nöjd alls.,negativ
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag chattade supporten och fick vänta länge.,negativ
+Jag chattade er avdelning och ställde en fråga.,neutral
+Jag ringde tekniska supporten och blev hjälpt.,positiv
+Tack för informationen.,neutral
+Tack för informationen.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag mailade tekniska supporten och fick inget svar.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag är absolut inte helnöjd med lösningen ni gav mig.,negativ
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.,negativ
+Jag kontaktade kundservice och bad om återkoppling.,neutral
+"ursäkta att jag stör, vilka betalningsalternativ erbjuder ni?",neutral
+Hur länge gäller erbjudandet?,neutral
+Jag avvaktar och ser hur det går.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag kontaktade supporten och ställde en fråga.,neutral
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Jag är inte nöjd alls.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och bad om återkoppling.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Operatören var otroligt hjälpsam och kunnig.,positiv
+"Allting fungerar klockrent nu, tack!",positiv
+Det känns som att ni verkligen bryr er.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag gillar ert nya system.,positiv
+Jag chattade kundtjänst och bad om återkoppling.,neutral
+Jag chattade kundtjänst och ställde en fråga.,neutral
+Jag chattade er avdelning och ställde en fråga.,neutral
+"Ursäkta, men, ert bemötande var outstanding.",positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade supporten och blev hjälpt.,positiv
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Jag har förlorat förtroendet för er helt.,negativ
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+"Hemskt bemötande, kände mig helt ignorerad. Det är under all kritik.",negativ
+Jag ringde kundtjänst och skickade dokument.,neutral
+Jag nådde er avdelning och blev hjälpt.,positiv
+Jag chattade kundservice och fick svar direkt.,positiv
+Bästa supporten jag varit med om på länge.,positiv
+Jag nådde supporten och skickade dokument.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag nådde tekniska supporten och allt ordnade sig.,positiv
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Tack för informationen.,neutral
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag mailade kundservice och lovades hjälp men inget hände.,negativ
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag nådde er avdelning och blev hjälpt.,positiv
+Har ni öppet på lördagar?,neutral
+Jag mailade er avdelning och fick svar direkt.,positiv
+Jag ringde supporten och fick svar direkt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kommer inte acceptera detta.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade kundservice och fick information.,neutral
+Jag nådde supporten och allt ordnade sig.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Ni gjorde en komplicerad process enkel.,positiv
+Mycket smidigare än jag trodde.,positiv
+Kundtjänsten knappast var mycket trevlig och professionell.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+"ursäkta att jag stör, har ni öppet på lördagar?",neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Återkommer om det behövs.,neutral
+Det här är rena katastrofen.,negativ
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag ringde er avdelning och fick vänta länge.,negativ
+Tack för informationen.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Återkommer om det behövs.,neutral
+Det här är helt oacceptabelt.,negativ
+Jag nådde kundservice och fick inget svar.,negativ
+Ingen har hört av sig trots att ni lovade.,negativ
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag noterar vad ni sagt.,neutral
+Återkommer om det behövs.,neutral
+Ni har inte löst någonting.,negativ
+Jag mailade supporten och löste problemet.,positiv
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Jag nådde kundservice och blev hjälpt.,positiv
+Jag nådde er avdelning och löste problemet.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade supporten och lovades hjälp men inget hände.,negativ
+Mycket smidigare än jag trodde.,positiv
+Tack för informationen.,neutral
+Jag är väldigt nöjd med servicen idag.,positiv
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag chattade supporten och fick inget svar.,negativ
+Personalen var otrevlig och ointresserad.,negativ
+Jag ej känner mig trygg som kund hos er.,negativ
+Jag nådde kundtjänst och fick hjälp.,positiv
+Mycket smidigare än jag trodde.,positiv
+Återkommer om det behövs.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag gillar ert nya system.,positiv
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Jag kontaktade er avdelning och löste problemet.,positiv
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag kontaktade supporten och blev runtkopplad.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag mailade supporten och fick hjälp.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Detta är tredje gången jag ringer om samma sak.,negativ
+Tack vare er support fungerar allt perfekt nu.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag kontaktade supporten och ingen kunde hjälpa.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Kan ni skicka en bekräftelse på mail?,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag mailade kundservice och blev hjälpt.,positiv
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+"Jag ej fick hjälp inom några minuter, imponerad!",negativ
+Jag mailade er avdelning och allt ordnade sig.,positiv
+Jag är inte nöjd alls.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Tack för informationen.,neutral
+Jag kontaktade supporten och fick vänta länge.,negativ
+Jag uppskattar verkligen ert tålamod.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag är arg och frustrerad över situationen.,negativ
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade kundtjänst och fick information.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+"Jag hoppas ni kan hjälpa mig, jag är väldigt nöjd med servicen idag.",positiv
+Jag mailade er avdelning och löste problemet.,positiv
+Personalen var otrevlig och ointresserad.,negativ
+Jag mailade kundservice och löste problemet.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Det ej var enkelt att komma fram och få hjälp.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag nådde supporten och blev hjälpt.,positiv
+Jag ringde tekniska supporten och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och fick vänta länge.,negativ
+Jag noterar vad ni sagt.,neutral
+Tack för snabb återkoppling på mitt mail.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundservice och fick svar direkt.,positiv
+"Jag fick service inom några minuter, imponerad!",positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade kundservice och lovades hjälp men inget hände.,negativ
+Jag ringde kundtjänst och fick information.,neutral
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Jag mailade tekniska supporten och löste problemet.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade kundservice och löste problemet.,positiv
+Ni har verkligen överträffat mina förväntningar.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Tusen tack för snabb återkoppling på mitt mail.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag mailade supporten och lovades hjälp men inget hände.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Jag kontaktade kundtjänst och ingen kunde hjälpa.,negativ
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Jag mailade kundtjänst och lovades hjälp men inget hände.,negativ
+Återkommer om det behövs.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag gillar ert nya system.,positiv
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Jag mailade er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Smidigt och professionellt hanterat!,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag chattade kundservice och fick vänta länge.,negativ
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag chattade er avdelning och fick information.,neutral
+Tack för informationen.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag gillar ert nya system.,positiv
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Supporten förstod direkt vad jag menade.,positiv
+"ursäkta att jag stör, jag vill bara dubbelkolla en sak.",neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag chattade tekniska supporten och fick information.,neutral
+Jag kontaktade supporten och skickade dokument.,neutral
+Jag nådde kundservice och fick inget svar.,negativ
+Jag fick ett meddelande om att ni försökt nå mig.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade supporten och skickade dokument.,neutral
+Det här är rena katastrofen.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade kundservice och fick information.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag har inte hunnit testa lösningen ännu.,neutral
+Det känns som knappast att ni verkligen bryr er.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag chattade kundservice och fick svar direkt.,positiv
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag chattade kundtjänst och allt ordnade sig.,positiv
+Jag nådde kundservice och fick hjälp.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag nådde kundservice och skickade dokument.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag nådde kundservice och fick inget svar.,negativ
+Jag ringde supporten och fick hjälp.,positiv
+Ni har inte löst någonting.,negativ
+"Jag hoppas ni kan handräckninga mig, jag är helnöjd med lösningen ni gav mig.",positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+Återkommer om det behövs.,neutral
+Ert bemötande var outstanding.,positiv
+Jag mailade supporten och löste problemet.,positiv
+Jag kontaktade supporten och ställde en fråga.,neutral
+Har ni öppet på lördagar?,neutral
+Jag ringde er avdelning och fick svar direkt.,positiv
+Jag nådde er avdelning och fick information.,neutral
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Vilken skillnad efter att ni vägledningte mig!,positiv
+Jag mailade er avdelning och löste problemet.,positiv
+"ursäkta att jag stör, jag har precis registrerat mig och loggar in för första gången.",neutral
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Jag kontaktade er avdelning och skickade dokument.,neutral
+Er support är helt värdelös.,negativ
+Jag kommer inte acceptera detta.,negativ
+Tack för snabb hjälp med mitt ärende!,positiv
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde kundtjänst och fick hjälp.,positiv
+Äntligen fick jag svar på min fråga.,positiv
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och skickade dokument.,neutral
+"Jag hoppas ni kan hjälpa mig, ni har verkligen överträffat mina förväntningar.",positiv
+Jag nådde kundservice och blev hjälpt.,positiv
+Jag gillar ert nya system.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade kundservice och fick inget svar.,negativ
+Jag chattade er avdelning och fick svar direkt.,positiv
+Jag är mycket besviken på hur ni hanterat mitt ärende.,negativ
+Jag mailade tekniska supporten och fick svar direkt.,positiv
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag chattade supporten och blev hjälpt.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och bad om återkoppling.,neutral
+Jag har precis registrerat mig och loggar in för första gången.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag känner mig trygg som kund hos er.,positiv
+Jag ringde kundservice och fick inget svar.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag förstår inte varför detta ska vara så svårt.,negativ
+"Jag undrar om ni möjligen, jag är heltillfreds med lösningen ni gav mig.",positiv
+"ursäkta, men, jag ska precis skicka in dokumenten ni bad om.",neutral
+Jag gillar ert nya system.,positiv
+Återkommer om det behövs.,neutral
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Tack för informationen.,neutral
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag är inte nöjd alls.,negativ
+Tack för informationen.,neutral
+Jag chattade kundservice och allt ordnade sig.,positiv
+Jag är arg och frustrerad över situationen.,negativ
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Tack så mycket vare er support fungerar allt perfekt nu.,positiv
+Behöver jag boka tid för ett besök?,neutral
+Ni gjorde en ej komplicerad process enkel.,negativ
+Jag chattade kundservice och ingen kunde hjälpa.,negativ
+Jag kontaktade kundtjänst och skickade dokument.,neutral
+Ni har inte löst någonting.,negativ
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag kontaktade supporten och allt ordnade sig.,positiv
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde kundtjänst och allt ordnade sig.,positiv
+Jag chattade supporten och allt ordnade sig.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade kundservice och blev hjälpt.,positiv
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Er support är helt värdelös.,negativ
+Jag chattade supporten och bad om återkoppling.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Jag mailade er avdelning och skickade dokument.,neutral
+Supporten förstod direkt vad jag menade.,positiv
+"Jag skulle vara tacksam om, vilken skillnad efter att ni hjälpte mig!",positiv
+Jag gillar ert nya system.,positiv
+Återkommer om det behövs.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde er avdelning och fick hjälp.,positiv
+Jag rekommenderar aldrig er varmt till alla jag känner.,negativ
+Återkommer om det behövs.,neutral
+Jag ringde kundtjänst och skickade dokument.,neutral
+Jag mailade kundtjänst och blev runtkopplad.,negativ
+Jag mailade kundservice och fick inget svar.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+Ni har verkligen överträffat mina förväntningar.,positiv
+"jag undrar om ni möjligen, kan ni uppdatera mina kontaktuppgifter?",neutral
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag mailade kundservice och skickade dokument.,neutral
+Jag känner aldrig mig trygg som kund hos er.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+"jag skulle vara tacksam om, kan jag få en specifikation på fakturan?",neutral
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Återkommer om det behövs.,neutral
+Jag ringde kundtjänst och fick hjälp.,positiv
+Återkommer om det behövs.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag ringde er avdelning och blev runtkopplad.,negativ
+Jag är så glad att jag ringde er.,positiv
+När kan jag förvänta mig en återkoppling?,neutral
+Ni har inte löst någonting.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Kan ni skicka en bekräftelse på mail?,neutral
+Jag ringde supporten och allt ordnade sig.,positiv
+Jag är inte nöjd alls.,negativ
+Jag mailade kundtjänst och skickade dokument.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Operatören var otroligt assistanssam och kunnig.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag är inte nöjd alls.,negativ
+Jag ringde er avdelning och lovades hjälp men inget hände.,negativ
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Jag kontaktade kundservice och fick svar direkt.,positiv
+Jag chattade supporten och fick vänta länge.,negativ
+Ni har inte löst någonting.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Detta är tredje gången jag ringer om samma sak.,negativ
+Jag mailade er avdelning och skickade dokument.,neutral
+Det här är rena katastrofen.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag kontaktade kundtjänst och ställde en fråga.,neutral
+"ursäkta att jag stör, när kan jag förvänta mig en återkoppling?",neutral
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag har en fråga om min faktura.,neutral
+Jag mailade kundservice och fick svar direkt.,positiv
+Det känns som att ni verkligen bryr er.,positiv
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag ringde er avdelning och fick vänta länge.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Det var enkelt att komma fram och få hjälp.,positiv
+Jag kommer inte acceptera detta.,negativ
+Detta är sämsta servicen jag någonsin fått. Det är under all kritik.,negativ
+Tack ej för snabb återkoppling på mitt mail.,negativ
+Jag mailade kundservice och blev hjälpt.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade supporten och fick vänta länge.,negativ
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag kommer inte acceptera detta.,negativ
+"Ursäkta att jag stör, supporten förstod direkt vad jag menade.",positiv
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Jag noterar vad ni sagt.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Bästa supporten jag varit med om på länge.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag chattade supporten och fick information.,neutral
+Jag mailade er avdelning och fick information.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Supporten förstod direkt vad jag menade.,positiv
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Återkommer om det behövs.,neutral
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Jag ringde kundtjänst och löste problemet.,positiv
+Tack för informationen.,neutral
+Tack för informationen.,neutral
+Jag kontaktade supporten och löste problemet.,positiv
+Jag mailade tekniska supporten och blev hjälpt.,positiv
+Jag nådde kundtjänst och ingen kunde hjälpa.,negativ
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Kan ni bekräfta att ni tagit emot min beställning?,neutral
+Jag noterar vad ni sagt.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Vilka betalningsalternativ erbjuder ni?,neutral
+Er support är helt värdelös.,negativ
+Jag gillar ert nya system.,positiv
+Tack för informationen.,neutral
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade kundtjänst och ställde en fråga.,neutral
+Jag chattade tekniska supporten och fick information.,neutral
+Jag nådde tekniska supporten och löste problemet.,positiv
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Ni har inte löst någonting.,negativ
+Jag mailade kundservice och skickade dokument.,neutral
+Ni har tappat bort mina dokument. Det är under all kritik.,negativ
+"jag hoppas ni kan hjälpa mig, kan ni skicka en bekräftelse på mail?",neutral
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Jag ringde er avdelning och fick hjälp.,positiv
+Återkommer om det behövs.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag kontaktade tekniska supporten och ingen kunde hjälpa.,negativ
+Ni gjorde en komplicerad process enkel.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag undrar hur lång leveranstiden är.,neutral
+Jag mailade er avdelning och löste problemet.,positiv
+Det känns som att ni verkligen bryr er.,positiv
+Jag nådde kundtjänst och fick hjälp.,positiv
+"Jag fick hjälp inom några minuter, imponerad!",positiv
+Jag mailade kundtjänst och fick information.,neutral
+Jag mailade kundservice och allt ordnade sig.,positiv
+Jag kontaktade tekniska supporten och fick information.,neutral
+Jag ringde er avdelning och fick information.,neutral
+Jag chattade kundservice och blev hjälpt.,positiv
+Jag mailade kundtjänst och fick svar direkt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag är så glad att jag ringde er.,positiv
+Det känns som att ni verkligen bryr er.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade supporten och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Vilken skillnad efter att ni hjälpte mig!,positiv
+Jag ringde supporten och blev hjälpt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Ni har tappat bort mina dokument.,negativ
+Jag kontaktade tekniska supporten och fick inget svar.,negativ
+Jag känner mig lurad av ert företag.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde kundtjänst och fick information.,neutral
+Ni har inte löst någonting.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde supporten och bad om återkoppling.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag är inte nöjd alls.,negativ
+Återkommer om det behövs.,neutral
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Jag nådde kundtjänst och allt ordnade sig.,positiv
+Tack för informationen.,neutral
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Kommer aldrig mer anlita er igen.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag ringde supporten och fick svar direkt.,positiv
+Kundtjänsten var mycket vägledningsam och professionell.,positiv
+Ni har inte löst någonting.,negativ
+Jag förstår inte varför detta ska vara så svårt.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade kundservice och bad om återkoppling.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Detta är tredje gången jag ringer om samma sak.,negativ
+Jag mailade er avdelning och fick information.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag nådde tekniska supporten och löste problemet.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag mailade kundservice och fick svar direkt.,positiv
+Personalen var otrevlig och ointresserad. Det är under all kritik.,negativ
+Jag ringde supporten och fick inget svar.,negativ
+Jag nådde kundtjänst och fick information.,neutral
+Jag chattade kundservice och löste problemet.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Äntligen fick absolut inte jag svar på min fråga.,negativ
+Mycket smidigare än jag trodde.,positiv
+Tack för informationen.,neutral
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag ringde supporten och fick vänta länge.,negativ
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Jag gillar ert nya system.,positiv
+Jag ringde kundservice och lovades hjälp men inget hände.,negativ
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade kundtjänst och fick hjälp.,positiv
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag mailade kundtjänst och skickade dokument.,neutral
+Det här är rena katastrofen.,negativ
+Jag kontaktade er avdelning och fick information.,neutral
+Smidigt och professionellt hanterat!,positiv
+Jag ringde kundservice och fick inget svar.,negativ
+Jag kontaktade kundservice och fick inget svar.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag chattade supporten och löste problemet.,positiv
+Ni gjorde en komplicerad process enkel.,positiv
+Jag chattade kundservice och fick information.,neutral
+Jag kommer inte acceptera detta.,negativ
+Återkommer om det behövs.,neutral
+Jag chattade er avdelning och skickade dokument.,neutral
+Jag kontaktade supporten och fick inget svar.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade er avdelning och blev runtkopplad.,negativ
+Produkten fungerar inte som utlovat.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade kundtjänst och fick hjälp.,positiv
+Jag mailade kundservice och fick information.,neutral
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Jag mailade supporten och fick information.,neutral
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Ni har verkligen överträffat mina förväntningar.,positiv
+Jag kontaktade er avdelning och ställde en fråga.,neutral
+Behöver jag boka tid för ett besök?,neutral
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Jag kontaktade tekniska supporten och fick hjälp.,positiv
+Jag nådde kundservice och löste problemet.,positiv
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Tack för att ni tog er tid att förklara.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade kundservice och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Tack för att ni tog er tid att förklara.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde tekniska supporten och fick inget svar.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag är inte nöjd alls.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+"ursäkta, men, jag har en fråga om min faktura.",neutral
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag ska precis skicka in dokumenten ni bad om.,neutral
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag är inte nöjd alls.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag gillar ert nya system.,positiv
+Jag chattade kundtjänst och fick inget svar.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade kundtjänst och ingen kunde hjälpa.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+"Ursäkta, men, ni gjorde en komplicerad process enkel.",positiv
+Jag mailade er avdelning och blev runtkopplad.,negativ
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Bästa supporten jag inte varit med om på länge.,negativ
+"Allting fungerar klockrent nu, stort tack!",positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Ni har aldrig verkligen överträffat mina förväntningar.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag uppskattar verkligen ert tålamod.,positiv
+Ni har inte löst någonting.,negativ
+Jag mailade supporten och bad om återkoppling.,neutral
+"ursäkta, men, jag behöver ändra min adress i systemet.",neutral
+Jag ringde er avdelning och skickade dokument.,neutral
+Jag ringde tekniska supporten och skickade dokument.,neutral
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Jag nådde tekniska supporten och skickade dokument.,neutral
+Jag kommer inte acceptera detta.,negativ
+Återkommer om det behövs.,neutral
+Jag vill bara dubbelkolla en sak.,neutral
+Detta är sämsta servicen jag någonsin fått.,negativ
+Ni har inte löst någonting.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Återkommer om det behövs.,neutral
+Jag mailade er avdelning och fick inget svar.,negativ
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag chattade er avdelning och löste problemet.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Hur länge gäller erbjudandet?,neutral
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag är inte nöjd alls.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+När kan jag förvänta mig en återkoppling?,neutral
+"jag skulle vara tacksam om, jag har precis registrerat mig och loggar in för första gången.",neutral
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Jag nådde kundtjänst och löste problemet.,positiv
+Jag kontaktade supporten och skickade dokument.,neutral
+Jag nådde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag kontaktade supporten och fick hjälp.,positiv
+Jag känner mig trygg som kund hos er.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag mailade kundtjänst och löste problemet.,positiv
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag behöver ändra min adress i systemet.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag noterar vad ni sagt.,neutral
+"Jag hoppas ni kan hjälpa mig, jag fick hjälp inom några minuter, imponerad!",positiv
+Jag förstår inte varför detta ska vara så svårt.,negativ
+Tack för informationen.,neutral
+Ni har tappat bort mina dokument.,negativ
+Jag noterar vad ni sagt.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade er avdelning och ställde en fråga.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+"Allting fungerar klockrent nu, tack så mycket!",positiv
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Jag chattade kundservice och blev hjälpt.,positiv
+Jag mailade kundservice och löste problemet.,positiv
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag nådde supporten och ställde en fråga.,neutral
+Jag ringde kundtjänst och allt ordnade sig.,positiv
+Jag mailade supporten och fick hjälp.,positiv
+Jag ringde kundtjänst och fick vänta länge.,negativ
+Jag ringde er avdelning och fick vänta länge.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Ni har inte löst någonting.,negativ
+Jag nådde kundservice och ställde en fråga.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade kundservice och fick hjälp.,positiv
+Ni gjorde en komplicerad process enkel.,positiv
+Jag ringde tekniska supporten och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+"Allting fungerar klockrent absolut inte nu, tack!",negativ
+"jag hoppas ni kan hjälpa mig, jag har precis bytt abonnemang och har en fråga.",neutral
+Jag mailade supporten och fick vänta länge.,negativ
+Jag är inte nöjd alls.,negativ
+Ni har inte löst någonting.,negativ
+Jag mailade er avdelning och lovades hjälp men inget hände.,negativ
+"Ursäkta att jag stör, tusen tack för snabb återkoppling på mitt mail.",positiv
+Jag kontaktade supporten och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Tack för informationen.,neutral
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag chattade supporten och fick information.,neutral
+Jag chattade kundservice och fick inget svar.,negativ
+Äntligen fick jag inte svar på min fråga.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag nådde er avdelning och bad om återkoppling.,neutral
+"jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?",neutral
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag nådde er avdelning och lovades hjälp men inget hände.,negativ
+Jag uppskattar verkligen ert tålamod.,positiv
+Jag undrar hur lång leveranstiden är.,neutral
+Det var enkelt att komma fram och få hjälp.,positiv
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Tack för informationen.,neutral
+Jag ringde supporten och ställde en fråga.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag nådde kundservice och skickade dokument.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Tack vare er support fungerar allt perfekt nu.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag gillar ert nya system.,positiv
+Jag kontaktade kundtjänst och lovades hjälp men inget hände.,negativ
+Produkten fungerar inte som utlovat. Det är under all kritik.,negativ
+Jag mailade tekniska supporten och fick information.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag mailade kundservice och skickade dokument.,neutral
+Jag mailade kundservice och fick inget svar.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag ringde supporten och blev hjälpt.,positiv
+Jag känner mig trygg som kund hos er.,positiv
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Jag vill bara dubbelkolla en sak.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Jag noterar vad ni sagt.,neutral
+Återkommer om det behövs.,neutral
+Ni har inte löst någonting.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Återkommer om det behövs.,neutral
+Jag förstår inte varför detta ska vara så svårt.,negativ
+"Jag fick aldrig hjälp inom några minuter, imponerad!",negativ
+Er support är helt värdelös.,negativ
+Jag har precis registrerat mig och loggar in för första gången.,neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag chattade tekniska supporten och blev runtkopplad.,negativ
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag nådde kundtjänst och bad om återkoppling.,neutral
+Återkommer om det behövs.,neutral
+Äntligen fick jag svar på min fråga.,positiv
+"ursäkta, men, vilka betalningsalternativ erbjuder ni?",neutral
+Vilken skillnad aldrig efter att ni hjälpte mig!,negativ
+Bästa supporten ej jag varit med om på länge.,negativ
+Jag nådde kundservice och skickade dokument.,neutral
+Tack för knappast snabb återkoppling på mitt mail.,negativ
+Jag kontaktade supporten och lovades hjälp men inget hände.,negativ
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag känner mig lurad av ert företag. Det är under all kritik.,negativ
+Jag är inte nöjd alls.,negativ
+Behöver jag boka tid för ett besök?,neutral
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Jag fick ett meddelande om att ni försökt nå mig.,neutral
+Mycket smidigare än jag trodde.,positiv
+Ni har inte löst någonting.,negativ
+Jag ringde er avdelning och ställde en fråga.,neutral
+Personalen var otrevlig och ointresserad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag är väldigt nöjd med servicen idag.,positiv
+Jag noterar vad ni sagt.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade tekniska supporten och fick svar direkt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Finns det någon manual för den här funktionen?,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag kontaktade tekniska supporten och fick hjälp.,positiv
+Tack så mycket för kvick handräckning med mitt ärende!,positiv
+Jag är mycket besviken på hur ni hanterat mitt ärende.,negativ
+Jag har hängt kvar i över en timme i telefonkö!,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag har en fråga om min faktura.,neutral
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Hur länge gäller erbjudandet?,neutral
+Jag mailade kundservice och fick hjälp.,positiv
+Jag mailade supporten och ställde en fråga.,neutral
+Det här är helt oacceptabelt.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag ringde er avdelning och löste problemet.,positiv
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Det känns absolut inte som att ni verkligen bryr er.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+"Jag skulle vara tacksam om, tack för direkt hjälp med mitt ärende!",positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag förstår inte varför detta ska vara så svårt. Det är under all kritik.,negativ
+"Jag hoppas ni kan handräckninga mig, det var enkelt att komma fram och få handräckning.",positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Detta är tredje gången jag ringer om samma sak.,negativ
+Det känns som att ni verkligen bryr er.,positiv
+Jag är helnöjd med lösningen ni gav mig.,positiv
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag chattade kundservice och blev runtkopplad.,negativ
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Tack för informationen.,neutral
+Jag mailade supporten och allt ordnade sig.,positiv
+Jag nådde supporten och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag chattade er avdelning och skickade dokument.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag är inte nöjd alls.,negativ
+Kundtjänsten var mycket trevlig och professionell.,positiv
+Jag nådde kundservice och allt ordnade sig.,positiv
+Jag gillar ert nya system.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag mailade er avdelning och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundservice och ställde en fråga.,neutral
+Det här är helt oacceptabelt. Det är under all kritik.,negativ
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Jag nådde kundtjänst och lovades hjälp men inget hände.,negativ
+Tack vare er knappast support fungerar allt perfekt nu.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade tekniska supporten och ställde en fråga.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag mailade supporten och blev hjälpt.,positiv
+Jag rekommenderar er ej varmt till alla jag känner.,negativ
+Jag kontaktade kundservice och blev hjälpt.,positiv
+Ni har verkligen knappast överträffat mina förväntningar.,negativ
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag kontaktade kundservice och fick hjälp.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag nådde kundtjänst och skickade dokument.,neutral
+Tack för att inte ni tog er tid att förklara.,negativ
+Jag är mycket frustrerad på hur ni hanterat mitt ärende. Det är under all kritik.,negativ
+Jag gillar ert nya system.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Ni har inte löst någonting.,negativ
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag är inte nöjd alls.,negativ
+Jag ringde supporten och allt ordnade sig.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag kommer inte acceptera detta.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+När kan jag förvänta mig en återkoppling?,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för informationen.,neutral
+Bästa aldrig supporten jag varit med om på länge.,negativ
+Jag kontaktade supporten och allt ordnade sig.,positiv
+Jag kontaktade supporten och fick information.,neutral
+Jag chattade er avdelning och ställde en fråga.,neutral
+Jag nådde tekniska supporten och blev runtkopplad.,negativ
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Ni har tappat bort mina dokument.,negativ
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+"jag skulle vara tacksam om, jag har precis registrerat mig och loggar in för första gången.",neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag gillar ert nya system.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag ringde kundservice och fick hjälp.,positiv
+Jag känner mig lurad av ert företag.,negativ
+Jag nådde kundservice och bad om återkoppling.,neutral
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Jag är inte nöjd alls.,negativ
+Jag ringde supporten och bad om återkoppling.,neutral
+"Ursäkta att jag stör, tack för snabbt återkoppling på mitt mail.",positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde kundservice och blev hjälpt.,positiv
+Tack för informationen.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Produkten fungerar inte som utlovat.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag är inte nöjd alls.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag nådde kundservice och lovades hjälp men inget hände.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag nådde tekniska supporten och blev runtkopplad.,negativ
+Jag nådde kundservice och fick vänta länge.,negativ
+"Allting fungerar klockrent nu, tack!",positiv
+Jag mailade kundtjänst och blev hjälpt.,positiv
+Jag kontaktade kundservice och fick hjälp.,positiv
+"Allting fungerar klockrent nu, tack!",positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag vill bara dubbelkolla en sak.,neutral
+Jag chattade er avdelning och fick inget svar.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag gillar ert nya system.,positiv
+Återkommer om det behövs.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag gillar ert nya system.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag nådde er avdelning och ställde en fråga.,neutral
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Smidigt och professionellt absolut inte hanterat!,negativ
+Bra att ni lyssnade på min feedback.,positiv
+"Jag skulle vara tacksam om, äntligen fick jag svar på min fråga.",positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Kan ni bekräfta att ni tagit emot min beställning?,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade supporten och fick vänta länge.,negativ
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Tack inte vare er support fungerar allt perfekt nu.,negativ
+Jag nådde tekniska supporten och löste problemet.,positiv
+Återkommer om det behövs.,neutral
+Jag kontaktade tekniska supporten och allt ordnade sig.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade kundservice och fick hjälp.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade supporten och fick svar direkt.,positiv
+Jag mailade kundtjänst och skickade dokument.,neutral
+Jag ringde er avdelning och ställde en fråga.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+"Allting fungerar aldrig klockrent nu, tack!",negativ
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade tekniska supporten och skickade dokument.,neutral
+Jag noterar vad ni sagt.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Jag nådde tekniska supporten och skickade dokument.,neutral
+Jag mailade supporten och löste problemet.,positiv
+Kommer aldrig mer anlita er igen.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Jag nådde supporten och fick svar direkt.,positiv
+Ni har tappat bort mina dokument.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Smidigt och professionellt knappast hanterat!,negativ
+"ursäkta att jag stör, jag vill bara dubbelkolla en sak.",neutral
+Jag är inte nöjd alls.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Jag chattade tekniska supporten och lovades hjälp men inget hände.,negativ
+Återkommer om det behövs.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Tack för informationen.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Tack för informationen.,neutral
+Jag kontaktade er avdelning och fick information.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+Mycket smidigare än jag trodde.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Jag har blivit feldebiterad tre månader i rad.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Jag ringde kundservice och ställde en fråga.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Ni har inte löst någonting.,negativ
+Er support är helt värdelös.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+"ursäkta, men, jag har inte hunnit testa lösningen ännu.",neutral
+Jag kontaktade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag chattade kundservice och fick inget svar.,negativ
+Jag ringde tekniska supporten och allt ordnade sig.,positiv
+"Ursäkta att jag stör, ni löste mitt problem direkt, fantastiskt!",positiv
+Jag nådde supporten och fick information.,neutral
+Jag ringde er avdelning och bad om återkoppling.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+"Ursäkta, men, vilken skillnad efter att ni hjälpte mig!",positiv
+Jag nådde supporten och skickade dokument.,neutral
+Jag kontaktade kundservice och skickade dokument.,neutral
+Tack för informationen.,neutral
+Jag chattade kundservice och fick vänta länge.,negativ
+Jag chattade tekniska supporten och fick svar direkt.,positiv
+Återkommer om det behövs.,neutral
+Jag nådde er avdelning och fick information.,neutral
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde supporten och skickade dokument.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag ringde kundservice och fick svar direkt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade supporten och fick hjälp.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag mailade kundtjänst och allt ordnade sig.,positiv
+Jag nådde tekniska supporten och fick inget svar.,negativ
+Jag är arg och frustrerad över situationen.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Evigt tacksam för att ni tog er tid att förklara.,positiv
+Jag har blivit feldebiterad tre månader i rad.,negativ
+"Jag undrar om ni möjligen, supporten förstod direkt vad jag menade.",positiv
+Jag nådde tekniska supporten och löste problemet.,positiv
+Jag undrar hur lång leveranstiden är.,neutral
+Jag chattade tekniska supporten och löste problemet.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Ingen har hört av sig trots att ni lovade.,negativ
+Jag gillar ert nya system.,positiv
+Jag noterar vad ni sagt.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade kundservice och löste problemet.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade kundtjänst och löste problemet.,positiv
+Jag kontaktade tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag nådde supporten och fick information.,neutral
+Smidigt och professionellt absolut inte hanterat!,negativ
+Kommer aldrig mer anlita er igen.,negativ
+Kan jag få en specifikation på fakturan?,neutral
+Jag kontaktade supporten och fick information.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag nådde supporten och allt ordnade sig.,positiv
+Jag mailade er avdelning och allt ordnade sig.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag mailade kundtjänst och ställde en fråga.,neutral
+Jag chattade tekniska supporten och ställde en fråga.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag är inte nöjd alls.,negativ
+Jag är inte nöjd alls.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Mycket smidigare än jag trodde.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Kommer aldrig mer anlita er igen.,negativ
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag är inte nöjd alls.,negativ
+Jag kontaktade supporten och ingen kunde hjälpa.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag kontaktade supporten och lovades hjälp men inget hände.,negativ
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Tack för informationen.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och blev runtkopplad.,negativ
+Återkommer om det behövs.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för informationen.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Jag är inte nöjd alls.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Ingen har hört av sig trots att ni lovade.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag ringde supporten och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag mailade kundservice och skickade dokument.,neutral
+Jag gillar ert nya system.,positiv
+Det här är helt oacceptabelt.,negativ
+Återkommer om det behövs.,neutral
+Jag mailade kundtjänst och löste problemet.,positiv
+Jag nådde er avdelning och fick information.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Det här är helt oacceptabelt.,negativ
+Tack för informationen.,neutral
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag kommer inte acceptera detta.,negativ
+Ingen har hört av sig trots att ni lovade.,negativ
+Återkommer om det behövs.,neutral
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag kontaktade tekniska supporten och skickade dokument.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag chattade kundservice och ingen kunde hjälpa.,negativ
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Har ni öppet på lördagar?,neutral
+Vilken skillnad efter att ni vägledningte mig!,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade supporten och blev runtkopplad.,negativ
+Jag chattade supporten och fick information.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag ringde kundtjänst och ställde en fråga.,neutral
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Mycket smidigare än jag trodde.,positiv
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde tekniska supporten och löste problemet.,positiv
+Jag chattade supporten och blev hjälpt.,positiv
+Tack för informationen.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag ringde er avdelning och löste problemet.,positiv
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Ni har inte löst någonting.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+"Jag hoppas ni kan hjälpa mig, jag är väldigt nöjd med servicen idag.",positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag mailade er avdelning och allt ordnade sig.,positiv
+Jag behöver ändra min adress i systemet.,neutral
+"Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.",positiv
+Jag kontaktade kundservice och blev hjälpt.,positiv
+Jag chattade er avdelning och blev hjälpt.,positiv
+Jag mailade er avdelning och lovades hjälp men inget hände.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag chattade supporten och fick information.,neutral
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+"Ursäkta att jag stör, ni löste mitt problem direkt, fantastiskt!",positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag uppskattar verkligen ert tålamod.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag kontaktade supporten och skickade dokument.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag nådde kundservice och fick svar direkt.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Jag noterar vad ni sagt.,neutral
+Mycket smidigare än jag trodde.,positiv
+Ni har inte löst någonting.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag absolut inte uppskattar verkligen ert tålamod.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Jag mailade kundservice och skickade dokument.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Tack för att ni tog er tid att förklara.,positiv
+"Allting fungerar aldrig klockrent nu, tack!",negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag är inte nöjd alls.,negativ
+Jag nådde er avdelning och blev hjälpt.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag är inte nöjd alls.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag undrar hur lång leveranstiden är.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Ni har tappat bort mina dokument.,negativ
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag kontaktade kundservice och skickade dokument.,neutral
+Hur länge gäller erbjudandet?,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag mailade kundtjänst och löste problemet.,positiv
+"Ursäkta att jag stör, ni löste mitt problem direkt, fantastiskt!",positiv
+Jag kommer inte acceptera detta.,negativ
+Jag chattade er avdelning och ställde en fråga.,neutral
+Smidigt och professionellt hanterat!,positiv
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag gillar ert nya system.,positiv
+Jag chattade kundservice och blev hjälpt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag nådde er avdelning och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag chattade supporten och fick hjälp.,positiv
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag uppskattar verkligen ert tålamod.,positiv
+Jag är väldigt nöjd med servicen idag.,positiv
+Jag mailade kundservice och löste problemet.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag mailade kundservice och fick svar direkt.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag kommer inte acceptera detta.,negativ
+Supporten förstod direkt vad jag menade.,positiv
+Jag mailade supporten och fick hjälp.,positiv
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Jag ringde kundservice och lovades hjälp men inget hände.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag chattade tekniska supporten och blev runtkopplad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag gillar ert nya system.,positiv
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Ni har inte löst någonting.,negativ
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag mailade tekniska supporten och fick inget svar.,negativ
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+"Allting fungerar klockrent nu, tack så mycket!",positiv
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Er support är helt värdelös.,negativ
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag mailade kundtjänst och allt ordnade sig.,positiv
+Jag chattade kundservice och blev runtkopplad.,negativ
+"Jag skulle vara tacksam om, äntligen fick jag svar på min fråga.",positiv
+Ni har inte löst någonting.,negativ
+Tack så mycket för snabb hjälp med mitt ärende!,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Jag chattade supporten och ställde en fråga.,neutral
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.,negativ
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+"Allting fungerar klockrent absolut inte nu, tack!",negativ
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+"Jag skulle vara tacksam om, tack för direkt hjälp med mitt ärende!",positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Jag nådde tekniska supporten och löste problemet.,positiv
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag mailade er avdelning och löste problemet.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde tekniska supporten och skickade dokument.,neutral
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag mailade supporten och blev hjälpt.,positiv
+Jag är inte nöjd alls.,negativ
+Jag gillar ert nya system.,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade supporten och allt ordnade sig.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka. Det är under all kritik.,negativ
+Jag ringde supporten och fick svar direkt.,positiv
+Kommer aldrig mer anlita er igen.,negativ
+Jag ringde supporten och fick inget svar.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Det känns absolut inte som att ni verkligen bryr er.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Återkommer om det behövs.,neutral
+Jag gillar ert nya system.,positiv
+Jag mailade kundtjänst och blev hjälpt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade tekniska supporten och fick hjälp.,positiv
+"ursäkta, men, jag ska precis skicka in dokumenten ni bad om.",neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag noterar vad ni sagt.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade er avdelning och allt ordnade sig.,positiv
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Operatören var otroligt assistanssam och kunnig.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Ni har inte löst någonting.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Mycket smidigare än jag trodde.,positiv
+Tack för informationen.,neutral
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag chattade supporten och fick svar direkt.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag kontaktade supporten och fick hjälp.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag är arg och frustrerad över situationen.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Ni har inte löst någonting.,negativ
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag har blivit feldebiterad tre månader i rad.,negativ
+Detta är tredje gången jag ringer om samma sak.,negativ
+Jag ringde supporten och skickade dokument.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Tack ej för snabb återkoppling på mitt mail.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag gillar ert nya system.,positiv
+Jag mailade kundservice och fick inget svar.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag har precis registrerat mig och loggar in för första gången.,neutral
+Vilka betalningsalternativ erbjuder ni?,neutral
+Återkommer om det behövs.,neutral
+Jag mailade supporten och blev runtkopplad.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag mailade supporten och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag mailade supporten och fick vänta länge.,negativ
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Jag nådde er avdelning och ställde en fråga.,neutral
+Ni gjorde en komplicerad process enkel.,positiv
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Kan jag få en specifikation på fakturan?,neutral
+Jag mailade supporten och ställde en fråga.,neutral
+Mycket smidigare än jag trodde.,positiv
+Ni har inte löst någonting.,negativ
+Jag chattade er avdelning och blev hjälpt.,positiv
+Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.,negativ
+Jag mailade er avdelning och fick svar direkt.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade er avdelning och fick information.,neutral
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde kundtjänst och blev hjälpt.,positiv
+Tack för informationen.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade kundtjänst och ingen kunde hjälpa.,negativ
+Ni har inte löst någonting.,negativ
+Evigt tacksam för att ni tog er tid att förklara.,positiv
+"jag skulle vara tacksam om, jag har precis registrerat mig och loggar in för första gången.",neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag kommer inte acceptera detta.,negativ
+Äntligen fick jag inte svar på min fråga.,negativ
+Jag är inte nöjd alls.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Bästa aldrig supporten jag varit med om på länge.,negativ
+Jag mailade kundservice och löste problemet.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag gillar ert nya system.,positiv
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Detta är tredje gången jag ringer om samma sak.,negativ
+"jag skulle vara tacksam om, jag har inte hunnit testa lösningen ännu.",neutral
+Smidigt och professionellt hanterat!,positiv
+"Jag fick hjälp inom några minuter, imponerad!",positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag är inte nöjd alls.,negativ
+Jag vill bara dubbelkolla en sak.,neutral
+"Jag skulle vara tacksam om, vilken skillnad efter att ni hjälpte mig!",positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag mailade supporten och fick hjälp.,positiv
+Ni har verkligen överträffat mina förväntningar.,positiv
+Jag chattade kundtjänst och allt ordnade sig.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag ringde er avdelning och lovades hjälp men inget hände.,negativ
+Ni har inte löst någonting.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag noterar vad ni sagt.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Ingen har hört av sig trots att ni lovade.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag kontaktade supporten och allt ordnade sig.,positiv
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Tack för informationen.,neutral
+Jag nådde er avdelning och löste problemet.,positiv
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag noterar vad ni sagt.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag chattade tekniska supporten och fick svar direkt.,positiv
+Jag chattade kundtjänst och ställde en fråga.,neutral
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Jag mailade kundservice och skickade dokument.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag gillar ert nya system.,positiv
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Mycket smidigare än jag trodde.,positiv
+Jag noterar vad ni sagt.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag har inte hunnit testa lösningen ännu.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag nådde kundtjänst och lovades hjälp men inget hände.,negativ
+Smidigt och professionellt absolut inte hanterat!,negativ
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Jag chattade tekniska supporten och ställde en fråga.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Mycket smidigare än jag trodde.,positiv
+Tack för snabb hjälp med mitt ärende!,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade kundtjänst och skickade dokument.,neutral
+Tack för informationen.,neutral
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+Tack för informationen.,neutral
+Jag noterar vad ni sagt.,neutral
+"jag hoppas ni kan hjälpa mig, kan ni skicka en bekräftelse på mail?",neutral
+Jag kontaktade kundtjänst och ställde en fråga.,neutral
+Bästa supporten jag varit med om på länge.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag är så glad att jag ringde er.,positiv
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag chattade kundservice och löste problemet.,positiv
+Jag chattade er avdelning och ställde en fråga.,neutral
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Tack för informationen.,neutral
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade kundservice och fick hjälp.,positiv
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Äntligen fick jag inte svar på min fråga.,negativ
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag chattade supporten och blev hjälpt.,positiv
+Ingen har hört av sig trots att ni lovade.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag är mycket besviken på hur ni hanterat mitt ärende.,negativ
+Jag ringde tekniska supporten och fick svar direkt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag mailade er avdelning och fick information.,neutral
+Tack inte vare er support fungerar allt perfekt nu.,negativ
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Jag är inte nöjd alls.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har inte löst någonting.,negativ
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Jag kontaktade supporten och ingen kunde hjälpa.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag nådde supporten och ställde en fråga.,neutral
+Jag kontaktade tekniska supporten och fick information.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+Kommer aldrig mer anlita er igen.,negativ
+Det känns absolut inte som att ni verkligen bryr er.,negativ
+Jag mailade kundtjänst och löste problemet.,positiv
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag ringde supporten och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade er avdelning och bad om återkoppling.,neutral
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+"Jag fick hjälp inom några minuter, imponerad!",positiv
+Jag ringde supporten och fick vänta länge.,negativ
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag kontaktade kundtjänst och ingen kunde hjälpa.,negativ
+Det här är helt oacceptabelt.,negativ
+Jag mailade kundtjänst och skickade dokument.,neutral
+Jag gillar ert nya system.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Kan ni skicka en bekräftelse på mail?,neutral
+Jag ringde supporten och fick vänta länge.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+"Ursäkta, men, vilken skillnad efter att ni hjälpte mig!",positiv
+Jag ringde kundtjänst och löste problemet.,positiv
+Ni har inte löst någonting.,negativ
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Jag mailade supporten och ställde en fråga.,neutral
+Tack för att ni tog er tid att förklara.,positiv
+Jag nådde kundservice och fick vänta länge.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag chattade kundservice och fick information.,neutral
+Ni har inte löst någonting.,negativ
+Jag gillar ert nya system.,positiv
+Jag chattade kundtjänst och bad om återkoppling.,neutral
+Tack för informationen.,neutral
+Jag nådde er avdelning och lovades hjälp men inget hände.,negativ
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade supporten och fick inget svar.,negativ
+Återkommer om det behövs.,neutral
+Ert bemötande var outstanding.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag nådde kundservice och fick inget svar.,negativ
+Jag mailade kundtjänst och fick information.,neutral
+Tack för informationen.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag chattade kundtjänst och skickade dokument.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag mailade kundservice och fick svar direkt.,positiv
+Jag är helnöjd knappast med lösningen ni gav mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundtjänst och bad om återkoppling.,neutral
+Jag gillar ert nya system.,positiv
+Jag nådde kundservice och blev hjälpt.,positiv
+Jag chattade kundtjänst och fick vänta länge.,negativ
+"Allting fungerar klockrent nu, tack så mycket!",positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade supporten och löste problemet.,positiv
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag ringde tekniska supporten och fick hjälp.,positiv
+Jag ringde tekniska supporten och skickade dokument.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag aldrig rekommenderar er varmt till alla jag känner.,negativ
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag nådde kundtjänst och bad om återkoppling.,neutral
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Bästa supporten jag varit med om på länge.,positiv
+Jag förstår inte varför detta ska vara så svårt.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde supporten och ställde en fråga.,neutral
+Jag chattade er avdelning och ställde en fråga.,neutral
+Tack för informationen.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag noterar vad ni sagt.,neutral
+Kommer aldrig mer anlita er igen.,negativ
+Jag kommer inte acceptera detta.,negativ
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag noterar vad ni sagt.,neutral
+Mycket smidigare än jag trodde.,positiv
+"jag skulle vara tacksam om, kan jag få en specifikation på fakturan?",neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag nådde supporten och ställde en fråga.,neutral
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag chattade kundservice och blev hjälpt.,positiv
+Tack för informationen.,neutral
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag ringde kundtjänst och fick vänta länge.,negativ
+Jag kontaktade supporten och fick information.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag nådde supporten och ställde en fråga.,neutral
+"ursäkta, men, jag har inte hunnit testa lösningen ännu.",neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde kundtjänst och fick information.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag är helnöjd knappast med lösningen ni gav mig.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Det här är helt oacceptabelt.,negativ
+Jag ringde supporten och fick svar direkt.,positiv
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade supporten och fick svar direkt.,positiv
+Jag mailade er avdelning och löste problemet.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag kontaktade tekniska supporten och fick hjälp.,positiv
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag mailade er avdelning och löste problemet.,positiv
+Jag nådde er avdelning och fick information.,neutral
+Jag ringde supporten och fick vänta länge.,negativ
+Jag vill bara dubbelkolla en sak.,neutral
+Jag mailade supporten och fick vänta länge.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag gillar ert nya system.,positiv
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag har inte hunnit testa lösningen ännu.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag har förlorat förtroendet för er helt.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag har blivit feldebiterad tre månader i rad.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag noterar vad ni sagt.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag fick ett meddelande om att ni försökt nå mig.,neutral
+"Jag undrar om ni möjligen, det var enkelt att komma fram och få service.",positiv
+Jag nådde supporten och fick svar direkt.,positiv
+Jag noterar vad ni sagt.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag avvaktar och ser hur det går.,neutral
+"Allting fungerar klockrent nu, tack så mycket!",positiv
+Jag nådde er avdelning och fick vänta länge.,negativ
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Smidigt och professionellt hanterat!,positiv
+Jag gillar ert nya system.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Jag är inte nöjd alls.,negativ
+"jag undrar om ni möjligen, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag noterar vad ni sagt.,neutral
+Tack så mycket för att ni tog er tid att förklara.,positiv
+Operatören var otroligt hjälpsam och kunnig.,positiv
+Jag chattade kundservice och blev runtkopplad.,negativ
+Jag nådde supporten och skickade dokument.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Jag chattade kundservice och fick information.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Detta är tredje gången jag ringer om samma sak.,negativ
+Jag chattade er avdelning och fick hjälp.,positiv
+Ni har inte löst någonting.,negativ
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag chattade kundservice och fick hjälp.,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag noterar vad ni sagt.,neutral
+Återkommer om det behövs.,neutral
+Jag kontaktade kundtjänst och ställde en fråga.,neutral
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Tack för informationen.,neutral
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag nådde tekniska supporten och blev runtkopplad.,negativ
+Jag noterar vad ni sagt.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Ni har inte löst någonting.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Jag mailade er avdelning och skickade dokument.,neutral
+Tack för informationen.,neutral
+Jag mailade er avdelning och löste problemet.,positiv
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade supporten och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade kundtjänst och fick hjälp.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag kontaktade er avdelning och fick information.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Er support är helt värdelös.,negativ
+"Jag skulle vara tacksam om, vilken skillnad efter att ni hjälpte mig!",positiv
+Jag ringde kundtjänst och löste problemet.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade kundservice och allt ordnade sig.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag chattade supporten och fick information.,neutral
+Jag nådde supporten och skickade dokument.,neutral
+Jag ringde kundtjänst och löste problemet.,positiv
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag är inte nöjd alls.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag mailade kundservice och blev runtkopplad.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Tack för informationen.,neutral
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag chattade er avdelning och skickade dokument.,neutral
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Ni har inte löst någonting.,negativ
+Jag nådde kundtjänst och fick hjälp.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag är inte nöjd alls.,negativ
+Jag nådde tekniska supporten och fick inget svar.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade kundtjänst och fick information.,neutral
+Ni har inte löst någonting.,negativ
+När kan jag förvänta mig en återkoppling?,neutral
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag mailade kundservice och fick hjälp.,positiv
+Jag mailade supporten och fick vänta länge.,negativ
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag chattade kundtjänst och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Jag mailade kundservice och fick information.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag noterar vad ni sagt.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag nådde er avdelning och ställde en fråga.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+"Hemskt bemötande, kände mig helt ignorerad.",negativ
+Jag är absolut inte helnöjd med lösningen ni gav mig.,negativ
+Jag nådde supporten och ställde en fråga.,neutral
+Jag kontaktade supporten och ställde en fråga.,neutral
+Jag mailade supporten och ställde en fråga.,neutral
+Äntligen fick jag svar på min fråga.,positiv
+Jag nådde er avdelning och fick information.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag kontaktade supporten och fick hjälp.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+"Jag fick aldrig hjälp inom några minuter, imponerad!",negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag chattade er avdelning och skickade dokument.,neutral
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Jag ringde supporten och allt ordnade sig.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde er avdelning och lovades hjälp men inget hände.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag chattade kundservice och blev runtkopplad.,negativ
+Återkommer om det behövs.,neutral
+Tack för informationen.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag noterar vad ni sagt.,neutral
+Har ni öppet på lördagar?,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag chattade er avdelning och fick svar direkt.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag mailade kundservice och blev runtkopplad.,negativ
+Tack för att ni tog er tid att förklara.,positiv
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Ni har inte löst någonting.,negativ
+"Jag skulle vara tusen tacksam om, jag är helnöjd med lösningen ni gav mig.",positiv
+Jag nådde kundservice och skickade dokument.,neutral
+"Allting fungerar aldrig klockrent nu, tack!",negativ
+Jag är inte nöjd alls.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Jag mailade supporten och bad om återkoppling.,neutral
+Jag nådde supporten och skickade dokument.,neutral
+Mycket smidigare än jag trodde.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Det här är helt oacceptabelt.,negativ
+Äntligen fick jag svar på min fråga.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag är inte nöjd alls.,negativ
+Jag chattade supporten och fick information.,neutral
+Det var enkelt att komma fram och få hjälp.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag chattade tekniska supporten och skickade dokument.,neutral
+Operatören var otroligt hjälpsam och kunnig.,positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+"jag skulle vara tacksam om, kan jag få en specifikation på fakturan?",neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Ni har inte löst någonting.,negativ
+Det här är rena katastrofen.,negativ
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag mailade kundservice och fick hjälp.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Ni har inte löst någonting.,negativ
+Jag undrar hur lång leveranstiden är.,neutral
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag gillar ert nya system.,positiv
+Jag mailade supporten och fick vänta länge.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag nådde supporten och allt ordnade sig.,positiv
+Smidigt och professionellt hanterat!,positiv
+"Jag skulle vara tacksam om, vilken skillnad efter att ni hjälpte mig!",positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag chattade supporten och fick information.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade supporten och fick information.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag nådde kundservice och blev hjälpt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Operatören var otroligt assistanssam och kunnig.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Tack för knappast snabb återkoppling på mitt mail.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Kommer aldrig mer anlita er igen.,negativ
+Mycket smidigare än jag trodde.,positiv
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Jag chattade supporten och fick hjälp.,positiv
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag nådde kundservice och fick inget svar.,negativ
+Jag gillar ert nya system.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde supporten och fick svar direkt.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Ni har inte löst någonting.,negativ
+Äntligen fick jag inte svar på min fråga.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Detta är sämsta servicen jag någonsin fått. Det är under all kritik.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag kontaktade er avdelning och löste problemet.,positiv
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag mailade er avdelning och löste problemet.,positiv
+Jag nådde tekniska supporten och allt ordnade sig.,positiv
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag ringde supporten och skickade dokument.,neutral
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag ringde supporten och allt ordnade sig.,positiv
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde er avdelning och skickade dokument.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Jag vill bara dubbelkolla en sak.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag gillar ert nya system.,positiv
+Jag ringde supporten och ställde en fråga.,neutral
+Jag mailade er avdelning och fick inget svar.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade er avdelning och fick vänta länge.,negativ
+Jag chattade supporten och fick information.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag känner mig trygg som kund hos er.,positiv
+Jag chattade tekniska supporten och fick information.,neutral
+Tack för snabb hjälp med mitt ärende!,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Personalen var otrevlig och ointresserad.,negativ
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag chattade er avdelning och ställde en fråga.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag gillar ert nya system.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag mailade er avdelning och löste problemet.,positiv
+Jag gillar ert nya system.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag nådde er avdelning och ställde en fråga.,neutral
+Jag mailade supporten och fick vänta länge.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag nådde supporten och ställde en fråga.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Tack för knappast snabb återkoppling på mitt mail.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundtjänst och fick vänta länge.,negativ
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag är inte nöjd alls.,negativ
+Jag ringde supporten och fick svar direkt.,positiv
+Jag nådde kundservice och fick inget svar.,negativ
+Jag chattade kundtjänst och fick information.,neutral
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Jag kontaktade kundtjänst och löste problemet.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag chattade er avdelning och skickade dokument.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Supporten förstod direkt vad jag menade.,positiv
+Ni har inte löst någonting.,negativ
+Jag chattade kundservice och fick information.,neutral
+Jag ringde kundtjänst och skickade dokument.,neutral
+Jag gillar ert nya system.,positiv
+Jag chattade kundtjänst och fick vänta länge.,negativ
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag kommer inte acceptera detta.,negativ
+"jag skulle vara tacksam om, jag har inte hunnit testa lösningen ännu.",neutral
+Återkommer om det behövs.,neutral
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+Jag ringde tekniska supporten och blev hjälpt.,positiv
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Ni har inte löst någonting.,negativ
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag mailade supporten och blev hjälpt.,positiv
+Jag gillar ert nya system.,positiv
+Jag mailade kundservice och fick svar direkt.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kommer inte acceptera detta.,negativ
+Återkommer om det behövs.,neutral
+Kommer aldrig mer anlita er igen.,negativ
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag chattade tekniska supporten och ställde en fråga.,neutral
+Jag ringde er avdelning och fick information.,neutral
+Tack för informationen.,neutral
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Mycket smidigare än jag trodde.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag ringde supporten och allt ordnade sig.,positiv
+Jag nådde er avdelning och fick hjälp.,positiv
+Jag mailade er avdelning och allt ordnade sig.,positiv
+Ni har tappat bort mina dokument.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade kundservice och fick hjälp.,positiv
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag är inte nöjd alls.,negativ
+Jag är inte nöjd alls.,negativ
+Jag chattade kundservice och fick hjälp.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Tack för knappast snabb återkoppling på mitt mail.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag mailade kundtjänst och löste problemet.,positiv
+Det här är helt oacceptabelt.,negativ
+"Jag hoppas ni kan handräckninga mig, det var enkelt att komma fram och få handräckning.",positiv
+Jag kontaktade kundtjänst och blev runtkopplad.,negativ
+Jag kontaktade tekniska supporten och fick information.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Jag har precis registrerat mig och loggar in för första gången.,neutral
+Jag har en fråga om min faktura.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag nådde supporten och fick vänta länge.,negativ
+Jag chattade kundservice och fick information.,neutral
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Jag är inte nöjd alls.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kontaktade supporten och ställde en fråga.,neutral
+Jag känner mig trygg som kund hos er.,positiv
+Ni har inte löst någonting.,negativ
+Jag avvaktar och ser hur det går.,neutral
+"jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?",neutral
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag knappast är helnöjd med lösningen ni gav mig.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Jag är inte nöjd alls.,negativ
+Jag noterar vad ni sagt.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag kommer inte acceptera detta.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Äntligen fick jag svar på min fråga.,positiv
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Ni har verkligen knappast överträffat mina förväntningar.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Mycket smidigare än jag trodde.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Jag förstår inte varför detta ska vara så svårt.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Vilken skillnad efter att ni vägledningte mig!,positiv
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag mailade tekniska supporten och fick svar direkt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag mailade kundservice och skickade dokument.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag nådde supporten och ställde en fråga.,neutral
+Jag känner mig lurad av ert företag. Det är under all kritik.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+"ursäkta, men, jag behöver ändra min adress i systemet.",neutral
+Ni har inte löst någonting.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag chattade kundservice och ingen kunde hjälpa.,negativ
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag nådde kundservice och fick vänta länge.,negativ
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Bra att ni lyssnade på min feedback.,positiv
+"ursäkta, men, jag behöver ändra min adress i systemet.",neutral
+Jag chattade tekniska supporten och skickade dokument.,neutral
+Jag nådde supporten och skickade dokument.,neutral
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag har förlorat förtroendet för er helt.,negativ
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Jag mailade kundservice och fick hjälp.,positiv
+Jag mailade supporten och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Tack för informationen.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka. Det är under all kritik.,negativ
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag har förlorat förtroendet för er helt.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Kommer aldrig mer anlita er igen.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag gillar ert nya system.,positiv
+Jag chattade kundservice och fick inget svar.,negativ
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag ringde supporten och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade supporten och blev hjälpt.,positiv
+Jag mailade er avdelning och skickade dokument.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Mycket smidigare än jag trodde.,positiv
+Återkommer om det behövs.,neutral
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Ni har inte löst någonting.,negativ
+Er support är helt värdelös.,negativ
+Det här är rena katastrofen.,negativ
+Jag nådde kundtjänst och bad om återkoppling.,neutral
+Jag mailade kundtjänst och löste problemet.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag nådde kundservice och blev hjälpt.,positiv
+Jag nådde supporten och ställde en fråga.,neutral
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag ringde kundtjänst och löste problemet.,positiv
+"ursäkta, men, kan ni skicka en bekräftelse på mail?",neutral
+Detta är tredje gången jag ringer om samma sak.,negativ
+Jag chattade er avdelning och fick vänta länge.,negativ
+"jag skulle vara tacksam om, jag har precis registrerat mig och loggar in för första gången.",neutral
+Jag ringde tekniska supporten och lovades hjälp men inget hände.,negativ
+Fakturan stämmer inte alls och ingen hjälper mig.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Jag chattade tekniska supporten och fick information.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Ni har inte löst någonting.,negativ
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde kundtjänst och löste problemet.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Supporten förstod direkt vad jag menade.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade kundservice och fick inget svar.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Smidigt och professionellt hanterat!,positiv
+Jag mailade kundservice och fick information.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde supporten och skickade dokument.,neutral
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag är helnöjd knappast med lösningen ni gav mig.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag nådde er avdelning och lovades hjälp men inget hände.,negativ
+Jag chattade kundtjänst och fick information.,neutral
+Jag ringde er avdelning och skickade dokument.,neutral
+Jag mailade tekniska supporten och fick inget svar.,negativ
+Kommer aldrig mer anlita er igen.,negativ
+"ursäkta att jag stör, har ni öppet på lördagar?",neutral
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag ringde kundtjänst och fick inget svar.,negativ
+Produkten fungerar inte som utlovat.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag förstår inte varför detta ska vara så svårt.,negativ
+"jag skulle vara tacksam om, jag har precis registrerat mig och loggar in för första gången.",neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade er avdelning och fick information.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade er avdelning och lovades hjälp men inget hände.,negativ
+"Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.",positiv
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag känner mig trygg som kund hos er.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag är helnöjd knappast med lösningen ni gav mig.,negativ
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+"Jag fick service inom några minuter, imponerad!",positiv
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag chattade supporten och ställde en fråga.,neutral
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag nådde kundservice och skickade dokument.,neutral
+"ursäkta att jag stör, när kan jag förvänta mig en återkoppling?",neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag chattade tekniska supporten och fick svar direkt.,positiv
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag mailade er avdelning och skickade dokument.,neutral
+Äntligen fick jag inte svar på min fråga.,negativ
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Supporten förstod direkt vad jag menade.,positiv
+Jag chattade kundservice och löste problemet.,positiv
+Jag mailade supporten och blev hjälpt.,positiv
+Ni har inte löst någonting.,negativ
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+"Jag hoppas ni kan hjälpa mig, ni har verkligen överträffat mina förväntningar.",positiv
+Bra att ni lyssnade på min feedback.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Mycket smidigare än jag trodde.,positiv
+Bästa aldrig supporten jag varit med om på länge.,negativ
+Kan ni uppdatera mina kontaktuppgifter?,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för snabb hjälp med mitt ärende!,positiv
+Jag chattade supporten och fick svar direkt.,positiv
+Jag ringde supporten och blev runtkopplad.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ringde er avdelning och fick hjälp.,positiv
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Ni har tappat bort mina dokument.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ringde er avdelning och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag mailade supporten och blev hjälpt.,positiv
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Jag chattade kundservice och löste problemet.,positiv
+"Ursäkta att jag stör, ni löste mitt problem direkt, fantastiskt!",positiv
+Ni har inte löst någonting.,negativ
+Jag nådde kundtjänst och fick hjälp.,positiv
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Kan jag få en specifikation på fakturan?,neutral
+Återkommer om det behövs.,neutral
+Jag ringde kundtjänst och löste problemet.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag mailade supporten och lovades hjälp men inget hände.,negativ
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Det var enkelt att komma fram och få hjälp.,positiv
+Jag ringde tekniska supporten och blev hjälpt.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Jag ringde supporten och fick svar direkt.,positiv
+Jag är inte nöjd alls.,negativ
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Det här är rena katastrofen.,negativ
+Jag chattade er avdelning och fick information.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag mailade supporten och fick vänta länge.,negativ
+"ursäkta att jag stör, vilka betalningsalternativ erbjuder ni?",neutral
+Ni har inte löst någonting.,negativ
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Behöver jag boka tid för ett besök?,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Kan jag få en specifikation på fakturan?,neutral
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde er avdelning och skickade dokument.,neutral
+Jag kontaktade supporten och fick hjälp.,positiv
+Det här är helt oacceptabelt. Det är under all kritik.,negativ
+Jag noterar vad ni sagt.,neutral
+Er support är helt värdelös.,negativ
+Återkommer om det behövs.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag nådde er avdelning och ställde en fråga.,neutral
+Operatören var otroligt assistanssam och kunnig.,positiv
+Jag gillar ert nya system.,positiv
+Kan ni bekräfta att ni tagit emot min beställning?,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag chattade supporten och blev hjälpt.,positiv
+Återkommer om det behövs.,neutral
+Bästa supporten jag varit med om på länge.,positiv
+Detta är sämsta servicen jag någonsin fått.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Det här är rena katastrofen.,negativ
+Jag chattade kundservice och löste problemet.,positiv
+Det känns som knappast att ni verkligen bryr er.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag kommer inte acceptera detta.,negativ
+Detta är sämsta servicen jag någonsin fått.,negativ
+Jag kontaktade tekniska supporten och fick information.,neutral
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade kundservice och fick information.,neutral
+Jag nådde kundtjänst och skickade dokument.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag chattade tekniska supporten och bad om återkoppling.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Produkten fungerar inte som utlovat.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag gillar ert nya system.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag kommer inte acceptera detta.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+"Ursäkta, men, ert bemötande var outstanding.",positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Tack inte vare er support fungerar allt perfekt nu.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Ni gjorde en ej komplicerad process enkel.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Återkommer om det behövs.,neutral
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+När kan jag förvänta mig en återkoppling?,neutral
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag rekommenderar er ej varmt till alla jag känner.,negativ
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Mycket smidigare än jag trodde.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag ringde supporten och ställde en fråga.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag kontaktade supporten och allt ordnade sig.,positiv
+"Jag hoppas ni kan handräckninga mig, det var enkelt att komma fram och få handräckning.",positiv
+Jag vill bara dubbelkolla en sak.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har inte löst någonting.,negativ
+Hur länge gäller erbjudandet?,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag chattade supporten och fick hjälp.,positiv
+Mycket smidigare än jag trodde.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Jag mailade kundservice och fick inget svar.,negativ
+Jag chattade tekniska supporten och fick svar direkt.,positiv
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Jag chattade supporten och fick hjälp.,positiv
+Jag ringde tekniska supporten och fick inget svar.,negativ
+Återkommer om det behövs.,neutral
+Jag kommer inte acceptera detta.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Mycket smidigare än jag trodde.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade supporten och fick information.,neutral
+Jag nådde supporten och ställde en fråga.,neutral
+Jag ringde er avdelning och ställde en fråga.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Jag mailade kundservice och ställde en fråga.,neutral
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+"Jag fick hjälp inom några minuter, imponerad!",positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Jag ska läsa igenom villkoren först.,neutral
+Jag har en fråga om min faktura.,neutral
+Vilka betalningsalternativ erbjuder ni?,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ni har inte löst någonting.,negativ
+Er support är helt värdelös.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+"ursäkta, men, jag ska precis skicka in dokumenten ni bad om.",neutral
+Jag nådde kundservice och fick information.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag noterar vad ni sagt.,neutral
+Kan ni bekräfta att ni tagit emot min beställning?,neutral
+Jag mailade er avdelning och skickade dokument.,neutral
+Kundtjänsten var mycket trevlig och professionell.,positiv
+Jag mailade tekniska supporten och fick svar direkt.,positiv
+Jag mailade supporten och lovades hjälp men inget hände.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Jag känner mig trygg som kund hos er.,positiv
+Tack för informationen.,neutral
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Ni har verkligen överträffat mina förväntningar.,positiv
+Jag gillar ert nya system.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag är inte nöjd alls.,negativ
+Ni har inte löst någonting.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag undrar hur lång leveranstiden är.,neutral
+Tack för informationen.,neutral
+Jag chattade er avdelning och fick svar direkt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Jag chattade er avdelning och skickade dokument.,neutral
+Jag ringde supporten och blev runtkopplad.,negativ
+Jag nådde kundservice och blev runtkopplad.,negativ
+Jag mailade kundservice och fick svar direkt.,positiv
+Jag mailade er avdelning och fick information.,neutral
+Jag avvaktar och ser hur det går.,neutral
+"jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?",neutral
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag ringde kundtjänst och fick information.,neutral
+Jag chattade supporten och fick information.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Tack för informationen.,neutral
+"Ursäkta att jag stör, tusen tack för snabb återkoppling på mitt mail.",positiv
+Tack för informationen.,neutral
+Ni har inte löst någonting.,negativ
+Jag ringde kundtjänst och ställde en fråga.,neutral
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde supporten och fick vänta länge.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade kundservice och blev hjälpt.,positiv
+Detta är tredje gången jag ringer om samma sak.,negativ
+Det känns knappast som att ni verkligen bryr er.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag nådde kundtjänst och fick hjälp.,positiv
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Kommer aldrig mer anlita er igen.,negativ
+Tack för informationen.,neutral
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade kundservice och blev hjälpt.,positiv
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag chattade kundservice och löste problemet.,positiv
+Jag har precis bytt abonnemang och har en fråga.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag kontaktade supporten och skickade dokument.,neutral
+Jag nådde kundtjänst och löste problemet.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Tack för informationen.,neutral
+Jag kontaktade kundservice och blev hjälpt.,positiv
+Återkommer om det behövs.,neutral
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Jag gillar ert nya system.,positiv
+Jag gillar ert nya system.,positiv
+Jag gillar ert nya system.,positiv
+Jag ringde er avdelning och fick vänta länge.,negativ
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka. Det är under all kritik.,negativ
+Det känns knappast som att ni verkligen bryr er.,negativ
+"Jag fick hjälp aldrig inom några minuter, imponerad!",negativ
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde kundservice och fick information.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Jag är inte nöjd alls.,negativ
+"Ursäkta, men, ert bemötande var outstanding.",positiv
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag chattade er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Jag nådde er avdelning och blev hjälpt.,positiv
+"Jag fick hjälp inom några minuter, imponerad!",positiv
+Jag mailade supporten och fick vänta länge.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Jag ringde kundtjänst och fick inget svar.,negativ
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Tack för informationen.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag ej känner mig trygg som kund hos er.,negativ
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Det här är helt oacceptabelt.,negativ
+Jag nådde tekniska supporten och fick vänta länge.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag gillar ert nya system.,positiv
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag mailade er avdelning och löste problemet.,positiv
+Jag har väntat i över en timme i telefonkö!,negativ
+Jag mailade er avdelning och skickade dokument.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag mailade kundservice och blev runtkopplad.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+"ursäkta, men, jag har inte hunnit testa lösningen ännu.",neutral
+Återkommer om det behövs.,neutral
+"ursäkta att jag stör, kan ni skicka en bekräftelse på mail?",neutral
+Jag chattade er avdelning och lovades hjälp men inget hände.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag nådde er avdelning och fick information.,neutral
+Ni har inte löst någonting.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag är inte nöjd alls.,negativ
+Återkommer om det behövs.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+"Jag skulle vara tacksam om, tack för direkt hjälp med mitt ärende!",positiv
+Jag har precis registrerat mig och loggar in för första gången.,neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag noterar vad ni sagt.,neutral
+Äntligen fick jag svar på min fråga.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag absolut inte uppskattar verkligen ert tålamod.,negativ
+Jag mailade kundtjänst och löste problemet.,positiv
+Finns det någon manual för den här funktionen?,neutral
+Jag ringde er avdelning och skickade dokument.,neutral
+Jag kontaktade kundservice och löste problemet.,positiv
+Jag är väldigt nöjd med servicen idag.,positiv
+Ni har inte löst någonting.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag kontaktade supporten och skickade dokument.,neutral
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Tack för informationen.,neutral
+Er support är helt värdelös.,negativ
+Jag är inte nöjd alls.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag är inte nöjd alls.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Ni har inte löst någonting.,negativ
+Jag mailade supporten och fick vänta länge.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade kundservice och allt ordnade sig.,positiv
+Jag nådde supporten och ställde en fråga.,neutral
+Jag nådde kundtjänst och fick information.,neutral
+Jag ringde er avdelning och bad om återkoppling.,neutral
+Vilka betalningsalternativ erbjuder ni?,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+"Ursäkta att jag stör, ni löste mitt problem direkt, fantastiskt!",positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+När kan jag förvänta mig en återkoppling?,neutral
+Jag chattade er avdelning och fick information.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag kontaktade tekniska supporten och blev runtkopplad.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Personalen var otrevlig och ointresserad.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Jag är inte nöjd alls.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+"Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.",positiv
+Jag chattade kundservice och blev runtkopplad.,negativ
+Jag ringde supporten och fick svar direkt.,positiv
+Jag mailade er avdelning och löste problemet.,positiv
+Jag noterar vad ni sagt.,neutral
+Återkommer om det behövs.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Tack för informationen.,neutral
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Ni har inte löst någonting.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag nådde er avdelning och blev runtkopplad.,negativ
+Jag mailade kundservice och blev runtkopplad.,negativ
+Jag mailade kundservice och fick hjälp.,positiv
+Ni har inte löst någonting.,negativ
+Jag kontaktade er avdelning och bad om återkoppling.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag gillar ert nya system.,positiv
+Jag ringde tekniska supporten och blev hjälpt.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+Jag nådde kundservice och allt ordnade sig.,positiv
+Jag mailade er avdelning och lovades hjälp men inget hände.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Det känns knappast som att ni verkligen bryr er.,negativ
+Jag kontaktade kundservice och fick svar direkt.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag är inte nöjd alls.,negativ
+Jag nådde er avdelning och fick information.,neutral
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag chattade kundservice och fick information.,neutral
+Jag gillar ert nya system.,positiv
+Jag chattade er avdelning och fick hjälp.,positiv
+Jag chattade kundtjänst och fick hjälp.,positiv
+Tack för informationen.,neutral
+Jag nådde supporten och allt ordnade sig.,positiv
+Återkommer om det behövs.,neutral
+Finns det någon manual för den här funktionen?,neutral
+Återkommer om det behövs.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag kontaktade er avdelning och blev hjälpt.,positiv
+Det känns som att ni verkligen bryr er.,positiv
+Jag mailade tekniska supporten och skickade dokument.,neutral
+Jag chattade er avdelning och fick vänta länge.,negativ
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag mailade er avdelning och fick inget svar.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade tekniska supporten och blev hjälpt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag nådde kundtjänst och fick vänta länge.,negativ
+Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.,negativ
+Återkommer om det behövs.,neutral
+Jag kontaktade supporten och lovades hjälp men inget hände.,negativ
+Kommer aldrig mer anlita er igen.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Ni har inte löst någonting.,negativ
+Jag noterar vad ni sagt.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Jag nådde kundtjänst och fick hjälp.,positiv
+Återkommer om det behövs.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Jag mailade supporten och löste problemet.,positiv
+Återkommer om det behövs.,neutral
+Ni lovade återkoppling inom 24 timmar – det har gått en vecka.,negativ
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Jag ringde er avdelning och ingen kunde hjälpa.,negativ
+Jag kontaktade kundtjänst och fick vänta länge.,negativ
+Jag chattade supporten och allt ordnade sig.,positiv
+Bra att ni lyssnade på min feedback.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Tack för informationen.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Ni har inte löst någonting.,negativ
+Tack för informationen.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag chattade er avdelning och blev hjälpt.,positiv
+Jag noterar vad ni sagt.,neutral
+Jag noterar vad ni sagt.,neutral
+Jag är väldigt nöjd med servicen idag.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag har förlorat förtroendet för er helt.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag chattade er avdelning och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag gillar ert nya system.,positiv
+Tack vare er support fungerar allt perfekt nu.,positiv
+Jag behöver ändra min adress i systemet.,neutral
+Jag kontaktade tekniska supporten och fick information.,neutral
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag noterar vad ni sagt.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag ringde tekniska supporten och fick svar direkt.,positiv
+Jag är inte nöjd alls.,negativ
+Det känns som knappast att ni verkligen bryr er.,negativ
+"Allting fungerar klockrent nu, tack!",positiv
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag mailade kundtjänst och fick hjälp.,positiv
+Jag kontaktade supporten och fick inget svar.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Personalen var otrevlig och ointresserad.,negativ
+Jag mailade tekniska supporten och fick svar direkt.,positiv
+Jag chattade tekniska supporten och fick hjälp.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde tekniska supporten och ställde en fråga.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade supporten och fick information.,neutral
+Tack för snabb hjälp med mitt ärende!,positiv
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Jag mailade kundservice och lovades hjälp men inget hände.,negativ
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundtjänst och fick information.,neutral
+Jag kontaktade kundtjänst och skickade dokument.,neutral
+Jag ringde supporten och fick hjälp.,positiv
+Jag nådde kundtjänst och ställde en fråga.,neutral
+Jag absolut inte uppskattar verkligen ert tålamod.,negativ
+Jag chattade er avdelning och skickade dokument.,neutral
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Jag chattade er avdelning och löste problemet.,positiv
+Jag noterar vad ni sagt.,neutral
+Mycket smidigare än jag trodde.,positiv
+Bästa supporten jag varit med om på länge.,positiv
+Jag mailade er avdelning och fick vänta länge.,negativ
+Återkommer om det behövs.,neutral
+Jag vill bara dubbelkolla en sak.,neutral
+Jag kontaktade er avdelning och ställde en fråga.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag är mycket missnöjd på hur ni hanterat mitt ärende.,negativ
+Jag ringde kundtjänst och blev runtkopplad.,negativ
+Tack för informationen.,neutral
+Jag nådde supporten och ställde en fråga.,neutral
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag ringde supporten och fick svar direkt.,positiv
+Kundtjänsten var mycket trevlig och professionell.,positiv
+Jag kontaktade kundtjänst och fick inget svar.,negativ
+Jag gillar ert nya system.,positiv
+Jag mailade er avdelning och fick svar direkt.,positiv
+Jag chattade kundservice och lovades hjälp men inget hände.,negativ
+Ni har verkligen förbättrat er sedan sist.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag ringde tekniska supporten och fick vänta länge.,negativ
+Jag nådde kundtjänst och fick information.,neutral
+Jag gillar ert nya system.,positiv
+Jag chattade tekniska supporten och fick inget svar.,negativ
+"jag skulle vara tacksam om, jag fick ett meddelande om att ni försökt nå mig.",neutral
+Det här var inte vad jag förväntade mig.,negativ
+Jag är mycket missnöjd på hur ni hanterat mitt ärende.,negativ
+Jag kontaktade supporten och fick information.,neutral
+Jag mailade kundtjänst och löste problemet.,positiv
+Jag chattade supporten och ställde en fråga.,neutral
+Jag kontaktade er avdelning och ingen kunde hjälpa.,negativ
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag kontaktade er avdelning och ställde en fråga.,neutral
+Bästa supporten jag inte varit med om på länge.,negativ
+Jag chattade er avdelning och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+"jag skulle vara tacksam om, när kan jag förvänta mig en återkoppling?",neutral
+Jag mailade tekniska supporten och blev runtkopplad.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag chattade er avdelning och fick vänta länge.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade tekniska supporten och blev runtkopplad.,negativ
+Jag har förlorat förtroendet för er helt.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag nådde tekniska supporten och allt ordnade sig.,positiv
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Jag nådde supporten och skickade dokument.,neutral
+Jag ringde kundservice och löste problemet.,positiv
+Mycket smidigare än jag trodde.,positiv
+Tack för informationen.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Jag chattade er avdelning och blev hjälpt.,positiv
+Jag nådde er avdelning och fick vänta länge.,negativ
+Tack för informationen.,neutral
+Jag kontaktade supporten och bad om återkoppling.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag ringde kundservice och fick svar direkt.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Jag kontaktade supporten och blev hjälpt.,positiv
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Jag kontaktade supporten och allt ordnade sig.,positiv
+Jag nådde er avdelning och allt ordnade sig.,positiv
+Jag mailade er avdelning och löste problemet.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Jag nådde kundservice och fick inget svar.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag har blivit feldebiterad tre månader i rad. Det är under all kritik.,negativ
+Jag chattade tekniska supporten och ingen kunde hjälpa.,negativ
+Jag chattade tekniska supporten och fick information.,neutral
+Tack för informationen.,neutral
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Ni har inte löst någonting.,negativ
+Det känns absolut inte som att ni verkligen bryr er.,negativ
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag kontaktade supporten och ställde en fråga.,neutral
+Jag ringde supporten och fick inget svar.,negativ
+Operatören var otroligt hjälpsam och kunnig.,positiv
+Jag gillar ert nya system.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag är inte nöjd alls.,negativ
+Jag har inte hunnit testa lösningen ännu.,neutral
+Jag nådde er avdelning och bad om återkoppling.,neutral
+Tack för knappast snabb återkoppling på mitt mail.,negativ
+Jag känner mig lurad av ert företag.,negativ
+Det här är helt oacceptabelt.,negativ
+Jag mailade supporten och blev hjälpt.,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag chattade tekniska supporten och fick information.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag nådde kundservice och fick inget svar.,negativ
+"ursäkta, men, jag behöver ändra min adress i systemet.",neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Jag mailade supporten och fick vänta länge.,negativ
+Jag ringde kundtjänst och allt ordnade sig.,positiv
+Mycket smidigare än jag trodde.,positiv
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag kontaktade kundtjänst och bad om återkoppling.,neutral
+Jag mailade er avdelning och löste problemet.,positiv
+"Ursäkta, men, ert bemötande var outstanding.",positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag nådde kundtjänst och blev runtkopplad.,negativ
+Jag ringde supporten och ingen kunde hjälpa.,negativ
+Jag chattade supporten och ställde en fråga.,neutral
+Jag nådde er avdelning och fick information.,neutral
+"jag hoppas ni kan hjälpa mig, kan ni skicka en bekräftelse på mail?",neutral
+Er support är helt värdelös.,negativ
+Jag ringde tekniska supporten och blev runtkopplad.,negativ
+Jag ringde kundservice och löste problemet.,positiv
+Jag ringde kundtjänst och löste problemet.,positiv
+Jag ringde kundservice och löste problemet.,positiv
+Jag mailade er avdelning och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Kan ni skicka en bekräftelse på mail?,neutral
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Jag chattade tekniska supporten och skickade dokument.,neutral
+Tack för informationen.,neutral
+Tack för snabb återkoppling på mitt mail.,positiv
+Jag mailade kundservice och fick inget svar.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag känner mig trygg som kund hos er.,positiv
+Hur länge gäller erbjudandet?,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Jag kontaktade er avdelning och lovades hjälp men inget hände.,negativ
+Jag kommer inte acceptera detta.,negativ
+Jag chattade kundservice och ingen kunde hjälpa.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag mailade tekniska supporten och allt ordnade sig.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade kundtjänst och fick vänta länge.,negativ
+Jag ringde er avdelning och fick vänta länge.,negativ
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag chattade supporten och blev hjälpt.,positiv
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag nådde tekniska supporten och fick inget svar.,negativ
+Smidigt och professionellt hanterat!,positiv
+Jag kommer inte acceptera detta.,negativ
+Jag ringde er avdelning och fick vänta länge.,negativ
+Tack vare er support fungerar allt perfekt nu.,positiv
+Jag gillar ert nya system.,positiv
+Tack inte vare er support fungerar allt perfekt nu.,negativ
+Jag gillar ert nya system.,positiv
+Jag ringde kundtjänst och blev hjälpt.,positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag ringde kundservice och lovades hjälp men inget hände.,negativ
+Jag noterar vad ni sagt.,neutral
+Ni har inte löst någonting.,negativ
+Jag kontaktade er avdelning och fick information.,neutral
+Jag mailade supporten och fick hjälp.,positiv
+Operatören var otroligt hjälpsam och kunnig.,positiv
+När kan jag förvänta mig en återkoppling?,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag nådde supporten och lovades hjälp men inget hände.,negativ
+Jag chattade kundservice och blev hjälpt.,positiv
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Vilken skillnad efter att ni vägledningte mig!,positiv
+Jag chattade er avdelning och skickade dokument.,neutral
+Ni har inte löst någonting.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Vilken skillnad efter att ni hjälpte mig!,positiv
+Jag avvaktar och ser hur det går.,neutral
+Mycket smidigare än jag trodde.,positiv
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag nådde er avdelning och ställde en fråga.,neutral
+Jag chattade er avdelning och blev runtkopplad.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+"Jag undrar om ni möjligen, kundtjänsten var mycket tillmötesgående och professionell.",positiv
+Det här är helt oacceptabelt. Det är under all kritik.,negativ
+Jag kontaktade tekniska supporten och ställde en fråga.,neutral
+Operatören var otroligt hjälpsam och kunnig.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Jag chattade er avdelning och allt ordnade sig.,positiv
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Jag mailade supporten och blev runtkopplad.,negativ
+Jag kontaktade kundtjänst och fick svar direkt.,positiv
+Ni knappast gjorde en komplicerad process enkel.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag chattade kundtjänst och skickade dokument.,neutral
+Jag chattade kundservice och blev runtkopplad.,negativ
+Jag nådde kundservice och ställde en fråga.,neutral
+Jag kontaktade kundservice och allt ordnade sig.,positiv
+Er support är helt värdelös.,negativ
+Ni har inte löst någonting.,negativ
+"Jag undrar om ni möjligen, operatören var otroligt handräckningsam och kunnig.",positiv
+Mycket smidigare än jag trodde.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Bästa aldrig supporten jag varit med om på länge.,negativ
+Bästa aldrig supporten jag varit med om på länge.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Återkommer om det behövs.,neutral
+Jag kommer inte acceptera detta.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Mycket smidigare än jag trodde.,positiv
+Återkommer om det behövs.,neutral
+Återkommer om det behövs.,neutral
+Jag noterar vad ni sagt.,neutral
+"Jag hoppas ni kan handräckninga mig, det var enkelt att komma fram och få handräckning.",positiv
+Jag noterar vad ni sagt.,neutral
+Det känns som att ni verkligen bryr er.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde kundtjänst och fick information.,neutral
+Jag är inte nöjd alls.,negativ
+Det här är helt oacceptabelt.,negativ
+Jag chattade supporten och fick hjälp.,positiv
+Jag ringde kundtjänst och fick inget svar.,negativ
+Personalen var otrevlig och ointresserad.,negativ
+Tack för informationen.,neutral
+Jag kontaktade supporten och fick hjälp.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+Smidigt och professionellt absolut inte hanterat!,negativ
+Jag mailade er avdelning och löste problemet.,positiv
+"Jag skulle vara tacksam om, tack för direkt hjälp med mitt ärende!",positiv
+Jag gillar ert nya system.,positiv
+Jag chattade tekniska supporten och fick inget svar.,negativ
+Vilken skillnad efter att ni hjälpte mig!,positiv
+Jag kontaktade kundtjänst och fick hjälp.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kommer inte acceptera detta.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Jag kontaktade kundservice och fick hjälp.,positiv
+Jag nådde tekniska supporten och lovades hjälp men inget hände.,negativ
+Jag noterar vad ni sagt.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Vilken skillnad efter att ni hjälpte mig!,positiv
+Jag gillar ert nya system.,positiv
+Jag kontaktade kundtjänst och blev hjälpt.,positiv
+Jag känner mig trygg som kund hos er.,positiv
+Jag mailade tekniska supporten och bad om återkoppling.,neutral
+Jag avvaktar och ser hur det går.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag chattade kundservice och fick inget svar.,negativ
+Tack för informationen.,neutral
+Ni har verkligen förbättrat er sedan sist.,positiv
+Jag förstår inte varför detta ska vara så svårt.,negativ
+Bra att ni lyssnade på min feedback.,positiv
+Jag nådde er avdelning och fick vänta länge.,negativ
+Jag chattade er avdelning och fick vänta länge.,negativ
+Uppskattar att ni ringde tillbaka.,positiv
+"Allting fungerar klockrent nu, tack!",positiv
+Uppskattar att ni ringde tillbaka.,positiv
+Jag mailade kundservice och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Hur länge gäller erbjudandet?,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Återkommer om det behövs.,neutral
+Jag ska läsa igenom villkoren först.,neutral
+Ni har aldrig verkligen överträffat mina förväntningar.,negativ
+Tack för att ni följde upp mitt ärende.,positiv
+Jag ringde tekniska supporten och ställde en fråga.,neutral
+Tack för att ni följde upp mitt ärende.,positiv
+Återkommer om det behövs.,neutral
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag nådde tekniska supporten och skickade dokument.,neutral
+Uppskattar att ni ringde tillbaka.,positiv
+Evigt tacksam för att ni tog er tid att förklara.,positiv
+Jag kommer inte acceptera detta.,negativ
+Det här är helt oacceptabelt.,negativ
+Jag chattade tekniska supporten och fick information.,neutral
+Jag chattade kundservice och löste problemet.,positiv
+Jag ringde er avdelning och ställde en fråga.,neutral
+Ni har inte löst någonting.,negativ
+Jag chattade kundtjänst och fick information.,neutral
+Jag nådde supporten och skickade dokument.,neutral
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Jag chattade tekniska supporten och skickade dokument.,neutral
+Jag ringde supporten och fick svar direkt.,positiv
+Jag nådde kundservice och fick inget svar.,negativ
+Jag kommer inte acceptera detta.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag chattade kundtjänst och fick information.,neutral
+Jag mailade kundservice och fick hjälp.,positiv
+Det känns som knappast att ni verkligen bryr er.,negativ
+Jag rekommenderar er varmt till alla jag känner.,positiv
+Jag vill bara dubbelkolla en sak.,neutral
+Jag nådde kundservice och blev hjälpt.,positiv
+"Ni löste mitt problem direkt, fantastiskt!",positiv
+Jag nådde tekniska supporten och allt ordnade sig.,positiv
+Jag chattade supporten och allt ordnade sig.,positiv
+Jag kontaktade er avdelning och fick information.,neutral
+Jag mailade kundservice och fick hjälp.,positiv
+Jag nådde kundservice och blev hjälpt.,positiv
+Det här var inte vad jag förväntade mig.,negativ
+Jag avvaktar och ser hur det går.,neutral
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Tack för informationen.,neutral
+Jag kontaktade er avdelning och fick information.,neutral
+Jag chattade kundtjänst och fick information.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Jag vill bara kontrollera status på mitt ärende.,neutral
+Jag kommer inte acceptera detta.,negativ
+Jag chattade supporten och fick information.,neutral
+Jag mailade tekniska supporten och fick hjälp.,positiv
+Kan jag få en specifikation på fakturan?,neutral
+Jag kontaktade kundtjänst och lovades hjälp men inget hände.,negativ
+Jag chattade er avdelning och fick inget svar.,negativ
+Tack för informationen.,neutral
+Återkommer om det behövs.,neutral
+Det känns som att ni verkligen bryr er.,positiv
+Jag ska läsa igenom villkoren först.,neutral
+Ni har inte löst någonting.,negativ
+Jag ringde er avdelning och fick inget svar.,negativ
+"Jag undrar om ni möjligen, jag är heltillfreds med lösningen ni gav mig.",positiv
+Jag chattade tekniska supporten och blev runtkopplad.,negativ
+Ni har inte löst någonting.,negativ
+Jag chattade supporten och fick inget svar.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag kontaktade supporten och löste problemet.,positiv
+Jag avvaktar och ser hur det går.,neutral
+Det känns som knappast att ni verkligen bryr er.,negativ
+Det här var inte vad jag förväntade mig.,negativ
+Jag chattade kundtjänst och lovades hjälp men inget hände.,negativ
+Mycket smidigare än jag trodde.,positiv
+Jag ringde kundtjänst och fick svar direkt.,positiv
+Jag ringde supporten och allt ordnade sig.,positiv
+Ingenting har förändrats sedan jag ringde förra veckan.,negativ
+Jag kommer inte acceptera detta.,negativ
+Mycket smidigare än jag trodde.,positiv
+Återkommer om det behövs.,neutral
+Jag kommer inte acceptera detta.,negativ
+Ni har inte löst någonting.,negativ
+Jag är helnöjd med lösningen ni gav mig.,positiv
+Jag mailade tekniska supporten och fick vänta länge.,negativ
+Jag chattade supporten och fick vänta länge.,negativ
+"ursäkta, men, jag ska precis skicka in dokumenten ni bad om.",neutral
+Jag kontaktade kundservice och ställde en fråga.,neutral
+Bra att ni lyssnade på min feedback.,positiv
+Tack för att ni följde upp mitt ärende.,positiv
+Jag nådde supporten och skickade dokument.,neutral
+Återkommer om det behövs.,neutral
+Jag chattade supporten och ingen kunde hjälpa.,negativ
+Jag chattade kundtjänst och skickade dokument.,neutral

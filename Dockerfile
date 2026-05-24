@@ -16,20 +16,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirement files first for better caching
-COPY requirements-min.txt requirements-cli.txt requirements-api.txt ./
+COPY requirements-min.txt requirements-cli.txt requirements-api.txt requirements.txt ./
 
-# Install Python deps (API + minimal inference; CLI optional)
+# Install Python deps (API + minimal inference + fine-tuning dependencies)
 RUN python -m pip install -U pip && \
     pip install -r requirements-min.txt -r requirements-api.txt && \
     pip install -r requirements-cli.txt
 
-# Copy source
+# Copy source, configs, data, and docs
 COPY src/ ./src/
+COPY configs/ ./configs/
+COPY data/ ./data/
 COPY samples/ ./samples/
-COPY README.md ./
+COPY docs/ ./docs/
+COPY README.md ROADMAP.md ./
 
-# Create cache and outputs directories
-RUN mkdir -p /cache/hf /app/outputs
+# Create cache, outputs, and models directories
+RUN mkdir -p /cache/hf /app/outputs /app/models
 VOLUME ["/cache/hf"]
 
 EXPOSE 8000

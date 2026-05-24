@@ -6,10 +6,10 @@ import torch
 from transformers import pipeline
 
 from .clean import clean_texts
+from .negation import apply_negation_heuristic, detect_negation
 from .profiles import resolve_profile
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-NEGATION_TERMS = {"inte", "ej", "aldrig", "icke", "knappast"}
 POLITE_POSITIVE_TERMS = {"tack", "vänlig", "hjälpsam", "uppskattar"}
 
 
@@ -22,15 +22,6 @@ def normalize_label(label: str) -> str:
     if lowered in {"label_2", "positive", "pos"}:
         return "positiv"
     return label
-
-
-def detect_negation(text: str, window: int = 3) -> bool:
-    """Detect whether a Swedish negation appears near a sentiment-bearing phrase."""
-    tokens = [tok.strip(".,!?;:()[]\"'").lower() for tok in str(text).split()]
-    for idx, token in enumerate(tokens):
-        if token in NEGATION_TERMS and any(tokens[idx + 1 : idx + 1 + window]):
-            return True
-    return False
 
 
 def adjust_distribution_for_callcenter(text: str, dist: dict[str, float]) -> dict[str, float]:
@@ -290,4 +281,5 @@ __all__ = [
     "analyze_one",
     "detect_negation",
     "adjust_distribution_for_callcenter",
+    "apply_negation_heuristic",
 ]
