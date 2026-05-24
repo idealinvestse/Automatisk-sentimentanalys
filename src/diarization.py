@@ -359,7 +359,8 @@ class DiarizationPipeline:
                 timeout=10,
             )
             return float(result.stdout.strip())
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to get audio duration for %s: %s", path, e)
             return 0.0
 
     @staticmethod
@@ -386,7 +387,8 @@ class DiarizationPipeline:
             with suppress(OSError):
                 os.unlink(tmp_path)  # Windows may still hold the file briefly
             return audio
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to load audio as numpy from %s: %s", path, e)
             return None
 
 

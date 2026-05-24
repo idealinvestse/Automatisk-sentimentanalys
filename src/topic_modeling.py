@@ -15,7 +15,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,7 @@ class TopicModeler:
             topics=topics,
             emerging_topics=emerging,
             total_segments=len(segments),
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat(),
             backend=self.backend,
         )
 

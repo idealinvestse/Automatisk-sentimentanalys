@@ -29,6 +29,17 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 | `docs/FAS2_SUMMARY.md` | ✅ | `fdea2f5` |
 | `README.md` uppdaterad | ✅ | `fdea2f5` |
 | `ROADMAP.md` uppdaterad | ✅ | `fdea2f5` |
+| `src/negation.py` separat modul | ✅ | `0dffd4f` |
+| `src/blending.py` med `LearnedBlender` | ✅ | `0dffd4f` |
+| Speaker diarization (`src/diarization.py`) | ✅ | `fcb2798` |
+| Intent classification (`src/intent.py`) | ✅ | `0ed5c0f` |
+| Call summarization (`src/summarizer.py`) | ✅ | `d5c8dbc` |
+| Topic modeling (`src/topic_modeling.py`) | ✅ | `c7a8f23` |
+| Insights & root cause (`src/insights.py`) | ✅ | `c7a8f23` |
+| Predictive analytics (`src/predictive.py`) | ✅ | `c7a8f23` |
+| Streamlit dashboard (`app/dashboard.py`) | ✅ | `c7a8f23` |
+| CI/CD (ruff, black, pytest 144 st) | ✅ | `c7a8f23` |
+| `Dockerfile` uppdaterad | ✅ | `0dffd4f` |
 
 ### Återstår ⬜
 
@@ -37,12 +48,10 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 | Utöka träningsdataset till 3 000–5 000 exempel | P0 |
 | `scripts/prepare_callcenter_data.py` | P0 |
 | Kör GPU-träning (`python -m src.finetune`) | P0 |
-| `src/blending.py` med learned blending | P1 |
 | Full SenSALDO-lexikon (ladda ner + bearbeta) | P1 |
-| Separat `src/negation.py` modul | P2 |
 | Avancerad utvärdering per negationstyp | P2 |
-| Uppdaterad Docker-image | P2 |
 | v0.3.0 release notes | P2 |
+| End-to-end pipeline (`src/pipeline.py`) | P2 |
 
 ---
 
@@ -116,12 +125,12 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 - ⬜ Skapa `data/sensaldo_full.csv` (term, polarity, confidence).
 - ✅ Utöka med call center-specifika termer (seed: 20 termer i `data/sensaldo_lexicon.csv`).
 
-**Del 3.2 – Förbättrad blending** ⬜
-- ⬜ Skapa `src/blending.py` med:
-  - `LearnedBlender` (enkel logistic regression eller liten neural nätverk)
-  - Alternativ: Bayesian blending eller viktad ensemble
+**Del 3.2 – Förbättrad blending** ✅
+- ✅ Skapa `src/blending.py` med:
+  - `LearnedBlender` – gradient-free grid search som lär per-klass-vikter
+  - `save/load` för persistens
 - ✅ Uppdatera `src/lexicon.py` med bättre svenska tokenisering (hantera sammansatta ord).
-- ✅ Implementera **negation detection** (regelbaserad i `src/sentiment.py`).
+- ✅ Implementera **negation detection** (regelbaserad i `src/sentiment.py` + separat `src/negation.py`).
 
 **Del 3.3 – Ny profil** ✅
 - ✅ Lägg till `callcenter`-profil i `src/profiles.py` med anpassad rengöring och max_length=384.
@@ -135,12 +144,13 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 - ✅ Skapa `reports/fas2_comparison.json` + `reports/fas2_comparison.md`
 - ⬜ Generera confusion matrices och felanalys (från skarp modellkörning).
 
-### Steg 5: Integration & Produktionsanpassning (1 vecka) ⬜
+### Steg 5: Integration & Produktionsanpassning (1 vecka) 🔶
 
 - ⬜ Uppdatera `src/sentiment.py` och `src/main.py` att använda den nya finetunade modellen som default.
 - ✅ Lägg till stöd för modellväxling via `--model` och API.
-- ⬜ Uppdatera Docker-image och `requirements.txt`.
-- ⬜ Lägg till exempel i `samples/` för call center-användning.
+- ✅ Uppdatera Docker-image och `requirements.txt`.
+- ✅ Lägg till exempel i `samples/` för call center-användning.
+- ⬜ Skapa `src/pipeline.py` – end-to-end pipeline som binder samman alla moduler.
 
 ### Steg 6: Dokumentation & Avslutning (3–5 dagar) ✅
 

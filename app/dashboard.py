@@ -83,15 +83,15 @@ def load_sample_data() -> dict[str, Any]:
     if base:
         data["baseline"] = base
 
-    # Generate synthetic demo data
-    random.seed(42)
+    # Generate synthetic demo data with local RNG (avoids global state side effects)
+    rng = random.Random(42)
 
     demo_calls = []
     for i in range(20):
-        sentiments = random.choices(
-            ["positiv", "neutral", "negativ"], weights=[0.4, 0.35, 0.25], k=random.randint(5, 20)
+        sentiments = rng.choices(
+            ["positiv", "neutral", "negativ"], weights=[0.4, 0.35, 0.25], k=rng.randint(5, 20)
         )
-        intents = random.choices(
+        intents = rng.choices(
             [
                 "billing_inquiry",
                 "technical_support",
@@ -105,15 +105,15 @@ def load_sample_data() -> dict[str, Any]:
         demo_calls.append(
             {
                 "id": f"CALL-{i+1:04d}",
-                "timestamp": f"2026-05-{random.randint(1,25):02d}T{random.randint(8,18):02d}:00:00Z",
-                "duration_s": random.randint(120, 900),
+                "timestamp": f"2026-05-{rng.randint(1,25):02d}T{rng.randint(8,18):02d}:00:00Z",
+                "duration_s": rng.randint(120, 900),
                 "segments": len(sentiments),
                 "overall_sentiment": max(set(sentiments), key=sentiments.count),
                 "top_intent": max(set(intents), key=intents.count),
-                "resolution": random.choice(
-                    ["resolved", "pending", "escalated"], p=[0.5, 0.3, 0.2]
-                ),
-                "agent": f"Agent-{random.randint(1,6)}",
+                "resolution": rng.choices(
+                    ["resolved", "pending", "escalated"], weights=[0.5, 0.3, 0.2]
+                )[0],
+                "agent": f"Agent-{rng.randint(1,6)}",
             }
         )
     data["calls"] = demo_calls
@@ -123,9 +123,9 @@ def load_sample_data() -> dict[str, Any]:
     data["agents"] = [
         {
             "name": a,
-            "calls": random.randint(10, 50),
-            "avg_resolution_rate": round(random.uniform(0.4, 0.9), 2),
-            "avg_sentiment_positive": round(random.uniform(0.3, 0.7), 2),
+            "calls": rng.randint(10, 50),
+            "avg_resolution_rate": round(rng.uniform(0.4, 0.9), 2),
+            "avg_sentiment_positive": round(rng.uniform(0.3, 0.7), 2),
         }
         for a in agents
     ]

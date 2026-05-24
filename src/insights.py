@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ class InsightsEngine:
             key_findings=key_findings,
             recommendations=recommendations,
             risk_alerts=risk_alerts,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
     # ------------------------------------------------------------------
@@ -165,19 +165,26 @@ class InsightsEngine:
 
         # Check for technical issues combined with negative sentiment
         if intent_results and sentiment_results:
-            tech_neg = 0
-            for (intent, _), sent in zip(intent_results, sentiment_results, strict=False):
-                if intent == "technical_support" and sent.get("label") == "negativ":
-                    tech_neg += 1
-            if tech_neg >= 2:
-                causes.append(
-                    RootCause(
-                        issue="Tekniskt problem som orsakar missnöje",
-                        evidence=[f"{tech_neg} negativa segment om tekniska problem"],
-                        severity="high",
-                    )
+            if len(intent_results) != len(sentiment_results):
+                logger.warning(
+                    "Intent results (%d) and sentiment results (%d) length mismatch. "
+                    "Skipping combined root cause analysis.",
+                    len(intent_results),
+                    len(sentiment_results),
                 )
-
+            else:
+                tech_neg = 0
+                for (intent, _), sent in zip(intent_results, sentiment_results, strict=True):
+                    if intent == "technical_support" and sent.get("label") == "negativ":
+                        tech_neg += 1
+                if tech_neg >= 2:
+                    causes.append(
+                        RootCause(
+                            issue="Tekniskt problem som orsakar missnöje",
+                            evidence=[f"{tech_neg} negativa segment om tekniska problem"],
+                            severity="high",
+                        )
+                    )
         # Check for agent-related issues
         if segments:
             agent_segments = [s for s in segments if s.get("speaker", "") not in ("", "UNKNOWN")]

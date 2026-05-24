@@ -88,10 +88,10 @@ class LearnedBlender:
         learning_rate: float = 0.01,
         epochs: int = 100,
     ) -> dict[str, float]:
-        """Learn per-class blending weights using logistic regression.
+        """Learn per-class blending weights using gradient-free grid search.
 
-        Optimizes weights to maximize accuracy on the training set using
-        a simple gradient-free grid search (robust, no sklearn dependency).
+        Robust fallback that works without sklearn. For a proper
+        logistic-regression fit, use `fit_sklearn` when available.
 
         Args:
             model_dists: List of model output distributions.
@@ -164,6 +164,81 @@ class LearnedBlender:
                 best_weights = dict(weights)
 
         self.weights = best_weights
+        self._fitted = True
+        return self.weights
+
+    def fit_sklearn(
+        self,
+        model_dists: list[dict[str, float]],
+        lexicon_dists: list[tuple[float, float, float]],
+        labels: list[str],
+        max_iter: int = 1000,
+    ) -> dict[str, float]:
+        """Learn blending weights using sklearn LogisticRegression.
+
+        Fits a multinomial logistic regression over concatenated
+        [model_probs, lexicon_probs] features to predict the label.
+        The per-class weights are derived from the learned coefficients
+        so that classes where the lexicon is more informative get a
+        higher lexicon weight.
+
+        Args:
+            model_dists: List of model output distributions.
+            lexicon_dists: List of lexicon (neg, neu, pos) tuples.
+            labels: True labels (negativ/neutral/positiv).
+            max_iter: Maximum iterations for LogisticRegression.
+
+        Returns:
+            The learned weight dict.
+        """
+        try:
+            import numpy as np
+            from sklearn.linear_model import LogisticRegression
+            from sklearn.preprocessing import LabelEncoder
+        except ImportError as exc:
+            raise ImportError(
+                "sklearn is required for fit_sklearn. "
+                "Install it with: pip install scikit-learn"
+            ) from exc
+
+        if len(model_dists) == 0 or len(model_dists) != len(lexicon_dists) != len(labels):
+            return self.weights
+
+        label_set = ["negativ", "neutral", "positiv"]
+
+        # Build feature matrix: [model_neg, model_neu, model_pos, lex_neg, lex_neu, lex_pos]
+        features_matrix: list[list[float]] = []
+        for md, ld in zip(model_dists, lexicon_dists, strict=True):
+            features = [md.get(lbl, 0.0) for lbl in label_set] + list(ld)
+            features_matrix.append(features)
+
+        x_arr = np.array(features_matrix)
+        le = LabelEncoder()
+        y = le.fit_transform(labels)
+
+        clf = LogisticRegression(
+            multi_class="multinomial",
+            solver="lbfgs",
+            max_iter=max_iter,
+            random_state=42,
+        )
+        clf.fit(x_arr, y)
+
+        # Coefficients shape: (n_classes, n_features=6)
+        # For each class, compute how much the lexicon features (indices 3-5)
+        # contribute relative to the model features (indices 0-2).
+        coef = clf.coef_  # type: ignore[has-type]
+        learned: dict[str, float] = {}
+        for i, lbl in enumerate(label_set):
+            model_sum = np.sum(np.abs(coef[i, :3]))
+            lex_sum = np.sum(np.abs(coef[i, 3:]))
+            total = model_sum + lex_sum
+            if total > 0:
+                learned[lbl] = float(np.clip(lex_sum / total, 0.0, 1.0))
+            else:
+                learned[lbl] = self.default_lexicon_weight
+
+        self.weights = learned
         self._fitted = True
         return self.weights
 
