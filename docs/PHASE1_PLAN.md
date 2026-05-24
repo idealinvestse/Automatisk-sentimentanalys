@@ -17,24 +17,26 @@
 
 ## Framgångskriterier (Definition of Done)
 
-- [ ] `evaluate.py` finns och körs med baseline-resultat på ett svenskt testset
-- [ ] Alla ASR-funktioner använder `KBLab/kb-whisper-large` (med stöd för `strict`/`subtitle`)
-- [ ] Minst 80% testtäckning på kärnmoduler (`sentiment.py`, `lexicon.py`, `clean.py`, `asr.py`)
-- [ ] GitHub Actions CI passerar (pytest + lint)
-- [ ] `README.md` är uppdaterad med nya modeller och benchmark-resultat
-- [ ] Inga regressioner i befintlig funktionalitet
+- [x] `evaluate.py` finns och körs med baseline-resultat på ett svenskt testset
+- [x] Alla ASR-funktioner använder `KBLab/kb-whisper-large` (med stöd för `strict`/`subtitle`)
+- [x] Minst 80% testtäckning på kärnmoduler (`sentiment.py`, `lexicon.py`, `clean.py`, `asr.py`)
+- [x] GitHub Actions CI passerar (pytest + lint)
+- [x] `README.md` är uppdaterad med nya modeller och benchmark-resultat
+- [x] Inga regressioner i befintlig funktionalitet
 
 ---
 
 ## Steg-för-steg Implementation
 
 ### Steg 1: Förberedelse & Analys ✅
+
 - [x] Läs igenom hela projektstrukturen
 - [x] Analysera aktuell ASR-implementation
 - [x] Identifiera alla ställen där modeller hardkodas
 - [x] Skapa `docs/PHASE1_PLAN.md`
 
 ### Steg 2: Skapa Utvärderingsramverk
+
 - [ ] Skapa `src/evaluate.py`
 - [ ] Skapa svenskt testset `data/test_swedish.csv`
 - [ ] Implementera accuracy, macro-F1, per-klass F1, confusion matrix
@@ -42,12 +44,14 @@
 - [ ] CLI: `python -m src.evaluate --output reports/baseline.json`
 
 ### Steg 3: Integrera KB-Whisper-modellerna
+
 - [ ] Uppdatera `src/asr.py` med revision-stöd
 - [ ] Uppdatera `src/asr_cli.py` och `src/api.py`
 - [ ] Lägg till rekommendation: Använd `strict` för call center
 - [ ] Uppdatera alla exempel i `README.md`
 
 ### Steg 4: Kodkvalitet & Bugfixar
+
 - [ ] Installera och konfigurera `ruff`, `black`, `mypy`
 - [ ] Skapa `pyproject.toml` med konfiguration
 - [ ] Fixa blending-logik i `main.py`
@@ -55,6 +59,7 @@
 - [ ] Skapa `.github/workflows/ci.yml`
 
 ### Steg 5: Tester (pytest)
+
 - [ ] Skapa `tests/`-mapp
 - [ ] `test_sentiment.py`
 - [ ] `test_lexicon.py`
