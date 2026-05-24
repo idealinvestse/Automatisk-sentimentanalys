@@ -121,6 +121,8 @@ class TranscribeRequest(BaseModel):
     # KB-Whisper revision: standard, strict, subtitle
     # 'strict' is recommended for call center (verbatim transcription)
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers (None=auto)")
 
 
 class TranscribeResponse(BaseModel):
@@ -153,6 +155,8 @@ class AnalyzeConversationRequest(BaseModel):
     chunk_length_s: int = Field(30, ge=5, le=60)
     # KB-Whisper revision: standard, strict, subtitle
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers")
     # Sentiment analysis parameters
     # Whether to return all scores or only the top prediction
     return_all_scores: bool = Field(True)
@@ -483,6 +487,8 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
         word_timestamps=req.word_timestamps,
         chunk_length_s=req.chunk_length_s,
         revision=req.revision,
+        diarize=req.diarize,
+        num_speakers=req.num_speakers,
     )
     # Generate timestamp for response
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -521,6 +527,8 @@ async def analyze_conversation(
         word_timestamps=req.word_timestamps,
         chunk_length_s=req.chunk_length_s,
         revision=req.revision,
+        diarize=req.diarize,
+        num_speakers=req.num_speakers,
     )
     # Extract text segments from transcription
     segments = tr.get("segments", []) or []
@@ -723,6 +731,8 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
             revision=req.revision,
+            diarize=req.diarize,
+            num_speakers=req.num_speakers,
         )
         return p, tr
 
@@ -864,6 +874,8 @@ async def batch_analyze_conversation(
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
             revision=req.revision,
+            diarize=req.diarize,
+            num_speakers=req.num_speakers,
         )
         # Extract text segments from transcription
         segments = tr.get("segments", []) or []
@@ -1038,6 +1050,8 @@ class ScanProcessRequest(BaseModel):
     word_timestamps: bool = Field(False)
     chunk_length_s: int = Field(30, ge=5, le=60)
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers")
     # Sentiment analysis parameters (only used when
     # operation=analyze_conversation)
     sentiment_model: str | None = Field(None)
@@ -1141,6 +1155,8 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
             revision=req.revision,
+            diarize=req.diarize,
+            num_speakers=req.num_speakers,
         )
 
     def _do_analyze(p: str) -> dict[str, Any]:

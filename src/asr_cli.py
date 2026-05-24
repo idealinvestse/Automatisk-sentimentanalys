@@ -78,6 +78,8 @@ def transcribe(
         None,
         help="KB-Whisper revision: standard|strict|subtitle (strict recommended for call center)",
     ),
+    diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
+    num_speakers: int | None = typer.Option(None, "--num-speakers", help="Expected number of speakers"),
     output_json: str | None = typer.Option(
         None, help="Optional path to save transcript JSON (single input)"
     ),
@@ -128,6 +130,8 @@ def transcribe(
                     word_timestamps=word_timestamps,
                     chunk_length_s=chunk_length_s,
                     revision=revision,
+                    diarize=diarize,
+                    num_speakers=num_speakers,
                 )
                 ok += 1
             except Exception as e:
@@ -195,6 +199,8 @@ def analyze_call(
     word_timestamps: bool = typer.Option(False),
     chunk_length_s: int = typer.Option(30, min=5, max=60),
     revision: str | None = typer.Option(None, help="KB-Whisper revision: standard|strict|subtitle"),
+    diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
+    num_speakers: int | None = typer.Option(None, "--num-speakers", help="Expected number of speakers"),
     # Sentiment
     sentiment_model: str | None = typer.Option(None, help="Optional override for sentiment model"),
     lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
@@ -251,6 +257,8 @@ def analyze_call(
                     word_timestamps=word_timestamps,
                     chunk_length_s=chunk_length_s,
                     revision=revision,
+                    diarize=diarize,
+                    num_speakers=num_speakers,
                 )
             except Exception as e:
                 fail += 1

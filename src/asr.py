@@ -60,6 +60,34 @@ def _normalize_device(device: str | None = "auto") -> tuple[str, int | None]:
     return "cpu", None
 
 
+def _add_diarization(
+    result: dict[str, Any],
+    audio_path: str,
+    diarize: bool,
+    num_speakers: int | None,
+) -> dict[str, Any]:
+    """Add speaker diarization to a transcript result if requested."""
+    if not diarize:
+        return result
+
+    try:
+        from .diarization import DiarizationPipeline
+
+        dp = DiarizationPipeline(backend="heuristic")
+        diar_result = dp.diarize(audio_path, num_speakers=num_speakers)
+        segments = result.get("segments", [])
+        result["segments"] = dp.assign_speakers_to_segments(segments, diar_result)
+        result["diarization"] = diar_result.to_dict()
+        logger.info(
+            "Diarization added | speakers=%d | segments=%d", diar_result.num_speakers, len(segments)
+        )
+    except Exception as e:
+        logger.warning("Diarization failed: %s. Continuing without speaker labels.", e)
+        result["diarization"] = {"error": str(e), "backend": "failed"}
+
+    return result
+
+
 def _to_transcript(
     segments: list[dict[str, Any]],
     model_name: str,
@@ -93,6 +121,8 @@ def transcribe(
     word_timestamps: bool = True,
     chunk_length_s: int = 30,
     revision: str | None = None,
+    diarize: bool = False,
+    num_speakers: int | None = 2,
 ) -> dict[str, Any]:
     """Transcribe audio and return a normalized transcript dict.
 
@@ -109,10 +139,12 @@ def transcribe(
         chunk_length_s: Chunk length in seconds (transformers only).
         revision: KB-Whisper revision: 'standard', 'strict', 'subtitle'.
                   'strict' is recommended for call center (verbatim transcription).
+        diarize: Run speaker diarization and annotate segments with speaker labels.
+        num_speakers: Expected number of speakers for diarization (None = auto).
 
     Returns:
         Transcript dict with model, backend, language, duration,
-        processing_time, segments, and optional revision.
+        processing_time, segments, optional revision, and optional diarization.
     """
     t0 = time.time()
     model_name = _resolve_model_name(model)
@@ -217,7 +249,8 @@ def transcribe(
                 )
         proc = time.time() - t0
         logger.info("ASR done (faster) | segs=%d | audio_dur=%s | proc=%.2fs", len(segs), dur, proc)
-        return _to_transcript(segs, model_name, "faster", language, dur, proc, revision)
+        result = _to_transcript(segs, model_name, "faster", language, dur, proc, revision)
+        return _add_diarization(result, audio_path, diarize, num_speakers)
 
     # transformers backend
     logger.debug(
@@ -291,4 +324,5 @@ def transcribe(
         )
     proc = time.time() - t0
     logger.info("ASR done (transformers) | segs=%d | proc=%.2fs", len(segs), proc)
-    return _to_transcript(segs, model_name, "transformers", language, dur, proc, revision)
+    result = _to_transcript(segs, model_name, "transformers", language, dur, proc, revision)
+    return _add_diarization(result, audio_path, diarize, num_speakers)
