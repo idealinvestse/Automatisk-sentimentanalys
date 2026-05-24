@@ -79,7 +79,9 @@ def transcribe(
         help="KB-Whisper revision: standard|strict|subtitle (strict recommended for call center)",
     ),
     diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
-    num_speakers: int | None = typer.Option(None, "--num-speakers", help="Expected number of speakers"),
+    num_speakers: int | None = typer.Option(
+        None, "--num-speakers", help="Expected number of speakers"
+    ),
     output_json: str | None = typer.Option(
         None, help="Optional path to save transcript JSON (single input)"
     ),
@@ -200,7 +202,9 @@ def analyze_call(
     chunk_length_s: int = typer.Option(30, min=5, max=60),
     revision: str | None = typer.Option(None, help="KB-Whisper revision: standard|strict|subtitle"),
     diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
-    num_speakers: int | None = typer.Option(None, "--num-speakers", help="Expected number of speakers"),
+    num_speakers: int | None = typer.Option(
+        None, "--num-speakers", help="Expected number of speakers"
+    ),
     # Sentiment
     sentiment_model: str | None = typer.Option(None, help="Optional override for sentiment model"),
     lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),

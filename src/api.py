@@ -188,6 +188,8 @@ class SegmentSentiment(BaseModel):
     negativ: float | None = None
     neutral: float | None = None
     positiv: float | None = None
+    intent: str | None = None
+    intent_confidence: float | None = None
 
 
 class AnalyzeConversationResponse(BaseModel):
