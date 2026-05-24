@@ -96,6 +96,19 @@ PROFILE_SPECS: dict[str, dict] = {
             "lowercase": False,
         },
     },
+    "callcenter": {
+        "model": DEFAULT_MODEL,
+        "max_length": 384,
+        "cleaning": {
+            "unescape_html": False,
+            "strip_html": False,
+            "remove_urls": True,
+            "remove_usernames": False,
+            "remove_hashtags": False,
+            "normalize_whitespace": True,
+            "lowercase": False,
+        },
+    },
 }
 
 AVAILABLE_PROFILES = sorted(PROFILE_SPECS.keys())
@@ -114,6 +127,8 @@ SOURCE_TO_PROFILE = {
     "call": "call",
     "phone": "call",
     "telephony": "call",
+    "callcenter": "callcenter",
+    "customer_service": "callcenter",
 }
 
 DATATYPE_TO_PROFILE = {
@@ -124,6 +139,7 @@ DATATYPE_TO_PROFILE = {
     "review": "review",
     "call": "call",
     "transcript": "call",
+    "callcenter": "callcenter",
 }
 
 

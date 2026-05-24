@@ -1,4 +1,5 @@
 """Tests for profiles module."""
+
 from __future__ import annotations
 
 from src.profiles import AVAILABLE_PROFILES, PROFILE_SPECS, resolve_profile
@@ -46,4 +47,5 @@ class TestProfilesConfig:
         assert "default" in AVAILABLE_PROFILES
         assert "forum" in AVAILABLE_PROFILES
         assert "call" in AVAILABLE_PROFILES
+        assert "callcenter" in AVAILABLE_PROFILES
         assert len(AVAILABLE_PROFILES) >= 7

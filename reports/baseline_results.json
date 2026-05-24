@@ -1,0 +1,161 @@
+{
+  "timestamp": "2026-05-24T09:32:43.018037Z",
+  "testset": "data/test_swedish.csv",
+  "scenarios": {
+    "forum": {
+      "accuracy": 0.5,
+      "macro_f1": 0.4622,
+      "per_class": {
+        "negativ": {
+          "precision": 0.9048,
+          "recall": 0.2714,
+          "f1": 0.4176,
+          "support": 70
+        },
+        "neutral": {
+          "precision": 0.4024,
+          "recall": 0.9714,
+          "f1": 0.569,
+          "support": 70
+        },
+        "positiv": {
+          "precision": 0.9,
+          "recall": 0.2571,
+          "f1": 0.4,
+          "support": 70
+        }
+      },
+      "confusion_matrix": {
+        "negativ": {
+          "negativ": 19,
+          "neutral": 50,
+          "positiv": 1
+        },
+        "neutral": {
+          "negativ": 1,
+          "neutral": 68,
+          "positiv": 1
+        },
+        "positiv": {
+          "negativ": 1,
+          "neutral": 51,
+          "positiv": 18
+        }
+      },
+      "n_samples": 210,
+      "backend": "heuristic",
+      "model": "heuristic-swedish-baseline",
+      "profile": "forum",
+      "description": "Forum/sociala kommentarer"
+    },
+    "call": {
+      "accuracy": 0.5,
+      "macro_f1": 0.4622,
+      "per_class": {
+        "negativ": {
+          "precision": 0.9048,
+          "recall": 0.2714,
+          "f1": 0.4176,
+          "support": 70
+        },
+        "neutral": {
+          "precision": 0.4024,
+          "recall": 0.9714,
+          "f1": 0.569,
+          "support": 70
+        },
+        "positiv": {
+          "precision": 0.9,
+          "recall": 0.2571,
+          "f1": 0.4,
+          "support": 70
+        }
+      },
+      "confusion_matrix": {
+        "negativ": {
+          "negativ": 19,
+          "neutral": 50,
+          "positiv": 1
+        },
+        "neutral": {
+          "negativ": 1,
+          "neutral": 68,
+          "positiv": 1
+        },
+        "positiv": {
+          "negativ": 1,
+          "neutral": 51,
+          "positiv": 18
+        }
+      },
+      "n_samples": 210,
+      "backend": "heuristic",
+      "model": "heuristic-swedish-baseline",
+      "profile": "call",
+      "description": "ASR-transkriberade kundtjänstsamtal"
+    },
+    "news": {
+      "accuracy": 0.5,
+      "macro_f1": 0.4622,
+      "per_class": {
+        "negativ": {
+          "precision": 0.9048,
+          "recall": 0.2714,
+          "f1": 0.4176,
+          "support": 70
+        },
+        "neutral": {
+          "precision": 0.4024,
+          "recall": 0.9714,
+          "f1": 0.569,
+          "support": 70
+        },
+        "positiv": {
+          "precision": 0.9,
+          "recall": 0.2571,
+          "f1": 0.4,
+          "support": 70
+        }
+      },
+      "confusion_matrix": {
+        "negativ": {
+          "negativ": 19,
+          "neutral": 50,
+          "positiv": 1
+        },
+        "neutral": {
+          "negativ": 1,
+          "neutral": 68,
+          "positiv": 1
+        },
+        "positiv": {
+          "negativ": 1,
+          "neutral": 51,
+          "positiv": 18
+        }
+      },
+      "n_samples": 210,
+      "backend": "heuristic",
+      "model": "heuristic-swedish-baseline",
+      "profile": "news",
+      "description": "Nyhets-/artikeltext"
+    }
+  },
+  "asr_comparison": [
+    {
+      "name": "OpenAI Whisper large-v3",
+      "model": "openai/whisper-large-v3",
+      "revision": null,
+      "recommended_for": "Allmän flerspråkig ASR-baseline",
+      "relative_swedish_wer": 1.0
+    },
+    {
+      "name": "KB-Whisper large strict",
+      "model": "KBLab/kb-whisper-large",
+      "revision": "strict",
+      "recommended_for": "Svenska call center-samtal (verbatim)",
+      "relative_swedish_wer": 0.53
+    }
+  ],
+  "note": "Offline heuristic baseline; run python -m src.evaluate evaluate --backend model for HF metrics."
+}

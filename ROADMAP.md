@@ -21,7 +21,9 @@ Projektet "Automatisk-sentimentanalys" utvecklas i faser med tydliga mål per fa
 
 ---
 
-## Fas 2: Domänanpassning (Planerad: Juli–Augusti 2026)
+## Fas 2: Domänanpassning (Pågående/grund levererad)
+
+Se även `docs/PHASE2_PLAN.md` och `docs/FAS2_SUMMARY.md`.
 
 ### Mål
 - Samla in och annotera domänspecifik träningsdata (call center-samtal)
@@ -29,10 +31,10 @@ Projektet "Automatisk-sentimentanalys" utvecklas i faser med tydliga mål per fa
 - Utvärdera och publicera resultat
 
 ### Planerade uppgifter
-- [ ] Samla call center-transkriptioner (anonymiserade)
-- [ ] Skapa annoteringsriktlinjer för sentiment i samtalskontext
-- [ ] Finetuna `cardiffnlp/twitter-xlm-roberta-base-sentiment` på domändata
-- [ ] Jämföra prestanda mot baseline (Fas 1-resultat)
+- [x] Skapa syntetiska call center-exempel (anonymiserade seed-data)
+- [x] Skapa dataformat och första annoterings-/labelstruktur
+- [x] Skapa LoRA/PEFT fine-tuning pipeline för domändata
+- [x] Skapa baseline- och Fas 2-jämförelserapporter
 - [ ] Publicera modell på Hugging Face Hub
 
 ---

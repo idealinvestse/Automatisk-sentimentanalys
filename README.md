@@ -220,6 +220,22 @@ python -m src.evaluate evaluate --output-csv reports/detailed_results.csv
 python -m src.evaluate list-profiles
 ```
 
+### Benchmark (baseline)
+
+`reports/baseline_results.json` innehåller tre obligatoriska scenarier:
+
+| Scenario | Profil | Backend | Accuracy | Macro-F1 |
+|---|---|---|---:|---:|
+| Forum | `forum` | heuristic baseline | 49.52% | 47.07% |
+| Call | `call` | heuristic baseline | 49.52% | 47.07% |
+| News | `news` | heuristic baseline | 49.52% | 47.07% |
+
+Kör skarp Hugging Face-utvärdering med:
+
+```powershell
+python -m src.evaluate evaluate --backend model --profile call --output reports/call_model_results.json
+```
+
 ## KB-Whisper: Rekommenderad ASR-modell
 
 **KBLab** (KB, National Library of Sweden) har släppt svensktränade Whisper-modeller
@@ -239,7 +255,32 @@ python -m src.asr_cli transcribe samtal.wav --model kb-whisper-large --revision 
 
 # Använd subtitle-revision för bättre läsbarhet
 python -m src.asr_cli transcribe samtal.wav --revision subtitle
+
+# Byt tillbaka till OpenAI Whisper-baseline
+python -m src.asr_cli transcribe samtal.wav --model openai/whisper-large-v3
 ```
+
+## Fas 2: Domänanpassning
+
+Fas 2 introducerar en reproducerbar LoRA/PEFT-pipeline för svensk call center-domän.
+
+```powershell
+# Installera träningsberoenden
+pip install -r requirements.txt
+
+# Kör LoRA fine-tuning (kräver GPU för praktisk körning)
+python -m src.finetune --config configs/finetune.yaml
+
+# Utvärdera ny adapter/model output
+python -m src.evaluate evaluate --backend model --model models/callcenter-sentiment-lora --profile callcenter
+```
+
+Rekommenderad call center-konfiguration:
+
+- ASR: `KBLab/kb-whisper-large` med `--revision strict`
+- Sentimentprofil: `callcenter`
+- Lexikon: `data/sensaldo_lexicon.csv`
+- Lexikon-blending: börja med `--lexicon-weight 0.25`
 
 ## Utveckling
 

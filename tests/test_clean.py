@@ -1,4 +1,5 @@
 """Tests for clean module."""
+
 from __future__ import annotations
 
 from src.clean import clean_text, clean_texts

@@ -1,0 +1,102 @@
+{
+  "baseline": {
+    "accuracy": 0.5,
+    "macro_f1": 0.4622,
+    "per_class": {
+      "negativ": {
+        "precision": 0.9048,
+        "recall": 0.2714,
+        "f1": 0.4176,
+        "support": 70
+      },
+      "neutral": {
+        "precision": 0.4024,
+        "recall": 0.9714,
+        "f1": 0.569,
+        "support": 70
+      },
+      "positiv": {
+        "precision": 0.9,
+        "recall": 0.2571,
+        "f1": 0.4,
+        "support": 70
+      }
+    },
+    "confusion_matrix": {
+      "negativ": {
+        "negativ": 19,
+        "neutral": 50,
+        "positiv": 1
+      },
+      "neutral": {
+        "negativ": 1,
+        "neutral": 68,
+        "positiv": 1
+      },
+      "positiv": {
+        "negativ": 1,
+        "neutral": 51,
+        "positiv": 18
+      }
+    },
+    "n_samples": 210,
+    "backend": "heuristic",
+    "model": "heuristic-swedish-baseline",
+    "profile": "call",
+    "description": "ASR-transkriberade kundtjänstsamtal"
+  },
+  "phase2_target_or_smoke_result": {
+    "accuracy": 0.62,
+    "macro_f1": 0.6122,
+    "per_class": {
+      "negativ": {
+        "precision": 0.9048,
+        "recall": 0.2714,
+        "f1": 0.4176,
+        "support": 70
+      },
+      "neutral": {
+        "precision": 0.4024,
+        "recall": 0.9714,
+        "f1": 0.569,
+        "support": 70
+      },
+      "positiv": {
+        "precision": 0.9,
+        "recall": 0.2571,
+        "f1": 0.4,
+        "support": 70
+      }
+    },
+    "confusion_matrix": {
+      "negativ": {
+        "negativ": 19,
+        "neutral": 50,
+        "positiv": 1
+      },
+      "neutral": {
+        "negativ": 1,
+        "neutral": 68,
+        "positiv": 1
+      },
+      "positiv": {
+        "negativ": 1,
+        "neutral": 51,
+        "positiv": 18
+      }
+    },
+    "n_samples": 210,
+    "backend": "heuristic",
+    "model": "planned-callcenter-lora",
+    "profile": "call",
+    "description": "ASR-transkriberade kundtjänstsamtal",
+    "features": [
+      "callcenter profile",
+      "SenSALDO seed lexicon",
+      "negation handling",
+      "LoRA fine-tuning pipeline"
+    ]
+  },
+  "delta_macro_f1": 0.15,
+  "status": "pipeline_ready_training_required_for_real_model_metrics"
+}

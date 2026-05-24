@@ -1,0 +1,11 @@
+text,label,source
+Tack för snabb hjälp med mitt ärende,positiv,synthetic_callcenter
+Jag är inte nöjd med hur ni hanterade fakturan,negativ,synthetic_callcenter
+Det fungerar som förväntat just nu,neutral,synthetic_callcenter
+Kundtjänsten var hjälpsam och löste problemet direkt,positiv,synthetic_callcenter
+Jag har väntat länge och är väldigt besviken,negativ,synthetic_callcenter
+Jag vill bara kontrollera status på min beställning,neutral,synthetic_callcenter
+Det här var inte dåligt alls,positiv,synthetic_callcenter
+Jag kommer aldrig rekommendera den här tjänsten,negativ,synthetic_callcenter
+Operatören förklarade tydligt och vänligt,positiv,synthetic_callcenter
+Jag behöver mer information innan jag bestämmer mig,neutral,synthetic_callcenter

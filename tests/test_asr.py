@@ -1,4 +1,5 @@
 """Tests for ASR module (unit tests with mocked model loading)."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -116,17 +117,17 @@ class TestTranscribeMocked:
             patch("src.asr.WhisperModel", return_value=mock_model),
             patch("src.asr._HAS_FASTER", True),
         ):
-                result = transcribe(
-                    audio_path="test.wav",
-                    model="kb-whisper-large",
-                    backend="faster",
-                    device="cpu",
-                    language="sv",
-                    beam_size=5,
-                    vad=False,
-                    word_timestamps=False,
-                    revision="strict",
-                )
+            result = transcribe(
+                audio_path="test.wav",
+                model="kb-whisper-large",
+                backend="faster",
+                device="cpu",
+                language="sv",
+                beam_size=5,
+                vad=False,
+                word_timestamps=False,
+                revision="strict",
+            )
 
         assert result["model"] == "KBLab/kb-whisper-large"
         assert result["backend"] == "faster"
@@ -141,11 +142,11 @@ class TestTranscribeMocked:
             patch("src.asr._HAS_FASTER", False),
             pytest.raises(RuntimeError, match="faster-whisper not installed"),
         ):
-                transcribe(
-                    audio_path="test.wav",
-                    backend="faster",
-                    device="cpu",
-                )
+            transcribe(
+                audio_path="test.wav",
+                backend="faster",
+                device="cpu",
+            )
 
     def test_transformers_backend_mocked(self):
         """Test transformers backend with mocked pipeline."""

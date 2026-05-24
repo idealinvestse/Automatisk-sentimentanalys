@@ -1,10 +1,13 @@
 """Tests for sentiment module (unit tests without model loading)."""
+
 from __future__ import annotations
 
 from src.sentiment import (
     DEFAULT_MODEL,
     _device_arg_from_key,
     _normalize_device_spec,
+    adjust_distribution_for_callcenter,
+    detect_negation,
     normalize_label,
 )
 
@@ -76,3 +79,14 @@ class TestDeviceArgFromKey:
 class TestDefaults:
     def test_default_model_is_set(self):
         assert DEFAULT_MODEL == "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+
+
+class TestCallcenterHeuristics:
+    def test_detect_negation(self):
+        assert detect_negation("Jag är inte nöjd")
+        assert not detect_negation("Jag är väldigt nöjd")
+
+    def test_adjust_distribution_for_negation(self):
+        dist = {"negativ": 0.1, "neutral": 0.2, "positiv": 0.7}
+        adjusted = adjust_distribution_for_callcenter("Jag är inte nöjd", dist)
+        assert adjusted["negativ"] > adjusted["positiv"]

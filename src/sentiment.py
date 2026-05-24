@@ -9,6 +9,8 @@ from .clean import clean_texts
 from .profiles import resolve_profile
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+NEGATION_TERMS = {"inte", "ej", "aldrig", "icke", "knappast"}
+POLITE_POSITIVE_TERMS = {"tack", "vänlig", "hjälpsam", "uppskattar"}
 
 
 def normalize_label(label: str) -> str:
@@ -20,6 +22,30 @@ def normalize_label(label: str) -> str:
     if lowered in {"label_2", "positive", "pos"}:
         return "positiv"
     return label
+
+
+def detect_negation(text: str, window: int = 3) -> bool:
+    """Detect whether a Swedish negation appears near a sentiment-bearing phrase."""
+    tokens = [tok.strip(".,!?;:()[]\"'").lower() for tok in str(text).split()]
+    for idx, token in enumerate(tokens):
+        if token in NEGATION_TERMS and any(tokens[idx + 1 : idx + 1 + window]):
+            return True
+    return False
+
+
+def adjust_distribution_for_callcenter(text: str, dist: dict[str, float]) -> dict[str, float]:
+    """Apply lightweight call-center heuristics for negation and polite phrases."""
+    adjusted = dict(dist)
+    lowered = text.lower()
+    if detect_negation(text):
+        adjusted["negativ"], adjusted["positiv"] = adjusted.get("positiv", 0.0), adjusted.get(
+            "negativ", 0.0
+        )
+    if any(term in lowered for term in POLITE_POSITIVE_TERMS):
+        adjusted["positiv"] = adjusted.get("positiv", 0.0) + 0.05
+        adjusted["neutral"] = max(0.0, adjusted.get("neutral", 0.0) - 0.05)
+    total = sum(adjusted.values())
+    return {k: v / total for k, v in adjusted.items()} if total > 0 else adjusted
 
 
 class SentimentPipeline:
@@ -167,6 +193,18 @@ def analyze_smart(
         return_all_scores=return_all_scores,
         max_length=resolved_max_length,
     )
+    if profile_name == "callcenter" and return_all_scores:
+        adjusted_results = []
+        for text, inner in zip(proc_texts, results, strict=False):
+            if isinstance(inner, list):
+                dist = {entry.get("label"): float(entry.get("score", 0.0)) for entry in inner}
+                dist = adjust_distribution_for_callcenter(text, dist)
+                adjusted_results.append(
+                    [{"label": label, "score": score} for label, score in dist.items()]
+                )
+            else:
+                adjusted_results.append(inner)
+        results = adjusted_results
     meta: dict[str, str | int] = {
         "profile": profile_name,
         "model": chosen_model,
@@ -250,4 +288,6 @@ __all__ = [
     "analyze",
     "analyze_smart",
     "analyze_one",
+    "detect_negation",
+    "adjust_distribution_for_callcenter",
 ]

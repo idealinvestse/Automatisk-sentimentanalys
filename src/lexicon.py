@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from functools import lru_cache
 
 _WORD_RE = re.compile(r"[\wäöåÄÖÅ]+", re.UNICODE)
+NEGATIONS = {"inte", "ej", "aldrig", "icke", "knappast"}
 
 
 @lru_cache(maxsize=8)
@@ -56,13 +57,28 @@ def tokenize(text: str) -> Iterable[str]:
 
 
 def score_text(text: str, lexicon: dict[str, float]) -> float:
-    """Return a scalar sentiment score in [-1, 1] using average of matched terms."""
+    """Return a scalar sentiment score in [-1, 1] using Swedish negation handling."""
     total = 0.0
     n = 0
+    negation_window = 0
     for tok in tokenize(text):
-        if tok in lexicon:
-            total += lexicon[tok]
+        if tok in NEGATIONS:
+            negation_window = 3
+            continue
+        score = lexicon.get(tok)
+        if score is None:
+            # Simple Swedish compound-word fallback: match lexicon suffixes such as "kundservice".
+            score = next(
+                (value for term, value in lexicon.items() if len(term) > 3 and tok.endswith(term)),
+                None,
+            )
+        if score is not None:
+            if negation_window > 0:
+                score *= -0.8
+            total += score
             n += 1
+        if negation_window > 0:
+            negation_window -= 1
     if n == 0:
         return 0.0
     s = total / n
