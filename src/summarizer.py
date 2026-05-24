@@ -303,10 +303,10 @@ class CallSummarizer:
 
         scored.sort(key=lambda x: x[1], reverse=True)
         top = scored[: self.max_summary_sentences]
-        # Sort back by original order
-        top.sort(key=lambda x: next(i for i, s in enumerate(scored) if s[0] == x[0]))
-
-        return [t for t, _ in top]
+        # Sort back by original order using index stored during scoring
+        indexed_top = [(i, t) for i, (t, s) in enumerate(scored) if t in {x[0] for x in top}]
+        indexed_top.sort(key=lambda x: x[0])
+        return [t for _, t in indexed_top[: self.max_summary_sentences]]
 
     # ------------------------------------------------------------------
     # Action items

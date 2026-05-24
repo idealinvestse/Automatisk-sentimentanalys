@@ -274,7 +274,31 @@ class IntentClassifier:
         if not scores or max(scores.values()) == 0:
             return "other", 0.5
 
-        best = max(scores.items(), key=lambda kv: kv[1])
+        # Break ties deterministically: prefer specific intents over "other" and "information_request"
+        best_score = max(scores.values())
+        candidates = [k for k, v in scores.items() if v == best_score]
+        if len(candidates) > 1:
+            priority_order = [
+                "complaint",
+                "cancellation",
+                "refund_request",
+                "billing_inquiry",
+                "technical_support",
+                "account_update",
+                "order_status",
+                "appointment_booking",
+                "information_request",
+                "other",
+            ]
+            for preferred in priority_order:
+                if preferred in candidates:
+                    best = (preferred, best_score)
+                    break
+            else:
+                best = (candidates[0], best_score)
+        else:
+            best = (candidates[0], best_score)
+
         confidence = min(1.0, best[1])
         return best[0], round(confidence, 3)
 

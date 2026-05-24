@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -367,21 +368,23 @@ class DiarizationPipeline:
         try:
             import subprocess
             import tempfile
+            import wave
 
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp_path = tmp.name
+            tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)  # noqa: SIM115
+            tmp_path = tmp.name
+            tmp.close()  # Close immediately to avoid Windows lock issues
+
             subprocess.run(
                 ["ffmpeg", "-y", "-i", path, "-ar", "16000", "-ac", "1", "-f", "wav", tmp_path],
                 capture_output=True,
                 timeout=30,
                 check=True,
             )
-            import wave
-
             with wave.open(tmp_path, "rb") as wf:
                 frames = wf.readframes(wf.getnframes())
                 audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
-            os.unlink(tmp_path)
+            with suppress(OSError):
+                os.unlink(tmp_path)  # Windows may still hold the file briefly
             return audio
         except Exception:
             return None
