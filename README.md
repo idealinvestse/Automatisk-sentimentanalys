@@ -12,6 +12,17 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
   - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process`
 - (Ny) Utvärderingsramverk: `src/evaluate.py` för att mäta prestanda mot testset
 
+## Funktioner (v0.3 – Call Center Intelligence)
+- **Speaker Diarization**: Separera agent och kund med pyannote.audio eller energy-based VAD
+- **Intent Classification**: 10 call center-intents med keyword- och model-backend
+- **Call Summarization**: Extractive summary, action items, och outcome-detection
+- **Topic Modeling**: Keyword-baserad topic extraction med sentiment-fördelning
+- **Root Cause Analysis**: Identifiera upprepade klagomål, faktureringsproblem, tekniska fel
+- **Predictive Analytics**: Churn-risk, escalation-risk, och satisfaction scoring
+- **End-to-end Pipeline**: `CallAnalysisPipeline` som binder samman alla moduler
+- **Streamlit Dashboard**: Visuell översikt över sentiment, intents, topics och agent-prestanda
+- **Full Pipeline API**: `/analyze_pipeline` – kör alla analyssteg i ett anrop
+
 ## Installation (Windows PowerShell)
 ```powershell
 # 1) Skapa och aktivera virtuell miljö
@@ -201,6 +212,52 @@ Notera:
 - **batch_size**: antal filer per batch; endpointen kör batchar sekventiellt men kan parallellisera inom batch.
 - **glob/pattern**: använder Python glob (t.ex. `**/*.wav`).
 
+#### Full Pipeline API
+
+```bash
+# Kör sentiment + intent + topics + insights + risks på befintliga segments
+curl -X POST http://localhost:8000/analyze_pipeline -H "Content-Type: application/json" -d '{
+  "segments": [
+    {"text": "Jag är mycket missnöjd med fakturan", "speaker": "kund"},
+    {"text": "Jag ska hjälpa dig direkt", "speaker": "agent"}
+  ],
+  "device": "cpu"
+}'
+```
+
+#### Python: End-to-end Pipeline
+
+```python
+from src.pipeline import CallAnalysisPipeline
+
+pipe = CallAnalysisPipeline()
+
+# Från audio (inkl. transkribering + diarization + all analys)
+report = pipe.analyze_audio("data/call.wav", num_speakers=2, language="sv")
+
+# Eller från befintliga segments
+segments = [
+    {"text": "Jag har problem med min faktura", "start": 0, "end": 5},
+    {"text": "Jag ska kolla på det direkt", "start": 5, "end": 10},
+]
+report = pipe.analyze_segments(segments)
+
+print(report.to_dict())
+```
+
+#### Dashboard
+
+```bash
+# Starta Streamlit-dashboardet
+streamlit run app/dashboard.py
+```
+
+Dashboardet visar:
+- Sentiment-trender över tid
+- Intent-fördelning (pie chart)
+- Agent-prestanda (resolution rate, sentiment)
+- "Hot topics" från utvärdering
+- Live-analys av egna segments
 
 ## Utvärdering
 

@@ -258,6 +258,47 @@ else:
     st.info("Inga samtalsdata. Ladda upp en JSON-fil eller generera data först.")
 
 # ---------------------------------------------------------------------------
+# Row 5: Live Analysis (run pipeline on user input)
+# ---------------------------------------------------------------------------
+st.divider()
+st.subheader("🧪 Live-analys")
+
+live_text = st.text_area(
+    "Klistra in transkriberade segments (JSON-format):",
+    placeholder='[\n  {"text": "Jag har problem med fakturan", "speaker": "kund"},\n  {"text": "Jag ska hjälpa dig", "speaker": "agent"}\n]',
+    height=120,
+)
+
+if st.button("Analysera") and live_text:
+    try:
+        live_segments = json.loads(live_text)
+        if isinstance(live_segments, list) and live_segments:
+            with st.spinner("Kör pipeline..."):
+                from src.pipeline import CallAnalysisPipeline
+
+                pipe = CallAnalysisPipeline()
+                report = pipe.analyze_segments(live_segments)
+
+            col_r1, col_r2, col_r3 = st.columns(3)
+            with col_r1:
+                st.metric("Sentiment", report.sentiment_results[0].get("label", "?") if report.sentiment_results else "N/A")
+            with col_r2:
+                top_intent = report.intent_results[0][0] if report.intent_results else "N/A"
+                st.metric("Intent", top_intent)
+            with col_r3:
+                risk_level = report.risks.get("risk_level", "N/A")
+                st.metric("Risknivå", risk_level)
+
+            with st.expander("Detaljerade resultat"):
+                st.json(report.to_dict())
+        else:
+            st.warning("Inmatningen måste vara en lista med segment.")
+    except json.JSONDecodeError as e:
+        st.error(f"Ogiltig JSON: {e}")
+    except Exception as e:
+        st.error(f"Analys misslyckades: {e}")
+
+# ---------------------------------------------------------------------------
 # Footer
 # ---------------------------------------------------------------------------
 st.divider()

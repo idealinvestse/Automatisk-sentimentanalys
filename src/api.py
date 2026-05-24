@@ -646,6 +646,72 @@ async def analyze_conversation(
     )
 
 
+# --- Full pipeline endpoint ---
+
+
+class PipelineRequest(BaseModel):
+    """Request for the full call analysis pipeline."""
+
+    segments: list[dict[str, Any]] = Field(
+        ...,
+        description="ASR segments with 'text' and optionally 'speaker' keys",
+    )
+    sentiment_model: str | None = Field(
+        None,
+        description="Optional sentiment model override",
+    )
+    device: str = Field("auto")
+
+
+class PipelineResponse(BaseModel):
+    """Response from the full call analysis pipeline."""
+
+    sentiment_results: list[dict[str, Any]]
+    intent_results: list[dict[str, Any]]
+    summary: dict[str, Any]
+    topics: dict[str, Any]
+    insights: dict[str, Any]
+    risks: dict[str, Any]
+    processing_time_s: float
+    timestamp: str
+
+
+@app.post("/analyze_pipeline", response_model=PipelineResponse)
+async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
+    """Run the full call analysis pipeline on pre-transcribed segments.
+
+    This endpoint orchestrates sentiment, intent, summarization,
+    topic modeling, insights, and predictive analytics in a single call.
+
+    Args:
+        req: PipelineRequest with ASR segments.
+
+    Returns:
+        PipelineResponse with complete analysis results.
+    """
+    from .pipeline import CallAnalysisPipeline
+
+    pipe = CallAnalysisPipeline(
+        sentiment_model=req.sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+        device=req.device,
+    )
+    report = pipe.analyze_segments(req.segments)
+
+    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return PipelineResponse(
+        sentiment_results=report.sentiment_results,
+        intent_results=[
+            {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
+        ],
+        summary=report.summary,
+        topics=report.topics,
+        insights=report.insights,
+        risks=report.risks,
+        processing_time_s=report.processing_time_s,
+        timestamp=now_iso,
+    )
+
+
 # --- Batch endpoints ---
 
 

@@ -305,7 +305,30 @@ class DiarizationPipeline:
                     audio_duration_s=audio_dur,
                 )
         except Exception as e:
-            logger.debug("VAD-based diarization failed: %s. Using uniform split.", e)
+            logger.debug("faster-whisper VAD failed: %s. Trying energy-based VAD.", e)
+
+        # Fallback 2: energy-based VAD using numpy
+        audio_np = self._load_audio_numpy(audio_path)
+        if audio_np is not None and len(audio_np) > 0:
+            energy_segments = self._energy_vad(audio_np, min_segment_length)
+            if energy_segments:
+                vad_segments: list[SpeakerSegment] = []
+                for i, (start, end) in enumerate(energy_segments):
+                    if end - start >= min_segment_length:
+                        speaker = speakers[i % n_speakers]
+                        vad_segments.append(
+                            SpeakerSegment(
+                                start=round(start, 3), end=round(end, 3), speaker=speaker
+                            )
+                        )
+                if vad_segments:
+                    return DiarizationResult(
+                        segments=vad_segments,
+                        num_speakers=n_speakers,
+                        speakers=speakers,
+                        backend="heuristic",
+                        audio_duration_s=audio_dur or len(audio_np) / 16000.0,
+                    )
 
         # Ultimate fallback: uniform split into alternating segments
         if audio_dur is None:
@@ -390,6 +413,102 @@ class DiarizationPipeline:
         except Exception as e:
             logger.warning("Failed to load audio as numpy from %s: %s", path, e)
             return None
+
+    @staticmethod
+    def _energy_vad(
+        audio: np.ndarray,
+        min_segment_length: float,
+        frame_duration_ms: float = 30.0,
+        energy_threshold_db: float = -40.0,
+        min_silence_ms: float = 300.0,
+    ) -> list[tuple[float, float]]:
+        """Simple energy-based voice activity detection.
+
+        Divides audio into frames, computes RMS energy, and detects
+        speech segments above a relative energy threshold.
+
+        Args:
+            audio: 1D numpy array of audio samples (16kHz, mono).
+            min_segment_length: Minimum segment duration in seconds.
+            frame_duration_ms: Frame size in milliseconds.
+            energy_threshold_db: Energy threshold relative to max in dB.
+            min_silence_ms: Minimum silence to split segments in ms.
+
+        Returns:
+            List of (start_s, end_s) speech segments.
+        """
+        if len(audio) == 0:
+            return []
+
+        sr = 16000
+        frame_len = int(sr * frame_duration_ms / 1000)
+        if frame_len == 0:
+            return []
+
+        # Compute RMS energy per frame
+        n_frames = len(audio) // frame_len
+        energies: list[float] = []
+        for i in range(n_frames):
+            frame = audio[i * frame_len : (i + 1) * frame_len]
+            rms = np.sqrt(np.mean(frame**2))
+            # Convert to dB, clamp at -60 dB floor
+            db = 20.0 * np.log10(max(rms, 1e-6))
+            energies.append(db)
+
+        if not energies:
+            return []
+
+        # Dynamic threshold: max energy minus threshold offset
+        max_energy = max(energies)
+        threshold = max_energy + energy_threshold_db  # e.g. -40 dB below peak
+
+        # Binary speech detection
+        is_speech = [e > threshold for e in energies]
+
+        # Merge short gaps and split on long silence
+        min_silence_frames = max(1, int(min_silence_ms / frame_duration_ms))
+        min_speech_frames = max(1, int(min_segment_length * 1000 / frame_duration_ms))
+
+        # Merge: require at least min_silence_frames of non-speech to split
+        merged_speech = list(is_speech)
+        for _ in range(2):  # Two passes of morphological smoothing
+            for i in range(1, len(merged_speech) - 1):
+                if not merged_speech[i]:
+                    # If surrounded by speech on both sides within short gap, fill
+                    left_speech = any(merged_speech[max(0, i - min_silence_frames) : i])
+                    right_speech = any(
+                        merged_speech[i + 1 : min(len(merged_speech), i + 1 + min_silence_frames)]
+                    )
+                    if left_speech and right_speech:
+                        merged_speech[i] = True
+
+        # Extract segments
+        segments: list[tuple[float, float]] = []
+        in_speech = False
+        seg_start = 0
+
+        for i, speech in enumerate(merged_speech):
+            if speech and not in_speech:
+                seg_start = i
+                in_speech = True
+            elif not speech and in_speech:
+                # Check if segment is long enough
+                duration_frames = i - seg_start
+                if duration_frames >= min_speech_frames:
+                    start_s = seg_start * frame_duration_ms / 1000.0
+                    end_s = i * frame_duration_ms / 1000.0
+                    segments.append((start_s, end_s))
+                in_speech = False
+
+        # Close final segment
+        if in_speech:
+            duration_frames = len(merged_speech) - seg_start
+            if duration_frames >= min_speech_frames:
+                start_s = seg_start * frame_duration_ms / 1000.0
+                end_s = len(merged_speech) * frame_duration_ms / 1000.0
+                segments.append((start_s, end_s))
+
+        return segments
 
 
 __all__ = [
