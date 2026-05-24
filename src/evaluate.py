@@ -1,0 +1,342 @@
+"""Utvärderingsramverk för svensk sentimentanalys.
+
+Användning:
+    python -m src.evaluate --testset data/test_swedish.csv --output reports/baseline.json
+    python -m src.evaluate --testset data/test_swedish.csv --profile call --lexicon-weight 0.3
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from collections import Counter
+from datetime import datetime
+from typing import Any
+
+import pandas as pd
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
+from .profiles import AVAILABLE_PROFILES
+from .sentiment import analyze_smart
+
+app = typer.Typer(help="Utvärderingsramverk: kör sentimentanalys mot testset och beräkna metrics")
+console = Console()
+
+LABELS = ["negativ", "neutral", "positiv"]
+
+
+def load_testset(path: str) -> pd.DataFrame:
+    """Ladda testset från CSV med kolumner 'text', 'label'."""
+    df = pd.read_csv(path, encoding="utf-8")
+    for col in ("text", "label"):
+        if col not in df.columns:
+            raise ValueError(f"Testset måste ha kolumn '{col}'. Hittade: {list(df.columns)}")
+    df["label"] = df["label"].str.strip().str.lower()
+    unknown = set(df["label"].unique()) - set(LABELS)
+    if unknown:
+        console.print(
+            f"[yellow]Varning: okända labels i testset: {unknown}. Endast {LABELS} stöds.[/yellow]"
+        )
+    return df
+
+
+def compute_metrics(
+    y_true: list[str],
+    y_pred: list[str],
+    scores: list[dict[str, float]] | None = None,
+) -> dict[str, Any]:
+    """Beräkna accuracy, per-klass F1, macro-F1, och confusion matrix."""
+    n = len(y_true)
+    correct = sum(1 for t, p in zip(y_true, y_pred, strict=False) if t == p)
+    accuracy = correct / n if n > 0 else 0.0
+
+    # Per-class metrics
+    per_class: dict[str, dict[str, float]] = {}
+    for label in LABELS:
+        tp = sum(1 for t, p in zip(y_true, y_pred, strict=False) if t == label and p == label)
+        fp = sum(1 for t, p in zip(y_true, y_pred, strict=False) if t != label and p == label)
+        fn = sum(1 for t, p in zip(y_true, y_pred, strict=False) if t == label and p != label)
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        per_class[label] = {
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+            "support": sum(1 for t in y_true if t == label),
+        }
+
+    macro_f1 = sum(per_class[lbl]["f1"] for lbl in LABELS) / 3.0
+
+    # Confusion matrix
+    cm: dict[str, dict[str, int]] = {t: {p: 0 for p in LABELS} for t in LABELS}
+    for t, p in zip(y_true, y_pred, strict=False):
+        if t in cm and p in cm[t]:
+            cm[t][p] += 1
+
+    return {
+        "accuracy": round(accuracy, 4),
+        "macro_f1": round(macro_f1, 4),
+        "per_class": per_class,
+        "confusion_matrix": cm,
+        "n_samples": n,
+    }
+
+
+def run_evaluation(
+    df: pd.DataFrame,
+    profile: str = "default",
+    model: str | None = None,
+    device: str = "auto",
+    batch_size: int = 16,
+    lexicon_file: str | None = None,
+    lexicon_weight: float = 0.0,
+    max_length: int | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Kör utvärdering på hela testsetet.
+
+    Returns:
+        (metrics_dict, detailed_results_list)
+    """
+    texts = df["text"].astype(str).tolist()
+    y_true = df["label"].tolist()
+
+    console.print(f"[cyan]Kör sentimentanalys med profil:[/cyan] {profile}")
+    t0 = time.time()
+
+    results, meta = analyze_smart(
+        texts,
+        profile=profile,
+        model_name=model,
+        device=device,
+        batch_size=batch_size,
+        return_all_scores=True,
+        max_length=max_length,
+        clean=True,
+    )
+
+    # Extrahera predictioner och scores
+    y_pred: list[str] = []
+    scores_list: list[dict[str, float]] = []
+    for inner in results:
+        if isinstance(inner, list):
+            dist = {e.get("label", ""): float(e.get("score", 0.0)) for e in inner}
+            for k in LABELS:
+                dist.setdefault(k, 0.0)
+        elif isinstance(inner, dict):
+            label = inner.get("label", "neutral")
+            score = float(inner.get("score", 0.0))
+            dist = {k: 0.0 for k in LABELS}
+            if label in dist:
+                dist[label] = score
+        else:
+            dist = {k: 0.0 for k in LABELS}
+            dist["neutral"] = 1.0
+
+        scores_list.append(dist)
+        y_pred.append(max(dist.items(), key=lambda kv: kv[1])[0])
+
+    # Lexikon-blending om aktiverat
+    if lexicon_file and lexicon_weight > 0.0:
+        try:
+            lex = load_lexicon(lexicon_file)
+            console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
+            for i, (text, dist) in enumerate(zip(texts, scores_list, strict=False)):
+                s = score_text(text, lex)
+                ln, le, lp = scalar_to_dist(s)
+                blended = blend_distributions(dist, (ln, le, lp), lexicon_weight)
+                scores_list[i] = blended
+                y_pred[i] = max(blended.items(), key=lambda kv: kv[1])[0]
+        except Exception as e:
+            console.print(
+                f"[yellow]Varning: kunde inte blanda lexikon: {e}. Fortsätter utan.[/yellow]"
+            )
+
+    proc_time = time.time() - t0
+
+    metrics = compute_metrics(y_true, y_pred, scores_list)
+    metrics["processing_time_s"] = round(proc_time, 2)
+    metrics["profile"] = profile
+    metrics["model"] = meta.get("model", "unknown")
+    metrics["lexicon_weight"] = lexicon_weight
+    metrics["lexicon_file"] = lexicon_file
+
+    # Detaljerade resultat per text
+    details = []
+    for i, (text, true_label, pred_label, scores) in enumerate(
+        zip(texts, y_true, y_pred, scores_list, strict=False)
+    ):
+        details.append(
+            {
+                "index": i,
+                "text": text[:200],
+                "true_label": true_label,
+                "pred_label": pred_label,
+                "correct": true_label == pred_label,
+                "scores": scores,
+            }
+        )
+
+    return metrics, details
+
+
+def print_results(metrics: dict[str, Any]) -> None:
+    """Skriv ut resultaten i en fin tabell."""
+    console.print()
+    console.print(Panel.fit("[bold]Utvärderingsresultat[/bold]", border_style="cyan"))
+
+    # Översikt
+    overview = Table(title="Översikt")
+    overview.add_column("Metrik", style="cyan")
+    overview.add_column("Värde", style="green")
+    overview.add_row("Accuracy", f"{metrics['accuracy']:.2%}")
+    overview.add_row("Macro F1", f"{metrics['macro_f1']:.2%}")
+    overview.add_row("Modell", str(metrics.get("model", "N/A")))
+    overview.add_row("Profil", str(metrics.get("profile", "N/A")))
+    overview.add_row("Lexikonvikt", str(metrics.get("lexicon_weight", 0.0)))
+    overview.add_row("Antal sampel", str(metrics.get("n_samples", 0)))
+    overview.add_row("Processtid", f"{metrics.get('processing_time_s', 0):.2f}s")
+    console.print(overview)
+
+    # Per-klass
+    per_class = Table(title="Per-klass Metrics")
+    per_class.add_column("Klass")
+    per_class.add_column("Precision")
+    per_class.add_column("Recall")
+    per_class.add_column("F1")
+    per_class.add_column("Support")
+    for label in LABELS:
+        pc = metrics.get("per_class", {}).get(label, {})
+        per_class.add_row(
+            label,
+            f"{pc.get('precision', 0):.2%}",
+            f"{pc.get('recall', 0):.2%}",
+            f"{pc.get('f1', 0):.2%}",
+            str(pc.get("support", 0)),
+        )
+    console.print(per_class)
+
+    # Confusion matrix
+    cm = metrics.get("confusion_matrix", {})
+    if cm:
+        cm_table = Table(title="Confusion Matrix (rad=true, kol=pred)")
+        cm_table.add_column("", style="bold")
+        for label in LABELS:
+            cm_table.add_column(f"pred {label}", style="yellow")
+        for true_label in LABELS:
+            row = [f"true {true_label}"]
+            for pred_label in LABELS:
+                row.append(str(cm.get(true_label, {}).get(pred_label, 0)))
+            cm_table.add_row(*row)
+        console.print(cm_table)
+
+
+@app.command()
+def evaluate(
+    testset: str = typer.Option(
+        "data/test_swedish.csv",
+        "--testset",
+        help="Sökväg till testset CSV (kolumner: text, label)",
+    ),
+    profile: str = typer.Option(
+        "default",
+        "--profile",
+        help=f"Profil att använda. Tillgängliga: {', '.join(AVAILABLE_PROFILES)}",
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help="Hugging Face-modell (default: profilens standardmodell)",
+    ),
+    device: str = typer.Option("auto", "--device", help="Enhet: auto, cpu, cuda, mps"),
+    batch_size: int = typer.Option(16, "--batch-size", help="Batch-storlek"),
+    max_length: int | None = typer.Option(None, "--max-length", help="Max token-längd"),
+    lexicon_file: str | None = typer.Option(
+        None,
+        "--lexicon-file",
+        help="Sökväg till svenskt lexikon för blending",
+    ),
+    lexicon_weight: float = typer.Option(
+        0.0,
+        "--lexicon-weight",
+        min=0.0,
+        max=1.0,
+        help="Vikt för lexikon-blending [0..1]",
+    ),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        help="Spara resultat som JSON (t.ex. reports/baseline.json)",
+    ),
+    output_csv: str | None = typer.Option(
+        None,
+        "--output-csv",
+        help="Spara detaljerade resultat som CSV",
+    ),
+):
+    """Utvärdera sentimentanalys mot ett testset."""
+    if not os.path.isfile(testset):
+        console.print(f"[red]Testset hittades inte: {testset}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[cyan]Laddar testset:[/cyan] {testset}")
+    df = load_testset(testset)
+    console.print(f"  {len(df)} sampel, fördelning: {dict(Counter(df['label']))}")
+
+    metrics, details = run_evaluation(
+        df,
+        profile=profile,
+        model=model,
+        device=device,
+        batch_size=batch_size,
+        lexicon_file=lexicon_file,
+        lexicon_weight=lexicon_weight,
+        max_length=max_length,
+    )
+
+    print_results(metrics)
+
+    # Spara resultat
+    if output:
+        os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
+        report = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "testset": testset,
+            "metrics": metrics,
+        }
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        console.print(f"\n[green]Rapport sparad:[/green] {output}")
+
+    if output_csv:
+        os.makedirs(os.path.dirname(output_csv) or ".", exist_ok=True)
+        df_out = pd.DataFrame(details)
+        df_out.to_csv(output_csv, index=False, encoding="utf-8")
+        console.print(f"[green]Detaljer sparade:[/green] {output_csv}")
+
+
+@app.command()
+def list_profiles():
+    """Lista tillgängliga profiler."""
+    table = Table(title="Tillgängliga profiler")
+    table.add_column("Profil")
+    table.add_column("Modell")
+    table.add_column("Max längd")
+    from .profiles import PROFILE_SPECS
+
+    for name, spec in PROFILE_SPECS.items():
+        table.add_row(
+            name,
+            spec.get("model", "N/A"),
+            str(spec.get("max_length", "N/A")),
+        )
+    console.print(table)
+
+
+if __name__ == "__main__":
+    app()

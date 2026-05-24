@@ -1,29 +1,32 @@
 from __future__ import annotations
 
-# Standard library imports for type hints, file operations, and JSON handling
-from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime
-import os
 import glob
 import json
+import os
+
 # Concurrency utilities for parallel processing of audio files
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+
+# Standard library imports for type hints, file operations, and JSON handling
+from typing import Any
 
 # FastAPI framework for building the REST API
 from fastapi import FastAPI
+
 # Pydantic for data validation and serialization
 from pydantic import BaseModel, Field
 
-# Internal sentiment/ASR/lexicon modules
-from .sentiment import analyze_smart
 from .asr import transcribe as asr_transcribe
 from .lexicon import (
-    load_lexicon,
-    score_text,
-    scalar_to_dist,
     blend_distributions,
+    load_lexicon,
+    scalar_to_dist,
+    score_text,
 )
 
+# Internal sentiment/ASR/lexicon modules
+from .sentiment import analyze_smart
 
 # Initialize FastAPI app
 app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
@@ -31,33 +34,29 @@ app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
 
 class AnalyzeRequest(BaseModel):
     # List of texts to analyze for sentiment
-    texts: List[str] = Field(..., description="List of texts to analyze")
+    texts: list[str] = Field(..., description="List of texts to analyze")
     # Data type classification for profile selection
-    datatype: Optional[str] = Field(
+    datatype: str | None = Field(
         None,
-        description=(
-            "Data type: post, comment, article, review, ..."
-        ),
+        description=("Data type: post, comment, article, review, ..."),
     )
     # Source classification for profile selection
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None,
-        description=(
-            "Source: forum, magazine, news, social, ..."
-        ),
+        description=("Source: forum, magazine, news, social, ..."),
     )
     # Explicit profile name to use for sentiment analysis
-    profile: Optional[str] = Field(
+    profile: str | None = Field(
         None,
         description="Explicit profile name to use",
     )
     # Optional model override for sentiment analysis
-    model: Optional[str] = Field(
+    model: str | None = Field(
         None,
         description="Optional model override",
     )
     # Device specification for model execution
-    device: Optional[str] = Field(
+    device: str | None = Field(
         "auto",
         description="Device: auto, cpu, cuda, cuda:0, mps",
     )
@@ -66,14 +65,14 @@ class AnalyzeRequest(BaseModel):
     # Whether to return all scores or just the top prediction
     return_all_scores: bool = Field(False)
     # Maximum text length for processing (truncates longer texts)
-    max_length: Optional[int] = Field(None, ge=8, le=4096)
+    max_length: int | None = Field(None, ge=8, le=4096)
     # Whether to clean text before analysis
     # (HTML unescaping, URL removal, etc.)
     clean: bool = Field(True)
     # Whether to normalize text (case, whitespace, etc.)
     normalize: bool = Field(True)
     # Path to Swedish lexicon file for blending with model predictions
-    lexicon_file: Optional[str] = Field(
+    lexicon_file: str | None = Field(
         None,
         description=(
             "Path to Swedish lexicon (CSV/TSV) with columns "
@@ -91,19 +90,16 @@ class AnalyzeRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    meta: Dict[str, Any]
+    meta: dict[str, Any]
     timestamp: str
-    results: List[Any]
+    results: list[Any]
 
 
 class TranscribeRequest(BaseModel):
     # Path to audio file (server/container must have access)
     audio_path: str = Field(
         ...,
-        description=(
-            "Path to audio file accessible by the "
-            "server/container"
-        ),
+        description=("Path to audio file accessible by the " "server/container"),
     )
     # ASR model to use for transcription (KB Swedish large by default)
     model: str = Field("kb-whisper-large")
@@ -122,10 +118,13 @@ class TranscribeRequest(BaseModel):
     # Length of audio chunks in seconds for processing
     # (affects memory usage and accuracy)
     chunk_length_s: int = Field(30, ge=5, le=60)
+    # KB-Whisper revision: standard, strict, subtitle
+    # 'strict' is recommended for call center (verbatim transcription)
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
 
 
 class TranscribeResponse(BaseModel):
-    transcript: Dict[str, Any]
+    transcript: dict[str, Any]
     timestamp: str
 
 
@@ -133,10 +132,7 @@ class AnalyzeConversationRequest(BaseModel):
     # Path to audio file the server can access
     audio_path: str = Field(
         ...,
-        description=(
-            "Path to audio file accessible by the server/"
-            "container"
-        ),
+        description=("Path to audio file accessible by the server/" "container"),
     )
     # ASR parameters
     # ASR model to use (KB Swedish large by default)
@@ -155,16 +151,18 @@ class AnalyzeConversationRequest(BaseModel):
     word_timestamps: bool = Field(False)
     # Chunk length in seconds
     chunk_length_s: int = Field(30, ge=5, le=60)
+    # KB-Whisper revision: standard, strict, subtitle
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     # Sentiment analysis parameters
     # Whether to return all scores or only the top prediction
     return_all_scores: bool = Field(True)
     # Optional model override for sentiment analysis
-    sentiment_model: Optional[str] = Field(
+    sentiment_model: str | None = Field(
         None,
         description="Optional override for sentiment model",
     )
     # Path to Swedish lexicon file for blending with model predictions
-    lexicon_file: Optional[str] = Field(None)
+    lexicon_file: str | None = Field(None)
     # Blend weight [0..1]; 0=model only, 1=lexicon only
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
 
@@ -173,9 +171,9 @@ class SegmentSentiment(BaseModel):
     # Index of the segment in the conversation
     index: int
     # Start time of the segment in seconds
-    start: Optional[float]
+    start: float | None
     # End time of the segment in seconds
-    end: Optional[float]
+    end: float | None
     # Transcribed text of the segment
     text: str
     # Predicted sentiment label (negativ, neutral, or positiv)
@@ -183,18 +181,18 @@ class SegmentSentiment(BaseModel):
     # Confidence score for the predicted label
     score: float
     # Individual sentiment scores when return_all_scores=True
-    negativ: Optional[float] = None
-    neutral: Optional[float] = None
-    positiv: Optional[float] = None
+    negativ: float | None = None
+    neutral: float | None = None
+    positiv: float | None = None
 
 
 class AnalyzeConversationResponse(BaseModel):
     # Full transcription result from ASR
-    transcript: Dict[str, Any]
+    transcript: dict[str, Any]
     # Sentiment analysis results for each conversation segment
-    segment_sentiments: List[SegmentSentiment]
+    segment_sentiments: list[SegmentSentiment]
     # Metadata about the analysis process (model used, device, timing, etc.)
-    meta: Dict[str, Any]
+    meta: dict[str, Any]
     # ISO timestamp when the analysis was completed
     timestamp: str
 
@@ -204,10 +202,12 @@ class AnalyzeConversationResponse(BaseModel):
 AUDIO_EXTS = {".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".wma", ".aac"}
 
 
-def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
-                         directory: Optional[str] = None,
-                         pattern: Optional[str] = None,
-                         recursive: bool = True) -> List[str]:
+def _resolve_audio_paths(
+    audio_paths: list[str] | None = None,
+    directory: str | None = None,
+    pattern: str | None = None,
+    recursive: bool = True,
+) -> list[str]:
     """Resolve audio file paths from various input sources.
 
     This helper function handles multiple ways of specifying audio files:
@@ -225,17 +225,14 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
         Sorted list of absolute paths to valid audio files
         with deduplicated entries
     """
-    files: List[str] = []
+    files: list[str] = []
     # Process explicit paths: files, directories, or glob patterns
-    for p in (audio_paths or []):
+    for p in audio_paths or []:
         # Handle glob patterns (*, ?, []) in the path list
         if any(ch in p for ch in ["*", "?", "["]):
             for m in glob.glob(p, recursive=recursive):
                 # Validate that matched item is a file with supported extension
-                if (
-                    os.path.isfile(m)
-                    and os.path.splitext(m)[1].lower() in AUDIO_EXTS
-                ):
+                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
                     files.append(os.path.abspath(m))
         # Handle directory paths in the path list
         elif os.path.isdir(p):
@@ -248,10 +245,7 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
                 if not recursive:
                     break
         # Handle individual file paths in the path list
-        elif (
-            os.path.isfile(p)
-            and os.path.splitext(p)[1].lower() in AUDIO_EXTS
-        ):
+        elif os.path.isfile(p) and os.path.splitext(p)[1].lower() in AUDIO_EXTS:
             files.append(os.path.abspath(p))
     # Process directory + pattern combination if directory is specified
     if directory:
@@ -260,10 +254,7 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
             pat = os.path.join(directory, pattern)
             for m in glob.glob(pat, recursive=recursive):
                 # Validate file has supported extension
-                if (
-                    os.path.isfile(m)
-                    and os.path.splitext(m)[1].lower() in AUDIO_EXTS
-                ):
+                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
                     files.append(os.path.abspath(m))
         else:
             # Scan entire directory for audio files
@@ -280,7 +271,7 @@ def _resolve_audio_paths(audio_paths: Optional[List[str]] = None,
     return files
 
 
-def _chunk(lst: List[str], size: int) -> List[List[str]]:
+def _chunk(lst: list[str], size: int) -> list[list[str]]:
     """Divide a list into chunks of specified size.
 
     This helper function is used for batch processing to divide files into
@@ -293,10 +284,10 @@ def _chunk(lst: List[str], size: int) -> List[List[str]]:
     Returns:
         List of sublists (chunks) of the original list
     """
-    return [lst[i:i + size] for i in range(0, len(lst), size)]
+    return [lst[i : i + size] for i in range(0, len(lst), size)]
 
 
-def _load_state(path: Optional[str]) -> Dict[str, Any]:
+def _load_state(path: str | None) -> dict[str, Any]:
     """Load processing state from a JSON file.
 
     This helper is used by the scan process endpoint to track which files
@@ -317,14 +308,10 @@ def _load_state(path: Optional[str]) -> Dict[str, Any]:
         return {"processed": {}}
     try:
         # Load and validate state file structure
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             obj = json.load(f)
             # Ensure the loaded object has the expected structure
-            if (
-                isinstance(obj, dict)
-                and "processed" in obj
-                and isinstance(obj["processed"], dict)
-            ):
+            if isinstance(obj, dict) and "processed" in obj and isinstance(obj["processed"], dict):
                 return obj
     except Exception:
         # Return empty state if file reading or parsing fails
@@ -332,7 +319,7 @@ def _load_state(path: Optional[str]) -> Dict[str, Any]:
     return {"processed": {}}
 
 
-def _save_state(path: Optional[str], state: Dict[str, Any]) -> None:
+def _save_state(path: str | None, state: dict[str, Any]) -> None:
     """Save processing state to a JSON file.
 
     This helper persists the processing state to enable incremental
@@ -354,7 +341,7 @@ def _save_state(path: Optional[str], state: Dict[str, Any]) -> None:
 
 # Health check endpoint for monitoring service availability
 @app.get("/health")
-async def health() -> Dict[str, str]:
+async def health() -> dict[str, str]:
     """Simple health check endpoint.
 
     Returns a basic status response to indicate the API is running.
@@ -396,11 +383,7 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         clean=req.clean,
     )
     # Optional lexicon blending (combine model predictions with lexicon)
-    use_lex = (
-        req.lexicon_file is not None
-        and req.lexicon_weight
-        and req.lexicon_weight > 0.0
-    )
+    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
     if use_lex:
         try:
             # Load lexicon for blending
@@ -408,12 +391,9 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
             # Blend per item - process each text individually
             if results and isinstance(results[0], list):
                 blended_results = []
-                for t, inner in zip(req.texts, results):
+                for t, inner in zip(req.texts, results, strict=False):
                     # Extract scores from model results
-                    scores = {
-                        e.get("label"): float(e.get("score", 0.0))
-                        for e in inner
-                    }
+                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
                     # Ensure all sentiment labels are present
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
@@ -439,7 +419,7 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                 # Approximate dist; blend; re-pick top-1
                 # Handle case where only top prediction is returned
                 blended_results = []
-                for t, r in zip(req.texts, results):
+                for t, r in zip(req.texts, results, strict=False):
                     # Extract label (score not used)
                     label = r.get("label")
                     # Create distribution based on top prediction
@@ -502,6 +482,7 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
         vad=req.vad,
         word_timestamps=req.word_timestamps,
         chunk_length_s=req.chunk_length_s,
+        revision=req.revision,
     )
     # Generate timestamp for response
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -539,6 +520,7 @@ async def analyze_conversation(
         vad=req.vad,
         word_timestamps=req.word_timestamps,
         chunk_length_s=req.chunk_length_s,
+        revision=req.revision,
     )
     # Extract text segments from transcription
     segments = tr.get("segments", []) or []
@@ -547,15 +529,7 @@ async def analyze_conversation(
     # This handles cases where VAD doesn't split the audio into segments
     if not texts or all(not t for t in texts):
         texts = (
-            [
-                " ".join(
-                    [
-                        s.get("text", "").strip()
-                        for s in segments
-                        if s.get("text")
-                    ]
-                ).strip()
-            ]
+            [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
             if segments
             else []
         )
@@ -580,22 +554,15 @@ async def analyze_conversation(
         clean=True,
     )
     # Optional lexicon blending for improved sentiment accuracy
-    use_lex = (
-        req.lexicon_file is not None
-        and req.lexicon_weight
-        and req.lexicon_weight > 0.0
-    )
+    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
     if use_lex:
         try:
             # Load lexicon for blending
             lex = load_lexicon(req.lexicon_file)
             blended_results = []
-            for t, inner in zip(tr_texts, results):
+            for t, inner in zip(tr_texts, results, strict=False):
                 # Extract scores from model results
-                scores = {
-                    e.get("label"): float(e.get("score", 0.0))
-                    for e in inner
-                }
+                scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
                 # Ensure all sentiment labels are present
                 for k in ["negativ", "neutral", "positiv"]:
                     scores.setdefault(k, 0.0)
@@ -622,13 +589,10 @@ async def analyze_conversation(
             pass
 
     # Map sentiment analysis results back to segments with timing information
-    seg_out: List[SegmentSentiment] = []
-    for idx, (t, inner) in enumerate(zip(tr_texts, results)):
+    seg_out: list[SegmentSentiment] = []
+    for idx, (t, inner) in enumerate(zip(tr_texts, results, strict=False)):
         # Create scores map from analysis results
-        scores_map = {
-            e.get("label"): float(e.get("score", 0.0))
-            for e in inner
-        }
+        scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
         # Ensure all sentiment labels are present in scores map
         for k in ["negativ", "neutral", "positiv"]:
             scores_map.setdefault(k, 0.0)
@@ -640,12 +604,12 @@ async def analyze_conversation(
         if idx < len(segments):
             start = (
                 float(segments[idx].get("start", 0.0) or 0.0)
-                if isinstance(segments[idx].get("start"), (int, float))
+                if isinstance(segments[idx].get("start"), int | float)
                 else None
             )
             end = (
                 float(segments[idx].get("end", 0.0) or 0.0)
-                if isinstance(segments[idx].get("end"), (int, float))
+                if isinstance(segments[idx].get("end"), int | float)
                 else None
             )
         seg_out.append(
@@ -671,18 +635,19 @@ async def analyze_conversation(
         timestamp=now_iso,
     )
 
+
 # --- Batch endpoints ---
 
 
 class BatchTranscribeRequest(BaseModel):
-    audio_paths: Optional[List[str]] = None
-    directory: Optional[str] = None
-    glob: Optional[str] = Field(
+    audio_paths: list[str] | None = None
+    directory: str | None = None
+    glob: str | None = Field(
         None,
         description="Glob pattern within directory, e.g. **/*.wav",
     )
     recursive: bool = True
-    limit: Optional[int] = Field(None, ge=1)
+    limit: int | None = Field(None, ge=1)
     workers: int = Field(1, ge=1, le=8)
     # ASR params
     model: str = Field("kb-whisper-large")
@@ -693,16 +658,17 @@ class BatchTranscribeRequest(BaseModel):
     vad: bool = Field(True)
     word_timestamps: bool = Field(True)
     chunk_length_s: int = Field(30, ge=5, le=60)
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
 
 
 class BatchTranscribeItem(BaseModel):
     file: str
-    transcript: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    transcript: dict[str, Any] | None = None
+    error: str | None = None
 
 
 class BatchTranscribeResponse(BaseModel):
-    items: List[BatchTranscribeItem]
+    items: list[BatchTranscribeItem]
     ok: int
     failed: int
 
@@ -740,11 +706,11 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
     )
     if req.limit:
         files = files[: req.limit]
-    items: List[BatchTranscribeItem] = []
+    items: list[BatchTranscribeItem] = []
     ok = 0
     failed = 0
 
-    def _worker(p: str) -> Tuple[str, Dict[str, Any]]:
+    def _worker(p: str) -> tuple[str, dict[str, Any]]:
         """Worker function for processing individual audio files."""
         tr = asr_transcribe(
             audio_path=p,
@@ -756,6 +722,7 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
             vad=req.vad,
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
+            revision=req.revision,
         )
         return p, tr
 
@@ -773,10 +740,7 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
                 failed += 1
     else:
         with ThreadPoolExecutor(max_workers=req.workers) as ex:
-            futs = {
-                ex.submit(_worker, p): p
-                for p in files
-            }
+            futs = {ex.submit(_worker, p): p for p in files}
             for fut in as_completed(futs):
                 p = futs[fut]
                 try:
@@ -799,11 +763,11 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
 
 
 class BatchAnalyzeConversationRequest(BaseModel):
-    audio_paths: Optional[List[str]] = None
-    directory: Optional[str] = None
-    glob: Optional[str] = Field(None)
+    audio_paths: list[str] | None = None
+    directory: str | None = None
+    glob: str | None = Field(None)
     recursive: bool = True
-    limit: Optional[int] = Field(None, ge=1)
+    limit: int | None = Field(None, ge=1)
     workers: int = Field(1, ge=1, le=8)
     # ASR
     model: str = Field("kb-whisper-large")
@@ -814,22 +778,23 @@ class BatchAnalyzeConversationRequest(BaseModel):
     vad: bool = Field(True)
     word_timestamps: bool = Field(False)
     chunk_length_s: int = Field(30, ge=5, le=60)
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     # Sentiment
-    sentiment_model: Optional[str] = Field(None)
-    lexicon_file: Optional[str] = Field(None)
+    sentiment_model: str | None = Field(None)
+    lexicon_file: str | None = Field(None)
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
 
 
 class BatchAnalyzeConversationItem(BaseModel):
     file: str
-    transcript: Optional[Dict[str, Any]] = None
-    segment_sentiments: Optional[List[SegmentSentiment]] = None
-    meta: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    transcript: dict[str, Any] | None = None
+    segment_sentiments: list[SegmentSentiment] | None = None
+    meta: dict[str, Any] | None = None
+    error: str | None = None
 
 
 class BatchAnalyzeConversationResponse(BaseModel):
-    items: List[BatchAnalyzeConversationItem]
+    items: list[BatchAnalyzeConversationItem]
     ok: int
     failed: int
     total: int
@@ -868,21 +833,21 @@ async def batch_analyze_conversation(
     )
     if req.limit:
         files = files[: req.limit]
-    items: List[BatchAnalyzeConversationItem] = []
+    items: list[BatchAnalyzeConversationItem] = []
     ok = 0
     failed = 0
 
     # Local alias to keep type annotation lines short
-    WorkerResult = Tuple[
+    worker_result_type = tuple[
         str,
-        Dict[str, Any],
-        List[SegmentSentiment],
-        Dict[str, Any],
+        dict[str, Any],
+        list[SegmentSentiment],
+        dict[str, Any],
     ]
 
     def _worker(
         p: str,
-    ) -> WorkerResult:
+    ) -> worker_result_type:
         """Worker for processing conversation audio files.
 
         Processes a single file: transcribe, analyze, and package.
@@ -898,6 +863,7 @@ async def batch_analyze_conversation(
             vad=req.vad,
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
+            revision=req.revision,
         )
         # Extract text segments from transcription
         segments = tr.get("segments", []) or []
@@ -905,15 +871,7 @@ async def batch_analyze_conversation(
         # Fallback: single full transcript if no segments detected
         if not texts or all(not t for t in texts):
             texts = (
-                [
-                    " ".join(
-                        [
-                            s.get("text", "").strip()
-                            for s in segments
-                            if s.get("text")
-                        ]
-                    ).strip()
-                ]
+                [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
                 if segments
                 else []
             )
@@ -938,20 +896,13 @@ async def batch_analyze_conversation(
         )
 
         # Optional lexicon blending for improved sentiment accuracy
-        use_lex = (
-            req.lexicon_file is not None
-            and req.lexicon_weight
-            and req.lexicon_weight > 0.0
-        )
+        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
         if use_lex:
             try:
                 lex = load_lexicon(req.lexicon_file)
                 blended_results = []
-                for t, inner in zip(tr_texts, results):
-                    scores = {
-                        e.get("label"): float(e.get("score", 0.0))
-                        for e in inner
-                    }
+                for t, inner in zip(tr_texts, results, strict=False):
+                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
                     s_scalar = score_text(t, lex)
@@ -972,12 +923,9 @@ async def batch_analyze_conversation(
                 pass
 
         # Map results back to segments with timing info
-        seg_out: List[SegmentSentiment] = []
-        for idx, (t, inner) in enumerate(zip(tr_texts, results)):
-            scores_map = {
-                e.get("label"): float(e.get("score", 0.0))
-                for e in inner
-            }
+        seg_out: list[SegmentSentiment] = []
+        for idx, (t, inner) in enumerate(zip(tr_texts, results, strict=False)):
+            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
             for k in ["negativ", "neutral", "positiv"]:
                 scores_map.setdefault(k, 0.0)
             top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
@@ -987,12 +935,12 @@ async def batch_analyze_conversation(
             if idx < len(segments):
                 start = (
                     float(segments[idx].get("start", 0.0) or 0.0)
-                    if isinstance(segments[idx].get("start"), (int, float))
+                    if isinstance(segments[idx].get("start"), int | float)
                     else None
                 )
                 end = (
                     float(segments[idx].get("end", 0.0) or 0.0)
-                    if isinstance(segments[idx].get("end"), (int, float))
+                    if isinstance(segments[idx].get("end"), int | float)
                     else None
                 )
             seg_out.append(
@@ -1048,11 +996,12 @@ async def batch_analyze_conversation(
 
 # --- Directory scan + small-batch processing ---
 
+
 class ScanProcessRequest(BaseModel):
     # Directory to scan for audio files
     directory: str = Field(..., description="Directory to scan")
     # Optional glob pattern to filter files within the directory
-    pattern: Optional[str] = Field(
+    pattern: str | None = Field(
         None,
         description="Glob pattern relative to directory (e.g., **/*.wav)",
     )
@@ -1061,9 +1010,9 @@ class ScanProcessRequest(BaseModel):
     # Number of files to process in each batch
     batch_size: int = Field(4, ge=1, le=64)
     # Optional limit on the total number of files to process
-    max_files: Optional[int] = Field(None, ge=1)
+    max_files: int | None = Field(None, ge=1)
     # Optional JSON file to track processed files for incremental processing
-    state_file: Optional[str] = Field(
+    state_file: str | None = Field(
         None,
         description="Optional JSON file to track processed files",
     )
@@ -1088,10 +1037,11 @@ class ScanProcessRequest(BaseModel):
     vad: bool = Field(True)
     word_timestamps: bool = Field(False)
     chunk_length_s: int = Field(30, ge=5, le=60)
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     # Sentiment analysis parameters (only used when
     # operation=analyze_conversation)
-    sentiment_model: Optional[str] = Field(None)
-    lexicon_file: Optional[str] = Field(None)
+    sentiment_model: str | None = Field(None)
+    lexicon_file: str | None = Field(None)
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
 
 
@@ -1101,16 +1051,16 @@ class ScanItem(BaseModel):
     # Whether processing was successful
     ok: bool
     # Error message if processing failed
-    error: Optional[str] = None
+    error: str | None = None
     # Processing result data (transcript or analysis payload)
-    data: Optional[Dict[str, Any]] = None
+    data: dict[str, Any] | None = None
     # Index of the batch this file was processed in
     batch_index: int
 
 
 class ScanProcessResponse(BaseModel):
     # List of processing results for each file
-    items: List[ScanItem]
+    items: list[ScanItem]
     # Number of successfully processed files
     ok: int
     # Number of files that failed processing
@@ -1145,16 +1095,16 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
     """
     # Discover audio files in the specified directory using
     # glob patterns if provided
-    files = _resolve_audio_paths(directory=req.directory,
-                                 pattern=req.pattern,
-                                 recursive=req.recursive)
+    files = _resolve_audio_paths(
+        directory=req.directory, pattern=req.pattern, recursive=req.recursive
+    )
 
     # Load processing state and filter for new or changed files only
     # This enables incremental processing by skipping
     # previously processed files
     state = _load_state(req.state_file)
     processed = state.get("processed", {})
-    new_files: List[str] = []
+    new_files: list[str] = []
     for p in files:
         try:
             # Get file modification time to check if it's been updated
@@ -1165,21 +1115,20 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         info = processed.get(p)
         # Process file if it hasn't been processed before
         # or if it's been modified
-        if not info or not isinstance(info, dict) or \
-           float(info.get("mtime", 0.0)) < float(mtime):
+        if not info or not isinstance(info, dict) or float(info.get("mtime", 0.0)) < float(mtime):
             new_files.append(p)
 
     # Apply file limit if specified
     if req.max_files:
-        new_files = new_files[:req.max_files]
+        new_files = new_files[: req.max_files]
 
     # Divide files into batches for processing
     batches = _chunk(new_files, req.batch_size)
-    items: List[ScanItem] = []
+    items: list[ScanItem] = []
     ok = 0
     failed = 0
 
-    def _do_transcribe(p: str) -> Dict[str, Any]:
+    def _do_transcribe(p: str) -> dict[str, Any]:
         """Transcribe a single audio file using ASR."""
         return asr_transcribe(
             audio_path=p,
@@ -1191,9 +1140,10 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             vad=req.vad,
             word_timestamps=req.word_timestamps,
             chunk_length_s=req.chunk_length_s,
+            revision=req.revision,
         )
 
-    def _do_analyze(p: str) -> Dict[str, Any]:
+    def _do_analyze(p: str) -> dict[str, Any]:
         """Analyze sentiment of conversation segments in an audio file."""
         # Transcribe the audio file first
         tr = _do_transcribe(p)
@@ -1204,12 +1154,11 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
 
         # Fallback: single full transcript if no segments detected
         if not texts or all(not t for t in texts):
-            texts = [
-                " ".join([
-                    s.get("text", "").strip()
-                    for s in segments if s.get("text")
-                ]).strip()
-            ] if segments else []
+            texts = (
+                [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
+                if segments
+                else []
+            )
 
         # Run sentiment analysis on each segment using the 'call' profile
         results, meta = analyze_smart(
@@ -1225,22 +1174,15 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         )
 
         # Optional lexicon blending for improved sentiment accuracy
-        use_lex = (
-            req.lexicon_file is not None
-            and req.lexicon_weight
-            and req.lexicon_weight > 0.0
-        )
+        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
         if use_lex:
             try:
                 # Load lexicon for blending
                 lex = load_lexicon(req.lexicon_file)
                 blended_results = []
-                for t, inner in zip(texts, results):
+                for t, inner in zip(texts, results, strict=False):
                     # Extract scores from model results
-                    scores = {
-                        e.get("label"): float(e.get("score", 0.0))
-                        for e in inner
-                    }
+                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
                     # Ensure all sentiment labels are present
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
@@ -1267,13 +1209,10 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                 pass
 
         # Package output similar to analyze_conversation endpoint
-        seg_out: List[SegmentSentiment] = []
-        for idx, (t, inner) in enumerate(zip(texts, results)):
+        seg_out: list[SegmentSentiment] = []
+        for idx, (t, inner) in enumerate(zip(texts, results, strict=False)):
             # Create scores map from analysis results
-            scores_map = {
-                e.get("label"): float(e.get("score", 0.0))
-                for e in inner
-            }
+            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
             # Ensure all sentiment labels are present in scores map
             for k in ["negativ", "neutral", "positiv"]:
                 scores_map.setdefault(k, 0.0)
@@ -1281,26 +1220,26 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
             top_score = float(scores_map[top_label])
             # Extract timing information from original segments
-            start = float(segments[idx].get("start", 0.0) or 0.0) \
-                if idx < len(segments) else None
-            end = float(segments[idx].get("end", 0.0) or 0.0) \
-                if idx < len(segments) else None
+            start = float(segments[idx].get("start", 0.0) or 0.0) if idx < len(segments) else None
+            end = float(segments[idx].get("end", 0.0) or 0.0) if idx < len(segments) else None
             # Create segment sentiment object
-            seg_out.append(SegmentSentiment(
-                index=idx,
-                start=start,
-                end=end,
-                text=t,
-                label=top_label,
-                score=top_score,
-                negativ=scores_map.get("negativ"),
-                neutral=scores_map.get("neutral"),
-                positiv=scores_map.get("positiv"),
-            ))
+            seg_out.append(
+                SegmentSentiment(
+                    index=idx,
+                    start=start,
+                    end=end,
+                    text=t,
+                    label=top_label,
+                    score=top_score,
+                    negativ=scores_map.get("negativ"),
+                    neutral=scores_map.get("neutral"),
+                    positiv=scores_map.get("positiv"),
+                )
+            )
         return {
             "transcript": tr,
             "segment_sentiments": [s.model_dump() for s in seg_out],
-            "meta": meta
+            "meta": meta,
         }
 
     # Process batches with optional concurrency
@@ -1310,14 +1249,8 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             for p in batch:
                 try:
                     # Perform requested operation (transcribe or analyze)
-                    data = (
-                        _do_transcribe(p)
-                        if req.operation == "transcribe"
-                        else _do_analyze(p)
-                    )
-                    items.append(
-                        ScanItem(file=p, ok=True, data=data, batch_index=bidx)
-                    )
+                    data = _do_transcribe(p) if req.operation == "transcribe" else _do_analyze(p)
+                    items.append(ScanItem(file=p, ok=True, data=data, batch_index=bidx))
                     ok += 1
                     # Update state with file processing information
                     processed[p] = {
@@ -1341,18 +1274,12 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                 """Wrapper function for concurrent processing."""
                 return (
                     pth,
-                    (
-                        _do_transcribe(pth)
-                        if req.operation == "transcribe"
-                        else _do_analyze(pth)
-                    ),
+                    (_do_transcribe(pth) if req.operation == "transcribe" else _do_analyze(pth)),
                 )
 
             with ThreadPoolExecutor(max_workers=req.workers) as ex:
                 # Submit all files in the batch for concurrent processing
-                futs = {
-                    ex.submit(_wrap, p): p for p in batch
-                }
+                futs = {ex.submit(_wrap, p): p for p in batch}
                 for fut in as_completed(futs):
                     p = futs[fut]
                     try:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Dict, Iterable, List
+from collections.abc import Iterable
 
 _URL_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -10,7 +10,7 @@ _USERNAME_RE = re.compile(r"@[A-Za-z0-9_]+")
 _HASHTAG_RE = re.compile(r"#[\wäöåÄÖÅ]+", re.UNICODE)
 
 
-def clean_text(text: str, opts: Dict) -> str:
+def clean_text(text: str, opts: dict) -> str:
     t = text or ""
     if opts.get("unescape_html", False):
         t = html.unescape(t)
@@ -22,7 +22,7 @@ def clean_text(text: str, opts: Dict) -> str:
         t = _USERNAME_RE.sub(" ", t)
     if opts.get("remove_hashtags", False):
         # Remove '#' but keep the word
-        t = _HASHTAG_RE.sub(lambda m: m.group(0).lstrip('#'), t)
+        t = _HASHTAG_RE.sub(lambda m: m.group(0).lstrip("#"), t)
     if opts.get("lowercase", False):
         t = t.lower()
     if opts.get("normalize_whitespace", False):
@@ -30,5 +30,5 @@ def clean_text(text: str, opts: Dict) -> str:
     return t.strip()
 
 
-def clean_texts(texts: Iterable[str], opts: Dict) -> List[str]:
+def clean_texts(texts: Iterable[str], opts: dict) -> list[str]:
     return [clean_text(t, opts) for t in texts]

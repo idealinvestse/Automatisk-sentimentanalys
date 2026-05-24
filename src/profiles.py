@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
-
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
 
 # Minimal, pragmatic profile specifications
-PROFILE_SPECS: Dict[str, Dict] = {
+PROFILE_SPECS: dict[str, dict] = {
     "default": {
         "model": DEFAULT_MODEL,
         "max_length": 256,
@@ -130,14 +128,17 @@ DATATYPE_TO_PROFILE = {
 
 
 def resolve_profile(
-    datatype: Optional[str] = None,
-    source: Optional[str] = None,
-    profile: Optional[str] = None,
-) -> Tuple[str, Dict]:
+    datatype: str | None = None,
+    source: str | None = None,
+    profile: str | None = None,
+) -> tuple[str, dict]:
     """Resolve a profile name and spec based on explicit profile, source, or datatype."""
     if profile:
         name = profile.strip().lower()
-        return (name if name in PROFILE_SPECS else "default", PROFILE_SPECS.get(name, PROFILE_SPECS["default"]))
+        return (
+            name if name in PROFILE_SPECS else "default",
+            PROFILE_SPECS.get(name, PROFILE_SPECS["default"]),
+        )
 
     if source:
         s = source.strip().lower()

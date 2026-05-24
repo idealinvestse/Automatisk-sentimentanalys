@@ -3,14 +3,14 @@ from __future__ import annotations
 import csv
 import os
 import re
+from collections.abc import Iterable
 from functools import lru_cache
-from typing import Dict, Iterable, Tuple
 
 _WORD_RE = re.compile(r"[\wäöåÄÖÅ]+", re.UNICODE)
 
 
 @lru_cache(maxsize=8)
-def load_lexicon(path: str) -> Dict[str, float]:
+def load_lexicon(path: str) -> dict[str, float]:
     """Load a Swedish sentiment lexicon from CSV/TSV.
 
     Expected columns (case-insensitive): one of (term|word) and one of (polarity|score|sentiment).
@@ -22,8 +22,8 @@ def load_lexicon(path: str) -> Dict[str, float]:
     _, ext = os.path.splitext(path.lower())
     delimiter = "\t" if ext in {".tsv"} else ","
 
-    lex: Dict[str, float] = {}
-    with open(path, "r", encoding="utf-8") as f:
+    lex: dict[str, float] = {}
+    with open(path, encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter=delimiter)
         headers = {h.strip().lower() for h in reader.fieldnames or []}
         term_key = "term" if "term" in headers else ("word" if "word" in headers else None)
@@ -55,7 +55,7 @@ def tokenize(text: str) -> Iterable[str]:
         yield m.group(0)
 
 
-def score_text(text: str, lexicon: Dict[str, float]) -> float:
+def score_text(text: str, lexicon: dict[str, float]) -> float:
     """Return a scalar sentiment score in [-1, 1] using average of matched terms."""
     total = 0.0
     n = 0
@@ -73,7 +73,7 @@ def score_text(text: str, lexicon: Dict[str, float]) -> float:
     return s
 
 
-def scalar_to_dist(s: float) -> Tuple[float, float, float]:
+def scalar_to_dist(s: float) -> tuple[float, float, float]:
     """Map scalar sentiment [-1, 1] to a 3-class distribution (negativ, neutral, positiv)."""
     s = max(-1.0, min(1.0, s))
     p_pos = max(0.0, s)
@@ -85,7 +85,9 @@ def scalar_to_dist(s: float) -> Tuple[float, float, float]:
     return p_neg / total, p_neu / total, p_pos / total
 
 
-def blend_distributions(model: Dict[str, float], lex: Tuple[float, float, float], w: float) -> Dict[str, float]:
+def blend_distributions(
+    model: dict[str, float], lex: tuple[float, float, float], w: float
+) -> dict[str, float]:
     """Blend model distribution dict with lexicon 3-tuple using weight w in [0,1]."""
     w = max(0.0, min(1.0, w))
     mn = model.get("negativ", 0.0)

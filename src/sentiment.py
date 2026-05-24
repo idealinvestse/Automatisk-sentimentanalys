@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-from typing import List, Dict, Optional, Union, Tuple
 from functools import lru_cache
-from transformers import pipeline
+
 import torch
-from .profiles import resolve_profile
+from transformers import pipeline
+
 from .clean import clean_texts
+from .profiles import resolve_profile
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
 
 
 def normalize_label(label: str) -> str:
-    l = str(label).strip().lower()
-    if l in {"label_0", "negative", "neg"}:
+    lowered = str(label).strip().lower()
+    if lowered in {"label_0", "negative", "neg"}:
         return "negativ"
-    if l in {"label_1", "neutral"}:
+    if lowered in {"label_1", "neutral"}:
         return "neutral"
-    if l in {"label_2", "positive", "pos"}:
+    if lowered in {"label_2", "positive", "pos"}:
         return "positiv"
     return label
 
@@ -32,7 +33,7 @@ class SentimentPipeline:
     def __init__(
         self,
         model_name: str = DEFAULT_MODEL,
-        device: Optional[Union[int, str, torch.device]] = None,
+        device: int | str | torch.device | None = None,
         return_all_scores: bool = False,
         max_length: int = 256,
     ):
@@ -50,12 +51,12 @@ class SentimentPipeline:
 
     def analyze(
         self,
-        texts: List[str],
+        texts: list[str],
         batch_size: int = 16,
         normalize: bool = True,
-        return_all_scores: Optional[bool] = None,
-        max_length: Optional[int] = None,
-    ) -> List[Dict]:
+        return_all_scores: bool | None = None,
+        max_length: int | None = None,
+    ) -> list[dict]:
         ras = self.return_all_scores if return_all_scores is None else return_all_scores
         ml = self.max_length if max_length is None else max_length
         # Build kwargs to control output shape without deprecated flags
@@ -71,8 +72,8 @@ class SentimentPipeline:
         # Normalize labels depending on output shape
         if ras:
             # List[List[Dict[label, score]]]
-            for i, inner in enumerate(raw):
-                for j, entry in enumerate(inner):
+            for _i, inner in enumerate(raw):
+                for _j, entry in enumerate(inner):
                     entry["label"] = normalize_label(entry.get("label"))
             return raw
         else:
@@ -84,7 +85,7 @@ class SentimentPipeline:
 
 def load(
     model_name: str = DEFAULT_MODEL,
-    device: Optional[Union[int, str, torch.device]] = "auto",
+    device: int | str | torch.device | None = "auto",
     return_all_scores: bool = False,
     max_length: int = 256,
 ) -> SentimentPipeline:
@@ -105,14 +106,14 @@ def _get_cached(model_name: str, device_key: str) -> SentimentPipeline:
 
 
 def analyze(
-    texts: List[str],
+    texts: list[str],
     model_name: str = DEFAULT_MODEL,
-    device: Optional[Union[int, str, torch.device]] = "auto",
+    device: int | str | torch.device | None = "auto",
     batch_size: int = 16,
     normalize: bool = True,
     return_all_scores: bool = False,
     max_length: int = 256,
-) -> List[Dict]:
+) -> list[dict]:
     """Analyze texts in one call using a cached pipeline instance.
 
     Example:
@@ -130,18 +131,18 @@ def analyze(
 
 
 def analyze_smart(
-    texts: List[str],
-    datatype: Optional[str] = None,
-    source: Optional[str] = None,
-    profile: Optional[str] = None,
-    model_name: Optional[str] = None,
-    device: Optional[Union[int, str, torch.device]] = "auto",
+    texts: list[str],
+    datatype: str | None = None,
+    source: str | None = None,
+    profile: str | None = None,
+    model_name: str | None = None,
+    device: int | str | torch.device | None = "auto",
     batch_size: int = 16,
     normalize: bool = True,
     return_all_scores: bool = False,
-    max_length: Optional[int] = None,
+    max_length: int | None = None,
     clean: bool = True,
-) -> Tuple[List[Dict], Dict[str, Union[str, int]]]:
+) -> tuple[list[dict], dict[str, str | int]]:
     """Profile-aware analysis.
 
     - Resolves a profile from (profile | source | datatype)
@@ -166,7 +167,7 @@ def analyze_smart(
         return_all_scores=return_all_scores,
         max_length=resolved_max_length,
     )
-    meta: Dict[str, Union[str, int]] = {
+    meta: dict[str, str | int] = {
         "profile": profile_name,
         "model": chosen_model,
         "max_length": int(resolved_max_length),
@@ -174,14 +175,14 @@ def analyze_smart(
     return results, meta
 
 
-def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> Dict:
+def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> dict:
     """Analyze a single text and return one result dict."""
     return analyze([text], model_name=model_name, batch_size=1, normalize=normalize)[0]
 
 
 def _normalize_device_spec(
-    device: Optional[Union[int, str, torch.device]]
-) -> Tuple[Union[int, torch.device], str]:
+    device: int | str | torch.device | None,
+) -> tuple[int | torch.device, str]:
     """Return (device_arg_for_pipeline, device_key_for_cache)."""
     if device is None or (isinstance(device, str) and device.strip().lower() == "auto"):
         if torch.cuda.is_available():
@@ -199,7 +200,11 @@ def _normalize_device_spec(
         if device.type == "cuda" and torch.cuda.is_available():
             idx = device.index if device.index is not None else 0
             return idx, f"cuda:{idx}"
-        if device.type == "mps" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        if (
+            device.type == "mps"
+            and hasattr(torch.backends, "mps")
+            and torch.backends.mps.is_available()
+        ):
             return device, "mps"
         return -1, "cpu"
 
@@ -224,7 +229,7 @@ def _normalize_device_spec(
     return -1, "cpu"
 
 
-def _device_arg_from_key(key: str) -> Union[int, torch.device]:
+def _device_arg_from_key(key: str) -> int | torch.device:
     if key == "cpu":
         return -1
     if key == "mps":

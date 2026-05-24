@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import List, Optional
 
-import typer
 import pandas as pd
+import typer
 from rich.console import Console
 from rich.table import Table
-from .sentiment import load as load_sentiment
-from .profiles import resolve_profile
+
 from .clean import clean_texts
-from .lexicon import load_lexicon, score_text, scalar_to_dist, blend_distributions
+from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
+from .profiles import resolve_profile
+from .sentiment import load as load_sentiment
 
 console = Console()
 
@@ -33,60 +33,62 @@ def ensure_dir(path: str):
 
 
 def main(
-    text: Optional[str] = typer.Option(
-        None, help="Analysera en enskild text"
-    ),
-    txt_file: Optional[str] = typer.Option(
+    text: str | None = typer.Option(None, help="Analysera en enskild text"),
+    txt_file: str | None = typer.Option(
         None, "--txt-file", help="Sökväg till .txt (en text per rad)"
     ),
-    csv_file: Optional[str] = typer.Option(
-        None, "--csv-file", help="Sökväg till .csv med texter"
-    ),
-    text_column: str = typer.Option(
-        "text", help="Kolumnnamn i CSV som innehåller text"
-    ),
-    model: Optional[str] = typer.Option(
+    csv_file: str | None = typer.Option(None, "--csv-file", help="Sökväg till .csv med texter"),
+    text_column: str = typer.Option("text", help="Kolumnnamn i CSV som innehåller text"),
+    model: str | None = typer.Option(
         None, "--model", help="Hugging Face-modell att använda (standard väljs via profil)"
     ),
     batch_size: int = typer.Option(16, help="Batch-storlek för inferens"),
-    max_rows: Optional[int] = typer.Option(
-        None, help="Analysera högst N rader (debug/snabbtest)"
-    ),
-    output: Optional[str] = typer.Option(
+    max_rows: int | None = typer.Option(None, help="Analysera högst N rader (debug/snabbtest)"),
+    output: str | None = typer.Option(
         None, help="Spara resultat till CSV (t.ex. outputs/predictions.csv)"
     ),
-    device: Optional[str] = typer.Option(
+    device: str | None = typer.Option(
         "auto", help="Enhet: 'auto' (default), 'cpu', 'cuda', 'cuda:0', 'mps'"
     ),
     return_all_scores: bool = typer.Option(
         False, "--return-all-scores", help="Returnera sannolikheter för alla klasser"
     ),
-    max_length: Optional[int] = typer.Option(
+    max_length: int | None = typer.Option(
         None, help="Max token-längd vid inferens (om ej satt används profilens)"
     ),
-    datatype: Optional[str] = typer.Option(
+    datatype: str | None = typer.Option(
         None, "--datatype", help="Datatyp: t.ex. 'post', 'comment', 'article', 'review'"
     ),
-    source: Optional[str] = typer.Option(
+    source: str | None = typer.Option(
         None, "--source", help="Källa: t.ex. 'forum', 'magazine', 'news', 'social'"
     ),
-    profile: Optional[str] = typer.Option(
-        None, "--profile", help="Profil att använda (åsidolägger datatype/source). T.ex. 'forum', 'magazine'"
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Profil att använda (åsidolägger datatype/source). T.ex. 'forum', 'magazine'",
     ),
-    lexicon_file: Optional[str] = typer.Option(
-        None, "--lexicon-file", help="Sökväg till svenskt lexikon (CSV/TSV) med kolumner term|word och polarity|score|sentiment"
+    lexicon_file: str | None = typer.Option(
+        None,
+        "--lexicon-file",
+        help="Sökväg till svenskt lexikon (CSV/TSV) med kolumner term|word och polarity|score|sentiment",
     ),
     lexicon_weight: float = typer.Option(
-        0.0, "--lexicon-weight", min=0.0, max=1.0, help="Vikt för lexikon-blandning [0..1]. 0=inaktiverad"
+        0.0,
+        "--lexicon-weight",
+        min=0.0,
+        max=1.0,
+        help="Vikt för lexikon-blandning [0..1]. 0=inaktiverad",
     ),
 ):
     """Kör svensk sentimentanalys från text, .txt eller .csv"""
 
-    sources = sum([
-        1 if text is not None else 0,
-        1 if txt_file is not None else 0,
-        1 if csv_file is not None else 0,
-    ])
+    sources = sum(
+        [
+            1 if text is not None else 0,
+            1 if txt_file is not None else 0,
+            1 if csv_file is not None else 0,
+        ]
+    )
     if sources == 0:
         console.print("[yellow]Ange en källa: --text, --txt-file eller --csv-file[/yellow]")
         raise typer.Exit(code=1)
@@ -95,14 +97,14 @@ def main(
         raise typer.Exit(code=1)
 
     # 1) Läs in texter
-    texts: List[str] = []
+    texts: list[str] = []
     if text is not None:
         texts = [text.strip()]
     elif txt_file is not None:
         if not os.path.isfile(txt_file):
             console.print(f"[red]Hittar inte txt-fil: {txt_file}[/red]")
             raise typer.Exit(code=1)
-        with open(txt_file, "r", encoding="utf-8") as f:
+        with open(txt_file, encoding="utf-8") as f:
             texts = [line.strip() for line in f if line.strip()]
     elif csv_file is not None:
         if not os.path.isfile(csv_file):
@@ -112,7 +114,7 @@ def main(
             df = pd.read_csv(csv_file)
         except Exception as e:
             console.print(f"[red]Kunde inte läsa CSV: {e}[/red]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from e
         if text_column not in df.columns:
             console.print(
                 f"[red]Kolumn '{text_column}' finns inte i CSV. Tillgängliga kolumner: {list(df.columns)}[/red]"
@@ -149,7 +151,7 @@ def main(
         )
     except Exception as e:
         console.print(f"[red]Kunde inte ladda modellen '{chosen_model}': {e}[/red]")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from e
 
     # 4) Kör inferens
     console.print(f"[green]Analyserar {len(texts)} texter...[/green]")
@@ -162,7 +164,7 @@ def main(
         )
     except Exception as e:
         console.print(f"[red]Fel under inferens: {e}[/red]")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from e
 
     # 5) Lexikon (valfritt)
     lex = None
@@ -172,7 +174,9 @@ def main(
             lex = load_lexicon(lexicon_file)
             console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
         except Exception as e:
-            console.print(f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan lexikon.[/yellow]")
+            console.print(
+                f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan lexikon.[/yellow]"
+            )
             use_lex = False
 
     # 6) Paketera resultat
@@ -180,7 +184,7 @@ def main(
     rows = []
     if results and isinstance(results[0], list):
         # Expand to per-class columns
-        for t, inner in zip(texts, results):
+        for t, inner in zip(texts, results, strict=False):
             # inner: List[{"label": 'negativ|neutral|positiv', 'score': float}]
             scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
             # Ensure keys
@@ -194,19 +198,21 @@ def main(
             # Top prediction
             top_label = max(scores.items(), key=lambda kv: kv[1])[0]
             top_score = scores[top_label]
-            rows.append({
-                "text": t,
-                "label": top_label,
-                "score": float(top_score),
-                "negativ": scores["negativ"],
-                "neutral": scores["neutral"],
-                "positiv": scores["positiv"],
-                "model": chosen_model,
-                "profile": profile_name,
-                "timestamp": now_iso,
-            })
+            rows.append(
+                {
+                    "text": t,
+                    "label": top_label,
+                    "score": float(top_score),
+                    "negativ": scores["negativ"],
+                    "neutral": scores["neutral"],
+                    "positiv": scores["positiv"],
+                    "model": chosen_model,
+                    "profile": profile_name,
+                    "timestamp": now_iso,
+                }
+            )
     else:
-        for t, r in zip(texts, results):
+        for t, r in zip(texts, results, strict=False):
             label = r.get("label")
             score = float(r.get("score", 0.0))
             # If lexicon blending is requested but we don't have a full distribution,
@@ -223,7 +229,7 @@ def main(
             if ssum <= 0:
                 neu = 1.0
                 ssum = 1.0
-            model_dist = {"negativ": neg/ssum, "neutral": neu/ssum, "positiv": pos/ssum}
+            model_dist = {"negativ": neg / ssum, "neutral": neu / ssum, "positiv": pos / ssum}
             if use_lex and lex is not None:
                 s_scalar = score_text(t, lex)
                 ln, le, lp = scalar_to_dist(s_scalar)
@@ -231,14 +237,16 @@ def main(
                 # update label/score by top of blended
                 label = max(blended.items(), key=lambda kv: kv[1])[0]
                 score = float(blended[label])
-            rows.append({
-                "text": t,
-                "label": label,
-                "score": score,
-                "model": chosen_model,
-                "profile": profile_name,
-                "timestamp": now_iso,
-            })
+            rows.append(
+                {
+                    "text": t,
+                    "label": label,
+                    "score": score,
+                    "model": chosen_model,
+                    "profile": profile_name,
+                    "timestamp": now_iso,
+                }
+            )
     out_df = pd.DataFrame(rows)
 
     # 5) Output
@@ -251,7 +259,7 @@ def main(
             console.print(f"[green]Sparat:[/green] {output}")
         except Exception as e:
             console.print(f"[red]Kunde inte spara CSV: {e}[/red]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from e
     else:
         # visa några rader snyggt i terminal
         head_df = out_df.head(20)
@@ -262,7 +270,9 @@ def main(
             table.add_row(*(str(row[c]) for c in head_df.columns))
         console.print(table)
         if len(out_df) > len(head_df):
-            console.print(f"... visade 20 av {len(out_df)} rader. Använd --output för att spara allt.")
+            console.print(
+                f"... visade 20 av {len(out_df)} rader. Använd --output för att spara allt."
+            )
 
 
 if __name__ == "__main__":

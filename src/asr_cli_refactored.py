@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import json
-import os
 import glob
-import time
+import json
 import logging
-from typing import Optional, List
+import os
+import time
 
+import pandas as pd
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, BarColumn, TimeElapsedColumn, TextColumn
-import pandas as pd
 
 from .asr import transcribe as asr_transcribe
-from .lexicon import load_lexicon, score_text, scalar_to_dist, blend_distributions
+from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
 from .sentiment import analyze_smart
 
 app = typer.Typer(help="ASR tools: transcribe audio and analyze call sentiment")
@@ -38,8 +37,8 @@ def setup_logging(level: str = "INFO") -> None:
     )
 
 
-def resolve_audio_paths(inputs: List[str]) -> List[str]:
-    files: List[str] = []
+def resolve_audio_paths(inputs: list[str]) -> list[str]:
+    files: list[str] = []
     for inp in inputs:
         # Expand globs
         if any(ch in inp for ch in ["*", "?", "["]):
@@ -64,8 +63,10 @@ def resolve_audio_paths(inputs: List[str]) -> List[str]:
 
 @app.command()
 def transcribe(
-    inputs: List[str] = typer.Argument(..., help="Audio files, directories or globs"),
-    model: str = typer.Option("kb-whisper-large", help="ASR model: kb-whisper-large | openai/whisper-large-v3"),
+    inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
+    model: str = typer.Option(
+        "kb-whisper-large", help="ASR model: kb-whisper-large | openai/whisper-large-v3"
+    ),
     backend: str = typer.Option("faster", help="Backend: faster | transformers"),
     device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
     language: str = typer.Option("sv", help="ASR language code (sv)"),
@@ -73,14 +74,23 @@ def transcribe(
     vad: bool = typer.Option(True, help="Enable VAD filter (faster-whisper)"),
     word_timestamps: bool = typer.Option(True, help="Return word timestamps if supported"),
     chunk_length_s: int = typer.Option(30, min=5, max=60, help="Chunk length (transformers)"),
-    output_json: Optional[str] = typer.Option(None, help="Optional path to save transcript JSON (single input)"),
-    output_dir: Optional[str] = typer.Option(None, help="Directory to save per-file JSON (multiple inputs)"),
+    output_json: str | None = typer.Option(
+        None, help="Optional path to save transcript JSON (single input)"
+    ),
+    output_dir: str | None = typer.Option(
+        None, help="Directory to save per-file JSON (multiple inputs)"
+    ),
     log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
-    mode: str = typer.Option("full", help="Operation mode: full (transcribe + sentiment) | transcribe-only (transcribe only)"),
-    sentiment_model: Optional[str] = typer.Option(None, help="Optional override for sentiment model"),
-    lexicon_file: Optional[str] = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
+    mode: str = typer.Option(
+        "full",
+        help="Operation mode: full (transcribe + sentiment) | transcribe-only (transcribe only)",
+    ),
+    sentiment_model: str | None = typer.Option(None, help="Optional override for sentiment model"),
+    lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
     lexicon_weight: float = typer.Option(0.0, min=0.0, max=1.0, help="Blend weight [0..1]"),
-    output_csv: Optional[str] = typer.Option(None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"),
+    output_csv: str | None = typer.Option(
+        None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"
+    ),
 ):
     """Transcribe one or many audio files and print/save summaries."""
     setup_logging(log_level)
@@ -90,7 +100,9 @@ def transcribe(
         raise typer.Exit(code=1)
 
     if len(files) > 1 and not output_dir and output_json:
-        console.print("[yellow]Multiple inputs detected; ignoring --output-json and using --output-dir=outputs/transcripts[/yellow]")
+        console.print(
+            "[yellow]Multiple inputs detected; ignoring --output-json and using --output-dir=outputs/transcripts[/yellow]"
+        )
         output_dir = os.path.join("outputs", "transcripts")
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -103,7 +115,9 @@ def transcribe(
             lex = load_lexicon(lexicon_file)
             console.print(f"[green]Lexicon loaded:[/green] {lexicon_file} ({len(lex)} terms)")
         except Exception as e:
-            console.print(f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]")
+            console.print(
+                f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]"
+            )
             use_lex = False
 
     ok, fail = 0, 0
@@ -155,7 +169,12 @@ def transcribe(
                 table.add_column("end")
                 table.add_column("text")
                 for i, s in enumerate(head):
-                    table.add_row(str(i), f"{s.get('start', '')}", f"{s.get('end', '')}", s.get("text", "")[:100])
+                    table.add_row(
+                        str(i),
+                        f"{s.get('start', '')}",
+                        f"{s.get('end', '')}",
+                        s.get("text", "")[:100],
+                    )
                 console.print(table)
 
             # Save transcript JSON
@@ -176,9 +195,17 @@ def transcribe(
 
             # Run sentiment analysis only if mode is "full"
             if mode == "full":
-                texts: List[str] = [s.get("text", "").strip() for s in segs]
+                texts: list[str] = [s.get("text", "").strip() for s in segs]
                 if not texts or all(not t for t in texts):
-                    texts = [" ".join([s.get("text", "").strip() for s in segs if s.get("text")]).strip()] if segs else []
+                    texts = (
+                        [
+                            " ".join(
+                                [s.get("text", "").strip() for s in segs if s.get("text")]
+                            ).strip()
+                        ]
+                        if segs
+                        else []
+                    )
                     if not texts:
                         console.print(f"[yellow]No transcript text produced for {path}.[/yellow]")
                         fail += 1
@@ -198,7 +225,7 @@ def transcribe(
                 )
 
                 rows = []
-                for idx_seg, (t, inner) in enumerate(zip(texts, results)):
+                for idx_seg, (t, inner) in enumerate(zip(texts, results, strict=False)):
                     scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
                     for k in ["negativ", "neutral", "positiv"]:
                         scores.setdefault(k, 0.0)
@@ -208,8 +235,14 @@ def transcribe(
                         scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
                     top_label = max(scores.items(), key=lambda kv: kv[1])[0]
                     top_score = float(scores[top_label])
-                    start = float(segs[idx_seg].get("start", 0.0) or 0.0) if idx_seg < len(segs) else None
-                    end = float(segs[idx_seg].get("end", 0.0) or 0.0) if idx_seg < len(segs) else None
+                    start = (
+                        float(segs[idx_seg].get("start", 0.0) or 0.0)
+                        if idx_seg < len(segs)
+                        else None
+                    )
+                    end = (
+                        float(segs[idx_seg].get("end", 0.0) or 0.0) if idx_seg < len(segs) else None
+                    )
                     row = {
                         "file": path,
                         "index": idx_seg,
@@ -231,10 +264,19 @@ def transcribe(
                 for col in ["index", "start", "end", "label", "score", "text"]:
                     table.add_column(col)
                 for r in rows[:10]:
-                    table.add_row(str(r["index"]), str(r["start"]), str(r["end"]), r["label"], f"{r['score']:.3f}", r["text"][:100])
+                    table.add_row(
+                        str(r["index"]),
+                        str(r["start"]),
+                        str(r["end"]),
+                        r["label"],
+                        f"{r['score']:.3f}",
+                        r["text"][:100],
+                    )
                 console.print(table)
                 if len(rows) > 10:
-                    console.print(f"... showing 10 of {len(rows)} segments for {os.path.basename(path)}")
+                    console.print(
+                        f"... showing 10 of {len(rows)} segments for {os.path.basename(path)}"
+                    )
 
                 # Save sentiment analysis results to CSV if requested
                 if output_csv and rows:
@@ -247,12 +289,14 @@ def transcribe(
 
             progress.advance(task, 1)
 
-    console.print(f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s")
+    console.print(
+        f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s"
+    )
 
 
 @app.command("analyze-call")
 def analyze_call(
-    inputs: List[str] = typer.Argument(..., help="Audio files, directories or globs"),
+    inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
     # ASR
     model: str = typer.Option("kb-whisper-large", help="ASR model"),
     backend: str = typer.Option("faster", help="ASR backend: faster | transformers"),
@@ -263,10 +307,12 @@ def analyze_call(
     word_timestamps: bool = typer.Option(False),
     chunk_length_s: int = typer.Option(30, min=5, max=60),
     # Sentiment
-    sentiment_model: Optional[str] = typer.Option(None, help="Optional override for sentiment model"),
-    lexicon_file: Optional[str] = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
+    sentiment_model: str | None = typer.Option(None, help="Optional override for sentiment model"),
+    lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
     lexicon_weight: float = typer.Option(0.0, min=0.0, max=1.0, help="Blend weight [0..1]"),
-    output_csv: Optional[str] = typer.Option(None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"),
+    output_csv: str | None = typer.Option(
+        None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"
+    ),
     log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
     """Transcribe the call(s) and run per-segment sentiment using the 'call' profile."""

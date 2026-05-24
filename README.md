@@ -2,7 +2,7 @@
 
 Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Transformers. Första versionen fokuserar på offline-analys (ingen scraping) och ett CLI som tar text, .txt eller .csv och producerar etikett (negativ, neutral, positiv) + sannolikhet.
 
-## Funktioner (v0–v1)
+## Funktioner (v0-v1)
 - Enkel CLI: analysera enstaka text, en .txt med en text per rad, eller en .csv med vald kolumn
 - Svensk-kapabel modell: `cardiffnlp/twitter-xlm-roberta-base-sentiment` (multispråk, fungerar bra för forum/tweet-liknande text)
 - Output till terminal eller CSV med kolumner: text, label, score, model, timestamp
@@ -10,6 +10,7 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 - (Ny) ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
   - CLI: `src/asr_cli.py` med kommandon `transcribe` och `analyze-call`
   - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process`
+- (Ny) Utvärderingsramverk: `src/evaluate.py` för att mäta prestanda mot testset
 
 ## Installation (Windows PowerShell)
 ```powershell
@@ -26,7 +27,7 @@ pip install -r requirements-min.txt
 # Alternativ B: CLI (modul + kommandoradsverktyg)
 pip install -r requirements-min.txt -r requirements-cli.txt
 
-# (Valfritt) API (FastAPI) – inkluderar ASR-beroenden
+# (Valfritt) API (FastAPI) - inkluderar ASR-beroenden
 pip install -r requirements-min.txt -r requirements-api.txt
 
 # (Kompatibilitet) Allt-i-ett
@@ -86,8 +87,8 @@ curl -X POST \
 
 ### ASR: CLI
 ```powershell
-# Transkribera ljudfil (kb-whisper-large med faster-whisper)
-python -m src.asr_cli transcribe path\till\call.wav --backend faster --language sv --output-json outputs\call_transcript.json
+# Transkribera ljudfil (kb-whisper-large med faster-whisper, strict revision för call center)
+python -m src.asr_cli transcribe path\till\call.wav --backend faster --language sv --revision strict --output-json outputs\call_transcript.json
 
 # Alternativ backend (Transformers)
 python -m src.asr_cli transcribe path\till\call.wav --backend transformers --model openai/whisper-large-v3
@@ -140,7 +141,7 @@ curl -X POST http://localhost:8000/analyze_conversation -H "Content-Type: applic
 }'
 ```
 
-#### ASR: REST API – Batch & Scan
+#### ASR: REST API - Batch & Scan
 
 ```bash
 # Batch: transkribera flera filer (filer/mappar/globbar) med parallellism
@@ -195,11 +196,70 @@ curl -X POST http://localhost:8000/scan_process -H "Content-Type: application/js
 ```
 
 Notera:
-- __workers__: trådar per batch (1–8) för parallell körning.
-- __state_file__: JSON som spårar `processed` filer med `mtime`; endast nya/ändrade filer körs.
-- __batch_size__: antal filer per batch; endpointen kör batchar sekventiellt men kan parallellisera inom batch.
-- __glob/pattern__: använder Python glob (t.ex. `**/*.wav`).
+- **workers**: trådar per batch (1-8) för parallell körning.
+- **state_file**: JSON som spårar `processed` filer med `mtime`; endast nya/ändrade filer körs.
+- **batch_size**: antal filer per batch; endpointen kör batchar sekventiellt men kan parallellisera inom batch.
+- **glob/pattern**: använder Python glob (t.ex. `**/*.wav`).
 
+
+## Utvärdering
+
+Projektet inkluderar ett utvärderingsramverk för att mäta sentimentanalysens prestanda:
+
+```powershell
+# Kör baseline-utvärdering med default-profil
+python -m src.evaluate evaluate --testset data/test_swedish.csv --output reports/baseline.json
+
+# Utvärdera med specifik profil och lexikon-blending
+python -m src.evaluate evaluate --profile call --lexicon-file samples/lexicon_sample.csv --lexicon-weight 0.3
+
+# Spara detaljerade resultat som CSV
+python -m src.evaluate evaluate --output-csv reports/detailed_results.csv
+
+# Lista tillgängliga profiler
+python -m src.evaluate list-profiles
+```
+
+## KB-Whisper: Rekommenderad ASR-modell
+
+**KBLab** (KB, National Library of Sweden) har släppt svensktränade Whisper-modeller
+med ~47% lägre WER (Word Error Rate) jämfört med OpenAI:s modeller på svenska.
+
+Tillgängliga revisioner för `KBLab/kb-whisper-large`:
+
+| Revision   | Beskrivning | Rekommenderas för |
+|-----------|------------|-------------------|
+| `standard` | Standard-transkribering | Generellt bruk |
+| `strict`   | Verbatim (ordagrant) - behåller utfyllnadsord, upprepningar | **Call center (rekommenderas)** |
+| `subtitle` | Bättre läsbarhet, skiljetecken, versaler | Undertexter, visning |
+
+```powershell
+# Använd KB-Whisper med strict-revision (rekommenderas för call center)
+python -m src.asr_cli transcribe samtal.wav --model kb-whisper-large --revision strict
+
+# Använd subtitle-revision för bättre läsbarhet
+python -m src.asr_cli transcribe samtal.wav --revision subtitle
+```
+
+## Utveckling
+
+```powershell
+# Installera utvecklingsberoenden
+pip install pytest pytest-cov ruff black mypy
+
+# Kör tester
+pytest tests/ -v
+
+# Kör tester med coverage
+pytest tests/ -v --cov=src --cov-report=term
+
+# Linting
+python -m ruff check src/
+python -m black --check src/
+
+# Formattering
+python -m black src/
+```
 
 ## Minimal modul-användning
 Vill du använda systemet som en liten modul i egen kod:
@@ -221,82 +281,49 @@ for r in results:
 sp = load("cardiffnlp/twitter-xlm-roberta-base-sentiment", device="auto", return_all_scores=True, max_length=256)
 print(sp.analyze(["Vet inte riktigt... "]))
 
-# 3) Direkt med parametrar via hjälpfunktionen
-probs = analyze(["Toppen!", "Uselt..."], device="auto", return_all_scores=True, max_length=256)
-print(probs[0])
+# 3) Profil-medveten analys (rensning, modellval)
+from src.sentiment import analyze_smart
+results, meta = analyze_smart(
+    ["Det här är fantastiskt!"],
+    profile="call",
+    return_all_scores=True,
+)
+print(results, meta)
 ```
 
-## Profiler och datatyper
-- __Tillgängliga profiler__: `default`, `forum`, `magazine`, `news`, `social`, `review`, `call`.
-- __Automatiska val__:
-  - Modell: `cardiffnlp/twitter-xlm-roberta-base-sentiment` (standard i alla profiler nu)
-  - `max_length`: 256 för forum/social/review, 512 för magazine/news
-  - Rensning per profil: ta bort URL:er, ev. HTML, användarnamn, hashtags, normalisera whitespace, m.m.
-- __Mapping__ (förenklad):
-  - `--source forum|flashback|reddit` -> `forum`
-  - `--source magazine` -> `magazine`
-  - `--source news|newspaper` -> `news`
-  - `--source twitter|x|social|blog` -> `social`
-  - `--source call|phone|telephony` -> `call`
-  - `--datatype post|comment` -> `forum`, `--datatype article|story` -> `news`, `--datatype review` -> `review`
-- __Åsidosättningar__: du kan alltid sätta `--profile forum` eller välja `--model` och `--max-length` manuellt.
+### ASR: Minimal användning
+```python
+from src.asr import transcribe
 
-## REST API
-En lättvikts-API byggd med FastAPI finns i `src/api.py`.
-
-- __Start lokalt__ (utanför Docker):
-  ```powershell
-  pip install -r requirements-min.txt -r requirements-api.txt
-  uvicorn src.api:app --host 0.0.0.0 --port 8000
-  ```
-  Öppna http://localhost:8000/docs för Swagger UI.
-
-- __Request-exempel (JSON)__:
-  ```json
-  {
-    "texts": [
-      "Det här var fantastiskt!",
-      "Riktigt dålig service."
-    ],
-    "source": "forum",
-    "datatype": "post",
-    "return_all_scores": true,
-    "lexicon_file": "samples/lexicon_sample.csv",
-    "lexicon_weight": 0.3
-  }
-  ```
-
-## Docker
-Bygg och kör allt inuti en container.
-
-```powershell
-# Bygg image
-docker build -t sv-sentiment .
-
-# Skapa cache-volym för modeller (snabbare start efter första körning)
-docker volume create hf_cache
-
-# Kör API på port 8000
-docker run --rm -p 8000:8000 -v hf_cache:/cache/hf sv-sentiment
-
-# Öppna Swagger: http://localhost:8000/docs
-
-# (Valfritt) Kör CLI inuti container och spara resultat till volym
-docker volume create sentiment_outputs
-docker run --rm -v hf_cache:/cache/hf -v sentiment_outputs:/app/outputs sv-sentiment \
-  python -m src.main --txt-file samples/examples.txt --source forum --return-all-scores --output outputs/preds.csv
+# Transkribera med KB-Whisper large (strict revision)
+result = transcribe(
+    audio_path="samtal.wav",
+    model="kb-whisper-large",
+    backend="faster",
+    language="sv",
+    revision="strict",
+)
+print(result["segments"])
+for seg in result["segments"]:
+    print(f"[{seg['start']:.1f}s - {seg['end']:.1f}s] {seg['text']}")
 ```
 
-## Filstruktur
-- `src/main.py` – CLI och inferens
-- `src/asr.py` – ASR (Whisper) med faster-whisper/Transformers
-- `src/asr_cli.py` – CLI för transkribering och samtalsanalys
-- `requirements.txt` – Python-beroenden
-- `samples/examples.txt` – Exempeltexter på svenska
-- `outputs/` – Skapas automatiskt vid export (git-ignorerad)
+## Projektstruktur
+```
+src/sentiment.py      # Sentimentanalys (Hugging Face)
+src/asr.py            # ASR (tal-till-text) med faster-whisper/transformers
+src/lexicon.py        # Lexikon-baserad sentiment
+src/clean.py          # Textrensning
+src/profiles.py       # Profilhantering
+src/evaluate.py       # Utvärderingsramverk
+src/main.py           # Huvud-CLI för sentiment
+src/asr_cli.py        # CLI för ASR
+src/api.py            # FastAPI REST-server
+tests/                # Enhetstester
+data/                 # Testdata
+docs/                 # Dokumentation
+samples/              # Exempelfiler
+```
 
-
-## Nästa steg
-- (Valfritt) Lägg till enkel utvärdering på etiketterad testdata
-- (Valfritt) Streamlit-gränssnitt
-- (Valfritt) Integrera svenskt lexikon (t.ex. SenSALDO) som komplement
+## Licens
+MIT - se LICENSE för detaljer.
