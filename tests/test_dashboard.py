@@ -16,7 +16,9 @@ from app.dashboard import load_report, load_sample_data
 
 class TestLoadReport:
     def test_load_existing_file(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump({"key": "value"}, f)
             path = f.name
 

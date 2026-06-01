@@ -11,22 +11,32 @@ class TestCallAnalysisPipeline:
 
     def _mock_sentiment(self, monkeypatch):
         """Mock sentiment pipeline to avoid loading real models."""
-        def mock_run_sentiment(self, texts):
-            return [
-                {"label": "negativ", "score": 0.8},
-                {"label": "neutral", "score": 0.6},
-                {"label": "positiv", "score": 0.9},
-            ][: max(1, len(texts))] if texts else []
+
+        def mock_analyze(self, texts, **kwargs):
+            return (
+                [
+                    {"label": "negativ", "score": 0.8},
+                    {"label": "neutral", "score": 0.6},
+                    {"label": "positiv", "score": 0.9},
+                ][: max(1, len(texts))]
+                if texts
+                else []
+            )
 
         monkeypatch.setattr(
-            "src.pipeline.CallAnalysisPipeline._run_sentiment",
-            mock_run_sentiment,
+            "src.analysis.sentiment.SentimentPipeline.analyze",
+            mock_analyze,
         )
 
     def test_analyze_segments_basic(self, monkeypatch):
         self._mock_sentiment(monkeypatch)
         segments = [
-            {"start": 0, "end": 5, "text": "Jag är mycket missnöjd med fakturan.", "speaker": "SPEAKER_0"},
+            {
+                "start": 0,
+                "end": 5,
+                "text": "Jag är mycket missnöjd med fakturan.",
+                "speaker": "SPEAKER_0",
+            },
             {"start": 5, "end": 10, "text": "Jag ska hjälpa dig direkt.", "speaker": "SPEAKER_1"},
             {"start": 10, "end": 15, "text": "Tack, det uppskattar jag.", "speaker": "SPEAKER_0"},
         ]

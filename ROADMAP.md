@@ -35,7 +35,6 @@ Se även `docs/PHASE2_PLAN.md` och `docs/FAS2_SUMMARY.md`.
 - [x] Skapa dataformat och första annoterings-/labelstruktur
 - [x] Skapa LoRA/PEFT fine-tuning pipeline för domändata
 - [x] Skapa baseline- och Fas 2-jämförelserapporter
-- [ ] Publicera modell på Hugging Face Hub
 
 ---
 
@@ -51,21 +50,9 @@ Se även `docs/PHASE2_PLAN.md` och `docs/FAS2_SUMMARY.md`.
 - [ ] Model versioning och A/B-testning
 - [ ] Övervakning: Prometheus-metriker, alerting
 - [ ] Lasttestning och prestandaoptimering
-- [ ] Produktionsdeployment (Kubernetes/cloud)
 
 ---
 
-## Fas 4: Utökade språkstöd (Planerad: November–December 2026)
-
-### Mål
-- Stöd för norska och danska
-- Gemensam skandinavisk sentimentmodell
-
-### Planerade uppgifter
-- [ ] Utvärdera KB-Whisper på norska/danska
-- [ ] Samla/skapa testset för norska och danska
-- [ ] Finetuna eller adapter-baserad multispråksmodell
-- [ ] Uppdatera API för språkval
 
 ---
 

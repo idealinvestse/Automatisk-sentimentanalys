@@ -17,7 +17,6 @@ from fastapi import FastAPI
 # Pydantic for data validation and serialization
 from pydantic import BaseModel, Field
 
-from .asr import transcribe as asr_transcribe
 from .lexicon import (
     blend_distributions,
     load_lexicon,
@@ -27,9 +26,44 @@ from .lexicon import (
 
 # Internal sentiment/ASR/lexicon modules
 from .sentiment import analyze_smart
+from .transcription import get_transcriber
 
 # Initialize FastAPI app
 app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
+
+
+def _transcribe_helper(
+    audio_path: str,
+    model: str = "kb-whisper-large",
+    backend: str = "faster",
+    device: str = "auto",
+    language: str = "sv",
+    beam_size: int = 5,
+    vad: bool = True,
+    word_timestamps: bool = True,
+    chunk_length_s: int = 30,
+    revision: str | None = None,
+    diarize: bool = False,
+    num_speakers: int | None = 2,
+) -> dict[str, Any]:
+    """Helper function to run ASR transcription using the new modular transcription package."""
+    transcriber = get_transcriber(
+        backend=backend,
+        model_name=model,
+        device=device,
+    )
+    transcript = transcriber.transcribe(
+        audio_path=audio_path,
+        language=language,
+        beam_size=beam_size,
+        vad=vad,
+        word_timestamps=word_timestamps,
+        chunk_length_s=chunk_length_s,
+        revision=revision,
+        diarize=diarize,
+        num_speakers=num_speakers,
+    )
+    return transcript.to_dict()
 
 
 class AnalyzeRequest(BaseModel):
@@ -478,7 +512,7 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
         TranscribeResponse with transcription results and timestamp
     """
     # Run ASR transcription with specified parameters
-    tr = asr_transcribe(
+    tr = _transcribe_helper(
         audio_path=req.audio_path,
         model=req.model,
         backend=req.backend,
@@ -518,7 +552,7 @@ async def analyze_conversation(
         metadata, and timestamp
     """
     # Transcribe the conversation audio file
-    tr = asr_transcribe(
+    tr = _transcribe_helper(
         audio_path=req.audio_path,
         model=req.model,
         backend=req.backend,
@@ -700,9 +734,7 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
     now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
     return PipelineResponse(
         sentiment_results=report.sentiment_results,
-        intent_results=[
-            {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
-        ],
+        intent_results=[{"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results],
         summary=report.summary,
         topics=report.topics,
         insights=report.insights,
@@ -788,7 +820,7 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
 
     def _worker(p: str) -> tuple[str, dict[str, Any]]:
         """Worker function for processing individual audio files."""
-        tr = asr_transcribe(
+        tr = _transcribe_helper(
             audio_path=p,
             model=req.model,
             backend=req.backend,
@@ -931,7 +963,7 @@ async def batch_analyze_conversation(
         Processes a single file: transcribe, analyze, and package.
         """
         # Transcribe the conversation audio file
-        tr = asr_transcribe(
+        tr = _transcribe_helper(
             audio_path=p,
             model=req.model,
             backend=req.backend,
@@ -1212,7 +1244,7 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
 
     def _do_transcribe(p: str) -> dict[str, Any]:
         """Transcribe a single audio file using ASR."""
-        return asr_transcribe(
+        return _transcribe_helper(
             audio_path=p,
             model=req.model,
             backend=req.backend,

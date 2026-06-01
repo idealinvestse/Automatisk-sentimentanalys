@@ -50,33 +50,33 @@ pip install -r requirements-min.txt -r requirements-api.txt
 ## Körningsexempel
 ```powershell
 # Enstaka text
-python -m src.main --text "Vaccin är säkert och viktigt för folkhälsan."
+python -m src.cli sentiment --text "Vaccin är säkert och viktigt för folkhälsan."
 
 # Från .txt (en text per rad) och spara till CSV
-python -m src.main --txt-file samples\examples.txt --output outputs\predictions.csv
+python -m src.cli sentiment --txt-file samples\examples.txt --output outputs\predictions.csv
 
 # Från .csv med kolumnnamn
-python -m src.main --csv-file path\till\data.csv --text-column kommentar --output outputs\preds.csv
+python -m src.cli sentiment --csv-file path\till\data.csv --text-column kommentar --output outputs\preds.csv
 
 # Välj annan modell (om du vill experimentera)
-python -m src.main --text "Det här är dåligt" --model cardiffnlp/twitter-xlm-roberta-base-sentiment
+python -m src.cli sentiment --text "Det här är dåligt" --model cardiffnlp/twitter-xlm-roberta-base-sentiment
 
 # Fulla klass-sannolikheter (negativ/neutral/positiv) + auto-enhet
-python -m src.main --text "Det här var otroligt bra!" --return-all-scores --device auto
+python -m src.cli sentiment --text "Det här var otroligt bra!" --return-all-scores --device auto
 
 # Batch med fulla sannolikheter och kortare maxlängd
-python -m src.main --txt-file samples\examples.txt --return-all-scores --max-length 256 --output outputs\predictions_all.csv
+python -m src.cli sentiment --txt-file samples\examples.txt --return-all-scores --max-length 256 --output outputs\predictions_all.csv
 
 # Profiler (automatisk anpassning efter datatyp/källa)
 # Exempel: forum-innehåll med rensning av användarnamn/hashtags
-python -m src.main --txt-file samples\examples.txt --source forum --return-all-scores --output outputs\predictions_forum.csv
+python -m src.cli sentiment --txt-file samples\examples.txt --source forum --return-all-scores --output outputs\predictions_forum.csv
 
 # Exempel: magasin/artikel med längre maxlängd
-python -m src.main --text "Lång artikeltext..." --datatype article --return-all-scores
+python -m src.cli sentiment --text "Lång artikeltext..." --datatype article --return-all-scores
 
 # Lexikon (valfritt): blanda modell med svenskt lexikon
 # Prova med samples/lexicon_sample.csv och 30% lexikonvikt
-python -m src.main --txt-file samples\examples.txt --source forum \
+python -m src.cli sentiment --txt-file samples\examples.txt --source forum \
   --return-all-scores --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
   --output outputs\predictions_lex.csv
 
@@ -99,36 +99,36 @@ curl -X POST \
 ### ASR: CLI
 ```powershell
 # Transkribera ljudfil (kb-whisper-large med faster-whisper, strict revision för call center)
-python -m src.asr_cli transcribe path\till\call.wav --backend faster --language sv --revision strict --output-json outputs\call_transcript.json
+python -m src.cli transcribe path\till\call.wav --backend faster --language sv --revision strict --output-json outputs\call_transcript.json
 
 # Alternativ backend (Transformers)
-python -m src.asr_cli transcribe path\till\call.wav --backend transformers --model openai/whisper-large-v3
+python -m src.cli transcribe path\till\call.wav --backend transformers --model openai/whisper-large-v3
 
 # Analysera samtal per segment (sentiment + ev. lexikonblending)
-python -m src.asr_cli analyze-call path\till\call.wav \
+python -m src.cli analyze-call path\till\call.wav \
   --backend faster --language sv \
   --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
   --output-csv outputs\call_segments.csv
 
 # Batch-transkribering: mappar, listor och globbar
 # 1) Katalog (rekursivt)
-python -m src.asr_cli transcribe data\calls --backend faster --language sv --output-dir outputs\transcripts --log-level INFO
+python -m src.cli transcribe data\calls --backend faster --language sv --output-dir outputs\transcripts --log-level INFO
 
 # 2) Glob-mönster (rekursivt)
-python -m src.asr_cli transcribe "data\\calls\\**\\*.wav" --backend faster --output-dir outputs\transcripts
+python -m src.cli transcribe "data\\calls\\**\\*.wav" --backend faster --output-dir outputs\transcripts
 
 # 3) Flera filer i en körning
-python -m src.asr_cli transcribe data\a.wav data\b.mp3 data\c.m4a --output-dir outputs\transcripts
+python -m src.cli transcribe data\a.wav data\b.mp3 data\c.m4a --output-dir outputs\transcripts
 
 # Batch-analys av samtal med aggregerad CSV över alla filer
-python -m src.asr_cli analyze-call "data\\calls\\**\\*.wav" \
+python -m src.cli analyze-call "data\\calls\\**\\*.wav" \
   --backend faster --language sv \
   --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.25 \
   --output-csv outputs\all_call_segments.csv --log-level INFO
 
 # Loggning
 # Lägg till --log-level DEBUG för mer detaljerad logg (modell, enhet, segment mm.)
-python -m src.asr_cli transcribe path\till\call.wav --log-level DEBUG
+python -m src.cli transcribe path\till\call.wav --log-level DEBUG
 ```
 
 ### ASR: REST API
