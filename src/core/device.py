@@ -24,13 +24,17 @@ def normalize_device_spec(
 
     if isinstance(device, int):
         if device >= 0 and torch.cuda.is_available():
-            return device, f"cuda:{device}"
+            if device < torch.cuda.device_count():
+                return device, f"cuda:{device}"
+            return 0, "cuda:0"
         return -1, "cpu"
 
     if isinstance(device, torch.device):
         if device.type == "cuda" and torch.cuda.is_available():
             idx = device.index if device.index is not None else 0
-            return idx, f"cuda:{idx}"
+            if idx < torch.cuda.device_count():
+                return idx, f"cuda:{idx}"
+            return 0, "cuda:0"
         if (
             device.type == "mps"
             and hasattr(torch.backends, "mps")
@@ -48,10 +52,12 @@ def normalize_device_spec(
             if ":" in d:
                 try:
                     idx = int(d.split(":", 1)[1])
-                except Exception:
+                except ValueError:
                     idx = 0
             if torch.cuda.is_available():
-                return idx, f"cuda:{idx}"
+                if idx < torch.cuda.device_count():
+                    return idx, f"cuda:{idx}"
+                return 0, "cuda:0"
             return -1, "cpu"
         if d == "mps" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return torch.device("mps"), "mps"
@@ -70,7 +76,7 @@ def device_arg_from_key(key: str) -> int | torch.device:
         try:
             idx = int(key.split(":", 1)[1])
             return idx
-        except Exception:
+        except ValueError:
             return 0
     return -1
 
@@ -95,9 +101,13 @@ def normalize_device_for_asr(device: str | None = "auto") -> tuple[str, int | No
         if ":" in d:
             try:
                 idx = int(d.split(":", 1)[1])
-            except Exception:
+            except ValueError:
                 idx = 0
-        return "cuda", idx
+        if torch.cuda.is_available() and idx < torch.cuda.device_count():
+            return "cuda", idx
+        if torch.cuda.is_available():
+            return "cuda", 0
+        return "cpu", None
     if d == "mps":
         return "mps", None
     return "cpu", None

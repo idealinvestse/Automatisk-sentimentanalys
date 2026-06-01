@@ -12,7 +12,7 @@ import os
 import sys
 import time
 from collections import Counter
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -385,7 +385,7 @@ def evaluate(
     if output:
         os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
         report = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat(),
             "testset": testset,
             "metrics": metrics,
             "scenarios": SCENARIOS,
@@ -416,7 +416,7 @@ def evaluate_scenarios(
         metrics["description"] = cfg["description"]
         scenario_results[name] = metrics
     report = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "testset": testset,
         "scenarios": scenario_results,
         "asr_comparison": ASR_BASELINES,
@@ -432,7 +432,7 @@ def evaluate_scenarios(
 def asr_compare(output: str = typer.Option("reports/asr_model_comparison.json", "--output")):
     """Save OpenAI Whisper vs KB-Whisper model recommendation metadata."""
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
-    report = {"timestamp": datetime.utcnow().isoformat() + "Z", "models": ASR_BASELINES}
+    report = {"timestamp": datetime.now(UTC).isoformat(), "models": ASR_BASELINES}
     with open(output, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     console.print(f"[green]ASR comparison saved:[/green] {output}")
@@ -463,7 +463,7 @@ def evaluate_negation(
     metrics_all, _ = run_evaluation(df, backend=backend)
     results["overall"] = metrics_all
     report = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "testset": testset,
         "negation_evaluation": results,
     }

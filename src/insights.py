@@ -93,7 +93,6 @@ class InsightsEngine:
     def analyze(
         self,
         segments: list[dict[str, Any]],
-        diarization: dict[str, Any] | None = None,
         intent_results: list[tuple[str, float]] | None = None,
         sentiment_results: list[dict[str, Any]] | None = None,
         topics: list[Any] | None = None,
@@ -102,7 +101,6 @@ class InsightsEngine:
 
         Args:
             segments: ASR segments with optional speaker labels.
-            diarization: Diarization result dict.
             intent_results: Per-segment intent classifications.
             sentiment_results: Per-segment sentiment results.
             topics: Topic modeling results.

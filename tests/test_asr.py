@@ -40,9 +40,22 @@ class TestDeviceNormalization:
         assert idx is None
 
     def test_cuda_with_index(self):
-        device, idx = normalize_device_for_asr("cuda:1")
+        with (
+            patch("src.core.device.torch.cuda.is_available", return_value=True),
+            patch("src.core.device.torch.cuda.device_count", return_value=2),
+        ):
+            device, idx = normalize_device_for_asr("cuda:1")
         assert device == "cuda"
         assert idx == 1
+
+    def test_cuda_invalid_index_fallback(self):
+        with (
+            patch("src.core.device.torch.cuda.is_available", return_value=True),
+            patch("src.core.device.torch.cuda.device_count", return_value=1),
+        ):
+            device, idx = normalize_device_for_asr("cuda:5")
+        assert device == "cuda"
+        assert idx == 0
 
     def test_mps(self):
         device, idx = normalize_device_for_asr("mps")
@@ -104,9 +117,11 @@ class TestTranscribeMocked:
 
     def test_faster_backend_not_available(self):
         """Test that missing faster-whisper raises ImportError."""
-        with (patch("src.transcription.faster_whisper._HAS_FASTER", False),):
-            with pytest.raises(ImportError, match="faster-whisper is not installed"):
-                get_transcriber(backend="faster", device="cpu")
+        with (
+            patch("src.transcription.faster_whisper._HAS_FASTER", False),
+            pytest.raises(ImportError, match="faster-whisper is not installed"),
+        ):
+            get_transcriber(backend="faster", device="cpu")
 
     def test_transformers_backend_mocked(self):
         """Test transformers backend with mocked pipeline."""

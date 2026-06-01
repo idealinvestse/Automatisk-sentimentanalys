@@ -6,14 +6,21 @@ import torch
 from transformers import pipeline
 
 from .clean import clean_texts
+from .core.device import device_arg_from_key, normalize_device_spec
+from .core.errors import AnalysisError
 from .negation import apply_negation_heuristic, detect_negation
 from .profiles import resolve_profile
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
 POLITE_POSITIVE_TERMS = {"tack", "vänlig", "hjälpsam", "uppskattar"}
 
+_normalize_device_spec = normalize_device_spec
+_device_arg_from_key = device_arg_from_key
 
-def normalize_label(label: str) -> str:
+
+def normalize_label(label: str | None) -> str:
+    if label is None:
+        return "neutral"
     lowered = str(label).strip().lower()
     if lowered in {"label_0", "negative", "neg"}:
         return "negativ"
@@ -29,8 +36,9 @@ def adjust_distribution_for_callcenter(text: str, dist: dict[str, float]) -> dic
     adjusted = dict(dist)
     lowered = text.lower()
     if detect_negation(text):
-        adjusted["negativ"], adjusted["positiv"] = adjusted.get("positiv", 0.0), adjusted.get(
-            "negativ", 0.0
+        adjusted["negativ"], adjusted["positiv"] = (
+            adjusted.get("positiv", 0.0),
+            adjusted.get("negativ", 0.0),
         )
     if any(term in lowered for term in POLITE_POSITIVE_TERMS):
         adjusted["positiv"] = adjusted.get("positiv", 0.0) + 0.05
@@ -55,16 +63,19 @@ class SentimentPipeline:
         max_length: int = 256,
     ):
         self.model_name = model_name
-        device_arg, device_key = _normalize_device_spec(device)
+        device_arg, device_key = normalize_device_spec(device)
         self.device_key = device_key
         self.return_all_scores = return_all_scores
         self.max_length = max_length
-        self._nlp = pipeline(
-            task="sentiment-analysis",
-            model=model_name,
-            tokenizer=model_name,
-            device=device_arg,
-        )
+        try:
+            self._nlp = pipeline(
+                task="sentiment-analysis",
+                model=model_name,
+                tokenizer=model_name,
+                device=device_arg,
+            )
+        except Exception as e:
+            raise AnalysisError(f"Failed to initialize sentiment model '{model_name}': {e}") from e
 
     def analyze(
         self,
@@ -81,7 +92,10 @@ class SentimentPipeline:
         if ras:
             # Full distribution using modern API
             call_kwargs["top_k"] = None
-        raw = self._nlp(texts, **call_kwargs)
+        try:
+            raw = self._nlp(texts, **call_kwargs)
+        except Exception as e:
+            raise AnalysisError(f"Sentiment inference failed for {len(texts)} text(s): {e}") from e
 
         if not normalize:
             return raw
@@ -89,8 +103,8 @@ class SentimentPipeline:
         # Normalize labels depending on output shape
         if ras:
             # List[List[Dict[label, score]]]
-            for _i, inner in enumerate(raw):
-                for _j, entry in enumerate(inner):
+            for inner in raw:
+                for entry in inner:
                     entry["label"] = normalize_label(entry.get("label"))
             return raw
         else:
@@ -107,7 +121,7 @@ def load(
     max_length: int = 256,
 ) -> SentimentPipeline:
     """Load a minimal sentiment pipeline for the given model."""
-    device_arg, _ = _normalize_device_spec(device)
+    device_arg, _ = normalize_device_spec(device)
     return SentimentPipeline(
         model_name=model_name,
         device=device_arg,
@@ -118,7 +132,7 @@ def load(
 
 @lru_cache(maxsize=4)
 def _get_cached(model_name: str, device_key: str) -> SentimentPipeline:
-    device_arg = _device_arg_from_key(device_key)
+    device_arg = device_arg_from_key(device_key)
     return SentimentPipeline(model_name=model_name, device=device_arg)
 
 
@@ -137,7 +151,7 @@ def analyze(
         from src.sentiment import analyze
         results = analyze(["Det här är bra!"])
     """
-    _, device_key = _normalize_device_spec(device)
+    _, device_key = normalize_device_spec(device)
     return _get_cached(model_name, device_key).analyze(
         texts,
         batch_size=batch_size,
@@ -186,9 +200,18 @@ def analyze_smart(
     )
     if profile_name == "callcenter" and return_all_scores:
         adjusted_results = []
-        for text, inner in zip(proc_texts, results, strict=False):
+        if len(proc_texts) != len(results):
+            raise AnalysisError(
+                f"Sentiment result length mismatch: {len(proc_texts)} texts vs {len(results)} results"
+            )
+        for text, inner in zip(proc_texts, results, strict=True):
             if isinstance(inner, list):
-                dist = {entry.get("label"): float(entry.get("score", 0.0)) for entry in inner}
+                dist = {
+                    entry["label"]: float(entry.get("score", 0.0) or 0.0)
+                    for entry in inner
+                    if isinstance(entry, dict)
+                    and entry.get("label") in {"negativ", "neutral", "positiv"}
+                }
                 dist = adjust_distribution_for_callcenter(text, dist)
                 adjusted_results.append(
                     [{"label": label, "score": score} for label, score in dist.items()]
@@ -206,70 +229,10 @@ def analyze_smart(
 
 def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> dict:
     """Analyze a single text and return one result dict."""
-    return analyze([text], model_name=model_name, batch_size=1, normalize=normalize)[0]
-
-
-def _normalize_device_spec(
-    device: int | str | torch.device | None,
-) -> tuple[int | torch.device, str]:
-    """Return (device_arg_for_pipeline, device_key_for_cache)."""
-    if device is None or (isinstance(device, str) and device.strip().lower() == "auto"):
-        if torch.cuda.is_available():
-            return 0, "cuda:0"
-        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return torch.device("mps"), "mps"
-        return -1, "cpu"
-
-    if isinstance(device, int):
-        if device >= 0 and torch.cuda.is_available():
-            return device, f"cuda:{device}"
-        return -1, "cpu"
-
-    if isinstance(device, torch.device):
-        if device.type == "cuda" and torch.cuda.is_available():
-            idx = device.index if device.index is not None else 0
-            return idx, f"cuda:{idx}"
-        if (
-            device.type == "mps"
-            and hasattr(torch.backends, "mps")
-            and torch.backends.mps.is_available()
-        ):
-            return device, "mps"
-        return -1, "cpu"
-
-    if isinstance(device, str):
-        d = device.strip().lower()
-        if d == "cpu":
-            return -1, "cpu"
-        if d.startswith("cuda"):
-            idx = 0
-            if ":" in d:
-                try:
-                    idx = int(d.split(":", 1)[1])
-                except Exception:
-                    idx = 0
-            if torch.cuda.is_available():
-                return idx, f"cuda:{idx}"
-            return -1, "cpu"
-        if d == "mps" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return torch.device("mps"), "mps"
-        return -1, "cpu"
-
-    return -1, "cpu"
-
-
-def _device_arg_from_key(key: str) -> int | torch.device:
-    if key == "cpu":
-        return -1
-    if key == "mps":
-        return torch.device("mps")
-    if key.startswith("cuda:"):
-        try:
-            idx = int(key.split(":", 1)[1])
-        except Exception:
-            idx = 0
-        return idx
-    return -1
+    results = analyze([text], model_name=model_name, batch_size=1, normalize=normalize)
+    if not results:
+        raise AnalysisError("Sentiment analysis returned no result for single text")
+    return results[0]
 
 
 __all__ = [
@@ -282,4 +245,5 @@ __all__ = [
     "detect_negation",
     "adjust_distribution_for_callcenter",
     "apply_negation_heuristic",
+    "clean_texts",
 ]

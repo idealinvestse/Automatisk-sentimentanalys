@@ -391,16 +391,18 @@ print(results, meta)
 
 ### ASR: Minimal användning
 ```python
-from src.asr import transcribe
+from src.transcription import get_transcriber
 
 # Transkribera med KB-Whisper large (strict revision)
-result = transcribe(
-    audio_path="samtal.wav",
-    model="kb-whisper-large",
+transcriber = get_transcriber(
     backend="faster",
+    model_name="kb-whisper-large",
+)
+result = transcriber.transcribe(
+    audio_path="samtal.wav",
     language="sv",
     revision="strict",
-)
+).to_dict()
 print(result["segments"])
 for seg in result["segments"]:
     print(f"[{seg['start']:.1f}s - {seg['end']:.1f}s] {seg['text']}")

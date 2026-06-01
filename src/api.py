@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
+import threading
 
 # Concurrency utilities for parallel processing of audio files
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import UTC, datetime
 
 # Standard library imports for type hints, file operations, and JSON handling
 from typing import Any
@@ -17,6 +19,7 @@ from fastapi import FastAPI
 # Pydantic for data validation and serialization
 from pydantic import BaseModel, Field
 
+from .core.config import AUDIO_EXTS
 from .lexicon import (
     blend_distributions,
     load_lexicon,
@@ -28,8 +31,136 @@ from .lexicon import (
 from .sentiment import analyze_smart
 from .transcription import get_transcriber
 
+logger = logging.getLogger(__name__)
+
 # Initialize FastAPI app
 app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
+
+
+def _utc_now_iso(trim_microseconds: bool = True) -> str:
+    """Return a UTC ISO timestamp with a trailing Z."""
+    dt = datetime.now(UTC)
+    if trim_microseconds:
+        dt = dt.replace(microsecond=0)
+    return dt.isoformat().replace("+00:00", "Z")
+
+
+def _score_dict(entries: Any) -> dict[str, float]:
+    """Convert sentiment entries into a safe fixed-label score mapping."""
+    scores = {"negativ": 0.0, "neutral": 0.0, "positiv": 0.0}
+    if isinstance(entries, dict):
+        entries = [entries]
+    if not isinstance(entries, list):
+        return scores
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        label = entry.get("label")
+        if label not in scores:
+            continue
+        try:
+            scores[label] = float(entry.get("score", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid sentiment score for label %s: %r", label, entry)
+    return scores
+
+
+def _single_label_distribution(result: Any) -> dict[str, float]:
+    scores = _score_dict(result)
+    if any(scores.values()):
+        return scores
+    if isinstance(result, dict):
+        label = result.get("label")
+        if label in scores:
+            scores[label] = 1.0
+    return scores
+
+
+def _blend_with_lexicon(
+    texts: list[str],
+    results: list[Any],
+    lexicon_file: str | None,
+    lexicon_weight: float,
+) -> list[Any]:
+    """Blend model sentiment outputs with lexicon scores when configured."""
+    if not lexicon_file or lexicon_weight <= 0.0:
+        return results
+    if len(texts) != len(results):
+        logger.warning(
+            "Lexicon blending length mismatch: texts=%d results=%d", len(texts), len(results)
+        )
+    try:
+        lex = load_lexicon(lexicon_file)
+        blended_results: list[Any] = []
+        full_distribution = bool(results and isinstance(results[0], list))
+        for text, result in zip(texts, results, strict=False):
+            scores = (
+                _score_dict(result) if full_distribution else _single_label_distribution(result)
+            )
+            lex_dist = scalar_to_dist(score_text(text, lex))
+            scores = blend_distributions(scores, lex_dist, lexicon_weight)
+            if full_distribution:
+                blended_results.append(
+                    [
+                        {"label": "negativ", "score": scores["negativ"]},
+                        {"label": "neutral", "score": scores["neutral"]},
+                        {"label": "positiv", "score": scores["positiv"]},
+                    ]
+                )
+            else:
+                top_label = max(scores.items(), key=lambda kv: kv[1])[0]
+                blended_results.append({"label": top_label, "score": float(scores[top_label])})
+        return blended_results
+    except (FileNotFoundError, ValueError, TypeError, KeyError) as e:
+        logger.warning("Lexicon blending failed for %s: %s", lexicon_file, e, exc_info=True)
+        return results
+
+
+def _segment_time(segment: dict[str, Any], key: str) -> float | None:
+    value = segment.get(key)
+    if isinstance(value, int | float):
+        return float(value)
+    return None
+
+
+def _map_results_to_segments(
+    texts: list[str],
+    results: list[Any],
+    segments: list[dict[str, Any]],
+) -> list[SegmentSentiment]:
+    """Map sentiment distributions back onto transcript segments."""
+    if len(texts) != len(results):
+        logger.warning(
+            "Segment sentiment length mismatch: texts=%d results=%d", len(texts), len(results)
+        )
+    seg_out: list[SegmentSentiment] = []
+    for idx, (text, result) in enumerate(zip(texts, results, strict=False)):
+        scores_map = _score_dict(result)
+        top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
+        top_score = float(scores_map[top_label])
+        segment = segments[idx] if idx < len(segments) else {}
+        seg_out.append(
+            SegmentSentiment(
+                index=idx,
+                start=_segment_time(segment, "start"),
+                end=_segment_time(segment, "end"),
+                text=text,
+                label=top_label,
+                score=top_score,
+                negativ=scores_map.get("negativ"),
+                neutral=scores_map.get("neutral"),
+                positiv=scores_map.get("positiv"),
+            )
+        )
+    return seg_out
+
+
+def _texts_from_segments(segments: list[dict[str, Any]]) -> list[str]:
+    texts = [s.get("text", "").strip() for s in segments]
+    if texts and any(texts):
+        return texts
+    joined = " ".join(s.get("text", "").strip() for s in segments if s.get("text")).strip()
+    return [joined] if joined else []
 
 
 def _transcribe_helper(
@@ -44,7 +175,7 @@ def _transcribe_helper(
     chunk_length_s: int = 30,
     revision: str | None = None,
     diarize: bool = False,
-    num_speakers: int | None = 2,
+    num_speakers: int | None = None,
 ) -> dict[str, Any]:
     """Helper function to run ASR transcription using the new modular transcription package."""
     transcriber = get_transcriber(
@@ -109,8 +240,7 @@ class AnalyzeRequest(BaseModel):
     lexicon_file: str | None = Field(
         None,
         description=(
-            "Path to Swedish lexicon (CSV/TSV) with columns "
-            "term|word and polarity|score|sentiment"
+            "Path to Swedish lexicon (CSV/TSV) with columns term|word and polarity|score|sentiment"
         ),
     )
     # Blend weight for lexicon distribution [0..1]
@@ -133,7 +263,7 @@ class TranscribeRequest(BaseModel):
     # Path to audio file (server/container must have access)
     audio_path: str = Field(
         ...,
-        description=("Path to audio file accessible by the " "server/container"),
+        description=("Path to audio file accessible by the server/container"),
     )
     # ASR model to use for transcription (KB Swedish large by default)
     model: str = Field("kb-whisper-large")
@@ -168,7 +298,7 @@ class AnalyzeConversationRequest(BaseModel):
     # Path to audio file the server can access
     audio_path: str = Field(
         ...,
-        description=("Path to audio file accessible by the server/" "container"),
+        description=("Path to audio file accessible by the server/container"),
     )
     # ASR parameters
     # ASR model to use (KB Swedish large by default)
@@ -238,8 +368,6 @@ class AnalyzeConversationResponse(BaseModel):
 
 
 # --- Helpers for batch/scan ---
-# Set of supported audio file extensions for batch processing
-AUDIO_EXTS = {".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".wma", ".aac"}
 
 
 def _resolve_audio_paths(
@@ -353,7 +481,7 @@ def _load_state(path: str | None) -> dict[str, Any]:
             # Ensure the loaded object has the expected structure
             if isinstance(obj, dict) and "processed" in obj and isinstance(obj["processed"], dict):
                 return obj
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         # Return empty state if file reading or parsing fails
         pass
     return {"processed": {}}
@@ -422,78 +550,9 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         max_length=req.max_length,
         clean=req.clean,
     )
-    # Optional lexicon blending (combine model predictions with lexicon)
-    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
-    if use_lex:
-        try:
-            # Load lexicon for blending
-            lex = load_lexicon(req.lexicon_file)
-            # Blend per item - process each text individually
-            if results and isinstance(results[0], list):
-                blended_results = []
-                for t, inner in zip(req.texts, results, strict=False):
-                    # Extract scores from model results
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-                    # Ensure all sentiment labels are present
-                    for k in ["negativ", "neutral", "positiv"]:
-                        scores.setdefault(k, 0.0)
-                    # Get lexicon-based scalar score for the text
-                    s_scalar = score_text(t, lex)
-                    # Convert scalar score to distribution
-                    ln, le, lp = scalar_to_dist(s_scalar)
-                    # Blend with lexicon (weighted)
-                    scores = blend_distributions(
-                        scores,
-                        (ln, le, lp),
-                        req.lexicon_weight,
-                    )
-                    # Convert back to list of dicts preserving order
-                    blended_inner = [
-                        {"label": "negativ", "score": scores["negativ"]},
-                        {"label": "neutral", "score": scores["neutral"]},
-                        {"label": "positiv", "score": scores["positiv"]},
-                    ]
-                    blended_results.append(blended_inner)
-                results = blended_results
-            else:
-                # Approximate dist; blend; re-pick top-1
-                # Handle case where only top prediction is returned
-                blended_results = []
-                for t, r in zip(req.texts, results, strict=False):
-                    # Extract label (score not used)
-                    label = r.get("label")
-                    # Create distribution based on top prediction
-                    neg = 1.0 if label == "negativ" else 0.0
-                    neu = 1.0 if label == "neutral" else 0.0
-                    pos = 1.0 if label == "positiv" else 0.0
-                    model_dist = {
-                        "negativ": neg,
-                        "neutral": neu,
-                        "positiv": pos,
-                    }
-                    # Get lexicon-based scalar score
-                    s_scalar = score_text(t, lex)
-                    ln, le, lp = scalar_to_dist(s_scalar)
-                    # Blend distributions
-                    scores = blend_distributions(
-                        model_dist,
-                        (ln, le, lp),
-                        req.lexicon_weight,
-                    )
-                    # Select top label from blended scores
-                    top_label = max(scores.items(), key=lambda kv: kv[1])[0]
-                    blended_results.append(
-                        {
-                            "label": top_label,
-                            "score": float(scores[top_label]),
-                        }
-                    )
-                results = blended_results
-        except Exception:
-            # Continue with model-only results if lexicon processing fails
-            pass
+    results = _blend_with_lexicon(req.texts, results, req.lexicon_file, req.lexicon_weight)
     # Generate timestamp for response
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return AnalyzeResponse(meta=meta, timestamp=now_iso, results=results)
 
 
@@ -527,7 +586,7 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
         num_speakers=req.num_speakers,
     )
     # Generate timestamp for response
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return TranscribeResponse(transcript=tr, timestamp=now_iso)
 
 
@@ -568,21 +627,7 @@ async def analyze_conversation(
     )
     # Extract text segments from transcription
     segments = tr.get("segments", []) or []
-    texts = [s.get("text", "").strip() for s in segments]
-    # Fallback: single full transcript if no segments detected
-    # This handles cases where VAD doesn't split the audio into segments
-    if not texts or all(not t for t in texts):
-        texts = (
-            [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
-            if segments
-            else []
-        )
-        if not texts:
-            tr_texts = []
-        else:
-            tr_texts = texts
-    else:
-        tr_texts = texts
+    tr_texts = _texts_from_segments(segments)
 
     # Run sentiment analysis on each segment using the 'call' profile
     # The 'call' profile is optimized for conversation analysis
@@ -590,88 +635,18 @@ async def analyze_conversation(
         tr_texts,
         profile="call",
         model_name=req.sentiment_model,
-        device="auto",
+        device=req.device,
         batch_size=16,
         normalize=True,
         return_all_scores=True,
         max_length=None,
         clean=True,
     )
-    # Optional lexicon blending for improved sentiment accuracy
-    use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
-    if use_lex:
-        try:
-            # Load lexicon for blending
-            lex = load_lexicon(req.lexicon_file)
-            blended_results = []
-            for t, inner in zip(tr_texts, results, strict=False):
-                # Extract scores from model results
-                scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-                # Ensure all sentiment labels are present
-                for k in ["negativ", "neutral", "positiv"]:
-                    scores.setdefault(k, 0.0)
-                # Get lexicon-based scalar score
-                s_scalar = score_text(t, lex)
-                # Convert scalar score to distribution
-                ln, le, lp = scalar_to_dist(s_scalar)
-                # Blend model and lexicon distributions
-                scores = blend_distributions(
-                    scores,
-                    (ln, le, lp),
-                    req.lexicon_weight,
-                )
-                # Package blended results
-                blended_inner = [
-                    {"label": "negativ", "score": scores["negativ"]},
-                    {"label": "neutral", "score": scores["neutral"]},
-                    {"label": "positiv", "score": scores["positiv"]},
-                ]
-                blended_results.append(blended_inner)
-            results = blended_results
-        except Exception:
-            # Continue with model-only results if lexicon processing fails
-            pass
-
-    # Map sentiment analysis results back to segments with timing information
-    seg_out: list[SegmentSentiment] = []
-    for idx, (t, inner) in enumerate(zip(tr_texts, results, strict=False)):
-        # Create scores map from analysis results
-        scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-        # Ensure all sentiment labels are present in scores map
-        for k in ["negativ", "neutral", "positiv"]:
-            scores_map.setdefault(k, 0.0)
-        # Select top sentiment label
-        top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
-        top_score = float(scores_map[top_label])
-        start = None
-        end = None
-        if idx < len(segments):
-            start = (
-                float(segments[idx].get("start", 0.0) or 0.0)
-                if isinstance(segments[idx].get("start"), int | float)
-                else None
-            )
-            end = (
-                float(segments[idx].get("end", 0.0) or 0.0)
-                if isinstance(segments[idx].get("end"), int | float)
-                else None
-            )
-        seg_out.append(
-            SegmentSentiment(
-                index=idx,
-                start=start,
-                end=end,
-                text=t,
-                label=top_label,
-                score=top_score,
-                negativ=scores_map.get("negativ"),
-                neutral=scores_map.get("neutral"),
-                positiv=scores_map.get("positiv"),
-            )
-        )
+    results = _blend_with_lexicon(tr_texts, results, req.lexicon_file, req.lexicon_weight)
+    seg_out = _map_results_to_segments(tr_texts, results, segments)
 
     # Build response
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return AnalyzeConversationResponse(
         transcript=tr,
         segment_sentiments=seg_out,
@@ -731,7 +706,7 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
     )
     report = pipe.analyze_segments(req.segments)
 
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return PipelineResponse(
         sentiment_results=report.sentiment_results,
         intent_results=[{"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results],
@@ -767,6 +742,8 @@ class BatchTranscribeRequest(BaseModel):
     word_timestamps: bool = Field(True)
     chunk_length_s: int = Field(30, ge=5, le=60)
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers")
 
 
 class BatchTranscribeItem(BaseModel):
@@ -779,6 +756,8 @@ class BatchTranscribeResponse(BaseModel):
     items: list[BatchTranscribeItem]
     ok: int
     failed: int
+    total: int
+    timestamp: str
 
 
 # Alias to keep signature short
@@ -862,7 +841,7 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BTResp:
                     failed += 1
 
     # Generate timestamp for response
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return BatchTranscribeResponse(
         items=items,
         ok=ok,
@@ -889,6 +868,8 @@ class BatchAnalyzeConversationRequest(BaseModel):
     word_timestamps: bool = Field(False)
     chunk_length_s: int = Field(30, ge=5, le=60)
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers")
     # Sentiment
     sentiment_model: str | None = Field(None)
     lexicon_file: str | None = Field(None)
@@ -979,108 +960,37 @@ async def batch_analyze_conversation(
         )
         # Extract text segments from transcription
         segments = tr.get("segments", []) or []
-        texts = [s.get("text", "").strip() for s in segments]
-        # Fallback: single full transcript if no segments detected
-        if not texts or all(not t for t in texts):
-            texts = (
-                [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
-                if segments
-                else []
-            )
-            if not texts:
-                tr_texts = []
-            else:
-                tr_texts = texts
-        else:
-            tr_texts = texts
+        tr_texts = _texts_from_segments(segments)
 
         # Analyze sentiment for each segment using the 'call' profile
         results, meta = analyze_smart(
             tr_texts,
             profile="call",
             model_name=req.sentiment_model,
-            device="auto",
-            batch_size=16,
+            device=req.device,
+            batch_size=req.batch_size,
             normalize=True,
             return_all_scores=True,
             max_length=None,
             clean=True,
         )
 
-        # Optional lexicon blending for improved sentiment accuracy
-        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
-        if use_lex:
-            try:
-                lex = load_lexicon(req.lexicon_file)
-                blended_results = []
-                for t, inner in zip(tr_texts, results, strict=False):
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-                    for k in ["negativ", "neutral", "positiv"]:
-                        scores.setdefault(k, 0.0)
-                    s_scalar = score_text(t, lex)
-                    ln, le, lp = scalar_to_dist(s_scalar)
-                    scores = blend_distributions(
-                        scores,
-                        (ln, le, lp),
-                        req.lexicon_weight,
-                    )
-                    blended_inner = [
-                        {"label": "negativ", "score": scores["negativ"]},
-                        {"label": "neutral", "score": scores["neutral"]},
-                        {"label": "positiv", "score": scores["positiv"]},
-                    ]
-                    blended_results.append(blended_inner)
-                results = blended_results
-            except Exception:
-                pass
-
-        # Map results back to segments with timing info
-        seg_out: list[SegmentSentiment] = []
-        for idx, (t, inner) in enumerate(zip(tr_texts, results, strict=False)):
-            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-            for k in ["negativ", "neutral", "positiv"]:
-                scores_map.setdefault(k, 0.0)
-            top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
-            top_score = float(scores_map[top_label])
-            start = None
-            end = None
-            if idx < len(segments):
-                start = (
-                    float(segments[idx].get("start", 0.0) or 0.0)
-                    if isinstance(segments[idx].get("start"), int | float)
-                    else None
-                )
-                end = (
-                    float(segments[idx].get("end", 0.0) or 0.0)
-                    if isinstance(segments[idx].get("end"), int | float)
-                    else None
-                )
-            seg_out.append(
-                SegmentSentiment(
-                    index=idx,
-                    start=start,
-                    end=end,
-                    text=t,
-                    label=top_label,
-                    score=top_score,
-                    negativ=scores_map.get("negativ"),
-                    neutral=scores_map.get("neutral"),
-                    positiv=scores_map.get("positiv"),
-                )
-            )
+        results = _blend_with_lexicon(tr_texts, results, req.lexicon_file, req.lexicon_weight)
+        seg_out = _map_results_to_segments(tr_texts, results, segments)
 
         return p, tr, seg_out, meta
 
     # Process files concurrently using ThreadPoolExecutor
     # This enables parallel processing of multiple conversation files
     with ThreadPoolExecutor(max_workers=req.workers) as pool:
-        futures = [pool.submit(_worker, p) for p in files]
-        for fut in futures:
+        futures = {pool.submit(_worker, p): p for p in files}
+        for fut in as_completed(futures):
+            file_path = futures[fut]
             try:
-                file, tr, segs, meta = fut.result()
+                _, tr, segs, meta = fut.result()
                 items.append(
                     BatchAnalyzeConversationItem(
-                        file=file,
+                        file=file_path,
                         transcript=tr,
                         segment_sentiments=segs,
                         meta=meta,
@@ -1088,15 +998,13 @@ async def batch_analyze_conversation(
                 )
                 ok += 1
             except Exception as e:
-                items.append(
-                    BatchAnalyzeConversationItem(
-                        file=file,
-                        error=str(e),
-                    )
+                logger.error(
+                    "Batch conversation analysis failed for %s: %s", file_path, e, exc_info=True
                 )
+                items.append(BatchAnalyzeConversationItem(file=file_path, error=str(e)))
                 failed += 1
 
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return BatchAnalyzeConversationResponse(
         items=items,
         ok=ok,
@@ -1266,92 +1174,23 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
 
         # Extract text segments from transcription
         segments = tr.get("segments", []) or []
-        texts = [s.get("text", "").strip() for s in segments]
-
-        # Fallback: single full transcript if no segments detected
-        if not texts or all(not t for t in texts):
-            texts = (
-                [" ".join([s.get("text", "").strip() for s in segments if s.get("text")]).strip()]
-                if segments
-                else []
-            )
+        texts = _texts_from_segments(segments)
 
         # Run sentiment analysis on each segment using the 'call' profile
         results, meta = analyze_smart(
             texts,
             profile="call",
             model_name=req.sentiment_model,
-            device="auto",
-            batch_size=16,
+            device=req.device,
+            batch_size=req.batch_size,
             normalize=True,
             return_all_scores=True,
             max_length=None,
             clean=True,
         )
 
-        # Optional lexicon blending for improved sentiment accuracy
-        use_lex = req.lexicon_file is not None and req.lexicon_weight and req.lexicon_weight > 0.0
-        if use_lex:
-            try:
-                # Load lexicon for blending
-                lex = load_lexicon(req.lexicon_file)
-                blended_results = []
-                for t, inner in zip(texts, results, strict=False):
-                    # Extract scores from model results
-                    scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-                    # Ensure all sentiment labels are present
-                    for k in ["negativ", "neutral", "positiv"]:
-                        scores.setdefault(k, 0.0)
-                    # Get lexicon-based scalar score
-                    s_scalar = score_text(t, lex)
-                    # Convert scalar score to distribution
-                    ln, le, lp = scalar_to_dist(s_scalar)
-                    # Blend model and lexicon distributions
-                    scores = blend_distributions(
-                        scores,
-                        (ln, le, lp),
-                        req.lexicon_weight,
-                    )
-                    # Package blended results
-                    blended_inner = [
-                        {"label": "negativ", "score": scores["negativ"]},
-                        {"label": "neutral", "score": scores["neutral"]},
-                        {"label": "positiv", "score": scores["positiv"]},
-                    ]
-                    blended_results.append(blended_inner)
-                results = blended_results
-            except Exception:
-                # Continue with model-only results if lexicon processing fails
-                pass
-
-        # Package output similar to analyze_conversation endpoint
-        seg_out: list[SegmentSentiment] = []
-        for idx, (t, inner) in enumerate(zip(texts, results, strict=False)):
-            # Create scores map from analysis results
-            scores_map = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-            # Ensure all sentiment labels are present in scores map
-            for k in ["negativ", "neutral", "positiv"]:
-                scores_map.setdefault(k, 0.0)
-            # Select top sentiment label
-            top_label = max(scores_map.items(), key=lambda kv: kv[1])[0]
-            top_score = float(scores_map[top_label])
-            # Extract timing information from original segments
-            start = float(segments[idx].get("start", 0.0) or 0.0) if idx < len(segments) else None
-            end = float(segments[idx].get("end", 0.0) or 0.0) if idx < len(segments) else None
-            # Create segment sentiment object
-            seg_out.append(
-                SegmentSentiment(
-                    index=idx,
-                    start=start,
-                    end=end,
-                    text=t,
-                    label=top_label,
-                    score=top_score,
-                    negativ=scores_map.get("negativ"),
-                    neutral=scores_map.get("neutral"),
-                    positiv=scores_map.get("positiv"),
-                )
-            )
+        results = _blend_with_lexicon(texts, results, req.lexicon_file, req.lexicon_weight)
+        seg_out = _map_results_to_segments(texts, results, segments)
         return {
             "transcript": tr,
             "segment_sentiments": [s.model_dump() for s in seg_out],
@@ -1371,7 +1210,7 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                     # Update state with file processing information
                     processed[p] = {
                         "mtime": os.path.getmtime(p),
-                        "when": datetime.utcnow().isoformat() + "Z",
+                        "when": _utc_now_iso(trim_microseconds=False),
                     }
                 except Exception as e:
                     # Record failed processing attempts
@@ -1393,6 +1232,7 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                     (_do_transcribe(pth) if req.operation == "transcribe" else _do_analyze(pth)),
                 )
 
+            _lock = threading.Lock()
             with ThreadPoolExecutor(max_workers=req.workers) as ex:
                 # Submit all files in the batch for concurrent processing
                 futs = {ex.submit(_wrap, p): p for p in batch}
@@ -1401,38 +1241,40 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                     try:
                         # Extract results from completed future
                         _, data = fut.result()
-                        items.append(
-                            ScanItem(
-                                file=p,
-                                ok=True,
-                                data=data,
-                                batch_index=bidx,
+                        with _lock:
+                            items.append(
+                                ScanItem(
+                                    file=p,
+                                    ok=True,
+                                    data=data,
+                                    batch_index=bidx,
+                                )
                             )
-                        )
-                        ok += 1
-                        # Update state with file processing information
-                        processed[p] = {
-                            "mtime": os.path.getmtime(p),
-                            "when": datetime.utcnow().isoformat() + "Z",
-                        }
+                            ok += 1
+                            # Update state with file processing information
+                            processed[p] = {
+                                "mtime": os.path.getmtime(p),
+                                "when": _utc_now_iso(trim_microseconds=False),
+                            }
                     except Exception as e:
                         # Record failed processing attempts
-                        items.append(
-                            ScanItem(
-                                file=p,
-                                ok=False,
-                                error=str(e),
-                                batch_index=bidx,
+                        with _lock:
+                            items.append(
+                                ScanItem(
+                                    file=p,
+                                    ok=False,
+                                    error=str(e),
+                                    batch_index=bidx,
+                                )
                             )
-                        )
-                        failed += 1
+                            failed += 1
 
     # Persist processing state for incremental processing in future runs
     state["processed"] = processed
     _save_state(req.state_file, state)
 
     # Generate timestamp for response
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = _utc_now_iso()
     return ScanProcessResponse(
         items=items,
         ok=ok,

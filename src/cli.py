@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pandas as pd
 import typer
@@ -18,11 +18,11 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeEl
 from rich.table import Table
 
 # Core & Transcription imports
+from .clean import clean_texts
 from .core.config import AUDIO_EXTS, DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
 from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
 from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
-from .sentiment import clean_texts
 from .sentiment import load as load_sentiment
 from .transcription import get_transcriber
 
@@ -217,7 +217,7 @@ def sentiment_cmd(
             use_lex = False
 
     # 6) Paketera resultat
-    now_iso = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    now_iso = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     rows = []
     if results and isinstance(results[0], list):
         for t, inner in zip(texts, results, strict=False):
@@ -405,7 +405,7 @@ def transcribe_cmd(
             dur = tr.get("processing_time")
             segs = tr.get("segments", []) or []
             console.print(
-                f"[green]Done:[/green] {os.path.basename(path)} | segs={len(segs)} | time={time.time()-t0:.2f}s (ASR={dur:.2f}s)"
+                f"[green]Done:[/green] {os.path.basename(path)} | segs={len(segs)} | time={time.time() - t0:.2f}s (ASR={dur:.2f}s)"
             )
 
             # Show head segments
@@ -444,7 +444,7 @@ def transcribe_cmd(
             progress.advance(task, 1)
 
     console.print(
-        f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s"
+        f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
     )
 
 
@@ -644,7 +644,7 @@ def analyze_call_cmd(
             raise typer.Exit(code=1) from e
 
     console.print(
-        f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time()-start_all:.2f}s"
+        f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
     )
 
 

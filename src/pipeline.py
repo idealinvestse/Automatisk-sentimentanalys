@@ -28,6 +28,8 @@ class CallAnalysisPipeline:
         hf_token: HuggingFace token (required for pyannote diarization).
         device: 'cpu', 'cuda', or 'auto'.
         profile: Sentiment profile (e.g., 'callcenter', 'default').
+        asr_backend: ASR backend to use ('faster', 'transformers', etc.).
+        asr_model: ASR model name or alias (e.g., 'kb-whisper-large').
     """
 
     def __init__(
@@ -38,6 +40,8 @@ class CallAnalysisPipeline:
         hf_token: str | None = None,
         device: str = "cpu",
         profile: str = "default",
+        asr_backend: str = "faster",
+        asr_model: str = "kb-whisper-large",
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -45,6 +49,8 @@ class CallAnalysisPipeline:
         self.hf_token = hf_token
         self.device = device
         self.profile = profile
+        self.asr_backend = asr_backend
+        self.asr_model = asr_model
 
     def analyze_audio(
         self,
@@ -70,10 +76,10 @@ class CallAnalysisPipeline:
 
         # 1. Transcribe and optionally diarize
         try:
-            # Obtain transcriber (defaults to faster-whisper)
+            # Obtain transcriber using configured ASR backend and model
             transcriber = get_transcriber(
-                backend="faster",
-                model_name="kb-whisper-large",
+                backend=self.asr_backend,
+                model_name=self.asr_model,
                 device=self.device,
             )
             transcript = transcriber.transcribe(
@@ -87,8 +93,8 @@ class CallAnalysisPipeline:
             from .core.models import Transcript
 
             transcript = Transcript(
-                model="kb-whisper-large",
-                backend="faster",
+                model=self.asr_model,
+                backend=self.asr_backend,
                 language=language,
                 duration=0.0,
                 processing_time=0.0,
@@ -143,10 +149,16 @@ class CallAnalysisPipeline:
         # Convert segment dicts to Segment dataclasses
         typed_segments = []
         for s in segments:
+            try:
+                start = float(s.get("start", 0.0) or 0.0)
+                end = float(s.get("end", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                start = 0.0
+                end = 0.0
             typed_segments.append(
                 Segment(
-                    start=float(s.get("start", 0.0) or 0.0),
-                    end=float(s.get("end", 0.0) or 0.0),
+                    start=start,
+                    end=end,
                     text=str(s.get("text", "")),
                     speaker=s.get("speaker"),
                     avg_confidence=s.get("avg_confidence"),
@@ -163,7 +175,7 @@ class CallAnalysisPipeline:
         proc_time = round(time.time() - t0, 2)
 
         return CallAnalysisReport(
-            segments=segments,
+            segments=[s.to_dict() for s in typed_segments],
             sentiment_results=results.get("sentiment", []),
             intent_results=results.get("intent", []),
             diarization=None,

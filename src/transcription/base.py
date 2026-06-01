@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from typing import Protocol
 
 from ..core.models import Segment, Transcript
@@ -29,7 +30,9 @@ def add_diarization(
     diarize: bool,
     num_speakers: int | None,
 ) -> Transcript:
-    """Add speaker diarization to a Transcript object if requested."""
+    """Add speaker diarization to a Transcript object if requested.
+
+    Returns a new Transcript; the input object is not mutated."""
     if not diarize:
         return transcript
 
@@ -44,23 +47,24 @@ def add_diarization(
         assigned_dicts = dp.assign_speakers_to_segments(segments_dict, diar_result)
 
         # Re-convert assigned segment dicts to Segment objects
-        updated_segments = []
-        for s_dict in assigned_dicts:
-            # Reconstruct Segment with speaker label
-            updated_segments.append(Segment.from_dict(s_dict))
+        updated_segments = [Segment.from_dict(s_dict) for s_dict in assigned_dicts]
 
-        transcript.segments = updated_segments
-        transcript.diarization = diar_result.to_dict()
         logger.info(
             "Diarization added | speakers=%d | segments=%d",
             diar_result.num_speakers,
-            len(transcript.segments),
+            len(updated_segments),
+        )
+        return replace(
+            transcript,
+            segments=updated_segments,
+            diarization=diar_result.to_dict(),
         )
     except Exception as e:
         logger.warning("Diarization failed: %s. Continuing without speaker labels.", e)
-        transcript.diarization = {"error": str(e), "backend": "failed"}
-
-    return transcript
+        return replace(
+            transcript,
+            diarization={"error": str(e), "backend": "failed"},
+        )
 
 
 class Transcriber(Protocol):

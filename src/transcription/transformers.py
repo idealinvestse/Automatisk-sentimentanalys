@@ -48,10 +48,17 @@ class TransformersTranscriber:
             revision or "default",
         )
 
+        if dev_kind == "cuda":
+            pipeline_device = cuda_idx
+        elif dev_kind == "mps":
+            pipeline_device = "mps"
+        else:
+            pipeline_device = -1
+
         pipeline_kwargs: dict[str, Any] = {
             "task": "automatic-speech-recognition",
             "model": self.model_name,
-            "device": (cuda_idx if dev_kind == "cuda" else -1),
+            "device": pipeline_device,
         }
         if revision:
             pipeline_kwargs["revision"] = revision

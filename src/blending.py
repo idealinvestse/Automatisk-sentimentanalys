@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+from random import random
 from typing import Any
 
 
@@ -197,7 +198,7 @@ class LearnedBlender:
             from sklearn.preprocessing import LabelEncoder
         except ImportError as exc:
             raise ImportError(
-                "sklearn is required for fit_sklearn. " "Install it with: pip install scikit-learn"
+                "sklearn is required for fit_sklearn. Install it with: pip install scikit-learn"
             ) from exc
 
         if len(model_dists) == 0 or len(model_dists) != len(lexicon_dists) != len(labels):
@@ -280,6 +281,4 @@ def get_blender(weight_path: str | None = None) -> LearnedBlender:
 
 
 # Need random for the fit method
-from random import random  # noqa: E402
-
 __all__ = ["LearnedBlender", "get_blender"]

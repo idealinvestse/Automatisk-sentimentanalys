@@ -118,7 +118,7 @@ def run_analyzers(
             # Verify dependencies succeeded before running
             deps_ok = True
             for req in analyzer.requires:
-                if req in active_analyzers and req not in ctx.results:
+                if req not in ctx.results:
                     logger.warning(
                         "Skipping analyzer '%s' because dependency '%s' did not produce results.",
                         name,
