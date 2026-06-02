@@ -1,0 +1,64 @@
+# Example QA Scorecard for Swedish call center (Fas 4.2)
+# Place under configs/qa_scorecards/ and load by name or path.
+# Used by src/compliance_qa.py
+#
+# detection_method:
+#   rule-based : pure keywords / simple heuristics (fast, deterministic)
+#   llm        : send hint + transcript slice to Mistral (nuanced, e.g. empathy tone)
+#   hybrid     : rule first, LLM for borderline or high-weight
+
+name: "Standard_Support_QA_v1"
+version: "1.0"
+description: "Grundläggande QA för kundtjänst/support. 100% täckning mål."
+overall_pass_threshold: 75   # 0-100
+
+criteria:
+  - id: "greeting"
+    description: "Agent hälsar kunden vänligt och professionellt i början"
+    weight: 10
+    detection_method: "rule-based"
+    keywords: ["hej", "god dag", "välkommen", "hallå", "tack för att du ringer"]
+    required: true
+
+  - id: "empathy"
+    description: "Agent visar empati vid frustration eller negativa känslor"
+    weight: 20
+    detection_method: "hybrid"
+    prompt_hint: "Bedöm om agenten använder fraser som 'jag förstår', 'beklagar', 'det låter frustrerande' på ett naturligt sätt när kunden är upprörd. Ge 0-1 score + evidens."
+    keywords: ["jag förstår", "beklagar", "frustrerande", "ledsen", "jag hör att"]
+
+  - id: "resolution"
+    description: "Agent driver mot lösning och ger konkret nästa steg eller bekräftelse"
+    weight: 15
+    detection_method: "hybrid"
+    prompt_hint: "Leta efter konkreta erbjudanden, 'jag fixar', 'jag återkommer med', 'det här ska vi lösa' eller tydlig hänvisning till åtgärd."
+
+  - id: "no_promises_broken"
+    description: "Agent lovar inte saker som inte kan hållas (inga falska garantier)"
+    weight: 10
+    detection_method: "llm"
+    prompt_hint: "Hitta löften som 'du får pengarna imorgon' utan täckning i process. Flagga som risk."
+
+  - id: "closing"
+    description: "Agent avslutar samtalet korrekt med sammanfattning och fråga om mer hjälp"
+    weight: 10
+    detection_method: "rule-based"
+    keywords: ["finns det något mer", "annat jag kan hjälpa", "tack för samtalet", "ha en bra dag", "återkom gärna"]
+
+  - id: "compliance_script"
+    description: "Följer obligatoriska script-frågor / disclosure om tillämpligt (t.ex. inspelning, ID-kontroll)"
+    weight: 15
+    detection_method: "llm"
+    prompt_hint: "Leta efter saknade obligatoriska moment enligt bolagets script (t.ex. 'samtalet spelas in', legitimering)."
+
+  - id: "tone_professional"
+    description: "Agent håller professionell och lugn ton även vid eskalering"
+    weight: 10
+    detection_method: "llm"
+    prompt_hint: "Bedöm om tonen förblir serviceinriktad och inte blir defensiv/irriterad."
+
+  - id: "documentation"
+    description: "Agent dokumenterar ärendet korrekt (omnämner case/ärendenummer eller anteckning)"
+    weight: 10
+    detection_method: "rule-based"
+    keywords: ["ärende", "case", "ärendenummer", "antecknar", "registrerar", "loggar"]

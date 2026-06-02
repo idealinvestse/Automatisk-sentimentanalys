@@ -137,7 +137,11 @@ class ActionableSummary(BaseModel):
 
 
 class AgentAssessment(BaseModel):
-    """Assessment of the agent's performance with evidence (key for callcenter KPIs)."""
+    """Assessment of the agent's performance with evidence (key for callcenter KPIs).
+
+    Enhanced in Fas 4.1: now includes structured coaching recs with evidence_spans (from LLM in 4.1.2)
+    and is merged with local quantitative metrics from agent_performance engine.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -148,8 +152,22 @@ class AgentAssessment(BaseModel):
         default_factory=list, description="Script/process violations or missed opportunities detected."
     )
     strengths: list[str] = Field(default_factory=list, description="Positive behaviours worth reinforcing.")
+    weaknesses: list[str] = Field(
+        default_factory=list, description="Areas for improvement (specific, not generic)."
+    )
     evidence_spans: list[EvidenceSpan] = Field(
         default_factory=list, description="Exact turns/phrases that justify the empathy score and flags."
+    )
+    specific_coaching_recommendations: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Actionable, evidence-based coaching items. Each item: "
+            "{'recommendation': str, 'evidence_spans': list[EvidenceSpan], 'priority': 'high'|'medium'|'low', 'category': str}. "
+            "Produced by Mistral (4.1.2) or hybrid rules."
+        ),
+    )
+    overall_assessment: str | None = Field(
+        None, description="Concise Swedish overall judgment suitable for coach review."
     )
 
 
@@ -192,3 +210,69 @@ class CallLLMOutput(BaseModel):
 
 # For convenience when building the json_schema for the client
 LLM_OUTPUT_JSON_SCHEMA = CallLLMOutput.model_json_schema()
+
+
+# =============================================================================
+# Fas 4.1+ : Agent / Customer metrics (local + hybrid) - Pydantic for merging into CallAnalysisReport
+# =============================================================================
+
+class AgentMetrics(BaseModel):
+    """Quantitative agent performance signals derived locally (Fas 4.1.1).
+
+    Always cheap/fast to compute. Used for:
+    - Per-call dashboard cards
+    - Agent benchmarking / trends over time (aggregated in insights_aggregator later)
+    - Input features to LLM for nuanced coaching (4.1.2)
+
+    All scores 0-1 unless noted. Evidence is indirect via flags + later LLM spans.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    talk_ratio: float = Field(..., ge=0.0, le=1.0, description="Agent's share of total speaking time in call (0-1).")
+    talk_listen_ratio: float = Field(..., ge=0.0, description="Agent talk time divided by customer talk time (>1 = agent dominates airtime).")
+    question_density: float = Field(0.0, ge=0.0, description="Approx questions asked by agent per agent turn.")
+    lexical_formality: float = Field(0.5, ge=0.0, le=1.0, description="Heuristic score for professional Swedish service language (higher = more formal/polite).")
+    sentiment_variance: float = Field(0.0, ge=0.0, description="Variance in agent's sentiment tone across their turns (high = inconsistent).")
+    intervention_count: int = Field(0, ge=0, description="Approx number of times agent 'intervened' (speaker switches into customer flow).")
+    empathy_score: float = Field(0.0, ge=0.0, le=1.0, description="Local rule-based empathy signal (0-1). Combined with LLM later.")
+    de_escalation_effectiveness: float = Field(0.0, ge=0.0, le=1.0, description="Local measure of recovery in customer sentiment after negative moments.")
+    compliance_flags: list[str] = Field(
+        default_factory=list, description="Rule-detected issues e.g. 'missing_greeting', 'no_empathy_on_frustration'."
+    )
+    num_agent_turns: int = Field(0, ge=0)
+    num_customer_turns: int = Field(0, ge=0)
+    total_talk_time_s: float = Field(0.0, ge=0.0)
+
+
+class CustomerMetrics(BaseModel):
+    """Customer-side signals (symmetric to agent for context in coaching)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    talk_ratio: float = Field(..., ge=0.0, le=1.0, description="Customer's share of total speaking time.")
+    sentiment_slope: float = Field(0.0, description="Rough delta: end sentiment - start sentiment for customer (-1 to +1).")
+    frustration_peaks: int = Field(0, ge=0, description="Number of high-negativity spikes detected.")
+    question_count: int = Field(0, ge=0)
+    resolution_indicators: float = Field(
+        0.0, ge=0.0, le=1.0, description="Signals of resolution (thanks, 'det var bra', resolved language at end)."
+    )
+
+
+class CallAgentPerformance(BaseModel):
+    """Per-call structured output from the agent_performance engine.
+
+    This is what gets .model_dump()'ed and stored in CallAnalysisReport.results["agent_performance"]
+    (and can be merged/compared with llm["agent_assessment"]).
+    Actionable for supervisors immediately.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    agent: AgentMetrics
+    customer: CustomerMetrics
+    # Lightweight local (rule) hints before/without LLM
+    local_coaching_hints: list[str] = Field(
+        default_factory=list, description="Immediate rule-based suggestions (e.g. 'Agent bör hälsa tidigare')."
+    )
+    evidence_summary: str | None = Field(None, description="Short Swedish summary of key metric drivers.")

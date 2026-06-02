@@ -131,3 +131,75 @@ class TestCallAnalysisPipeline:
         assert "llm" in report.to_dict() or hasattr(report, "llm")
         # The llm field should be populated (or contain fallback info)
         assert report.llm is not None
+
+    def test_analyze_segments_includes_fas4_agent_performance(self, monkeypatch):
+        """Fas 4.1: report.results must contain agent_performance (Pydantic dump), agent_assessment, customer_metrics."""
+        self._mock_sentiment(monkeypatch)
+        segments = [
+            {"start": 0, "end": 4, "text": "Hej, jag är missnöjd med fakturan.", "speaker": "SPEAKER_0"},
+            {"start": 4, "end": 9, "text": "Jag förstår att det är frustrerande. Jag ska kolla direkt.", "speaker": "SPEAKER_1"},
+            {"start": 9, "end": 12, "text": "Tack, det låter bra.", "speaker": "SPEAKER_0"},
+        ]
+        report = self.pipe.analyze_segments(segments)
+
+        assert isinstance(report, CallAnalysisReport)
+        # Explicit per plan acceptance + integration contract
+        assert "agent_performance" in report.results
+        assert "agent_assessment" in report.results
+        assert "customer_metrics" in report.results
+
+        ap = report.results["agent_performance"]
+        assert isinstance(ap, dict)
+        assert "agent" in ap
+        assert "customer" in ap
+        assert "local_coaching_hints" in ap
+
+        agent_m = ap["agent"]
+        assert "empathy_score" in agent_m
+        assert "talk_ratio" in agent_m
+        assert "compliance_flags" in agent_m
+        assert 0.0 <= agent_m.get("empathy_score", -1) <= 1.0
+
+        cust_m = ap.get("customer") or report.results.get("customer_metrics", {})
+        assert "talk_ratio" in cust_m or "sentiment_slope" in cust_m
+
+        assess = report.results["agent_assessment"]
+        assert "empathy_score" in assess
+        assert assess.get("source") in ("local_rules_fas4.1", None)  # local until 4.1.2 LLM
+
+    def test_agent_performance_standalone(self):
+        """Direct call to new engine produces valid Pydantic and actionable output."""
+        from src.agent_performance import compute_call_agent_performance
+
+        segments = [
+            {"start": 0, "end": 2, "text": "Hej, välkommen till kundtjänst.", "speaker": "SPEAKER_1"},
+            {"start": 2, "end": 5, "text": "Hallå, jag har fått fel faktura igen!", "speaker": "SPEAKER_0"},
+            {"start": 5, "end": 10, "text": "Jag beklagar verkligen det här. Jag förstår att det är frustrerande för dig. Jag fixar det.", "speaker": "SPEAKER_1"},
+            {"start": 10, "end": 13, "text": "Kan du kolla ordernumret?", "speaker": "SPEAKER_1"},
+            {"start": 13, "end": 16, "text": "Ja tack, nu blev det rätt.", "speaker": "SPEAKER_0"},
+        ]
+        perf = compute_call_agent_performance(segments, role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"})
+        assert perf is not None
+        assert perf.agent.empathy_score >= 0.4  # detected "beklagar", "förstår", greeting present so no flag
+        assert isinstance(perf.local_coaching_hints, list)
+        # customer_metrics present
+        assert perf.customer.talk_ratio >= 0.0
+
+    def test_analyze_segments_includes_fas4_qa_scoring(self, monkeypatch):
+        """Fas 4.2: results contain qa / compliance_qa with overall, passed/failed, evidence, risk."""
+        self._mock_sentiment(monkeypatch)
+        segments = [
+            {"start": 0, "end": 2, "text": "Hej, välkommen.", "speaker": "SPEAKER_1"},
+            {"start": 2, "end": 6, "text": "Jag är arg, fakturan är fel!", "speaker": "SPEAKER_0"},
+            {"start": 6, "end": 11, "text": "Jag beklagar. Jag förstår frustrationen. Jag fixar det nu.", "speaker": "SPEAKER_1"},
+            {"start": 11, "end": 14, "text": "Tack, bra.", "speaker": "SPEAKER_0"},
+        ]
+        report = self.pipe.analyze_segments(segments)
+        assert "qa" in report.results or "compliance_qa" in report.results
+        qa = report.results.get("qa") or report.results.get("compliance_qa")
+        assert isinstance(qa, dict)
+        assert "overall_qa_score" in qa
+        assert "passed" in qa
+        assert "risk_level" in qa
+        assert "criteria_results" in qa or "error" in qa
+        assert qa.get("overall_qa_score", 0) >= 0

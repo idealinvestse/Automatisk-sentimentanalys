@@ -61,7 +61,7 @@ USER_PROMPT_TEMPLATE = """Analysera det här svenska kundtjänstsamtalet som en 
 - Refined aspects: Uppdatera eller hitta aspekter (t.ex. fakturering_pris, agent_attityd) med kors-referenser och evidens från hela samtalet.
 - Root cause: Vad är det verkliga underliggande problemet? Inte bara det första kunden klagade på.
 - Actionable summary: Vad hände egentligen, hur slutade kunden, och exakt vad ska coachas på?
-- Agent assessment: Empati-nivå (0-1), compliance-flaggor, styrkor, och alltid evidensspann.
+- Agent assessment / agent_assessment_detailed (Fas 4.1.2): Empati-score (0-1), strengths, weaknesses, compliance_flags. VIKTIGT: specific_coaching_recommendations MÅSTE vara konkreta, actionabla och evidensbaserade. Varje rekommendation innehåller exakt citat (evidence_spans med text + speaker_role + turn). Ex: 'Säg \"Jag hör att det är frustrerande för dig\" direkt efter kundens klagomål på fakturan (AGENT tur 2)'. Inkludera overall_assessment på svenska. Använd local agent_performance metrics (empathy, flags, talk_ratio) som bas och nyansera.
 - Emotion trajectory: Punkter som kan användas för grafer.
 
 Använd alltid svenska i textfält som "summary", "problem", "recommendations_for_qa" etc.
@@ -74,7 +74,8 @@ Returnera ENDAST den strikta JSON som matchar schemat. Inget annat.
 TASK_INSTRUCTIONS: dict[str, str] = {
     "trajectory": "Var extra noga med att identifiera vändpunkter och eskalationer. Ange tur-nummer och citat.",
     "root_cause": "Tänk som en detektiv. Fråga 'varför hände det här egentligen?'. Leta efter systemfel, missad information, eller brist på empowerment hos agenten.",
-    "agent_assessment": "Mät empati i handling, inte bara ord. En agent som säger 'jag förstår' utan att agera får låg poäng. Dokumentera exakta fraser.",
+    "agent_assessment": "Mät empati i handling, inte bara ord. Använd local metrics. Ge specifika coaching recs med evidence_spans (citat + talare + tur).",
+    "agent_assessment_detailed": "HYBRID: Börja från local agent_performance (empathy, talk_listen, flags). Producera weaknesses + 2-4 specific_coaching_recommendations som är 100% actionabla för coach (inte 'var mer empatisk'). Varje rec har recommendation + evidence_spans + priority + category. overall_assessment kort på svenska.",
     "actionable_summary": "Gör rekommendationerna så konkreta att en coach kan använda dem i nästa 1-till-1-möte med agenten. Undvik fluff.",
 }
 
@@ -86,7 +87,7 @@ def build_user_prompt(
 ) -> str:
     """Build the user message for the LLM."""
     if tasks is None:
-        tasks = ["trajectory", "refined_aspects", "root_cause", "actionable_summary", "agent_assessment"]
+        tasks = ["trajectory", "refined_aspects", "root_cause", "actionable_summary", "agent_assessment", "agent_assessment_detailed"]
 
     tasks_str = ", ".join(tasks)
 

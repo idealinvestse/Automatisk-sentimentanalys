@@ -50,4 +50,5 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
         processing_time_s=report.processing_time_s,
         timestamp=utc_now_iso(),
         llm=report.llm,
+        results=report.results,  # Fas 4: agent_performance, qa/compliance_qa, agent_assessment, customer_metrics etc.
     )

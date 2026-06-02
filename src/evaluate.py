@@ -643,6 +643,39 @@ def llm_human_preference_template(
         console.print(content)
 
 
+# =============================================================================
+# Fas 4 extensions (new metrics for call center features)
+# =============================================================================
+
+def compute_qa_score_consistency(qa_results: list[dict[str, Any]]) -> dict[str, float]:
+    """Fas 4.2 KPI stub: consistency between rule-based and hybrid/LLM parts of QA.
+
+    In real use: compare human QA vs auto on sample, or rule-only vs full hybrid.
+    Returns simple agreement proxy.
+    """
+    if not qa_results:
+        return {"agreement": 0.0, "n": 0}
+    # Placeholder: fraction of calls where overall > threshold and no high-risk flags
+    consistent = sum(1 for r in qa_results if r.get("passed") and r.get("risk_level") in ("low", "medium"))
+    return {"agreement": round(consistent / len(qa_results), 3), "n": len(qa_results)}
+
+
+def compute_coaching_precision(coaching_recs: list[dict[str, Any]], human_judged_good: list[bool] | None = None) -> dict[str, float]:
+    """Fas 4.1.2 KPI stub: 'precision' on specific_coaching_recommendations.
+
+    If human_judged_good provided (bool per rec), compute precision.
+    Otherwise return heuristic (e.g. presence of evidence_spans).
+    """
+    if not coaching_recs:
+        return {"precision": 0.0, "n": 0, "note": "no recs"}
+    if human_judged_good is not None and len(human_judged_good) == len(coaching_recs):
+        good = sum(1 for g in human_judged_good if g)
+        return {"precision": round(good / len(coaching_recs), 3), "n": len(coaching_recs)}
+    # heuristic: recs that have evidence_spans
+    with_ev = sum(1 for r in coaching_recs if r.get("evidence_spans"))
+    return {"precision": round(with_ev / len(coaching_recs), 3), "n": len(coaching_recs), "note": "heuristic: has_evidence"}
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         sys.argv.extend(["scenarios", "--output", "reports/baseline_results.json"])

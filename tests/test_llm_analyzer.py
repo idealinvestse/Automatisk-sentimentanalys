@@ -60,7 +60,18 @@ def test_schema_validation_roundtrip():
         "agent_assessment": {
             "empathy_score": 0.35,
             "compliance_flags": ["missade att bekräfta kundens känsla"],
-            "evidence_spans": [],
+            "strengths": ["Svarade snabbt"],
+            "weaknesses": ["Låg empati vid fakturaklagomål"],
+            "evidence_spans": [{"text": "Fakturan var helt fel", "speaker_role": "customer", "turn_index": 0}],
+            "specific_coaching_recommendations": [
+                {
+                    "recommendation": "Säg 'Jag förstår att det är frustrerande' direkt efter kundens klagomål.",
+                    "evidence_spans": [{"text": "Fakturan var helt fel", "speaker_role": "customer"}],
+                    "priority": "high",
+                    "category": "empathy"
+                }
+            ],
+            "overall_assessment": "Agenten behöver träna empati-fraser vid fakturaärenden.",
         },
         "meta": {"model": "mistralai/mistral-medium-3.5"},
     }
@@ -70,6 +81,15 @@ def test_schema_validation_roundtrip():
     assert model.actionable_summary.risk_level == "high"
     dumped = model.model_dump()
     assert dumped["meta"]["model"] == "mistralai/mistral-medium-3.5"
+    # Fas 4.1.2: detailed coaching recs + evidence
+    assess = model.agent_assessment
+    assert assess is not None
+    assert assess.empathy_score == 0.35
+    assert len(assess.specific_coaching_recommendations) >= 1
+    rec = assess.specific_coaching_recommendations[0]
+    assert "recommendation" in rec
+    assert "evidence_spans" in rec
+    assert assess.overall_assessment is not None
 
 
 def test_schema_rejects_extra_fields():

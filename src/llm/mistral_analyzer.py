@@ -43,7 +43,7 @@ Usage (after client is configured):
     result = analyzer.analyze_full_conversation(
         segments=[{"speaker": "SPEAKER_0", "text": "..."}, ...],
         role_map={"SPEAKER_0": "agent", "SPEAKER_1": "customer"},
-        tasks=["trajectory", "actionable_summary", "agent_assessment"],
+        tasks=["trajectory", "actionable_summary", "agent_assessment", "agent_assessment_detailed"],
     )
     # result is a dict (from CallLLMOutput) + "meta" with cost, model, cached etc.
 
@@ -112,6 +112,7 @@ class ConversationMistralAnalyzer:
         "root_cause",
         "actionable_summary",
         "agent_assessment",
+        "agent_assessment_detailed",  # Fas 4.1.2: richer coaching recs + evidence (uses same AgentAssessment schema)
         "emotion_trajectory",
     ]
 
@@ -168,9 +169,11 @@ class ConversationMistralAnalyzer:
         if local_results:
             # Only forward small, high-value signals
             local_ctx = {
-                "role_inference": local_results.get("role"),
+                "role_inference": (local_results.get("role") or {}).get("roles") if isinstance(local_results.get("role"), dict) else local_results.get("role"),
                 "sentiment_summary": self._summarize_sentiment(local_results.get("sentiment")),
                 "escalation_from_local": local_results.get("trajectory", {}).get("escalation_events"),
+                # Fas 4.1.1 + 4.1.2: forward local quantitative metrics so LLM can produce evidence-based coaching merged with numbers
+                "agent_performance_local": local_results.get("agent_performance") or local_results.get("agent_assessment_local"),
             }
 
         local_ctx_str = json.dumps(local_ctx, ensure_ascii=False, indent=2) if local_ctx else "Ingen tidigare analys."

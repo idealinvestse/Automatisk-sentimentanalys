@@ -167,7 +167,13 @@ class PipelineRequest(BaseModel):
 
 
 class PipelineResponse(BaseModel):
-    """Response from the full call analysis pipeline."""
+    """Response from the full call analysis pipeline.
+
+    Fas 4 additions: `results` contains the full analyzer output dict (including
+    "agent_performance", "qa"/"compliance_qa", "agent_assessment", "customer_metrics",
+    "agent_assessment_local" etc.). This makes the new call-center features
+    available over the API as required by the plan.
+    """
 
     sentiment_results: list[dict[str, Any]]
     intent_results: list[dict[str, Any]]
@@ -178,6 +184,10 @@ class PipelineResponse(BaseModel):
     processing_time_s: float
     timestamp: str
     llm: dict[str, Any] = Field(default_factory=dict, description="Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)")
+    results: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Complete analyzer results (Fas4: agent_performance, qa, agent_assessment, customer_metrics, ...). Use this for new call center features.",
+    )
 
 
 # ---------------------------------------------------------------------------
