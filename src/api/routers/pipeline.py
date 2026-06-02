@@ -29,6 +29,9 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
         pipe = CallAnalysisPipeline(
             sentiment_model=req.sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
             device=req.device,
+            use_mistral_llm=req.use_mistral_llm,
+            llm_model=req.llm_model,
+            deep_analysis=req.deep_analysis,
         )
         report = pipe.analyze_segments(req.segments)
     except Exception as e:
@@ -46,4 +49,5 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
         risks=report.risks,
         processing_time_s=report.processing_time_s,
         timestamp=utc_now_iso(),
+        llm=report.llm,
     )

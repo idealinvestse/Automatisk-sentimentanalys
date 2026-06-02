@@ -58,6 +58,19 @@ with st.sidebar:
     min_confidence = st.slider("Min konfidens", 0.0, 1.0, 0.5)
 
     st.divider()
+    st.subheader("🧠 Mistral LLM (Fas 3)")
+    use_llm = st.checkbox(
+        "Aktivera holistisk analys (Mistral)",
+        value=False,
+        help="Använder ConversationMistralAnalyzer via OpenRouter för trajectory, root cause, actionable insights, agent assessment. Kräver OPENROUTER_API_KEY. Loggar alltid extern dataöverföring.",
+    )
+    llm_model_choice = st.text_input(
+        "Modell (tom = default)",
+        value="",
+        placeholder="mistralai/mistral-medium-3.5",
+    )
+
+    st.divider()
     uploaded_file = st.file_uploader("Ladda upp samtalsdata (JSON)", type=["json"])
     st.divider()
     st.caption("Automatisk Sentimentanalys v0.3.0")
@@ -276,7 +289,13 @@ if st.button("Analysera") and live_text:
             with st.spinner("Kör pipeline..."):
                 from src.pipeline import CallAnalysisPipeline
 
-                pipe = CallAnalysisPipeline()
+                llm_model = llm_model_choice.strip() or None
+                pipe = CallAnalysisPipeline(
+                    profile=profile,
+                    use_mistral_llm=use_llm,
+                    llm_model=llm_model,
+                    deep_analysis=use_llm,
+                )
                 report = pipe.analyze_segments(live_segments)
 
             col_r1, col_r2, col_r3 = st.columns(3)
@@ -289,7 +308,51 @@ if st.button("Analysera") and live_text:
                 risk_level = report.risks.get("risk_level", "N/A")
                 st.metric("Risknivå", risk_level)
 
-            with st.expander("Detaljerade resultat"):
+            # LLM-enhanced badge + rich sections (Task 3.3.2)
+            llm = getattr(report, "llm", {}) or {}
+            llm_meta = llm.get("meta", {}) if isinstance(llm, dict) else {}
+            if llm_meta.get("llm_used") or llm.get("actionable_summary"):
+                st.success("✨ LLM-enhanced (Mistral via OpenRouter) – se nedan för holistisk analys")
+                if llm_meta.get("cost_usd") is not None:
+                    st.caption(f"Uppskattad kostnad: ${llm_meta.get('cost_usd'):.5f} | Modell: {llm_meta.get('model', 'okänd')} | Cached: {llm_meta.get('cached', False)}")
+
+                # Actionable insights
+                if llm.get("actionable_summary"):
+                    with st.expander("📋 Actionable Summary (QA-rekommendationer)", expanded=True):
+                        act = llm["actionable_summary"]
+                        st.markdown(f"**Problem:** {act.get('problem', '')}")
+                        st.markdown(f"**Kundens slutläge:** {act.get('final_customer_state', '')}")
+                        recs = act.get("recommendations_for_qa", [])
+                        if recs:
+                            st.markdown("**Rekommendationer för coachning:**")
+                            for r in recs:
+                                st.markdown(f"- {r}")
+
+                # Agent assessment
+                if llm.get("agent_assessment"):
+                    with st.expander("👤 Agent Assessment"):
+                        aa = llm["agent_assessment"]
+                        st.metric("Empati-score", f"{aa.get('empathy_score', 0):.2f}")
+                        if aa.get("compliance_flags"):
+                            st.warning("Compliance-flaggor: " + ", ".join(aa.get("compliance_flags", [])))
+                        if aa.get("strengths"):
+                            st.success("Styrkor: " + "; ".join(aa.get("strengths", [])))
+
+                # Trajectory / root cause (textual)
+                if llm.get("trajectory"):
+                    with st.expander("📈 Trajectory (kundresa)"):
+                        tr = llm["trajectory"]
+                        st.markdown(tr.get("summary", ""))
+                        if tr.get("escalation_events"):
+                            st.markdown("**Eskalationer:** " + " | ".join(tr.get("escalation_events", [])))
+
+                if llm.get("root_cause"):
+                    with st.expander("🔍 Root Cause"):
+                        rc = llm["root_cause"]
+                        st.markdown(f"**Primär orsak:** {rc.get('primary_cause', '')}")
+                        st.json(rc)
+
+            with st.expander("Detaljerade resultat (full CallAnalysisReport)"):
                 st.json(report.to_dict())
         else:
             st.warning("Inmatningen måste vara en lista med segment.")

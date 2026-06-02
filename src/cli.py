@@ -454,6 +454,20 @@ def analyze_call_cmd(
     preprocess: bool = typer.Option(
         False, "--preprocess", help="Enable audio preprocessing (high-pass + noise reduction) before ASR."
     ),
+    # LLM / Mistral holistic (Fas 3.2+)
+    use_mistral_llm: bool = typer.Option(
+        False,
+        "--use-mistral-llm",
+        help="Enable Mistral via OpenRouter for full-conversation holistic analysis (trajectory, root cause, actionable QA recommendations, agent assessment). Requires OPENROUTER_API_KEY env var. European/GDPR-preferred models.",
+    ),
+    llm_model: str | None = typer.Option(
+        None,
+        "--llm-model",
+        help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3.5). Example: mistralai/mistral-large-3",
+    ),
+    deep_analysis: bool = typer.Option(
+        False, "--deep-analysis", help="Force the deep LLM path (equivalent to --use-mistral-llm for callcenter use)."
+    ),
     # Sentiment settings
     sentiment_model: str = typer.Option(DEFAULT_SENTIMENT_MODEL, help="Sentiment model name"),
     lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
@@ -467,6 +481,10 @@ def analyze_call_cmd(
 
     Supports --backend whisperx for improved alignment and built-in diarization
     (recommended when you need accurate per-speaker timestamps for trajectory / ABSA).
+
+    --use-mistral-llm / --deep-analysis activates the hybrid Mistral layer (Fas 3) for
+    full-conversation reasoning (trajectory, root cause, actionable QA insights, agent assessment).
+    Requires OPENROUTER_API_KEY. Uses European-preferred models by default.
     """
     setup_logging(log_level)
     files = resolve_audio_paths(inputs)
@@ -501,7 +519,17 @@ def analyze_call_cmd(
         device=device,
         asr_backend=backend,
         asr_model=model,
+        use_mistral_llm=use_mistral_llm,
+        llm_model=llm_model,
+        deep_analysis=deep_analysis,
     )
+
+    if use_mistral_llm or deep_analysis:
+        console.print(
+            "[yellow]Mistral/OpenRouter LLM deep analysis ENABLED for this run. "
+            "Full conversation (with roles) will be sent to external service. "
+            "See INFO logs for GDPR/egress notice. Cost tracked in meta.[/yellow]"
+        )
 
     with Progress(
         SpinnerColumn(),

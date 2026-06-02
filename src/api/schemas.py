@@ -153,6 +153,10 @@ class PipelineRequest(BaseModel):
     )
     sentiment_model: str | None = Field(None, description="Optional sentiment model override")
     device: str = Field("auto")
+    # LLM deep analysis (Fas 3)
+    use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
+    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
+    deep_analysis: bool = Field(False, description="Force deep LLM path")
 
     @field_validator("segments")
     @classmethod
@@ -173,6 +177,7 @@ class PipelineResponse(BaseModel):
     risks: dict[str, Any]
     processing_time_s: float
     timestamp: str
+    llm: dict[str, Any] = Field(default_factory=dict, description="Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)")
 
 
 # ---------------------------------------------------------------------------

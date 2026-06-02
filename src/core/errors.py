@@ -29,3 +29,13 @@ class ConfigurationError(BaseAnalysisError):
     """Raised when system configuration is invalid or missing."""
 
     pass
+
+
+class LLMError(BaseAnalysisError):
+    """Raised when an external LLM call (e.g. Mistral via OpenRouter) fails after retries.
+
+    Callers (analyzers, pipeline) should catch and fallback to local heuristics/models.
+    Always log external egress for privacy compliance.
+    """
+
+    pass

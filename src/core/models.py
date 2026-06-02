@@ -142,7 +142,11 @@ class AnalysisContext:
 
 @dataclass
 class CallAnalysisReport:
-    """Unified and backwards-compatible analysis report for a call."""
+    """Unified and backwards-compatible analysis report for a call.
+
+    llm field (additive in Fas 3.2+): contains Mistral holistic output when deep analysis
+    was enabled. Local results always remain the base in the other fields + results dict.
+    """
 
     segments: list[dict[str, Any]] = field(default_factory=list)
     sentiment_results: list[dict[str, Any]] = field(default_factory=list)
@@ -156,6 +160,7 @@ class CallAnalysisReport:
     results: dict[str, Any] = field(
         default_factory=dict
     )  # Stores arbitrary model outputs dynamically
+    llm: dict[str, Any] = field(default_factory=dict)  # Mistral/OpenRouter holistic output (Fas 3.2+)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert report to dictionary, maintaining backward compatibility."""
@@ -172,4 +177,5 @@ class CallAnalysisReport:
             "risks": self.risks,
             "processing_time_s": self.processing_time_s,
             "results": self.results,
+            "llm": self.llm,
         }

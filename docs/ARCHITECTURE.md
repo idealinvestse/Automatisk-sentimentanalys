@@ -11,6 +11,10 @@ The system is designed around two main entry points:
 
 Both entry points share the same underlying analysis and transcription engines, but present different interfaces suited to their respective environments.
 
+**Completed per UTVECKLINGSPLAN.md (Fas 1-3)**: Advanced ASR (WhisperX, hotwords, chunking, preprocess), ABSA (aspects), emotions, role inference, trajectory/escalation, spoken normalization. All new capabilities are modular via the analysis registry and optional transcription params.
+
+**Fas 3 – Mistral/OpenRouter LLM Integration (European-first)**: Hybrid selective deep path using `mistralai/mistral-medium-3.5` (primary) / Large 3 via OpenRouter for holistic full-conversation analysis (trajectory, root cause, actionable insights, agent assessment). Strict JSON schema + Pydantic validation. Always logged for GDPR. Local fast path remains default. See `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` and `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`.
+
 ## Layered Architecture
 
 ```
@@ -31,23 +35,33 @@ Both entry points share the same underlying analysis and transcription engines, 
 │  Pipeline (src/pipeline.py)                                 │
 │  • CallAnalysisPipeline – end-to-end orchestration           │
 │  • coordinates transcription → analysis → report             │
+│  • Hybrid LLM hook (Fas 3): selective call to src/llm/       │
+│    (Mistral via OpenRouter) for holistisk analysis when      │
+│    profile/flag/deep path triggers it. Local results = base. │
 ├─────────────────────────────────────────────────────────────┤
 │  Registry (src/analysis/)                                   │
-│  • Analyzer base class + registry                          │
+│  • Analyzer base class + registry (@register_analyzer)     │
 │  • Topological dependency resolution                         │
 │  • Error isolation – one failing analyzer doesn't break     │
 │    downstream analyzers                                      │
 │  • Parametrizable via analyzer_configs                      │
 │  • Adapters: sentiment, intent, summary, topics,            │
-│    insights, predictive                                      │
+│    insights, predictive, aspect (ABSA), emotion,            │
+│    role, trajectory, spoken_normalizer, llm_judge (stub)   │
 ├─────────────────────────────────────────────────────────────┤
 │  Engines                                                    │
 │  • src/sentiment.py – HF transformers sentiment pipeline    │
+│  • src/transcription/ – ASR (faster, transformers, whisperx)│
+│    + preprocess.py (Task 1.4: high-pass + optional noisereduce) │
+│  • src/analysis/aspect.py – ABSA (hybrid keyword + sentiment) │
 │  • src/intent.py – intent classification (heuristic/model)  │
 │  • src/summarizer.py – abstractive summarization            │
 │  • src/topic_modeling.py – topic extraction               │
 │  • src/insights.py – action-item extraction               │
 │  • src/predictive.py – risk prediction                    │
+│  • src/analysis/{emotion,role,trajectory,...} – Fas 2 analyzers │
+│  • src/llm/ – Fas 3: OpenRouterClient, ConversationMistralAnalyzer, │
+│    prompts, Pydantic schemas (strict json_schema for Mistral) │
 ├─────────────────────────────────────────────────────────────┤
 │  Transcription (src/transcription/)                          │
 │  • FasterWhisperTranscriber                                │
@@ -227,3 +241,39 @@ No changes needed in CLI or API – the new analyzer will automatically be picke
 - The legacy monolithic `src/api.py` has been removed (it was a full duplicate of the refactored `src/api/` package). The current API is `src/api/` (uvicorn src.api:app still works via the package `__init__.py`).
 - All existing CLI commands (`sentiment`, `transcribe`, `analyze-call`) behave identically from a user perspective.
 - All analyzer constructors still accept the same default arguments; parametrization is opt-in via `analyzer_configs`.
+
+## Fas 3: Mistral/OpenRouter LLM Layer (Hybrid, European-first, Privacy-first)
+
+The `src/llm/` package implements selective **holistic post-transcription analysis** using Mistral models via OpenRouter.
+
+### Key Components
+- `openrouter_client.py`: OpenAI-compatible client with:
+  - `response_format={"type": "json_schema", "json_schema": {...}, "strict": true}`
+  - Content-addressable disk cache (`.cache/llm/*.json`) keyed on model + transcript hash + prompt.
+  - Retries + backoff for rate limits / transient errors.
+  - Approx. cost tracking + `cost_budget` warning.
+  - **Mandatory privacy logging**: Every call emits "EXTERNAL LLM CALL (OpenRouter/Mistral) ... Data ... is being sent to a third-party service."
+- `mistral_analyzer.py`: `ConversationMistralAnalyzer` – builds role-labeled transcript, calls client, validates with Pydantic.
+- `schemas.py`: Rich Pydantic models (`CallLLMOutput`, `Trajectory`, `ActionableSummary`, `AgentAssessment`, `RootCause`, `EvidenceSpan` etc.) with descriptions that feed the JSON schema.
+- `prompts.py`: Optimized system/user prompts for Swedish callcenter nuance, evidence spans, reasoning chain, customer-first, concrete QA recommendations.
+
+### Integration
+- Called from `CallAnalysisPipeline._run_mistral_holistic` (after local analyzers).
+- Decision: explicit `--use-mistral-llm` / `deep_analysis` **OR** (callcenter profile + long call) + low local confidence heuristics.
+- Output: `report.llm` + `results["llm"]` (additive; local data always remains the base in other fields).
+- Profile-driven: `callcenter` profile has `llm.enabled: true` by default (see `src/profiles.py`).
+
+### Privacy & Cost
+- Data is only sent when user/profile/flag explicitly enables it.
+- Always fallback on any error (never breaks the call report).
+- Caching ensures re-analysis of same transcript is free (and fast).
+- Cost and usage in `meta`.
+- See `configs/llm_config.yaml` and the plan for budget/anonymize hooks.
+
+### Why Mistral via OpenRouter?
+- European model provider (better GDPR alignment for Swedish personal data in calls).
+- Excellent Swedish + long-context reasoning.
+- OpenRouter gives one API + easy migration to self-hosted later.
+- Strict schema support for reliable structured output (no parsing hell).
+
+Full details, activation matrix, and examples: `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` and `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`.

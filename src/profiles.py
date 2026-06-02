@@ -22,6 +22,12 @@ PROFILE_SPECS: dict[str, dict] = {
             "normalize_whitespace": True,
             "lowercase": False,
         },
+        # LLM disabled for generic profiles (hybrid only on explicit flag or callcenter)
+        "llm": {
+            "enabled": False,
+            "default_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.05,
+        },
     },
     "forum": {
         "model": DEFAULT_MODEL,
@@ -135,6 +141,14 @@ PROFILE_SPECS: dict[str, dict] = {
             "kundtjänst_kvalitet", "teknisk_lösning", "fakturering_pris", "väntetid",
             "agent_attityd", "produkt_kvalitet", "uppföljning", "annat"
         ],
+        # Task 3.2.3: Mistral/OpenRouter LLM config for holistisk analysis (European-first)
+        "llm": {
+            "enabled": True,  # callcenter gets the deep path by default (selective via length/confidence)
+            "default_model": "mistralai/mistral-medium-3.5",
+            "fallback_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.08,
+            "anonymize_before_llm": False,  # Fas 3.4 hook
+        },
     },
 }
 

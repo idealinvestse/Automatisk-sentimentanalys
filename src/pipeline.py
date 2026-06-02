@@ -11,6 +11,7 @@ from typing import Any
 
 from .analysis import run_analyzers
 from .core.models import AnalysisContext, CallAnalysisReport, Segment
+from .llm.mistral_analyzer import ConversationMistralAnalyzer
 from .transcription import get_transcriber
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,9 @@ class CallAnalysisPipeline:
         asr_backend: ASR backend to use ('faster' (default), 'transformers', 'whisperx').
         asr_model: ASR model name or alias (e.g., 'kb-whisper-large').
         Note: 'whisperx' provides word-level alignment and optional integrated diarization.
+        use_mistral_llm: Force use of Mistral via OpenRouter for holistic analysis (Task 3.2.2).
+        llm_model: Specific Mistral model on OpenRouter (default mistralai/mistral-medium-3.5).
+        deep_analysis: Alias / stronger signal to enable the LLM deep path (profile + length + low conf heuristics also apply).
     """
 
     def __init__(
@@ -43,6 +47,10 @@ class CallAnalysisPipeline:
         profile: str = "default",
         asr_backend: str = "faster",
         asr_model: str = "kb-whisper-large",
+        # --- LLM / Mistral (Fas 3.2) ---
+        use_mistral_llm: bool = False,
+        llm_model: str | None = None,
+        deep_analysis: bool = False,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -52,6 +60,22 @@ class CallAnalysisPipeline:
         self.profile = profile
         self.asr_backend = asr_backend
         self.asr_model = asr_model
+        self.use_mistral_llm = use_mistral_llm
+        self.llm_model = llm_model
+        self.deep_analysis = deep_analysis
+
+        # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
+        try:
+            from .profiles import resolve_profile
+            _, spec = resolve_profile(profile=profile)
+            llm_spec = (spec or {}).get("llm", {}) or {}
+            if not self.use_mistral_llm and not self.deep_analysis:
+                self.use_mistral_llm = bool(llm_spec.get("enabled", False))
+            if self.llm_model is None:
+                self.llm_model = llm_spec.get("default_model")
+        except Exception:
+            # Profile system optional for pure LLM usage; non-fatal
+            pass
 
     def _build_analyzer_configs(self) -> dict[str, dict[str, Any]]:
         """Build per-analyzer configuration from pipeline settings.
@@ -68,6 +92,50 @@ class CallAnalysisPipeline:
                 "backend": self.intent_backend,
             },
         }
+
+    def _should_use_mistral_llm(self, segments: list) -> bool:
+        """Decision logic for hybrid path (profile + length + confidence + explicit flags)."""
+        if self.deep_analysis or self.use_mistral_llm:
+            return True
+        # Heuristic for callcenter profile: longer calls or many segments benefit from holistisk view
+        if self.profile in {"callcenter", "call", "customer_service"} and len(segments) >= 6:
+            return True
+        return False
+
+    def _run_mistral_holistic(
+        self,
+        segments: list[Segment] | list[dict[str, Any]],
+        results: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Call the Mistral analyzer (if available) and return enriched result or fallback dict."""
+        try:
+            role_map = results.get("role") or {}
+            # Convert Segment objects if needed for the analyzer
+            seg_dicts: list[dict[str, Any]] = []
+            for s in segments:
+                if isinstance(s, dict):
+                    seg_dicts.append(s)
+                else:
+                    seg_dicts.append(s.to_dict())
+
+            mistral = ConversationMistralAnalyzer(model=self.llm_model)
+            llm_out = mistral.analyze_full_conversation(
+                segments=seg_dicts,
+                role_map=role_map if isinstance(role_map, dict) else {},
+                local_results=results,
+                profile_name=self.profile,
+            )
+            if llm_out.get("fallback"):
+                llm_out["meta"] = llm_out.get("meta", {})
+                llm_out["meta"]["llm_used"] = False
+                llm_out["meta"]["llm_fallback_reason"] = llm_out.get("meta", {}).get("fallback_reason", "llm_error_or_disabled")
+            else:
+                llm_out.setdefault("meta", {})
+                llm_out["meta"]["llm_used"] = True
+            return llm_out
+        except Exception as e:
+            logger.warning("Mistral holistic step failed (will use local only): %s", e)
+            return {"llm_used": False, "llm_fallback_reason": str(e), "error": str(e)}
 
     def analyze_audio(
         self,
@@ -135,6 +203,16 @@ class CallAnalysisPipeline:
             selected=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
         )
+
+        # --- Mistral / LLM holistic layer (Fas 3.2) ---
+        llm_result: dict[str, Any] = {}
+        if self._should_use_mistral_llm(transcript.segments or []):
+            llm_result = self._run_mistral_holistic(transcript.segments or [], results)
+            results["llm"] = llm_result
+            if llm_result.get("meta", {}).get("llm_used"):
+                logger.info("Pipeline used Mistral LLM for holistic analysis (model=%s, cached=%s)",
+                            llm_result.get("meta", {}).get("model"), llm_result.get("meta", {}).get("cached"))
+
         proc_time = round(time.time() - t0, 2)
 
         # 3. Construct backwards-compatible report
@@ -154,6 +232,7 @@ class CallAnalysisPipeline:
             ),  # Map predictive risks to risks for backward-compatibility
             processing_time_s=proc_time,
             results=results,
+            llm=llm_result,
         )
 
     def analyze_segments(
@@ -204,6 +283,16 @@ class CallAnalysisPipeline:
             selected=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
         )
+
+        # --- Mistral / LLM holistic layer (Fas 3.2) ---
+        llm_result: dict[str, Any] = {}
+        if self._should_use_mistral_llm(typed_segments or []):
+            llm_result = self._run_mistral_holistic(typed_segments or [], results)
+            results["llm"] = llm_result
+            if llm_result.get("meta", {}).get("llm_used"):
+                logger.info("Pipeline used Mistral LLM for holistic analysis (model=%s, cached=%s)",
+                            llm_result.get("meta", {}).get("model"), llm_result.get("meta", {}).get("cached"))
+
         proc_time = round(time.time() - t0, 2)
 
         return CallAnalysisReport(
@@ -219,4 +308,5 @@ class CallAnalysisPipeline:
             ),  # Map predictive risks to risks for backward-compatibility
             processing_time_s=proc_time,
             results=results,
+            llm=llm_result,
         )

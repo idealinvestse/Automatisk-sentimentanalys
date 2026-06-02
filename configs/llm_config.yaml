@@ -1,0 +1,32 @@
+# Example LLM configuration for Mistral/OpenRouter integration (Fas 3.2.3+)
+# This can be loaded by future config system or used as reference.
+# The primary control is still via profile (see src/profiles.py "callcenter" section)
+# and explicit flags in CLI/API/pipeline.
+
+llm:
+  enabled: true
+  provider: "openrouter"
+  default_model: "mistralai/mistral-medium-3.5"
+  # Stronger (more expensive) alternative for very complex or high-value calls
+  strong_model: "mistralai/mistral-large-3"
+  fallback_model: "mistralai/mistral-medium-3.5"
+  # Per-call soft budget in USD (client + pipeline can warn or skip)
+  cost_budget_per_call: 0.08
+  temperature: 0.15
+  max_tokens: 4096
+
+  # Privacy / GDPR
+  anonymize_before_llm: false   # When true, PII redaction (Fas 3.4) runs before sending transcript
+  log_external_calls: true      # Always recommended
+
+  # Selective activation heuristics (used when no explicit --use-mistral-llm)
+  activation:
+    min_segments: 6
+    low_confidence_threshold: 0.55
+    profiles: ["callcenter", "call", "customer_service"]
+
+# OpenRouter specific (env var OPENROUTER_API_KEY still required)
+openrouter:
+  base_url: "https://openrouter.ai/api/v1"
+  # You can pin a specific provider if needed
+  # provider: "Mistral"

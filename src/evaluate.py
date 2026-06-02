@@ -455,6 +455,124 @@ def list_profiles():
     console.print(table)
 
 
+# ---------------------------------------------------------------------------
+# LLM holistic quality eval (Task 3.3.3)
+# ---------------------------------------------------------------------------
+
+def _synthetic_callcenter_samples() -> list[dict[str, Any]]:
+    """A few realistic Swedish callcenter-style transcripts for LLM quality smoke tests."""
+    return [
+        {
+            "id": "demo-1",
+            "segments": [
+                {"speaker": "SPEAKER_0", "text": "Hej, det gäller fakturan jag fick igår."},
+                {"speaker": "SPEAKER_1", "text": "Jag förstår, kan du berätta mer?"},
+                {"speaker": "SPEAKER_0", "text": "Den var dubbelt så hög som vanligt och jag har inte beställt något extra."},
+                {"speaker": "SPEAKER_1", "text": "Okej, jag kollar det här åt dig."},
+            ],
+        },
+        {
+            "id": "demo-2",
+            "segments": [
+                {"speaker": "SPEAKER_0", "text": "Jag vill säga upp mitt abonnemang."},
+                {"speaker": "SPEAKER_1", "text": "Jag beklagar att höra det. Får jag fråga varför?"},
+                {"speaker": "SPEAKER_0", "text": "För att det bara strular hela tiden och ingen verkar bry sig."},
+            ],
+        },
+    ]
+
+
+@app.command("llm-quality")
+def evaluate_llm_quality(
+    output: str | None = typer.Option("reports/llm_quality.json", "--output"),
+    use_real_llm: bool = typer.Option(False, "--use-real-llm", help="Actually call Mistral if OPENROUTER_API_KEY is set (otherwise always fallback path)"),
+):
+    """Utvärdera kvalitet på Mistral holistisk analys (Fas 3.3.3).
+
+    Metrics (proxy eftersom vi saknar human labels för insights):
+    - fallback_rate
+    - avg_cost_usd
+    - pct_with_actionable
+    - pct_with_evidence_spans (basic count)
+    - consistency (2 runs on same input -> cached + identical structure)
+    - cost tracking
+    """
+    from .llm.mistral_analyzer import ConversationMistralAnalyzer
+
+    samples = _synthetic_callcenter_samples()
+    results = []
+    costs = []
+    fallbacks = 0
+    has_actionable = 0
+    has_evidence = 0
+
+    analyzer = ConversationMistralAnalyzer()
+
+    for sample in samples:
+        for run in range(2):  # consistency check
+            out = analyzer.analyze_full_conversation(
+                segments=sample["segments"],
+                role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"},
+            )
+            meta = out.get("meta", {})
+            cost = meta.get("cost_usd") or 0.0
+            costs.append(cost)
+            if meta.get("llm_used") is False or out.get("fallback"):
+                fallbacks += 1
+            if out.get("actionable_summary"):
+                has_actionable += 1
+            # crude evidence presence
+            ev = 0
+            for k in ("trajectory", "refined_aspects", "root_cause", "agent_assessment"):
+                val = out.get(k) or {}
+                if isinstance(val, dict) and val.get("evidence_spans"):
+                    ev += len(val["evidence_spans"])
+                if isinstance(val, list):
+                    for item in val:
+                        if isinstance(item, dict) and item.get("evidence"):
+                            ev += len(item.get("evidence", []))
+            if ev > 0:
+                has_evidence += 1
+
+            results.append(
+                {
+                    "sample_id": sample["id"],
+                    "run": run,
+                    "cost_usd": cost,
+                    "cached": meta.get("cached", False),
+                    "llm_used": meta.get("llm_used", False),
+                    "has_actionable": bool(out.get("actionable_summary")),
+                    "evidence_count": ev,
+                }
+            )
+
+    n = len(results)
+    metrics = {
+        "n_runs": n,
+        "fallback_rate": round(fallbacks / max(1, n), 4),
+        "avg_cost_usd": round(sum(costs) / max(1, n), 6),
+        "pct_with_actionable": round(has_actionable / max(1, n), 4),
+        "pct_with_evidence": round(has_evidence / max(1, n), 4),
+        "total_cost_usd": round(sum(costs), 6),
+        "consistency_note": "Second run on identical input should be cached (cost ~0) if client cache works.",
+    }
+
+    console.print(Panel.fit("LLM Holistic Quality (proxy metrics)", style="cyan"))
+    console.print(metrics)
+
+    if output:
+        os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
+        full = {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "metrics": metrics,
+            "details": results,
+            "note": "Run with --use-real-llm (and OPENROUTER_API_KEY) for real Mistral numbers. Human preference study recommended for true insight quality.",
+        }
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(full, f, ensure_ascii=False, indent=2)
+        console.print(f"[green]LLM quality report saved:[/green] {output}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         sys.argv.extend(["scenarios", "--output", "reports/baseline_results.json"])

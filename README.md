@@ -23,6 +23,43 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 - **Streamlit Dashboard**: Visuell översikt över sentiment, intents, topics och agent-prestanda
 - **Full Pipeline API**: `/analyze_pipeline` – kör alla analyssteg i ett anrop
 
+### Avancerad Call Center Intelligence (Fas 1–3 – UTVECKLINGSPLAN.md)
+- **ASR Backends**: `faster` (default, KB-Whisper), `transformers`, `whisperx` (bättre alignment + inbyggd diarization)
+- **Hotwords & Initial Prompt** (Task 1.3): `--hotwords "fakturering,återbetalning"` + `--initial-prompt`. Auto-laddar `configs/callcenter_hotwords.txt` för callcenter.
+- **Chunking + Confidence** (Task 1.2): 30s chunks + 5s overlap i faster-backend för långa filer. `low_confidence` flag + automatisk högre lexicon-vikt på osäkra segment.
+- **Pre-processing** (Task 1.4): `--preprocess` – ffmpeg high-pass filter + valfri noisereduce före ASR (bättre WER på bullriga inspelningar).
+- **Aspect-Based Sentiment (ABSA)** (Task 1.5): `aspect` analyzer (hybrid keyword + sentiment). Callcenter-aspects: fakturering_pris, kundtjänst_kvalitet, teknisk_lösning, väntetid, agent_attityd m.fl. Finns i `results["aspect"]`.
+- **Emotions** (Fas 2.1): Multi-label emotion detection (frustration, ilska, besvikelse, oro, glädje m.fl.).
+- **Role Inference** (Fas 2.2): Heuristisk agent vs customer-klassificering baserat på talmönster.
+- **Trajectory & Escalation** (Fas 2.3): Sentiment/emotion-tidsserie, slope, escalation_events.
+- **Spoken Normalizer** (Fas 2.5): Tar bort fillers ("eh", "hmm") efter strict-transkription.
+- **LLM-Judge stub** (Fas 2.4): Plats för low-confidence fall (för närvarande heuristic fallback).
+- Alla nya analyzers är registrerade i `src/analysis/` (topologisk körning, error isolation) och aktiveras automatiskt eller via `selected_analyzers`.
+- `CallAnalysisReport.results` innehåller nu `aspect`, `emotion`, `role`, `trajectory` m.m. (additivt, backward compatible).
+
+### Mistral / OpenRouter LLM Integration (Fas 3 – European-first holistisk analys)
+- **Hybrid-arkitektur**: Lokala modeller + heuristics är default/fast path. Mistral (via OpenRouter) används selektivt för **full-conversation** reasoning: trajectory/escalation, root cause, actionable QA-rekommendationer, agent assessment med evidensspann.
+- **Primärmodell**: `mistralai/mistral-medium-3.5` (stark svensk prestanda, 256k context). Starkare alternativ `mistralai/mistral-large-3`.
+- **Strict structured output**: `response_format` med `json_schema` + `strict: true` → garanterat parsebar Pydantic-validerad JSON.
+- **Aktivering**:
+  - Per profil: `callcenter` har `llm.enabled: true` (selektiv via längd/låg confidence).
+  - Explicit: `analyze-call ... --use-mistral-llm --llm-model mistralai/mistral-medium-3.5`
+  - API: `use_mistral_llm`, `llm_model`, `deep_analysis` i PipelineRequest.
+  - Pipeline: `CallAnalysisPipeline(use_mistral_llm=True)`
+- **Privacy / GDPR**: Varje extern anrop loggar tydligt "EXTERNAL LLM CALL (OpenRouter/Mistral) ... data sent to third-party". Caching gör om-körningar gratis. Cost tracking i meta. Budget-varning stöd i klienten.
+- **Caching & cost**: Inbyggd innehålls-adresserbar disk-cache (.cache/llm/). Upprepade körningar på samma transkript ≈ 0 kr.
+- **Output**: `report.llm` + `results["llm"]` (additivt). Dashboard visar "LLM-enhanced" badge + dedikerade expanders för actionable insights, agent assessment, trajectory etc.
+- **Utvärdering**: `python -m src.evaluate llm-quality` ger proxy-metrics (fallback rate, cost, evidence coverage, consistency).
+- **Nya moduler**: `src/llm/{openrouter_client.py, mistral_analyzer.py, prompts.py, schemas.py}`
+- **Viktigt**: Kräver `OPENROUTER_API_KEY`. Utan nyckel faller allt tillbaka till lokal analys (aldrig krasch).
+
+**Dokumentation för nya användare**:
+- Praktisk quickstart + privacy + exempel: `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` (mål: igång på <30 min)
+- Full plan, tasks & status: `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`
+- Arkitektur: `docs/ARCHITECTURE.md` (uppdaterad med LLM-lager)
+
+Se även `configs/llm_config.yaml` (exempel) och `reports/llm_quality_smoke.json` (efter evaluate).
+
 ## Installation (Windows PowerShell)
 ```powershell
 # 1) Skapa och aktivera virtuell miljö
@@ -111,6 +148,14 @@ python -m src.cli analyze-call path\till\call.wav \
   --backend faster --language sv \
   --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
   --output-csv outputs\call_segments.csv
+
+# Avancerade ASR-flaggor (hotwords, initial_prompt, preprocess, chunking)
+python -m src.cli analyze-call path\till\call.wav \
+  --backend faster --revision strict \
+  --hotwords "fakturering,återbetalning,kundtjänst" \
+  --initial-prompt "Detta är ett svenskt kundsamtal om faktura och support." \
+  --preprocess \
+  --chunk-length-s 30
 
 # Batch-transkribering: mappar, listor och globbar
 # 1) Katalog (rekursivt)
@@ -232,18 +277,20 @@ curl -X POST http://localhost:8000/analyze_pipeline -H "Content-Type: applicatio
 ```python
 from src.pipeline import CallAnalysisPipeline
 
-pipe = CallAnalysisPipeline()
+pipe = CallAnalysisPipeline(profile="callcenter")
 
 # Från audio (inkl. transkribering + diarization + all analys)
-report = pipe.analyze_audio("data/call.wav", num_speakers=2, language="sv")
+# Nya flaggor (Fas 1-2): hotwords, initial_prompt, preprocess, aspects/emotions/trajectory etc. via registry
+report = pipe.analyze_audio(
+    "data/call.wav",
+    num_speakers=2,
+    language="sv",
+    hotwords=["fakturering", "support"],
+    preprocess=True,
+)
 
-# Eller från befintliga segments
-segments = [
-    {"text": "Jag har problem med min faktura", "start": 0, "end": 5},
-    {"text": "Jag ska kolla på det direkt", "start": 5, "end": 10},
-]
-report = pipe.analyze_segments(segments)
-
+# Resultat innehåller nu även:
+# report.results["aspect"], ["emotion"], ["role"], ["trajectory"], ...
 print(report.to_dict())
 ```
 
@@ -321,29 +368,39 @@ python -m src.asr_cli transcribe samtal.wav --revision subtitle
 python -m src.asr_cli transcribe samtal.wav --model openai/whisper-large-v3
 ```
 
-## Fas 2: Domänanpassning
+## Fas 1–3: Avancerad Call Center Intelligence (slutfört per UTVECKLINGSPLAN.md)
 
-Fas 2 introducerar en reproducerbar LoRA/PEFT-pipeline för svensk call center-domän.
+Se `UTVECKLINGSPLAN.md` för detaljerad task-lista (1.1–3.4).
 
-```powershell
-# Installera träningsberoenden
-pip install -r requirements.txt
+Huvudsakliga leveranser (utöver tidigare):
 
-# Kör LoRA fine-tuning (kräver GPU för praktisk körning)
-python -m src.finetune --config configs/finetune.yaml
-
-# Utvärdera ny adapter/model output
-python -m src.evaluate evaluate --backend model --model models/callcenter-sentiment-lora --profile callcenter
-```
+- **ASR-förbättringar** (1.1–1.4): WhisperX-backend, hotwords/initial_prompt (med auto-laddning av `configs/callcenter_hotwords.txt`), chunking+overlap+low_confidence i faster, valbar `--preprocess` (ffmpeg high-pass + noisereduce).
+- **ABSA** (1.5): `aspect`-analyzer (hybrid keywords + befintlig sentiment). 8 callcenter-aspects. Finns i `results["aspect"]`.
+- **Fas 2-analyzers** (via `src/analysis/` registry):
+  - `emotion`: multi-label (frustration, ilska, oro m.fl.)
+  - `role`: agent/customer inference
+  - `trajectory`: escalation detection + sentiment slope
+  - `spoken_normalizer`: tar bort "eh", "hmm" etc.
+  - `llm_judge`: stub för low-conf fall (utbyggbar)
+- **Pipeline & API**: Alla nya analyzers körs automatiskt (eller via `selected_analyzers`). `report.results` är additivt.
+- **LoRA/Finetune** (3.1): Befintlig pipeline i `src/finetune.py` + `configs/finetune.yaml` + callcenter-data.
 
 Rekommenderad call center-konfiguration:
 
-- ASR: `KBLab/kb-whisper-large` med `--revision strict`
-- Sentimentprofil: `callcenter` (auto-aktiverar nu lexicon blending med vikt 0.25 från profil-default, samt callcenter-heuristik/negation/intensity utan att behöva return_all_scores)
-- Lexikon: `data/sensaldo_lexicon.csv` (utökad seed med ~58 termer; auto-används för callcenter/forum/social/call-profiler)
-- Överstyr explicit med `--lexicon-file` / `--lexicon-weight` vid behov.
-- Nya textanalys-förbättringar: emoji-mapping + normalize_swedish i cleaning (aktiverat för callcenter m.fl.), unconditional callcenter heuristics/negation/intensity, unified negation (delad kod), mening-aggregering i lexicon scoring, LearnedBlender default i blending, hybrid uncertainty-boost i analyze_smart (meta flag + högre vikt vid låg conf), förbättrad lexicon-heuristic baseline i evaluate (använder nu riktig score_text + clean + negation).
-- callcenter-profil använder nu auto lora-modell om models/callcenter-sentiment-lora finns.
+- ASR: `KBLab/kb-whisper-large` med `--revision strict` (eller `whisperx` för bättre alignment)
+- `--hotwords`, `--preprocess`, `--profile callcenter`
+- Lexikon + LearnedBlender + per-segment low-conf boost
+- Nya vyer i dashboard (aspects, emotions, trajectory) rekommenderas att byggas ut.
+
+```powershell
+# Exempel med alla nya flaggor
+python -m src.cli analyze-call call.wav \
+  --backend faster --revision strict \
+  --hotwords "fakturering,återbetalning" \
+  --preprocess \
+  --profile callcenter \
+  --lexicon-weight 0.25
+```
 
 ## Utveckling
 
@@ -401,7 +458,7 @@ print(results, meta)
 ```python
 from src.transcription import get_transcriber
 
-# Transkribera med KB-Whisper large (strict revision)
+# Transkribera med KB-Whisper large (strict revision) + hotwords + preprocess
 transcriber = get_transcriber(
     backend="faster",
     model_name="kb-whisper-large",
@@ -410,27 +467,34 @@ result = transcriber.transcribe(
     audio_path="samtal.wav",
     language="sv",
     revision="strict",
+    hotwords=["fakturering", "återbetalning", "kundtjänst"],
+    preprocess=True,  # high-pass + optional noise reduction
 ).to_dict()
 print(result["segments"])
 for seg in result["segments"]:
     print(f"[{seg['start']:.1f}s - {seg['end']:.1f}s] {seg['text']}")
+    if seg.get("properties", {}).get("low_confidence"):
+        print("  (low confidence – högre lexicon-vikt användes i analys)")
 ```
 
 ## Projektstruktur
 ```
-src/sentiment.py      # Sentimentanalys (Hugging Face)
-src/cli.py            # Huvud-CLI (sentiment, transkribering, samtalsanalys)
-src/transcription/    # ASR (tal-till-text) med faster-whisper/transformers
-src/lexicon.py        # Lexikon-baserad sentiment
-src/clean.py          # Textrensning
-src/profiles.py       # Profilhantering
-src/evaluate.py       # Utvärderingsramverk
-src/api/              # FastAPI REST-server (app.py, routers, schemas)
-src/pipeline.py       # End-to-end samtalsanalyspipeline
-tests/                # Enhetstester
-data/                 # Testdata
-docs/                 # Dokumentation
-samples/              # Exempelfiler
+src/sentiment.py           # Sentimentanalys (Hugging Face)
+src/analysis/              # Registry-baserade analyzers (sentiment, aspect, emotion, trajectory, role, ...)
+src/cli.py                 # Huvud-CLI (sentiment, transkribering, samtalsanalys)
+src/transcription/         # ASR backends (faster, transformers, whisperx) + preprocess.py
+src/lexicon.py             # Lexikon-baserad sentiment + blending (LearnedBlender)
+src/clean.py               # Textrensning
+src/profiles.py            # Profilhantering (inkl. callcenter-aspects)
+src/evaluate.py            # Utvärderingsramverk
+src/api/                   # FastAPI REST-server
+src/pipeline.py            # End-to-end CallAnalysisPipeline
+src/core/                  # Modeller, errors, config, audio
+tests/                     # Enhetstester
+data/                      # Testdata
+docs/                      # Dokumentation
+configs/                   # callcenter_hotwords.txt m.m.
+samples/                   # Exempelfiler
 ```
 
 ## Licens
