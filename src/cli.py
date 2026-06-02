@@ -20,13 +20,12 @@ from rich.table import Table
 from .clean import clean_texts
 from .core.audio import resolve_audio_paths as _core_resolve_audio
 from .core.config import DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
-from .core.serialization import score_dict
+from .core.serialization import score_dict, utc_now_iso
 from .core.serialization import top_label as top_label_pair
-from .core.serialization import utc_now_iso
 from .lexicon import blend_results_with_lexicon, load_lexicon
 from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
-from .sentiment import load as load_sentiment
+from .sentiment import analyze_smart
 from .transcription import get_transcriber
 
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
@@ -163,53 +162,41 @@ def sentiment_cmd(
     chosen_model = model or spec.get("model", DEFAULT_SENTIMENT_MODEL)
     resolved_max_length = max_length or spec.get("max_length", 256)
 
-    # Rengör texter enligt profil
+    # Rengör texter enligt profil (för display + skicka till analyze_smart)
     texts = clean_texts(texts, spec.get("cleaning", {}))
 
-    # 3) Ladda modell
+    # 3) Kör via analyze_smart (hanterar clean + modell + ev. lexikon-default från profil)
     console.print(f"[green]Profil:[/green] {profile_name}")
     console.print(f"[green]Laddar modell:[/green] {chosen_model}")
     try:
-        sp = load_sentiment(
-            chosen_model,
+        results, meta = analyze_smart(
+            texts=texts,
+            profile=profile_name,
+            model_name=chosen_model,
             device=device,
-            return_all_scores=return_all_scores,
-            max_length=resolved_max_length,
-        )
-    except Exception as e:
-        console.print(f"[red]Kunde inte ladda modellen '{chosen_model}': {e}[/red]")
-        raise typer.Exit(code=2) from e
-
-    # 4) Kör inferens
-    console.print(f"[green]Analyserar {len(texts)} texter...[/green]")
-    try:
-        results = sp.analyze(
-            texts,
             batch_size=batch_size,
+            normalize=True,
             return_all_scores=return_all_scores,
             max_length=resolved_max_length,
+            clean=True,
+            lexicon_file=lexicon_file,
+            lexicon_weight=lexicon_weight,
         )
     except Exception as e:
-        console.print(f"[red]Fel under inferens: {e}[/red]")
+        console.print(f"[red]Fel under analys: {e}[/red]")
         raise typer.Exit(code=2) from e
 
-    # 5) Lexikon (valfritt)
-    lex = None
-    use_lex = lexicon_file is not None and lexicon_weight > 0.0
-    if use_lex:
+    # Lexikon-info (om auto från profil eller explicit)
+    use_lex = bool(meta.get("lexicon_file")) or (lexicon_file is not None and lexicon_weight > 0.0)
+    if meta.get("lexicon_file"):
+        console.print(f"[green]Lexikon (auto från profil eller explicit):[/green] {meta['lexicon_file']} (vikt={meta.get('lexicon_weight', 0)})")
+    elif lexicon_file and use_lex:
         try:
             lex = load_lexicon(lexicon_file)
             console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
         except Exception as e:
-            console.print(
-                f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan lexikon.[/yellow]"
-            )
+            console.print(f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan.[/yellow]")
             use_lex = False
-
-    # 6) Lexikon-blandning + paketera resultat
-    results = blend_results_with_lexicon(
-        texts, results, lexicon_file if use_lex else None, lexicon_weight
-    )
     now_iso = utc_now_iso()
     rows = []
     for t, result in zip(texts, results, strict=False):

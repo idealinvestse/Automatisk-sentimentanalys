@@ -113,7 +113,7 @@ These functions are used by both the CLI and the API, ensuring consistent output
 
 ### 5. API Package Structure
 
-The monolithic `src/api.py` has been refactored into a modular `src/api/` package:
+(The old monolithic `src/api.py` duplicate has been removed; current code lives in the modular `src/api/` package):
 
 ```
 src/api/
@@ -153,16 +153,18 @@ The `/scan_process` endpoint previously only wrote its incremental state file af
 2. Uses a single shared `run_batch()` helper with timeout support.
 3. Gracefully handles `TimeoutError` so that individual file failures don't abort the entire scan.
 
-### 8. Lexicon Blending as a Separate Concern
+### 8. Lexicon Blending (now profile-aware via analyze_smart)
 
-Lexicon blending lives in `src/lexicon.py` as `blend_results_with_lexicon()` rather than inside the sentiment analyzer. This keeps the analyzer generic (model inference only) and lets the CLI and API decide whether and how to blend, based on user-provided parameters.
+Core logic still in `src/lexicon.py` (`blend_results_with_lexicon()`, now using LearnedBlender by default for per-class weights). `analyze_smart` now integrates it automatically based on profile defaults (e.g. callcenter/forum get auto lexicon_file + weight; explicit params override). Keeps analyzer flexible while providing "batteries included" for common profiles. CLI/API/ evaluate updated to pass-through. See also new features: hybrid boost on low model confidence, sentence aggregation for mixed text.
 
 ## Data Flow
 
 ### Text Sentiment Analysis (CLI)
 
 ```
-texts → clean_texts() → analyze_smart() → blend_results_with_lexicon() → CSV/stdout
+texts → analyze_smart()  # clean + profile defaults (model, length, lexicon_file/weight for callcenter/forum etc.) + unconditional callcenter adjust + intensity/hybrid
+# (blend_results_with_lexicon still usable standalone or internally)
+→ CSV/stdout
 ```
 
 ### Audio Call Analysis (CLI)
@@ -222,6 +224,6 @@ No changes needed in CLI or API – the new analyzer will automatically be picke
 
 ## Backward Compatibility
 
-- The monolithic `src/api.py` has been refactored into the modular `src/api/` package. `uvicorn src.api:app` transparently uses the new modular API via `src/api/__init__.py`.
+- The legacy monolithic `src/api.py` has been removed (it was a full duplicate of the refactored `src/api/` package). The current API is `src/api/` (uvicorn src.api:app still works via the package `__init__.py`).
 - All existing CLI commands (`sentiment`, `transcribe`, `analyze-call`) behave identically from a user perspective.
 - All analyzer constructors still accept the same default arguments; parametrization is opt-in via `analyzer_configs`.

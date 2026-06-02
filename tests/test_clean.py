@@ -50,6 +50,17 @@ class TestCleanText:
         assert clean_text("", {}) == ""
         assert clean_text(None, {}) == ""
 
+    def test_map_emojis(self):
+        opts = {"map_emojis": True, "lowercase": True}
+        assert "glad" in clean_text("Det var bra 😊", opts)
+        assert "ledsen" in clean_text("Inte kul :(", opts)
+        assert "bra" in clean_text("👍", opts)
+
+    def test_normalize_swedish_basic(self):
+        opts = {"normalize_swedish": True, "lowercase": True}
+        # placeholder - the asr_fixes are minimal but shouldn't break
+        assert clean_text("Något stöd", opts)  # no crash
+
 
 class TestCleanTexts:
     def test_batch(self):

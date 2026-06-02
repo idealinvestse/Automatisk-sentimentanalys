@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 
 import pytest
 
-from src.lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text, tokenize
+from src.lexicon import (
+    blend_distributions,
+    blend_results_with_lexicon,
+    load_lexicon,
+    scalar_to_dist,
+    score_text,
+    tokenize,
+)
 
 SAMPLE_CSV = """term,polarity
 bra,0.8
@@ -145,3 +153,66 @@ class TestBlendDistributions:
         assert result["negativ"] == pytest.approx(0.0)
         assert result["neutral"] == pytest.approx(0.5)
         assert result["positiv"] == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# Tests for the high-level blend_results_with_lexicon (previously untested)
+# ---------------------------------------------------------------------------
+
+
+class TestBlendResultsWithLexicon:
+    @pytest.fixture
+    def sample_lex_path(self, tmp_path):
+        p = tmp_path / "lex.csv"
+        p.write_text("term,polarity\nbra,0.9\ndålig,-0.8\n", encoding="utf-8")
+        return str(p)
+
+    def test_no_lexicon_returns_original(self, sample_lex_path):
+        texts = ["Bra service"]
+        results = [{"label": "positiv", "score": 0.8}]
+        out = blend_results_with_lexicon(texts, results, None, 0.3)
+        assert out is results  # same object when skipped
+
+    def test_zero_weight_skips(self, sample_lex_path):
+        texts = ["Bra"]
+        results = [{"label": "positiv", "score": 0.9}]
+        out = blend_results_with_lexicon(texts, results, sample_lex_path, 0.0)
+        assert out == results
+
+    def test_full_distribution_blending(self, sample_lex_path):
+        texts = ["Det här är bra"]
+        results = [
+            [
+                {"label": "negativ", "score": 0.1},
+                {"label": "neutral", "score": 0.2},
+                {"label": "positiv", "score": 0.7},
+            ]
+        ]
+        out = blend_results_with_lexicon(texts, results, sample_lex_path, 0.5)
+        assert isinstance(out[0], list)
+        # lexicon "bra" positive should pull positiv up
+        pos = next(x for x in out[0] if x["label"] == "positiv")["score"]
+        assert pos > 0.7
+
+    def test_single_label_input_produces_single_label_output(self, sample_lex_path):
+        texts = ["Det här är dålig"]
+        results = [{"label": "negativ", "score": 0.75}]
+        out = blend_results_with_lexicon(texts, results, sample_lex_path, 0.4)
+        assert isinstance(out[0], dict)
+        assert out[0]["label"] in {"negativ", "neutral", "positiv"}
+
+    def test_length_mismatch_does_not_crash(self, sample_lex_path, caplog):
+        texts = ["ett", "två"]
+        results = [{"label": "positiv", "score": 0.9}]
+        with caplog.at_level(logging.WARNING):
+            out = blend_results_with_lexicon(texts, results, sample_lex_path, 0.2)
+        assert len(out) == 1
+        assert "length mismatch" in caplog.text.lower()
+
+    def test_bad_lexicon_file_returns_original_gracefully(self, caplog):
+        texts = ["Bra"]
+        results = [{"label": "positiv", "score": 0.9}]
+        with caplog.at_level(logging.WARNING):
+            out = blend_results_with_lexicon(texts, results, "/non/existent/lex.csv", 0.3)
+        assert out == results
+        assert "lexicon blending failed" in caplog.text.lower()

@@ -74,7 +74,9 @@ python -m src.cli sentiment --txt-file samples\examples.txt --source forum --ret
 # Exempel: magasin/artikel med längre maxlängd
 python -m src.cli sentiment --text "Lång artikeltext..." --datatype article --return-all-scores
 
-# Lexikon (valfritt): blanda modell med svenskt lexikon
+# Lexikon (valfritt / auto): blanda modell med svenskt lexikon
+# För forum/callcenter etc. auto-används nu data/sensaldo_lexicon.csv (vikt från profil) om inte explicit anges.
+# Överstyr eller ange för andra profiler:
 # Prova med samples/lexicon_sample.csv och 30% lexikonvikt
 python -m src.cli sentiment --txt-file samples\examples.txt --source forum \
   --return-all-scores --lexicon-file samples\lexicon_sample.csv --lexicon-weight 0.3 \
@@ -267,8 +269,10 @@ Projektet inkluderar ett utvärderingsramverk för att mäta sentimentanalysens 
 # Kör baseline-utvärdering med default-profil
 python -m src.evaluate evaluate --testset data/test_swedish.csv --output reports/baseline.json
 
-# Utvärdera med specifik profil och lexikon-blending
-python -m src.evaluate evaluate --profile call --lexicon-file samples/lexicon_sample.csv --lexicon-weight 0.3
+# Utvärdera med specifik profil (callcenter/forum etc. auto-använder nu lexicon från profil-default)
+python -m src.evaluate evaluate --profile callcenter
+# Överstyr explicit vid behov:
+# python -m src.evaluate evaluate --profile call --lexicon-file samples/lexicon_sample.csv --lexicon-weight 0.3
 
 # Spara detaljerade resultat som CSV
 python -m src.evaluate evaluate --output-csv reports/detailed_results.csv
@@ -335,9 +339,11 @@ python -m src.evaluate evaluate --backend model --model models/callcenter-sentim
 Rekommenderad call center-konfiguration:
 
 - ASR: `KBLab/kb-whisper-large` med `--revision strict`
-- Sentimentprofil: `callcenter`
-- Lexikon: `data/sensaldo_lexicon.csv`
-- Lexikon-blending: börja med `--lexicon-weight 0.25`
+- Sentimentprofil: `callcenter` (auto-aktiverar nu lexicon blending med vikt 0.25 från profil-default, samt callcenter-heuristik/negation/intensity utan att behöva return_all_scores)
+- Lexikon: `data/sensaldo_lexicon.csv` (utökad seed med ~58 termer; auto-används för callcenter/forum/social/call-profiler)
+- Överstyr explicit med `--lexicon-file` / `--lexicon-weight` vid behov.
+- Nya textanalys-förbättringar: emoji-mapping + normalize_swedish i cleaning (aktiverat för callcenter m.fl.), unconditional callcenter heuristics/negation/intensity, unified negation (delad kod), mening-aggregering i lexicon scoring, LearnedBlender default i blending, hybrid uncertainty-boost i analyze_smart (meta flag + högre vikt vid låg conf), förbättrad lexicon-heuristic baseline i evaluate (använder nu riktig score_text + clean + negation).
+- callcenter-profil använder nu auto lora-modell om models/callcenter-sentiment-lora finns.
 
 ## Utveckling
 
@@ -379,14 +385,16 @@ for r in results:
 sp = load("cardiffnlp/twitter-xlm-roberta-base-sentiment", device="auto", return_all_scores=True, max_length=256)
 print(sp.analyze(["Vet inte riktigt... "]))
 
-# 3) Profil-medveten analys (rensning, modellval)
+# 3) Profil-medveten analys (rensning, modellval, auto lexicon från profil)
 from src.sentiment import analyze_smart
 results, meta = analyze_smart(
     ["Det här är fantastiskt!"],
-    profile="call",
+    profile="callcenter",  # auto: lexicon (data/sensaldo_lexicon.csv @0.25) + heuristics + intensity + emoji etc.
     return_all_scores=True,
+    # lexicon_file/weight kan anges för override; nya opt: map_emojis etc via profile cleaning
 )
 print(results, meta)
+# Meta innehåller nu ev. "lexicon_file", "lexicon_weight", "hybrid_lexicon_boost" etc.
 ```
 
 ### ASR: Minimal användning

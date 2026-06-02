@@ -7,8 +7,11 @@ import re
 from collections.abc import Iterable
 from functools import lru_cache
 
+from .blending import get_blender
+from .negation import detect_negation, get_intensity_multiplier
+
 _WORD_RE = re.compile(r"[\wäöåÄÖÅ]+", re.UNICODE)
-NEGATIONS = {"inte", "ej", "aldrig", "icke", "knappast"}
+# NEGATIONS now unified via .negation.detect_negation (richer support for multi-word etc)
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +63,26 @@ def tokenize(text: str) -> Iterable[str]:
 
 
 def score_text(text: str, lexicon: dict[str, float]) -> float:
-    """Return a scalar sentiment score in [-1, 1] using Swedish negation handling."""
+    """Return a scalar sentiment score in [-1, 1] using Swedish negation handling.
+
+    For long/mixed texts, splits into sentences and averages (simple robustify).
+    """
+    # Basic sentence split for mixed polarity / long texts (prop8)
+    import re
+    sents = [s.strip() for s in re.split(r'[.!?]+', str(text)) if s.strip()]
+    if len(sents) > 1:
+        sent_scores = [ _score_single_sent(s, lexicon) for s in sents ]
+        return sum(sent_scores) / len(sent_scores) if sent_scores else 0.0
+    return _score_single_sent(text, lexicon)
+
+
+def _score_single_sent(text: str, lexicon: dict[str, float]) -> float:
+    """Internal single sentence scoring (old logic + negation/intensity)."""
     total = 0.0
     n = 0
-    negation_window = 0
+    intensity_mult = get_intensity_multiplier(text)
+    has_neg = detect_negation(text)
     for tok in tokenize(text):
-        if tok in NEGATIONS:
-            negation_window = 3
-            continue
         score = lexicon.get(tok)
         if score is None:
             # Simple Swedish compound-word fallback: match lexicon suffixes such as "kundservice".
@@ -76,12 +91,11 @@ def score_text(text: str, lexicon: dict[str, float]) -> float:
                 None,
             )
         if score is not None:
-            if negation_window > 0:
+            if has_neg:
                 score *= -0.8
+            score *= intensity_mult
             total += score
             n += 1
-        if negation_window > 0:
-            negation_window -= 1
     if n == 0:
         return 0.0
     s = total / n
@@ -209,7 +223,27 @@ def blend_results_with_lexicon(
                 eff_weight = min(1.0, lexicon_weight + boost)
 
             lex_dist = scalar_to_dist(score_text(text, lex))
-            scores = blend_distributions(scores, lex_dist, eff_weight)
+
+            # Per-segment lexicon weight boost for low ASR confidence (Task 1.2)
+            # Integrated with the new LearnedBlender system.
+            eff_weight = lexicon_weight
+            c = confs[idx] if idx < len(confs) else None
+            if c is not None and c < 0.60:
+                # Boost lexicon trust when the acoustic model is uncertain.
+                # The boost is capped so we never go completely lexicon-only unless
+                # the caller already asked for lexicon_weight=1.0.
+                boost = (0.60 - float(c)) * 1.5
+                eff_weight = min(1.0, lexicon_weight + boost)
+
+            if abs(eff_weight - lexicon_weight) > 0.01:
+                # Use a temporary blender with boosted lexicon trust for this low-conf segment
+                from .blending import LearnedBlender
+                b = LearnedBlender(default_lexicon_weight=eff_weight)
+                scores = b.blend(scores, lex_dist)
+            else:
+                blender = get_blender()
+                # Use learned per-class weights if fitted, else falls back to its default (which matches profile)
+                scores = blender.blend(scores, lex_dist)
 
             if full_distribution:
                 blended.append([

@@ -8,7 +8,7 @@ from transformers import pipeline
 from .clean import clean_texts
 from .core.device import device_arg_from_key, normalize_device_spec
 from .core.errors import AnalysisError
-from .negation import apply_negation_heuristic, detect_negation
+from .negation import apply_negation_heuristic, detect_negation, get_intensity_multiplier
 from .profiles import resolve_profile
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
@@ -43,6 +43,12 @@ def adjust_distribution_for_callcenter(text: str, dist: dict[str, float]) -> dic
     if any(term in lowered for term in POLITE_POSITIVE_TERMS):
         adjusted["positiv"] = adjusted.get("positiv", 0.0) + 0.05
         adjusted["neutral"] = max(0.0, adjusted.get("neutral", 0.0) - 0.05)
+    # New: intensity scaling
+    mult = get_intensity_multiplier(text)
+    if mult != 1.0:
+        for k in ("negativ", "positiv"):
+            adjusted[k] = adjusted.get(k, 0.0) * mult
+        adjusted["neutral"] = max(0.0, adjusted.get("neutral", 0.0) * (2 - mult))  # damp neutral a bit
     total = sum(adjusted.values())
     return {k: v / total for k, v in adjusted.items()} if total > 0 else adjusted
 
@@ -173,6 +179,8 @@ def analyze_smart(
     return_all_scores: bool = False,
     max_length: int | None = None,
     clean: bool = True,
+    lexicon_file: str | None = None,
+    lexicon_weight: float | None = None,
 ) -> tuple[list[dict], dict[str, str | int]]:
     """Profile-aware analysis.
 
@@ -180,25 +188,36 @@ def analyze_smart(
     - Picks model and max_length defaults from the profile if not provided
     - Optionally cleans texts according to the profile's cleaning spec
     - Uses cached pipeline by (model, device)
+    - If profile (or explicit) specifies lexicon_file/weight, applies blending
+      (callers can still override by passing explicit values).
 
-    Returns (results, meta) where meta contains {"profile", "model", "max_length"}.
+    Returns (results, meta) where meta contains {"profile", "model", "max_length", ...}.
     """
     profile_name, spec = resolve_profile(datatype=datatype, source=source, profile=profile)
     chosen_model = model_name or spec.get("model", DEFAULT_MODEL)
     resolved_max_length = max_length or spec.get("max_length", 256)
 
+    # Default lexicon from profile if not explicitly provided (None means use profile)
+    if lexicon_file is None:
+        lexicon_file = spec.get("lexicon_file")
+    if lexicon_weight is None:
+        lexicon_weight = spec.get("lexicon_weight", 0.0)
+
     proc_texts = clean_texts(texts, spec.get("cleaning", {})) if clean else list(texts)
 
+    # For callcenter profile we always want full distributions internally to apply
+    # the domain heuristics, then collapse at the end if caller didn't ask for them.
+    internal_return_all = return_all_scores or (profile_name == "callcenter")
     results = analyze(
         proc_texts,
         model_name=chosen_model,
         device=device,
         batch_size=batch_size,
         normalize=normalize,
-        return_all_scores=return_all_scores,
+        return_all_scores=internal_return_all,
         max_length=resolved_max_length,
     )
-    if profile_name == "callcenter" and return_all_scores:
+    if profile_name == "callcenter":
         adjusted_results = []
         if len(proc_texts) != len(results):
             raise AnalysisError(
@@ -219,11 +238,46 @@ def analyze_smart(
             else:
                 adjusted_results.append(inner)
         results = adjusted_results
-    meta: dict[str, str | int] = {
+        if not return_all_scores:
+            # Collapse back to single-label form if caller didn't request full scores
+            collapsed = []
+            for lst in results:
+                if isinstance(lst, list):
+                    best = max(lst, key=lambda e: e.get("score", 0))
+                    collapsed.append({"label": best["label"], "score": best["score"]})
+                else:
+                    collapsed.append(lst)
+            results = collapsed
+
+    hybrid = False
+    # Apply lexicon blending if we have a file and positive weight (from profile default or explicit)
+    if lexicon_file and lexicon_weight is not None and float(lexicon_weight) > 0.0:
+        from .lexicon import blend_results_with_lexicon
+        # Simple hybrid (prop10): boost lexicon weight if model uncertain on any item
+        eff_w = float(lexicon_weight)
+        try:
+            if internal_return_all or profile_name == "callcenter":
+                for r in results:
+                    if isinstance(r, list):
+                        mx = max((e.get("score", 0.0) for e in r), default=0.0)
+                        if mx < 0.55:
+                            eff_w = min(1.0, eff_w + 0.35)
+                            hybrid = True
+                            break
+        except Exception:
+            pass
+        results = blend_results_with_lexicon(proc_texts, results, lexicon_file, eff_w)
+
+    meta: dict[str, str | int | float | None] = {
         "profile": profile_name,
         "model": chosen_model,
         "max_length": int(resolved_max_length),
     }
+    if lexicon_file:
+        meta["lexicon_file"] = lexicon_file
+        meta["lexicon_weight"] = float(lexicon_weight) if lexicon_weight is not None else 0.0
+    if hybrid:
+        meta["hybrid_lexicon_boost"] = True
     return results, meta
 
 
