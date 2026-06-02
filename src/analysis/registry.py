@@ -29,12 +29,25 @@ def register_analyzer(name: str) -> Callable[[T], T]:
     return decorator
 
 
-def get_registered_analyzers() -> dict[str, Analyzer]:
-    """Instantiate and return all registered analyzers."""
+def get_registered_analyzers(
+    analyzer_configs: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Analyzer]:
+    """Instantiate and return all registered analyzers.
+
+    Args:
+        analyzer_configs: Optional mapping of analyzer name → keyword arguments
+            passed to the analyzer's constructor.  Unrecognised names are
+            silently ignored; unregistered names are not required to appear.
+
+    Returns:
+        Dict of instantiated analyzers keyed by their registered name.
+    """
+    configs = analyzer_configs or {}
     analyzers: dict[str, Analyzer] = {}
     for name, factory in _ANALYZER_REGISTRY.items():
+        kwargs = configs.get(name, {})
         try:
-            analyzers[name] = factory()
+            analyzers[name] = factory(**kwargs)
         except Exception as e:
             logger.error("Failed to instantiate analyzer '%s': %s", name, e)
     return analyzers
@@ -43,26 +56,31 @@ def get_registered_analyzers() -> dict[str, Analyzer]:
 def run_analyzers(
     ctx: AnalysisContext,
     selected: list[str] | None = None,
+    analyzer_configs: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Execute analyzers in topological order, respecting their dependencies.
 
     Args:
         ctx: The shared AnalysisContext carrying inputs and accumulating results.
-        selected: Optional list of analyzer names to run. If None, runs all registered.
-                  If specified, automatically resolves and runs their dependencies too.
+        selected: Optional list of analyzer names to run.  If *None*, runs all
+            registered analyzers.  If specified, their transitive dependencies
+            are resolved and included automatically.
+        analyzer_configs: Optional mapping of analyzer name → constructor kwargs
+            forwarded to :func:`get_registered_analyzers`.  Use this to pass
+            model names, devices, or lexicon settings without modifying the
+            registry itself.
 
     Returns:
-        The results dictionary containing analyzer outputs (ctx.results).
+        The results dictionary containing analyzer outputs (``ctx.results``).
     """
-    all_analyzers = get_registered_analyzers()
+    all_analyzers = get_registered_analyzers(analyzer_configs)
 
     # 1. Resolve which analyzers to run (selected + their transitives)
     to_run: set[str] = set()
     if selected is None:
         to_run = set(all_analyzers.keys())
     else:
-        # Recursively resolve dependencies of selected analyzers
-        def resolve_deps(name: str):
+        def resolve_deps(name: str) -> None:
             if name in to_run:
                 return
             to_run.add(name)
@@ -88,7 +106,7 @@ def run_analyzers(
     visited: dict[str, int] = {}  # 0=unvisited, 1=visiting, 2=visited
     execution_order: list[str] = []
 
-    def dfs(name: str):
+    def dfs(name: str) -> None:
         state = visited.get(name, 0)
         if state == 1:
             raise AnalysisError(f"Circular dependency detected involving '{name}'")
@@ -133,6 +151,6 @@ def run_analyzers(
                 logger.debug("Analyzer '%s' completed successfully", name)
         except Exception as e:
             logger.error("Analyzer '%s' failed: %s", name, e, exc_info=True)
-            # We isolate the error so subsequent, independent analyzers can still run
+            # Isolate the error so subsequent, independent analyzers can still run
 
     return ctx.results

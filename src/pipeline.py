@@ -52,6 +52,22 @@ class CallAnalysisPipeline:
         self.asr_backend = asr_backend
         self.asr_model = asr_model
 
+    def _build_analyzer_configs(self) -> dict[str, dict[str, Any]]:
+        """Build per-analyzer configuration from pipeline settings.
+
+        Returns:
+            Mapping of analyzer name → constructor kwargs.
+        """
+        return {
+            "sentiment": {
+                "model_name": self.sentiment_model,
+                "device": self.device,
+            },
+            "intent": {
+                "backend": self.intent_backend,
+            },
+        }
+
     def analyze_audio(
         self,
         audio_path: str,
@@ -76,7 +92,6 @@ class CallAnalysisPipeline:
 
         # 1. Transcribe and optionally diarize
         try:
-            # Obtain transcriber using configured ASR backend and model
             transcriber = get_transcriber(
                 backend=self.asr_backend,
                 model_name=self.asr_model,
@@ -108,10 +123,14 @@ class CallAnalysisPipeline:
             segments=transcript.segments,
         )
 
-        results = run_analyzers(ctx, selected=selected_analyzers)
+        results = run_analyzers(
+            ctx,
+            selected=selected_analyzers,
+            analyzer_configs=self._build_analyzer_configs(),
+        )
         proc_time = round(time.time() - t0, 2)
 
-        # 4. Construct backwards-compatible report
+        # 3. Construct backwards-compatible report
         segments_dict = [s.to_dict() for s in transcript.segments]
         diarization_data = transcript.diarization
 
@@ -171,7 +190,11 @@ class CallAnalysisPipeline:
             segments=typed_segments,
         )
 
-        results = run_analyzers(ctx, selected=selected_analyzers)
+        results = run_analyzers(
+            ctx,
+            selected=selected_analyzers,
+            analyzer_configs=self._build_analyzer_configs(),
+        )
         proc_time = round(time.time() - t0, 2)
 
         return CallAnalysisReport(

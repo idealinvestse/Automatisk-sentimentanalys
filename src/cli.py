@@ -9,7 +9,6 @@ import json
 import logging
 import os
 import time
-from datetime import UTC, datetime
 
 import pandas as pd
 import typer
@@ -19,8 +18,12 @@ from rich.table import Table
 
 # Core & Transcription imports
 from .clean import clean_texts
-from .core.config import AUDIO_EXTS, DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
-from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
+from .core.audio import resolve_audio_paths as _core_resolve_audio
+from .core.config import DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
+from .core.serialization import score_dict
+from .core.serialization import top_label as top_label_pair
+from .core.serialization import utc_now_iso
+from .lexicon import blend_results_with_lexicon, load_lexicon
 from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
 from .sentiment import load as load_sentiment
@@ -45,25 +48,12 @@ def setup_logging(level: str = "INFO") -> None:
 
 
 def resolve_audio_paths(inputs: list[str]) -> list[str]:
-    """Resolve file paths, directories, and glob patterns."""
-    import glob
+    """Resolve file paths, directories, and glob patterns.
 
-    files: list[str] = []
-    for inp in inputs:
-        if os.path.isfile(inp):
-            files.append(inp)
-        elif os.path.isdir(inp):
-            for ext in AUDIO_EXTS:
-                files.extend(glob.glob(os.path.join(inp, f"**/*{ext}"), recursive=True))
-        else:
-            # Try globbing
-            matched = glob.glob(inp, recursive=True)
-            if matched:
-                files.extend([m for m in matched if os.path.isfile(m)])
-            else:
-                console.print(f"[yellow]Warning: Input '{inp}' could not be resolved.[/yellow]")
-    files = sorted(dict.fromkeys(files))
-    return files
+    Thin wrapper around :func:`src.core.audio.resolve_audio_paths` with the
+    flat ``inputs`` signature expected by the CLI commands.
+    """
+    return _core_resolve_audio(audio_paths=inputs)
 
 
 @app.command("sentiment")
@@ -216,68 +206,28 @@ def sentiment_cmd(
             )
             use_lex = False
 
-    # 6) Paketera resultat
-    now_iso = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # 6) Lexikon-blandning + paketera resultat
+    results = blend_results_with_lexicon(
+        texts, results, lexicon_file if use_lex else None, lexicon_weight
+    )
+    now_iso = utc_now_iso()
     rows = []
-    if results and isinstance(results[0], list):
-        for t, inner in zip(texts, results, strict=False):
-            scores = {e.get("label"): float(e.get("score", 0.0)) for e in inner}
-            for k in ["negativ", "neutral", "positiv"]:
-                scores.setdefault(k, 0.0)
-            if use_lex and lex is not None:
-                s_scalar = score_text(t, lex)
-                ln, le, lp = scalar_to_dist(s_scalar)
-                scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
-            top_label = max(scores.items(), key=lambda kv: kv[1])[0]
-            top_score = scores[top_label]
-            rows.append(
-                {
-                    "text": t,
-                    "label": top_label,
-                    "score": float(top_score),
-                    "negativ": scores["negativ"],
-                    "neutral": scores["neutral"],
-                    "positiv": scores["positiv"],
-                    "model": chosen_model,
-                    "profile": profile_name,
-                    "timestamp": now_iso,
-                }
-            )
-    else:
-        for t, r in zip(texts, results, strict=False):
-            label = r.get("label")
-            score = float(r.get("score", 0.0))
-            neg = neu = pos = 0.0
-            if label == "negativ":
-                neg = score
-                neu = 1.0 - score
-            elif label == "neutral":
-                neu = score
-                pos = (1.0 - score) / 2.0
-                neg = (1.0 - score) / 2.0
-            elif label == "positiv":
-                pos = score
-                neu = 1.0 - score
-            scores = {"negativ": neg, "neutral": neu, "positiv": pos}
-            if use_lex and lex is not None:
-                s_scalar = score_text(t, lex)
-                ln, le, lp = scalar_to_dist(s_scalar)
-                scores = blend_distributions(scores, (ln, le, lp), lexicon_weight)
-                label = max(scores.items(), key=lambda kv: kv[1])[0]
-                score = scores[label]
-            rows.append(
-                {
-                    "text": t,
-                    "label": label,
-                    "score": score,
-                    "negativ": scores["negativ"],
-                    "neutral": scores["neutral"],
-                    "positiv": scores["positiv"],
-                    "model": chosen_model,
-                    "profile": profile_name,
-                    "timestamp": now_iso,
-                }
-            )
+    for t, result in zip(texts, results, strict=False):
+        scores = score_dict(result)
+        lbl, top_score = top_label_pair(scores)
+        rows.append(
+            {
+                "text": t,
+                "label": lbl,
+                "score": float(top_score),
+                "negativ": scores["negativ"],
+                "neutral": scores["neutral"],
+                "positiv": scores["positiv"],
+                "model": chosen_model,
+                "profile": profile_name,
+                "timestamp": now_iso,
+            }
+        )
 
     # 7) Visa
     table = Table(show_header=True, header_style="bold magenta")
@@ -535,42 +485,26 @@ def analyze_call_cmd(
             sentiment_results = report_dict.get("sentiment_results", []) or []
             intent_results = report_dict.get("intent_results", []) or []
 
+            # Blend lexicon over all segments at once (no-op when use_lex=False)
+            seg_texts = [s.get("text", "").strip() for s in segments]
+            sentiment_results = blend_results_with_lexicon(
+                seg_texts,
+                sentiment_results,
+                lexicon_file if use_lex else None,
+                lexicon_weight,
+            )
+
             rows = []
             for idx, s in enumerate(segments):
-                text_val = s.get("text", "").strip()
-
-                # Check for sentiment result for this segment
-                sent_score = {}
-                if idx < len(sentiment_results):
-                    sent_val = sentiment_results[idx]
-                    if isinstance(sent_val, list):
-                        # return_all_scores distribution list
-                        sent_score = {
-                            entry.get("label"): float(entry.get("score", 0.0)) for entry in sent_val
-                        }
-                    else:
-                        label_val = sent_val.get("label")
-                        score_val = float(sent_val.get("score", 0.0))
-                        sent_score = {"negativ": 0.0, "neutral": 0.0, "positiv": 0.0}
-                        sent_score[label_val] = score_val
-
-                for k in ["negativ", "neutral", "positiv"]:
-                    sent_score.setdefault(k, 0.0)
-
-                # Lexicon blend if configured
-                if use_lex and lex is not None and text_val:
-                    s_scalar = score_text(text_val, lex)
-                    ln, le, lp = scalar_to_dist(s_scalar)
-                    sent_score = blend_distributions(sent_score, (ln, le, lp), lexicon_weight)
-
-                top_label = max(sent_score.items(), key=lambda kv: kv[1])[0]
-                top_score = float(sent_score[top_label])
+                text_val = seg_texts[idx]
+                sent_val = sentiment_results[idx] if idx < len(sentiment_results) else {}
+                sent_score = score_dict(sent_val)
+                lbl, top_score = top_label_pair(sent_score)
 
                 # Get intent
                 intent_val = "other"
                 intent_conf = 0.0
                 if idx < len(intent_results):
-                    # In CallAnalysisReport, intent_results is list of dicts {"intent": str, "confidence": float}
                     res_entry = intent_results[idx]
                     intent_val = res_entry.get("intent", "other")
                     intent_conf = float(res_entry.get("confidence", 0.0))
@@ -582,7 +516,7 @@ def analyze_call_cmd(
                     "end": s.get("end"),
                     "speaker": s.get("speaker"),
                     "text": text_val,
-                    "label": top_label,
+                    "label": lbl,
                     "score": top_score,
                     "negativ": sent_score.get("negativ"),
                     "neutral": sent_score.get("neutral"),

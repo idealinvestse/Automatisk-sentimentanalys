@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import logging
 import os
 import re
 from collections.abc import Iterable
@@ -8,6 +9,8 @@ from functools import lru_cache
 
 _WORD_RE = re.compile(r"[\wäöåÄÖÅ]+", re.UNICODE)
 NEGATIONS = {"inte", "ej", "aldrig", "icke", "knappast"}
+
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=8)
@@ -119,3 +122,84 @@ def blend_distributions(
     if s > 0:
         out = {k: v / s for k, v in out.items()}
     return out
+
+
+def blend_results_with_lexicon(
+    texts: list[str],
+    results: list,
+    lexicon_file: str | None,
+    lexicon_weight: float,
+) -> list:
+    """Blend a list of model sentiment results with lexicon scores.
+
+    This is the high-level helper used by the API and CLI layers.  It handles
+    length mismatches gracefully and catches lexicon-loading errors so that the
+    caller always receives a valid result list.
+
+    Args:
+        texts: Source texts corresponding to ``results``.
+        results: Sentiment results from the model pipeline.  Each entry is
+            either a single ``{"label": str, "score": float}`` dict
+            (``return_all_scores=False``) or a list of such dicts
+            (``return_all_scores=True``).
+        lexicon_file: Path to a CSV/TSV Swedish lexicon, or *None*/empty to
+            skip blending.
+        lexicon_weight: Blend weight in ``[0, 1]``.  0 = model only,
+            1 = lexicon only.
+
+    Returns:
+        New list with the same structure as ``results`` but with scores
+        adjusted by the lexicon.  Returns ``results`` unchanged when
+        ``lexicon_file`` is falsy or ``lexicon_weight <= 0``.
+    """
+    if not lexicon_file or lexicon_weight <= 0.0:
+        return results
+    if len(texts) != len(results):
+        logger.warning(
+            "Lexicon blending length mismatch: texts=%d results=%d",
+            len(texts),
+            len(results),
+        )
+    try:
+        lex = load_lexicon(lexicon_file)
+        blended: list = []
+        full_distribution = bool(results and isinstance(results[0], list))
+        for text, result in zip(texts, results, strict=False):
+            if full_distribution:
+                scores: dict[str, float] = {
+                    entry.get("label"): float(entry.get("score", 0.0) or 0.0)
+                    for entry in result
+                    if isinstance(entry, dict)
+                    and entry.get("label") in {"negativ", "neutral", "positiv"}
+                }
+            else:
+                scores = {"negativ": 0.0, "neutral": 0.0, "positiv": 0.0}
+                if isinstance(result, dict):
+                    lbl = result.get("label")
+                    val = float(result.get("score", 0.0) or 0.0)
+                    if lbl in scores:
+                        scores[lbl] = val
+                    else:
+                        # Single-label without probability – give full weight
+                        if lbl in {"negativ", "neutral", "positiv"}:
+                            scores[lbl] = 1.0
+            # Ensure all labels present
+            for lbl in ("negativ", "neutral", "positiv"):
+                scores.setdefault(lbl, 0.0)
+
+            lex_dist = scalar_to_dist(score_text(text, lex))
+            scores = blend_distributions(scores, lex_dist, lexicon_weight)
+
+            if full_distribution:
+                blended.append([
+                    {"label": "negativ", "score": scores["negativ"]},
+                    {"label": "neutral", "score": scores["neutral"]},
+                    {"label": "positiv", "score": scores["positiv"]},
+                ])
+            else:
+                best = max(scores.items(), key=lambda kv: kv[1])[0]
+                blended.append({"label": best, "score": float(scores[best])})
+        return blended
+    except (FileNotFoundError, ValueError, TypeError, KeyError) as e:
+        logger.warning("Lexicon blending failed for %s: %s", lexicon_file, e, exc_info=True)
+        return results
