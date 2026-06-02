@@ -51,6 +51,8 @@ class CallAnalysisPipeline:
         use_mistral_llm: bool = False,
         llm_model: str | None = None,
         deep_analysis: bool = False,
+        # explicit override (e.g. from dashboard UI or API). Highest priority in get_openrouter_api_key.
+        llm_api_key: str | None = None,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -63,6 +65,7 @@ class CallAnalysisPipeline:
         self.use_mistral_llm = use_mistral_llm
         self.llm_model = llm_model
         self.deep_analysis = deep_analysis
+        self.llm_api_key = llm_api_key
 
         # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
         try:
@@ -122,7 +125,10 @@ class CallAnalysisPipeline:
                 else:
                     seg_dicts.append(s.to_dict())
 
-            mistral = ConversationMistralAnalyzer(model=self.llm_model)
+            mistral = ConversationMistralAnalyzer(
+                model=self.llm_model,
+                api_key=self.llm_api_key,
+            )
             llm_out = mistral.analyze_full_conversation(
                 segments=seg_dicts,
                 role_map=role_map if isinstance(role_map, dict) else {},
@@ -316,7 +322,10 @@ class CallAnalysisPipeline:
             use_llm_qa = bool(self.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used"))
             qa_analyzer = None
             if use_llm_qa:
-                qa_analyzer = ConversationMistralAnalyzer(model=self.llm_model)
+                qa_analyzer = ConversationMistralAnalyzer(
+                model=self.llm_model,
+                api_key=self.llm_api_key,
+            )
             qa_res = score_call_with_default_scorecard(
                 segments=transcript.segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
@@ -509,7 +518,10 @@ class CallAnalysisPipeline:
             from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
             use_llm_qa = bool(self.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used"))
-            qa_analyzer = ConversationMistralAnalyzer(model=self.llm_model) if use_llm_qa else None
+            qa_analyzer = ConversationMistralAnalyzer(
+                model=self.llm_model,
+                api_key=self.llm_api_key,
+            ) if use_llm_qa else None
             qa_res = score_call_with_default_scorecard(
                 segments=typed_segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
@@ -586,7 +598,10 @@ class CallAnalysisPipeline:
 
             mistral = None
             if self.use_mistral_llm or self.deep_analysis:
-                mistral = ConversationMistralAnalyzer(model=self.llm_model)
+                mistral = ConversationMistralAnalyzer(
+                    model=self.llm_model,
+                    api_key=self.llm_api_key,
+                )
                 logger.info("Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)")
 
             agg_dict = aggregate_call_reports(reports, mistral_analyzer=mistral)

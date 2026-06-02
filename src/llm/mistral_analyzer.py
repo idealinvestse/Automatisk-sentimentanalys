@@ -122,8 +122,12 @@ class ConversationMistralAnalyzer:
         model: str | None = None,
         temperature: float = 0.15,
         max_tokens: int = 4096,
+        api_key: str | None = None,   # convenience: pass key directly (e.g. from dashboard override)
     ) -> None:
-        self.client = client or OpenRouterClient()
+        if client is not None:
+            self.client = client
+        else:
+            self.client = OpenRouterClient(api_key=api_key) if api_key else OpenRouterClient()
         self.model = model or self.client.default_model
         self.temperature = temperature
         self.max_tokens = max_tokens

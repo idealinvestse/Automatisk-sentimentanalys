@@ -157,6 +157,10 @@ class PipelineRequest(BaseModel):
     use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
     llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
     deep_analysis: bool = Field(False, description="Force deep LLM path")
+    llm_api_key: str | None = Field(
+        None,
+        description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.",
+    )
 
     @field_validator("segments")
     @classmethod
@@ -366,6 +370,7 @@ class AgentPerformanceRequest(BaseModel):
     window: str = Field("7d", description="Time window e.g. 7d, 30d")
     profile: str = Field("callcenter")
     use_mistral_llm: bool = Field(False)
+    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 
 class AgentPerformanceResponse(BaseModel):
@@ -381,6 +386,7 @@ class SemanticSearchRequest(BaseModel):
     top_k: int = Field(5, ge=1, le=50)
     filters: dict[str, Any] | None = Field(None)
     profile: str = Field("callcenter")
+    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 
 class SemanticSearchResponse(BaseModel):
@@ -395,6 +401,7 @@ class HotTopicsRequest(BaseModel):
     window: str = "7d"
     profile: str = "callcenter"
     use_mistral_llm: bool = False
+    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 
 class HotTopicsResponse(BaseModel):
@@ -407,6 +414,7 @@ class QAScoreRequest(BaseModel):
     segments: list[dict[str, Any]]
     profile: str = "callcenter"
     use_mistral_llm: bool = False
+    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 
 class QAScoreResponse(BaseModel):
@@ -418,6 +426,7 @@ class AlertsRequest(BaseModel):
     segments_list: list[list[dict[str, Any]]] | None = None  # for per call
     aggregate: dict[str, Any] | None = None  # for trend alerts from aggregator
     profile: str = "callcenter"
+    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 
 class AlertsResponse(BaseModel):

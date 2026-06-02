@@ -24,7 +24,7 @@ from __future__ import annotations
 
 # Re-exports (populated as modules are implemented)
 from .mistral_analyzer import ConversationMistralAnalyzer
-from .openrouter_client import OpenRouterClient
+from .openrouter_client import OpenRouterClient, get_openrouter_api_key, load_openrouter_key_from_file
 from .pii_redactor import redact_pii, redact_segments
 from .prompts import SYSTEM_PROMPT as LLM_SYSTEM_PROMPT, build_user_prompt, get_system_prompt
 from .schemas import (
@@ -41,6 +41,8 @@ from .schemas import (
 
 __all__ = [
     "OpenRouterClient",
+    "get_openrouter_api_key",
+    "load_openrouter_key_from_file",
     "ConversationMistralAnalyzer",
     "CallLLMOutput",
     "Trajectory",

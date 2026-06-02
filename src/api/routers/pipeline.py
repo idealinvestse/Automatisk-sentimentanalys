@@ -32,6 +32,7 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
             use_mistral_llm=req.use_mistral_llm,
             llm_model=req.llm_model,
             deep_analysis=req.deep_analysis,
+            llm_api_key=req.llm_api_key,
         )
         report = pipe.analyze_segments(req.segments)
     except Exception as e:
@@ -79,6 +80,7 @@ async def get_agent_performance(agent_id: str, req: AgentPerformanceRequest) -> 
             profile=req.profile,
             use_mistral_llm=req.use_mistral_llm,
             deep_analysis=req.use_mistral_llm,
+            llm_api_key=req.llm_api_key,
         )
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
         metrics = pipe.get_cached_agent_performance(agent_id, reports, window=req.window)
@@ -100,7 +102,7 @@ async def semantic_search(req: SemanticSearchRequest) -> SemanticSearchResponse:
     """Hybrid semantic + keyword search over provided calls (Fas 4.3.2 + 4.5.2)."""
     logger.info("Semantic search: %s", req.query[:50])
     try:
-        pipe = CallAnalysisPipeline(profile=req.profile)
+        pipe = CallAnalysisPipeline(profile=req.profile, llm_api_key=getattr(req, 'llm_api_key', None))
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
         hits = pipe.semantic_search(req.query, top_k=req.top_k, filters=req.filters or {}, corpus=reports)
         return SemanticSearchResponse(
@@ -122,6 +124,7 @@ async def get_hot_topics(req: HotTopicsRequest) -> HotTopicsResponse:
         pipe = CallAnalysisPipeline(
             profile=req.profile,
             use_mistral_llm=req.use_mistral_llm,
+            llm_api_key=req.llm_api_key,
         )
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
         topics = pipe.get_cached_hot_topics(reports, window=req.window)
@@ -139,7 +142,7 @@ async def get_hot_topics(req: HotTopicsRequest) -> HotTopicsResponse:
 async def get_qa_score(req: QAScoreRequest) -> QAScoreResponse:
     """Run QA scoring on segments (Fas 4.2 + 4.5.2)."""
     try:
-        pipe = CallAnalysisPipeline(profile=req.profile, use_mistral_llm=req.use_mistral_llm)
+        pipe = CallAnalysisPipeline(profile=req.profile, use_mistral_llm=req.use_mistral_llm, llm_api_key=getattr(req, 'llm_api_key', None))
         report = pipe.analyze_segments(req.segments)
         qa = report.results.get("qa") or report.results.get("compliance_qa", {})
         return QAScoreResponse(qa=qa, timestamp=utc_now_iso())
@@ -151,7 +154,7 @@ async def get_qa_score(req: QAScoreRequest) -> QAScoreResponse:
 async def get_alerts(req: AlertsRequest) -> AlertsResponse:
     """Get alerts from per-call results or aggregate trends (Fas 4.4.2 + 4.5.2)."""
     try:
-        pipe = CallAnalysisPipeline(profile=req.profile)
+        pipe = CallAnalysisPipeline(profile=req.profile, llm_api_key=getattr(req, 'llm_api_key', None))
         alerts: list[dict] = []
         if req.segments_list:
             for segs in req.segments_list:

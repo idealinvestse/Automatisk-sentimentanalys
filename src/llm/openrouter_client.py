@@ -37,6 +37,11 @@ log line below.
 Usage (after 3.1.2+):
     from src.llm.openrouter_client import OpenRouterClient
     client = OpenRouterClient()
+    # Key resolution order:
+    #   1. api_key= passed to constructor
+    #   2. OPENROUTER_API_KEY environment variable (recommended for prod/CI)
+    #   3. Dev convenience files (gitignored): configs/openrouter.key, OPENROUTER_API_KEY.txt, etc.
+    #      (only for local development - a loud warning is logged)
     data, meta = client.structured_chat(
         messages=[{"role": "system", ...}, {"role": "user", ...}],
         json_schema=the_pydantic_model_json_schema,
@@ -59,6 +64,101 @@ from typing import Any
 from ..core.errors import LLMError
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Public helper functions for convenient key loading (dev + dashboard override)
+# =============================================================================
+
+def _read_key_file(path: Path) -> str | None:
+    """Internal: read a single potential key file, strip BOM and whitespace."""
+    try:
+        if path.exists() and path.is_file():
+            raw = path.read_text(encoding="utf-8")
+            content = raw.strip().lstrip("\ufeff").strip()
+            if content and content.startswith("sk-or-"):
+                return content
+    except Exception as e:
+        logger.debug("Could not read key file %s: %s", path, e)
+    return None
+
+
+def load_openrouter_key_from_file(
+    key_file: str | Path | None = None,
+    *,
+    set_as_env: bool = True,
+    silent: bool = False,
+) -> str | None:
+    """
+    Load OpenRouter API key from a dev key file (for local development convenience).
+
+    Args:
+        key_file: Explicit path. If None, tries standard locations.
+        set_as_env: If True, also does os.environ["OPENROUTER_API_KEY"] = key
+        silent: If True, do not log the security warning.
+
+    Returns:
+        The key string, or None if not found / invalid.
+    """
+    candidates: list[Path] = []
+
+    if key_file:
+        candidates.append(Path(key_file))
+    else:
+        # Standard dev locations (must be in .gitignore!)
+        candidates.extend([
+            Path("configs") / "openrouter.key",
+            Path("openrouter.key"),
+            Path("OPENROUTER_API_KEY.txt"),
+            Path(".openrouter_key"),
+            Path("configs") / "openrouter_api_key.txt",
+        ])
+
+    key: str | None = None
+    used_path: Path | None = None
+
+    for p in candidates:
+        loaded = _read_key_file(p)
+        if loaded:
+            key = loaded
+            used_path = p
+            break
+
+    if key:
+        if set_as_env:
+            os.environ["OPENROUTER_API_KEY"] = key
+        if not silent:
+            logger.warning(
+                "SECURITY: Loaded OpenRouter API key from FILE: %s. "
+                "DEV USE ONLY. In production/CI always use the OPENROUTER_API_KEY environment variable.",
+                used_path,
+            )
+        return key
+
+    return None
+
+
+def get_openrouter_api_key(override: str | None = None) -> str | None:
+    """
+    Resolve the effective OpenRouter API key with full priority:
+
+    1. `override` (e.g. from Streamlit dashboard UI) - highest priority
+    2. Environment variable OPENROUTER_API_KEY
+    3. Dev key file (configs/openrouter.key etc.) - only for local development
+
+    This is the recommended function to call from application code / dashboard
+    when you want to support runtime override of the key.
+    """
+    if override and str(override).strip():
+        return str(override).strip()
+
+    env_key = os.getenv("OPENROUTER_API_KEY")
+    if env_key:
+        return env_key
+
+    # Try file but do NOT auto-set env here (let caller decide)
+    return load_openrouter_key_from_file(set_as_env=False, silent=True)
+
 
 # Lazy / optional dependency handling (pattern matched from src/transcription/whisperx.py and factory.py)
 try:
@@ -103,8 +203,18 @@ class OpenRouterClient:
         cache_dir: str | Path | None = None,
         enable_cache: bool = True,
     ) -> None:
-        """Initialize client (does not create OpenAI instance until first use = lazy)."""
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        """
+        Initialize client (does not create OpenAI instance until first use = lazy).
+
+        Key loading order (for convenience in dev):
+            1. Explicit `api_key` argument
+            2. OPENROUTER_API_KEY environment variable (strongly preferred)
+            3. Local gitignored key file (configs/openrouter.key, OPENROUTER_API_KEY.txt, etc.)
+               → Only for local development. A prominent security warning is logged.
+        """
+        # Use the central resolver that supports UI override + env + file
+        self.api_key = get_openrouter_api_key(api_key)
+
         self.base_url = base_url
         self.default_model = default_model
         self.timeout = timeout
@@ -126,6 +236,18 @@ class OpenRouterClient:
                 "OPENROUTER_API_KEY is not set. Calls to Mistral via OpenRouter will raise LLMError "
                 "unless api_key is passed at call time. Local fallback paths in pipeline/analyzer remain available."
             )
+
+    @staticmethod
+    def _try_load_key_from_file() -> str | None:
+        """
+        Deprecated internal method.
+
+        Use the public helpers instead:
+            - load_openrouter_key_from_file()
+            - get_openrouter_api_key(override=...)
+        """
+        # Delegate to the new public implementation for backward compatibility
+        return load_openrouter_key_from_file(set_as_env=False, silent=True)
 
     def _ensure_openai(self) -> OpenAI:
         """Lazy load the OpenAI client (and enforce optional dep)."""
