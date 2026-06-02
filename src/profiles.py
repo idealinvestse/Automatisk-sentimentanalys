@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import os
+
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+
+def _get_callcenter_model() -> str:
+    lora = "models/callcenter-sentiment-lora"
+    return lora if os.path.isdir(lora) else DEFAULT_MODEL
 
 # Minimal, pragmatic profile specifications
 PROFILE_SPECS: dict[str, dict] = {
@@ -28,7 +34,11 @@ PROFILE_SPECS: dict[str, dict] = {
             "remove_hashtags": True,
             "normalize_whitespace": True,
             "lowercase": False,
+            "map_emojis": True,
+            "normalize_swedish": True,
         },
+        "lexicon_file": "data/sensaldo_lexicon.csv",
+        "lexicon_weight": 0.3,
     },
     "magazine": {
         "model": DEFAULT_MODEL,
@@ -67,7 +77,11 @@ PROFILE_SPECS: dict[str, dict] = {
             "remove_hashtags": True,
             "normalize_whitespace": True,
             "lowercase": False,
+            "map_emojis": True,
+            "normalize_swedish": True,
         },
+        "lexicon_file": "data/sensaldo_lexicon.csv",
+        "lexicon_weight": 0.3,
     },
     "review": {
         "model": DEFAULT_MODEL,
@@ -94,10 +108,14 @@ PROFILE_SPECS: dict[str, dict] = {
             "remove_hashtags": False,
             "normalize_whitespace": True,
             "lowercase": False,
+            "map_emojis": True,
+            "normalize_swedish": True,
         },
+        "lexicon_file": "data/sensaldo_lexicon.csv",
+        "lexicon_weight": 0.25,
     },
     "callcenter": {
-        "model": DEFAULT_MODEL,
+        "model": _get_callcenter_model(),
         "max_length": 384,
         "cleaning": {
             "unescape_html": False,
@@ -107,7 +125,11 @@ PROFILE_SPECS: dict[str, dict] = {
             "remove_hashtags": False,
             "normalize_whitespace": True,
             "lowercase": False,
+            "map_emojis": True,
+            "normalize_swedish": True,
         },
+        "lexicon_file": "data/sensaldo_lexicon.csv",
+        "lexicon_weight": 0.25,
     },
 }
 

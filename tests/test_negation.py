@@ -85,3 +85,10 @@ class TestTokenizeLower:
     def test_punctuation(self):
         tokens = tokenize_lower("Inte, alls. bra!")
         assert tokens == ["inte", "alls", "bra"]
+
+
+def test_intensity_multiplier():
+    from src.negation import get_intensity_multiplier
+    assert get_intensity_multiplier("Det var väldigt bra") > 1.0
+    assert get_intensity_multiplier("Det var lite bra") < 1.0
+    assert get_intensity_multiplier("Det var okej") == 1.0

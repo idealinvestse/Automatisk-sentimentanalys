@@ -7,7 +7,7 @@ Fas 2 etablerar grunden för svensk domänanpassning av call center-sentiment.
 - `src/finetune.py`: LoRA/PEFT fine-tuning pipeline med YAML-konfiguration.
 - `configs/finetune.yaml`: standardkonfiguration för svensk BERT-baserad sekvensklassificering.
 - `data/callcenter_train.csv`: syntetiskt, anonymiserat call center seed-dataset.
-- `data/sensaldo_lexicon.csv`: större svenskt sentimentlexikon-seed inspirerat av SenSALDO.
+- `data/sensaldo_lexicon.csv`: svenskt sentimentlexikon (utökad till ~58 termer i denna implementation; seed inspirerat av SenSALDO; auto-används nu för callcenter m.fl. profiler).
 - `src/lexicon.py`: negationshantering och enkel svensk sammansättningsfallback.
 - `src/sentiment.py`: regelbaserad negation detection och callcenter-heuristik.
 - `src/profiles.py`: ny `callcenter`-profil.

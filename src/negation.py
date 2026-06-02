@@ -30,6 +30,10 @@ MULTI_WORD_NEGATIONS: list[tuple[str, str]] = [
 NEGATION_REINFORCERS: set[str] = {"alls", "alls.", "heller", "någonsin"}
 NEGATION_WEAKENERS: set[str] = {"kanske", "möjligen", "eventuellt"}
 
+# Intensity for sentiment (amplifiers increase |score|, diminishers decrease)
+AMPLIFIERS: set[str] = {"väldigt", "jätte", "extremt", "super", "mycket", "riktigt", "väldig"}
+DIMINISHERS: set[str] = {"lite", "något", "litegrann", "ganska", "någorlunda"}
+
 
 def tokenize_lower(text: str) -> list[str]:
     """Tokenize text into lowercase words, stripping punctuation."""
@@ -155,13 +159,28 @@ def is_negated_example(text: str) -> bool:
     return any((tokens[i], tokens[i + 1]) in MULTI_WORD_NEGATIONS for i in range(len(tokens) - 1))
 
 
+def get_intensity_multiplier(text: str) -> float:
+    """Return a multiplier >1 for amplifiers, <1 for diminishers (simple scan)."""
+    tokens = set(tokenize_lower(text))
+    if tokens & AMPLIFIERS:
+        return 1.4
+    if tokens & DIMINISHERS:
+        return 0.7
+    return 1.0
+
+
 __all__ = [
     "NEGATION_TERMS",
     "MULTI_WORD_NEGATIONS",
+    "NEGATION_REINFORCERS",
+    "NEGATION_WEAKENERS",
+    "AMPLIFIERS",
+    "DIMINISHERS",
     "detect_negation",
     "detect_negation_with_position",
     "flip_polarity",
     "apply_negation_heuristic",
     "is_negated_example",
     "tokenize_lower",
+    "get_intensity_multiplier",
 ]

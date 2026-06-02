@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ...core.audio import resolve_audio_paths
 from ...core.serialization import map_results_to_segment_dicts, texts_from_segments, utc_now_iso
-from ...lexicon import blend_results_with_lexicon
 from ...sentiment import analyze_smart
 from ..batch import run_batch
 from ..helpers import transcribe_helper
@@ -145,8 +145,9 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
             return_all_scores=True,
             max_length=None,
             clean=True,
+            lexicon_file=req.lexicon_file,
+            lexicon_weight=req.lexicon_weight,
         )
-        results = blend_results_with_lexicon(texts, results, req.lexicon_file, req.lexicon_weight)
         seg_dicts = map_results_to_segment_dicts(texts, results, segments)
         return {"transcript": tr, "segment_sentiments": seg_dicts, "meta": meta}
 
@@ -165,13 +166,11 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
                 items.append(ScanItem(file=path, ok=True, data=result, batch_index=bidx))
                 ok += 1
                 # Record successful processing with current mtime
-                try:
+                with contextlib.suppress(OSError):
                     processed[path] = {
                         "mtime": os.path.getmtime(path),
                         "when": utc_now_iso(trim_microseconds=False),
                     }
-                except OSError:
-                    pass
             else:
                 logger.error("scan_process failed for %s: %s", path, error, exc_info=True)
                 items.append(

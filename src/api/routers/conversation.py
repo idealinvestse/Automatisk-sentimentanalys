@@ -8,7 +8,6 @@ from fastapi import APIRouter, HTTPException
 
 from ...core.audio import resolve_audio_paths
 from ...core.serialization import map_results_to_segment_dicts, texts_from_segments, utc_now_iso
-from ...lexicon import blend_results_with_lexicon
 from ...sentiment import analyze_smart
 from ..batch import run_batch
 from ..helpers import transcribe_helper
@@ -81,12 +80,13 @@ async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConver
             return_all_scores=True,
             max_length=None,
             clean=True,
+            lexicon_file=req.lexicon_file,
+            lexicon_weight=req.lexicon_weight,
         )
     except Exception as e:
         logger.error("Sentiment analysis failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {e}") from e
 
-    results = blend_results_with_lexicon(tr_texts, results, req.lexicon_file, req.lexicon_weight)
     seg_out = _build_segment_sentiments(tr_texts, results, segments)
 
     return AnalyzeConversationResponse(
@@ -147,9 +147,8 @@ async def batch_analyze_conversation(
             return_all_scores=True,
             max_length=None,
             clean=True,
-        )
-        results = blend_results_with_lexicon(
-            tr_texts, results, req.lexicon_file, req.lexicon_weight
+            lexicon_file=req.lexicon_file,
+            lexicon_weight=req.lexicon_weight,
         )
         seg_out = _build_segment_sentiments(tr_texts, results, segments)
         return tr, seg_out, meta

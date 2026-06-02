@@ -23,7 +23,7 @@ def test_analyze_text_happy(monkeypatch):
         return ([{"label": "positiv", "score": 0.88}], {"profile": "default", "model": "fake"})
 
     monkeypatch.setattr("src.api.routers.text.analyze_smart", fake_smart)
-    monkeypatch.setattr("src.api.routers.text.blend_results_with_lexicon", lambda t, r, *a, **k: r)
+    # Note: blend now happens inside analyze_smart (via profile or explicit), no direct call in router
 
     payload = {"texts": ["Det här var fantastiskt!"]}
     r = client.post("/analyze", json=payload)

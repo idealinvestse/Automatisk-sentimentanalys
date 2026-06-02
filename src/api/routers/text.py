@@ -7,7 +7,6 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from ...core.serialization import utc_now_iso
-from ...lexicon import blend_results_with_lexicon
 from ...sentiment import analyze_smart
 from ..schemas import AnalyzeRequest, AnalyzeResponse
 
@@ -40,11 +39,12 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
             return_all_scores=req.return_all_scores,
             max_length=req.max_length,
             clean=req.clean,
+            lexicon_file=req.lexicon_file,
+            lexicon_weight=req.lexicon_weight,
         )
     except Exception as e:
         logger.error("Sentiment analysis failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {e}") from e
 
-    results = blend_results_with_lexicon(req.texts, results, req.lexicon_file, req.lexicon_weight)
     logger.info("Analysis complete – profile=%s model=%s", meta.get("profile"), meta.get("model"))
     return AnalyzeResponse(meta=meta, timestamp=utc_now_iso(), results=results)

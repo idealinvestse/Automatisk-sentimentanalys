@@ -19,7 +19,7 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 | `src/finetune.py` LoRA/PEFT pipeline | ✅ | `fdea2f5` |
 | `configs/finetune.yaml` | ✅ | `fdea2f5` |
 | `data/callcenter_train.csv` (seed, 10 ex) | ✅ | `fdea2f5` |
-| `data/sensaldo_lexicon.csv` (seed, 20 termer) | ✅ | `fdea2f5` |
+| `data/sensaldo_lexicon.csv` (seed, utökad ~58 termer i senare impl) | ✅ | `fdea2f5` |
 | `notebooks/finetune_callcenter.ipynb` | ✅ | `fdea2f5` |
 | Negation detection i `src/sentiment.py` | ✅ | `fdea2f5` |
 | `callcenter`-profil i `src/profiles.py` | ✅ | `fdea2f5` |
@@ -123,7 +123,7 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 **Del 3.1 – Lexikon** 🔶 (seed finns, fullt lexikon återstår)
 - ⬜ Ladda ner och bearbeta **SenSALDO** (eller motsvarande stor svensk lexikon).
 - ⬜ Skapa `data/sensaldo_full.csv` (term, polarity, confidence).
-- ✅ Utöka med call center-specifika termer (seed: 20 termer i `data/sensaldo_lexicon.csv`).
+- ✅ Utöka med call center-specifika termer (seed utökad till ~58 termer; auto i profiler i denna uppdatering).
 
 **Del 3.2 – Förbättrad blending** ✅
 - ✅ Skapa `src/blending.py` med:

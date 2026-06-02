@@ -21,7 +21,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from .lexicon import blend_distributions, load_lexicon, scalar_to_dist, score_text
+from .lexicon import load_lexicon, scalar_to_dist, score_text
 from .profiles import AVAILABLE_PROFILES
 from .sentiment import analyze_smart
 
@@ -114,46 +114,22 @@ def compute_metrics(
 def _heuristic_sentiment(
     texts: list[str],
 ) -> tuple[list[list[dict[str, float | str]]], dict[str, str | int]]:
-    """Offline deterministic fallback used for smoke tests and baseline generation."""
-    positive = {
-        "bra",
-        "fantastiskt",
-        "utmärkt",
-        "nöjd",
-        "tack",
-        "hjälpsam",
-        "snabb",
-        "trygg",
-        "perfekt",
-        "rekommenderar",
-        "älskar",
-    }
-    negative = {
-        "dålig",
-        "sämsta",
-        "uselt",
-        "besviken",
-        "arg",
-        "fel",
-        "trasigt",
-        "försenad",
-        "frustrerad",
-        "katastrof",
-        "aldrig",
-    }
+    """Offline deterministic fallback using lexicon+clean+negation (improved baseline)."""
+    from .clean import clean_texts
+    from .profiles import resolve_profile
+    try:
+        lex = load_lexicon("data/sensaldo_lexicon.csv")
+    except Exception:
+        lex = {}
+    _, spec = resolve_profile(profile="callcenter")
+    proc = clean_texts(texts, spec.get("cleaning", {}))
     results: list[list[dict[str, float | str]]] = []
-    for text in texts:
-        tokens = {tok.strip(".,!?;:()[]\"'").lower() for tok in text.split()}
-        pos = len(tokens & positive)
-        neg = len(tokens & negative)
-        if pos > neg:
-            dist = {"negativ": 0.1, "neutral": 0.2, "positiv": 0.7}
-        elif neg > pos:
-            dist = {"negativ": 0.7, "neutral": 0.2, "positiv": 0.1}
-        else:
-            dist = {"negativ": 0.2, "neutral": 0.6, "positiv": 0.2}
+    for t in proc:
+        s = score_text(t, lex)
+        ln, le, lp = scalar_to_dist(s)
+        dist = {"negativ": ln, "neutral": le, "positiv": lp}
         results.append([{"label": label, "score": score} for label, score in dist.items()])
-    return results, {"profile": "heuristic", "model": "heuristic-swedish-baseline", "max_length": 0}
+    return results, {"profile": "heuristic", "model": "lexicon-heuristic-via-score", "max_length": 0}
 
 
 def run_evaluation(
@@ -191,9 +167,11 @@ def run_evaluation(
             return_all_scores=True,
             max_length=max_length,
             clean=True,
+            lexicon_file=lexicon_file,
+            lexicon_weight=lexicon_weight,
         )
 
-    # Extrahera predictioner och scores
+    # Extrahera predictioner och scores (redan blended om lexicon angavs via analyze_smart)
     y_pred: list[str] = []
     scores_list: list[dict[str, float]] = []
     for inner in results:
@@ -213,22 +191,6 @@ def run_evaluation(
 
         scores_list.append(dist)
         y_pred.append(max(dist.items(), key=lambda kv: kv[1])[0])
-
-    # Lexikon-blending om aktiverat
-    if lexicon_file and lexicon_weight > 0.0:
-        try:
-            lex = load_lexicon(lexicon_file)
-            console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
-            for i, (text, dist) in enumerate(zip(texts, scores_list, strict=False)):
-                s = score_text(text, lex)
-                ln, le, lp = scalar_to_dist(s)
-                blended = blend_distributions(dist, (ln, le, lp), lexicon_weight)
-                scores_list[i] = blended
-                y_pred[i] = max(blended.items(), key=lambda kv: kv[1])[0]
-        except Exception as e:
-            console.print(
-                f"[yellow]Varning: kunde inte blanda lexikon: {e}. Fortsätter utan.[/yellow]"
-            )
 
     proc_time = time.time() - t0
 
