@@ -81,6 +81,9 @@ class Transcriber(Protocol):
         revision: str | None = None,
         diarize: bool = False,
         num_speakers: int | None = 2,
+        hotwords: list[str] | None = None,
+        initial_prompt: str | None = None,
+        preprocess: bool = False,
     ) -> Transcript:
         """Transcribe an audio file and return a Transcript object.
 
@@ -94,5 +97,13 @@ class Transcriber(Protocol):
             revision: Model revision or release variant.
             diarize: Enable speaker diarization.
             num_speakers: Expected number of speakers (None for auto).
+            hotwords: Optional list of domain-specific words to boost (e.g. company terms,
+                      "fakturering", "återbetalning"). Passed to Whisper for better WER on
+                      callcenter vocabulary.
+            initial_prompt: Optional text prompt to condition the decoder (helps with
+                            style, names, expected terminology at the start of the call).
+            preprocess: If True, run optional audio preprocessing (high-pass + noise
+                        reduction if noisereduce installed) before ASR. Improves WER
+                        on noisy call center recordings.
         """
         ...

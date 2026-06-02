@@ -12,6 +12,12 @@ from .registry import get_registered_analyzers, run_analyzers
 from .sentiment import SentimentAnalyzer
 from .summary import SummaryAnalyzer
 from .topics import TopicAnalyzer
+from .aspect import AspectAnalyzer  # Task 1.5
+from .emotion import EmotionAnalyzer  # Task 2.1
+from .role_classifier import RoleAnalyzer  # Task 2.2
+from .trajectory import TrajectoryAnalyzer  # Task 2.3
+from .llm_judge import LLMJudgeAnalyzer  # Task 2.4
+from .spoken_normalizer import SpokenNormalizerAnalyzer  # Task 2.5
 
 __all__ = [
     "Analyzer",
@@ -23,4 +29,10 @@ __all__ = [
     "SummaryAnalyzer",
     "InsightsAnalyzer",
     "PredictiveAnalyzer",
+    "AspectAnalyzer",
+    "EmotionAnalyzer",
+    "RoleAnalyzer",
+    "TrajectoryAnalyzer",
+    "LLMJudgeAnalyzer",
+    "SpokenNormalizerAnalyzer",
 ]

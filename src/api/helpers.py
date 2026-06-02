@@ -23,6 +23,9 @@ def transcribe_helper(
     revision: str | None = None,
     diarize: bool = False,
     num_speakers: int | None = None,
+    hotwords: list[str] | None = None,
+    initial_prompt: str | None = None,
+    preprocess: bool = False,
 ) -> dict[str, Any]:
     """Run ASR transcription and return the result as a plain dict.
 
@@ -32,7 +35,7 @@ def transcribe_helper(
     Args:
         audio_path: Path to the audio file.
         model: ASR model name or alias.
-        backend: ``'faster'`` or ``'transformers'``.
+        backend: ``'faster'`` (default), ``'transformers'`` or ``'whisperx'``.
         device: Device string (``'auto'``, ``'cpu'``, ``'cuda'``, …).
         language: BCP-47 language code (default ``'sv'``).
         beam_size: Beam width for decoding.
@@ -42,6 +45,8 @@ def transcribe_helper(
         revision: KB-Whisper revision (``'standard'``, ``'strict'``, ``'subtitle'``).
         diarize: Whether to run speaker diarization.
         num_speakers: Expected number of speakers.
+        hotwords: Domain words to boost during ASR.
+        initial_prompt: Conditioning prompt for the decoder.
 
     Returns:
         Transcription result as a plain dict (via ``Transcript.to_dict()``).
@@ -57,5 +62,8 @@ def transcribe_helper(
         revision=revision,
         diarize=diarize,
         num_speakers=num_speakers,
+        hotwords=hotwords,
+        initial_prompt=initial_prompt,
+        preprocess=preprocess,
     )
     return transcript.to_dict()

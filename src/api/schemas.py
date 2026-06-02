@@ -57,7 +57,9 @@ class AnalyzeResponse(BaseModel):
 class TranscribeRequest(BaseModel):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
     model: str = Field("kb-whisper-large")
-    backend: str = Field("faster", description="faster | transformers")
+    backend: str = Field(
+        "faster", description="faster | transformers | whisperx (alignment + diarization)"
+    )
     device: str = Field("auto")
     language: str = Field("sv")
     beam_size: int = Field(5, ge=1, le=10)
@@ -67,6 +69,9 @@ class TranscribeRequest(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers (None=auto)")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost (callcenter terms etc.)")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR decoder")
+    preprocess: bool = Field(False, description="Enable audio preprocessing before ASR")
 
     @field_validator("audio_path")
     @classmethod
@@ -89,7 +94,7 @@ class TranscribeResponse(BaseModel):
 class AnalyzeConversationRequest(BaseModel):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
     model: str = Field("kb-whisper-large")
-    backend: str = Field("faster")
+    backend: str = Field("faster", description="faster | transformers | whisperx")
     device: str = Field("auto")
     language: str = Field("sv")
     beam_size: int = Field(5, ge=1, le=10)
@@ -99,6 +104,8 @@ class AnalyzeConversationRequest(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
     return_all_scores: bool = Field(True)
     sentiment_model: str | None = Field(None, description="Optional override for sentiment model")
     lexicon_file: str | None = Field(None)
@@ -184,7 +191,7 @@ class BatchTranscribeRequest(BaseModel):
     worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
     # ASR params
     model: str = Field("kb-whisper-large")
-    backend: str = Field("faster")
+    backend: str = Field("faster", description="faster | transformers | whisperx")
     device: str = Field("auto")
     language: str = Field("sv")
     beam_size: int = Field(5, ge=1, le=10)
@@ -194,6 +201,8 @@ class BatchTranscribeRequest(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
 
 
 class BatchTranscribeItem(BaseModel):
@@ -225,7 +234,7 @@ class BatchAnalyzeConversationRequest(BaseModel):
     worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
     # ASR
     model: str = Field("kb-whisper-large")
-    backend: str = Field("faster")
+    backend: str = Field("faster", description="faster | transformers | whisperx")
     device: str = Field("auto")
     language: str = Field("sv")
     beam_size: int = Field(5, ge=1, le=10)
@@ -235,6 +244,8 @@ class BatchAnalyzeConversationRequest(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
     # Sentiment
     sentiment_model: str | None = Field(None)
     sentiment_batch_size: int = Field(16, ge=1, le=128, description="Batch size for sentiment inference")
@@ -277,7 +288,7 @@ class ScanProcessRequest(BaseModel):
     operation: str = Field("transcribe", description="transcribe | analyze_conversation")
     # ASR
     model: str = Field("kb-whisper-large")
-    backend: str = Field("faster")
+    backend: str = Field("faster", description="faster | transformers | whisperx")
     device: str = Field("auto")
     language: str = Field("sv")
     beam_size: int = Field(5, ge=1, le=10)
@@ -287,6 +298,8 @@ class ScanProcessRequest(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
     # Sentiment (used when operation=analyze_conversation)
     sentiment_model: str | None = Field(None)
     sentiment_batch_size: int = Field(

@@ -47,6 +47,9 @@ async def transcribe(req: TranscribeRequest) -> TranscribeResponse:
             revision=req.revision,
             diarize=req.diarize,
             num_speakers=req.num_speakers,
+            hotwords=getattr(req, "hotwords", None),
+            initial_prompt=getattr(req, "initial_prompt", None),
+            preprocess=getattr(req, "preprocess", False),
         )
     except Exception as e:
         logger.error("Transcription failed for %s: %s", req.audio_path, e, exc_info=True)
@@ -87,6 +90,9 @@ async def batch_transcribe(req: BatchTranscribeRequest) -> BatchTranscribeRespon
             revision=req.revision,
             diarize=req.diarize,
             num_speakers=req.num_speakers,
+            hotwords=getattr(req, "hotwords", None),
+            initial_prompt=getattr(req, "initial_prompt", None),
+            preprocess=getattr(req, "preprocess", False),
         )
 
     raw = run_batch(files, _worker, workers=req.workers, worker_timeout=req.worker_timeout)

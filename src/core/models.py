@@ -43,6 +43,11 @@ class Segment:
     words: list[Word] = field(default_factory=list)
     speaker: str | None = None
     avg_confidence: float | None = None
+    # Task 1.2: explicit confidence + low_confidence flag for downstream
+    # (e.g. higher lexicon weight on uncertain ASR segments). Stored both
+    # at top level (for easy access) and in properties for forward compat.
+    confidence: float | None = None
+    low_confidence: bool = False
     properties: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,6 +62,10 @@ class Segment:
             res["speaker"] = self.speaker
         if self.avg_confidence is not None:
             res["avg_confidence"] = self.avg_confidence
+        if self.confidence is not None:
+            res["confidence"] = self.confidence
+        if self.low_confidence:
+            res["low_confidence"] = True
         if self.properties:
             res["properties"] = self.properties
         return res
@@ -72,6 +81,8 @@ class Segment:
             words=words,
             speaker=data.get("speaker"),
             avg_confidence=data.get("avg_confidence"),
+            confidence=data.get("confidence") or data.get("avg_confidence"),
+            low_confidence=bool(data.get("low_confidence", False)),
             properties=data.get("properties", {}),
         )
 

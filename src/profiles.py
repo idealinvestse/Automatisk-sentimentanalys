@@ -108,6 +108,11 @@ PROFILE_SPECS: dict[str, dict] = {
             "normalize_whitespace": True,
             "lowercase": False,
         },
+        # Task 1.5: aspects enabled by default via AspectAnalyzer registration
+        "aspects": [
+            "kundtjänst_kvalitet", "teknisk_lösning", "fakturering_pris", "väntetid",
+            "agent_attityd", "produkt_kvalitet", "uppföljning", "annat"
+        ],
     },
 }
 

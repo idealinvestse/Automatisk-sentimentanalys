@@ -8,6 +8,8 @@ from functools import lru_cache
 from .base import Transcriber
 from .faster_whisper import FasterWhisperTranscriber
 from .transformers import TransformersTranscriber
+# whisperx is imported lazily inside the factory so that the package is only
+# required when the user actually selects backend="whisperx".
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,8 @@ def _get_cached_transcriber(backend: str, model_name: str, device: str) -> Trans
     kb-whisper-large on CPU + one alternate model).
 
     Args:
-        backend: ``'faster'`` for Faster-Whisper, ``'transformers'`` for HF Transformers.
+        backend: ``'faster'`` for Faster-Whisper, ``'transformers'`` for HF Transformers,
+                 ``'whisperx'`` for WhisperX (alignment + optional diarization).
         model_name: Model name or HuggingFace ID.
         device: Device specification (e.g. ``'auto'``, ``'cpu'``, ``'cuda'``).
 
@@ -38,8 +41,13 @@ def _get_cached_transcriber(backend: str, model_name: str, device: str) -> Trans
         return FasterWhisperTranscriber(model_name=model_name, device=device)
     if b == "transformers":
         return TransformersTranscriber(model_name=model_name, device=device)
+    if b == "whisperx":
+        # Lazy import keeps whisperx an optional dependency
+        from .whisperx import WhisperXTranscriber
+
+        return WhisperXTranscriber(model_name=model_name, device=device)
     raise ValueError(
-        f"Unknown transcription backend '{backend}'. Supported: 'faster', 'transformers'"
+        f"Unknown transcription backend '{backend}'. Supported: 'faster', 'transformers', 'whisperx'"
     )
 
 
@@ -64,7 +72,9 @@ def get_transcriber(
     without reloading the model weights.
 
     Args:
-        backend: ``'faster'`` for Faster-Whisper, ``'transformers'`` for HF Transformers.
+        backend: ``'faster'`` for Faster-Whisper (recommended default for Swedish WER),
+                 ``'transformers'`` for HF Transformers pipeline,
+                 ``'whisperx'`` for WhisperX (superior word alignment + integrated diarization).
         model_name: Model name or HuggingFace ID.
         device: Device specification (e.g. ``'auto'``, ``'cpu'``, ``'cuda'``, ``'mps'``).
 

@@ -271,7 +271,10 @@ def sentiment_cmd(
 def transcribe_cmd(
     inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
     model: str = typer.Option(DEFAULT_ASR_MODEL, help="ASR model name or HuggingFace ID"),
-    backend: str = typer.Option("faster", help="Backend: faster | transformers"),
+    backend: str = typer.Option(
+        "faster",
+        help="ASR backend: faster (default, best Swedish WER via KB-Whisper) | transformers | whisperx (better alignment + integrated diarization)",
+    ),
     device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
     language: str = typer.Option("sv", help="ASR language code (sv)"),
     beam_size: int = typer.Option(5, min=1, max=10),
@@ -286,6 +289,17 @@ def transcribe_cmd(
     num_speakers: int | None = typer.Option(
         None, "--num-speakers", help="Expected number of speakers"
     ),
+    hotwords: str | None = typer.Option(
+        None,
+        "--hotwords",
+        help="Comma or space separated list of domain words to boost (e.g. 'fakturering,återbetalning,acme'). Loaded automatically for callcenter profile if configs/callcenter_hotwords.txt exists.",
+    ),
+    initial_prompt: str | None = typer.Option(
+        None, "--initial-prompt", help="Text prompt to condition the ASR decoder (e.g. expected names or style at start of call)."
+    ),
+    preprocess: bool = typer.Option(
+        False, "--preprocess", help="Enable audio preprocessing (high-pass filter + optional noise reduction) before ASR. Useful for noisy recordings."
+    ),
     output_json: str | None = typer.Option(
         None, help="Optional path to save transcript JSON (single input)"
     ),
@@ -294,7 +308,11 @@ def transcribe_cmd(
     ),
     log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
-    """Transcribe one or many audio files using Faster-Whisper or Transformers ASR."""
+    """Transcribe one or many audio files using Faster-Whisper, Transformers or WhisperX ASR.
+
+    WhisperX backend gives superior word-level timestamps (valuable for aspect
+    evidence spans) and can perform diarization in the same pass.
+    """
     setup_logging(log_level)
     files = resolve_audio_paths(inputs)
     if not files:
@@ -333,6 +351,23 @@ def transcribe_cmd(
             progress.update(task, description=f"[{idx}/{len(files)}] {os.path.basename(path)}")
             t0 = time.time()
             try:
+                # Parse hotwords if provided as comma/space separated string
+                parsed_hotwords: list[str] | None = None
+                if hotwords:
+                    parsed_hotwords = [w.strip() for w in hotwords.replace(",", " ").split() if w.strip()]
+                # Auto-load from configs/callcenter_hotwords.txt if no explicit list given (Task 1.3)
+                if not parsed_hotwords:
+                    default_hw_path = os.path.join("configs", "callcenter_hotwords.txt")
+                    if os.path.exists(default_hw_path):
+                        try:
+                            with open(default_hw_path, encoding="utf-8") as f:
+                                lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
+                            if lines:
+                                parsed_hotwords = lines
+                                console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
+                        except Exception:
+                            pass
+
                 tr_obj = transcriber.transcribe(
                     audio_path=path,
                     language=language,
@@ -343,6 +378,9 @@ def transcribe_cmd(
                     revision=revision,
                     diarize=diarize,
                     num_speakers=num_speakers,
+                    hotwords=parsed_hotwords,
+                    initial_prompt=initial_prompt,
+                    preprocess=preprocess,
                 )
                 tr = tr_obj.to_dict()
                 ok += 1
@@ -403,7 +441,10 @@ def analyze_call_cmd(
     inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
     # ASR settings
     model: str = typer.Option(DEFAULT_ASR_MODEL, help="ASR model name"),
-    backend: str = typer.Option("faster", help="ASR backend: faster | transformers"),
+    backend: str = typer.Option(
+        "faster",
+        help="ASR backend: faster (default, best Swedish WER via KB-Whisper) | transformers | whisperx (better alignment + integrated diarization)",
+    ),
     device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
     language: str = typer.Option("sv", help="ASR language code"),
     beam_size: int = typer.Option(5, min=1, max=10),
@@ -415,6 +456,17 @@ def analyze_call_cmd(
     num_speakers: int | None = typer.Option(
         None, "--num-speakers", help="Expected number of speakers"
     ),
+    hotwords: str | None = typer.Option(
+        None,
+        "--hotwords",
+        help="Comma/space separated domain words to boost in ASR (e.g. fakturering,återbetalning). Auto-loaded for callcenter if config exists.",
+    ),
+    initial_prompt: str | None = typer.Option(
+        None, "--initial-prompt", help="Conditioning prompt for ASR decoder."
+    ),
+    preprocess: bool = typer.Option(
+        False, "--preprocess", help="Enable audio preprocessing (high-pass + noise reduction) before ASR."
+    ),
     # Sentiment settings
     sentiment_model: str = typer.Option(DEFAULT_SENTIMENT_MODEL, help="Sentiment model name"),
     lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
@@ -424,7 +476,11 @@ def analyze_call_cmd(
     ),
     log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
-    """Transcribe Swedish call(s) and perform end-to-end sentiment, intent, and summary analysis."""
+    """Transcribe Swedish call(s) and perform end-to-end sentiment, intent, and summary analysis.
+
+    Supports --backend whisperx for improved alignment and built-in diarization
+    (recommended when you need accurate per-speaker timestamps for trajectory / ABSA).
+    """
     setup_logging(log_level)
     files = resolve_audio_paths(inputs)
     if not files:
@@ -450,9 +506,14 @@ def analyze_call_cmd(
     console.print(f"[cyan]Found {len(files)} audio file(s). Starting analyze-call...[/cyan]")
 
     # Initialize pipeline
+    # NOTE: asr_backend + asr_model are forwarded so that --backend whisperx (and --model)
+    # actually affect the transcription step inside analyze-call. Previously these
+    # CLI flags were accepted but ignored for the full pipeline command.
     pipeline = CallAnalysisPipeline(
         sentiment_model=sentiment_model,
         device=device,
+        asr_backend=backend,
+        asr_model=model,
     )
 
     with Progress(
@@ -468,11 +529,31 @@ def analyze_call_cmd(
             progress.update(task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}")
             try:
                 # Execute pipeline!
+                # Parse hotwords for analyze-call
+                parsed_hotwords: list[str] | None = None
+                if hotwords:
+                    parsed_hotwords = [w.strip() for w in hotwords.replace(",", " ").split() if w.strip()]
+                # Auto-load from configs/callcenter_hotwords.txt if no explicit list given (Task 1.3)
+                if not parsed_hotwords:
+                    default_hw_path = os.path.join("configs", "callcenter_hotwords.txt")
+                    if os.path.exists(default_hw_path):
+                        try:
+                            with open(default_hw_path, encoding="utf-8") as f:
+                                lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
+                            if lines:
+                                parsed_hotwords = lines
+                                console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
+                        except Exception:
+                            pass
+
                 report = pipeline.analyze_audio(
                     audio_path=path,
                     num_speakers=num_speakers,
                     language=language,
                     run_diarization=diarize,
+                    hotwords=parsed_hotwords,
+                    initial_prompt=initial_prompt,
+                    preprocess=preprocess,
                 )
                 report_dict = report.to_dict()
             except Exception as e:
@@ -487,11 +568,15 @@ def analyze_call_cmd(
 
             # Blend lexicon over all segments at once (no-op when use_lex=False)
             seg_texts = [s.get("text", "").strip() for s in segments]
+            # Extract per-segment confidences so that low-confidence ASR segments
+            # automatically receive a boosted lexicon_weight (Task 1.2).
+            seg_confs = [s.get("confidence") or s.get("avg_confidence") for s in segments]
             sentiment_results = blend_results_with_lexicon(
                 seg_texts,
                 sentiment_results,
                 lexicon_file if use_lex else None,
                 lexicon_weight,
+                segment_confidences=seg_confs,
             )
 
             rows = []

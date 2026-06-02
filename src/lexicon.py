@@ -129,7 +129,15 @@ def blend_results_with_lexicon(
     results: list,
     lexicon_file: str | None,
     lexicon_weight: float,
+    segment_confidences: list[float | None] | None = None,
 ) -> list:
+    """Blend model results with lexicon.
+
+    When ``segment_confidences`` is provided, low-confidence segments
+    (confidence < ~0.60) receive an automatically boosted lexicon weight
+    (up to 1.0). This implements the call-center requirement that uncertain
+    ASR output should lean more on the trustworthy Swedish lexicon.
+    """
     """Blend a list of model sentiment results with lexicon scores.
 
     This is the high-level helper used by the API and CLI layers.  It handles
@@ -164,7 +172,10 @@ def blend_results_with_lexicon(
         lex = load_lexicon(lexicon_file)
         blended: list = []
         full_distribution = bool(results and isinstance(results[0], list))
-        for text, result in zip(texts, results, strict=False):
+        n = len(texts)
+        confs = segment_confidences or [None] * n
+
+        for idx, (text, result) in enumerate(zip(texts, results, strict=False)):
             if full_distribution:
                 scores: dict[str, float] = {
                     entry.get("label"): float(entry.get("score", 0.0) or 0.0)
@@ -187,8 +198,18 @@ def blend_results_with_lexicon(
             for lbl in ("negativ", "neutral", "positiv"):
                 scores.setdefault(lbl, 0.0)
 
+            # Per-segment lexicon weight boost for low ASR confidence (Task 1.2)
+            eff_weight = lexicon_weight
+            c = confs[idx] if idx < len(confs) else None
+            if c is not None and c < 0.60:
+                # Boost lexicon trust when the acoustic model is uncertain.
+                # The boost is capped so we never go completely lexicon-only unless
+                # the caller already asked for lexicon_weight=1.0.
+                boost = (0.60 - float(c)) * 1.5
+                eff_weight = min(1.0, lexicon_weight + boost)
+
             lex_dist = scalar_to_dist(score_text(text, lex))
-            scores = blend_distributions(scores, lex_dist, lexicon_weight)
+            scores = blend_distributions(scores, lex_dist, eff_weight)
 
             if full_distribution:
                 blended.append([

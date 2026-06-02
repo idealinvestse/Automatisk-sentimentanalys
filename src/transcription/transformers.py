@@ -83,6 +83,9 @@ class TransformersTranscriber:
         revision: str | None = None,
         diarize: bool = False,
         num_speakers: int | None = 2,
+        hotwords: list[str] | None = None,
+        initial_prompt: str | None = None,
+        preprocess: bool = False,
     ) -> Transcript:
         """Transcribe audio file using Hugging Face Transformers."""
         t0 = time.time()
@@ -97,14 +100,27 @@ class TransformersTranscriber:
             revision = None
 
         logger.info(
-            "ASR (transformers) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | chunk=%ds",
+            "ASR (transformers) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | chunk=%ds | hotwords=%s | prompt=%s | preprocess=%s",
             audio_path,
             self.model_name,
             revision or "default",
             self.device,
             language,
             chunk_length_s,
+            bool(hotwords),
+            bool(initial_prompt),
+            preprocess,
         )
+
+        # Preprocessing (Task 1.4)
+        asr_audio_path = audio_path
+        if preprocess:
+            try:
+                from .preprocess import maybe_preprocess
+
+                asr_audio_path = maybe_preprocess(audio_path, preprocess=True)
+            except Exception as e:
+                logger.warning("Preprocessing failed for transformers backend: %s", e)
 
         try:
             asr_pipeline = self._get_pipeline(revision=revision)
@@ -119,8 +135,16 @@ class TransformersTranscriber:
             if beam_size != 5:
                 generate_kwargs["num_beams"] = beam_size
 
+            # Hotwords and initial_prompt are primarily for faster-whisper / WhisperX.
+            # We forward them for completeness; the HF pipeline may ignore or partially support
+            # via generate config (best-effort for transformers backend).
+            if initial_prompt:
+                generate_kwargs["initial_prompt"] = initial_prompt
+            if hotwords:
+                generate_kwargs["hotwords"] = hotwords  # may be used by custom processors
+
             t_call = time.time()
-            out = asr_pipeline(audio_path, **generate_kwargs)
+            out = asr_pipeline(asr_audio_path, **generate_kwargs)
             logger.info(
                 "ASR backend call finished (transformers) | call_time=%.2fs", time.time() - t_call
             )
@@ -150,6 +174,7 @@ class TransformersTranscriber:
                     if words:
                         avg_conf = float(sum(w.prob for w in words) / max(1, len(words)))
 
+                    low_conf = avg_conf is not None and avg_conf < 0.60
                     segs.append(
                         Segment(
                             start=start,
@@ -157,6 +182,8 @@ class TransformersTranscriber:
                             text=text,
                             words=words,
                             avg_confidence=avg_conf,
+                            confidence=avg_conf,
+                            low_confidence=low_conf,
                         )
                     )
             else:
@@ -169,6 +196,8 @@ class TransformersTranscriber:
                         text=text_val,
                         words=[],
                         avg_confidence=None,
+                        confidence=None,
+                        low_confidence=False,
                     )
                 )
 

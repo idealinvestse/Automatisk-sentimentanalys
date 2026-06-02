@@ -28,8 +28,9 @@ class CallAnalysisPipeline:
         hf_token: HuggingFace token (required for pyannote diarization).
         device: 'cpu', 'cuda', or 'auto'.
         profile: Sentiment profile (e.g., 'callcenter', 'default').
-        asr_backend: ASR backend to use ('faster', 'transformers', etc.).
+        asr_backend: ASR backend to use ('faster' (default), 'transformers', 'whisperx').
         asr_model: ASR model name or alias (e.g., 'kb-whisper-large').
+        Note: 'whisperx' provides word-level alignment and optional integrated diarization.
     """
 
     def __init__(
@@ -75,6 +76,9 @@ class CallAnalysisPipeline:
         language: str = "sv",
         run_diarization: bool = True,
         selected_analyzers: list[str] | None = None,
+        hotwords: list[str] | None = None,
+        initial_prompt: str | None = None,
+        preprocess: bool = False,
     ) -> CallAnalysisReport:
         """Analyze a call from an audio file.
 
@@ -102,6 +106,9 @@ class CallAnalysisPipeline:
                 language=language,
                 diarize=run_diarization,
                 num_speakers=num_speakers,
+                hotwords=hotwords,
+                initial_prompt=initial_prompt,
+                preprocess=preprocess,
             )
         except Exception as e:
             logger.error("Transcription or ASR initialization failed for %s: %s", audio_path, e)
@@ -181,6 +188,8 @@ class CallAnalysisPipeline:
                     text=str(s.get("text", "")),
                     speaker=s.get("speaker"),
                     avg_confidence=s.get("avg_confidence"),
+                    confidence=s.get("confidence") or s.get("avg_confidence"),
+                    low_confidence=bool(s.get("low_confidence", False)),
                 )
             )
 
