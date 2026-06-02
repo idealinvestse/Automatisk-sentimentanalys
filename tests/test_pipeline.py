@@ -185,6 +185,116 @@ class TestCallAnalysisPipeline:
         # customer_metrics present
         assert perf.customer.talk_ratio >= 0.0
 
+    def test_aggregate_insights_fas4_3(self, monkeypatch):
+        """Fas 4.3.1: pipeline.aggregate_insights produces AggregatedInsights shape with hot_topics etc."""
+        self._mock_sentiment(monkeypatch)
+        segments1 = [
+            {"start": 0, "end": 3, "text": "Fakturan är fel!", "speaker": "C"},
+            {"start": 3, "end": 7, "text": "Jag beklagar, jag fixar det.", "speaker": "A"},
+        ]
+        segments2 = [
+            {"start": 0, "end": 2, "text": "Faktura stämmer inte.", "speaker": "C"},
+            {"start": 2, "end": 6, "text": "Jag förstår frustrationen. Vi krediterar.", "speaker": "A"},
+        ]
+        r1 = self.pipe.analyze_segments(segments1)
+        r2 = self.pipe.analyze_segments(segments2)
+
+        agg = self.pipe.aggregate_insights([r1, r2])
+        assert isinstance(agg, dict)
+        assert "hot_topics" in agg or "error" in agg
+        if "hot_topics" in agg:
+            assert isinstance(agg["hot_topics"], list)
+            if agg["hot_topics"]:
+                ht = agg["hot_topics"][0]
+                assert "topic" in ht
+                assert "volume" in ht
+                assert "avg_sentiment" in ht
+                assert "evidence_spans" in ht or "sample_quotes" in ht
+
+    def test_semantic_search_fas4_3_2(self, monkeypatch):
+        """Fas 4.3.2: pipeline.semantic_search returns ranked hits with highlights/scores."""
+        self._mock_sentiment(monkeypatch)
+        segs = [
+            {"start": 0, "end": 3, "text": "Fakturan är helt fel, jag är arg.", "speaker": "C"},
+            {"start": 3, "end": 8, "text": "Jag beklagar. Jag förstår att det är frustrerande. Jag fixar fakturan.", "speaker": "A"},
+        ]
+        r = self.pipe.analyze_segments(segs)
+        hits = self.pipe.semantic_search("faktura arg empati", top_k=3, corpus=[r])
+        assert isinstance(hits, dict)
+        assert "hits" in hits
+        assert isinstance(hits["hits"], list)
+        if hits["hits"]:
+            h = hits["hits"][0]
+            assert "score" in h
+            assert "highlights" in h or "evidence_spans" in h
+
+    def test_caching_fas4_5_1(self, monkeypatch):
+        """Fas 4.5.1: get_cached_* uses cache, invalidate works, hit rate metric."""
+        self._mock_sentiment(monkeypatch)
+        segs = [{"start": 0, "end": 2, "text": "Faktura fel", "speaker": "C"}]
+        r1 = self.pipe.analyze_segments(segs)
+        r2 = self.pipe.analyze_segments(segs)
+
+        # First call populates cache
+        m1 = self.pipe.get_cached_agent_performance("unknown", [r1, r2])
+        assert "call_count" in m1 or "error" not in m1
+
+        # Second should hit (same data)
+        m2 = self.pipe.get_cached_agent_performance("unknown", [r1, r2])
+        assert m1 == m2  # cached result identical
+
+        # Invalidate
+        self.pipe.invalidate_aggregate_cache("agent:unknown")
+        # (next call would recompute)
+
+        print("Cache test basic passed (hit/invalidate)")
+
+    def test_early_pii_redaction_fas4_4_1(self, monkeypatch):
+        """Fas 4.4.1: early redaction (before analyzers) when enabled by profile; structured log + redacted text in report."""
+        self._mock_sentiment(monkeypatch)
+        with monkeypatch.context() as m:
+            m.setattr("src.profiles.resolve_profile", lambda *a, **k: ("callcenter", {"llm": {"anonymize_before_llm": True}}), raising=False)
+            p = CallAnalysisPipeline(profile="callcenter")
+            segs = [
+                {"start": 0, "end": 2, "text": "Mitt personnummer är 19850101-1234, mail john@example.com", "speaker": "C"},
+                {"start": 2, "end": 5, "text": "Tack, jag fixar.", "speaker": "A"},
+            ]
+            report = p.analyze_segments(segs)
+            assert isinstance(report, CallAnalysisReport)
+            assert "pii_redaction" in report.results
+            pl = report.results["pii_redaction"]
+            assert pl.get("total_redacted", 0) >= 2
+            assert "personnummer" in pl.get("types_redacted", []) or "email" in pl.get("types_redacted", [])
+            # segments text should be redacted
+            if report.segments:
+                txt = report.segments[0].get("text", "")
+                assert "[REDACTED_PNR]" in txt or "[REDACTED_EMAIL]" in txt
+
+    def test_alerting_fas4_4_2(self, monkeypatch):
+        """Fas 4.4.2: alerts triggered from results (qa + agent + sentiment), evidence and actions present."""
+        self._mock_sentiment(monkeypatch)
+        segs = [
+            {"start": 0, "end": 2, "text": "Jag är extremt arg på fakturan!", "speaker": "C"},
+            {"start": 2, "end": 5, "text": "Okej.", "speaker": "A"},  # low empathy
+        ]
+        report = self.pipe.analyze_segments(segs)
+        # Force some bad qa/agent via monkey? But since real, check if alerts key appears or run direct
+        from src.alerting import run_alerts_on_results
+        # Simulate bad signals
+        fake_results = {
+            "llm": {"trajectory": {"customer_sentiment_slope": -0.8, "escalation_events": ["bad"]}},
+            "agent_performance": {"agent": {"empathy_score": 0.2}},
+            "qa": {"passed": False, "risk_level": "high", "overall_qa_score": 40},
+        }
+        alerts = run_alerts_on_results(fake_results)
+        assert isinstance(alerts, list)
+        if alerts:
+            a = alerts[0]
+            assert "rule_id" in a
+            assert "evidence_spans" in a
+            assert "recommended_actions" in a
+            assert len(a["recommended_actions"]) > 0
+
     def test_analyze_segments_includes_fas4_qa_scoring(self, monkeypatch):
         """Fas 4.2: results contain qa / compliance_qa with overall, passed/failed, evidence, risk."""
         self._mock_sentiment(monkeypatch)

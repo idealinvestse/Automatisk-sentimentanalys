@@ -77,6 +77,10 @@ class CallAnalysisPipeline:
             # Profile system optional for pure LLM usage; non-fatal
             pass
 
+        # Fas 4.5.1: Advanced caching / pre-computation (file by default, Redis optional)
+        from .caching import AggregateCache
+        self.cache = AggregateCache(use_redis=False)  # set True + redis_url for prod
+
     def _build_analyzer_configs(self) -> dict[str, dict[str, Any]]:
         """Build per-analyzer configuration from pipeline settings.
 
@@ -192,6 +196,30 @@ class CallAnalysisPipeline:
                 diarization={"segments": [], "backend": "failed", "error": str(e)},
             )
 
+        # --- Fas 4.4.1: Early PII Redaction (before ANY local analyzers or LLM) ---
+        # Privacy by design: if profile enables anonymize_before_llm, redact here so that
+        # local analysis (sentiment, role, intent, etc.) + LLM + final report all see masked data.
+        # Detailed log (what/where/type) is attached to results["pii_redaction"] for audit.
+        pii_log = None
+        try:
+            from .llm.pii_redactor import redact_segments
+
+            seg_dicts = [s.to_dict() for s in transcript.segments]
+            redacted_dicts, pii_log = redact_segments(
+                seg_dicts, profile_name=self.profile, return_log=True
+            )
+            if pii_log and pii_log.total_redacted > 0:
+                logger.info(
+                    "Fas 4.4.1 PII redaction (early): %d events, types=%s. Redacted text used for local analysis + LLM + report.",
+                    pii_log.total_redacted, pii_log.types_redacted
+                )
+            # Rebuild segments with redacted text (if any redactions happened)
+            if pii_log and pii_log.total_redacted > 0:
+                transcript.segments = [Segment.from_dict(d) for d in redacted_dicts]
+        except Exception as e:
+            logger.debug("Early PII redaction skipped or failed (non-fatal): %s", e)
+            pii_log = None
+
         # 2. Create context and run text analysis
         ctx = AnalysisContext(
             transcript=transcript,
@@ -203,6 +231,10 @@ class CallAnalysisPipeline:
             selected=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
         )
+
+        # Attach early PII redaction log (if any) to results for audit / downstream (Fas 4.4.1)
+        if pii_log is not None and pii_log.total_redacted > 0:
+            results["pii_redaction"] = pii_log.model_dump()
 
         # Pre-extract role for Fas 4.1/4.2 (supports richer output from extended role_classifier)
         role_res = results.get("role") or {}
@@ -305,6 +337,19 @@ class CallAnalysisPipeline:
             logger.warning("Fas 4.2 QA scoring failed (non-fatal): %s", e)
             results["qa"] = {"error": str(e), "overall_qa_score": 0.0, "passed": False}
 
+        # --- Fas 4.4.2: Alerting & Workflow Engine (explicit integration) ---
+        # Regelbaserade alerts från Fas4 data (sentiment, agent, qa, aggregator).
+        # Producerar evidence-based Alerts med recommended_actions.
+        # Kan triggas per call eller från aggregate_insights().
+        try:
+            from .alerting import run_alerts_on_results
+            alerts = run_alerts_on_results(results)
+            if alerts:
+                results["alerts"] = alerts
+                logger.info("Fas 4.4.2 alerts triggered: %d (highest severity in first)", len(alerts))
+        except Exception as e:
+            logger.warning("Fas 4.4.2 alerting failed (non-fatal): %s", e)
+
         proc_time = round(time.time() - t0, 2)
 
         # 3. Construct backwards-compatible report
@@ -364,6 +409,26 @@ class CallAnalysisPipeline:
                 )
             )
 
+        # --- Fas 4.4.1: Early PII Redaction (segments path, before analyzers/LLM) ---
+        pii_log = None
+        try:
+            from .llm.pii_redactor import redact_segments
+
+            seg_dicts = [s.to_dict() for s in typed_segments]
+            redacted_dicts, pii_log = redact_segments(
+                seg_dicts, profile_name=self.profile, return_log=True
+            )
+            if pii_log and pii_log.total_redacted > 0:
+                logger.info(
+                    "Fas 4.4.1 PII redaction (early, segments): %d events, types=%s",
+                    pii_log.total_redacted, pii_log.types_redacted
+                )
+            if pii_log and pii_log.total_redacted > 0:
+                typed_segments = [Segment.from_dict(d) for d in redacted_dicts]
+        except Exception as e:
+            logger.debug("Early PII redaction (segments) skipped: %s", e)
+            pii_log = None
+
         # Create context and run text analysis
         ctx = AnalysisContext(
             transcript=None,
@@ -375,6 +440,10 @@ class CallAnalysisPipeline:
             selected=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
         )
+
+        # Attach early PII redaction log (segments path)
+        if pii_log is not None and pii_log.total_redacted > 0:
+            results["pii_redaction"] = pii_log.model_dump()
 
         # Pre-extract role for 4.1/4.2 (supports richer output from extended role_classifier)
         role_res = results.get("role") or {}
@@ -457,6 +526,19 @@ class CallAnalysisPipeline:
             logger.warning("Fas 4.2 QA (segments) failed (non-fatal): %s", e)
             results["qa"] = {"error": str(e), "overall_qa_score": 0.0, "passed": False}
 
+        # --- Fas 4.4.2: Alerting & Workflow Engine (explicit integration) ---
+        # Regelbaserade alerts från Fas4 data (sentiment, agent, qa, aggregator).
+        # Producerar evidence-based Alerts med recommended_actions.
+        # Kan triggas per call eller från aggregate_insights().
+        try:
+            from .alerting import run_alerts_on_results
+            alerts = run_alerts_on_results(results)
+            if alerts:
+                results["alerts"] = alerts
+                logger.info("Fas 4.4.2 alerts triggered: %d (highest severity in first)", len(alerts))
+        except Exception as e:
+            logger.warning("Fas 4.4.2 alerting failed (non-fatal): %s", e)
+
         proc_time = round(time.time() - t0, 2)
 
         return CallAnalysisReport(
@@ -474,3 +556,127 @@ class CallAnalysisPipeline:
             results=results,
             llm=llm_result,
         )
+
+    # ------------------------------------------------------------------
+    # Fas 4.3: Explicit batch aggregation integration (Insights Aggregator)
+    # ------------------------------------------------------------------
+    def aggregate_insights(
+        self,
+        reports: list[CallAnalysisReport],
+    ) -> dict[str, Any]:
+        """Aggregate multiple per-call reports into cross-call insights (Fas 4.3.1).
+
+        Explicit integration point as required by the plan:
+            - Called from pipeline after collecting several CallAnalysisReport (batch jobs, dashboard backend, etc.).
+            - Uses the new Pydantic AggregatedInsights (hot_topics with evidence_spans, trends, clusters, agent issues).
+            - If self.use_mistral_llm / deep_analysis, passes a Mistral analyzer so that hot topic / cluster descriptions can be LLM-enriched (documented inside aggregator).
+            - Output is directly mergable / storable (e.g. attach to a "batch" result or API response).
+
+        Example usage (outside this file):
+            pipe = CallAnalysisPipeline(profile="callcenter", use_mistral_llm=True)
+            reports = [pipe.analyze_audio(p) for p in call_files]
+            agg = pipe.aggregate_insights(reports)
+            # agg["hot_topics"] contains volume, sentiment, trend, evidence_spans + optional llm_summary
+
+        See src/insights_aggregator.py for full details, fallbacks, caching, and privacy notes.
+        """
+        try:
+            from .insights_aggregator import aggregate_call_reports
+            from .llm.mistral_analyzer import ConversationMistralAnalyzer
+
+            mistral = None
+            if self.use_mistral_llm or self.deep_analysis:
+                mistral = ConversationMistralAnalyzer(model=self.llm_model)
+                logger.info("Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)")
+
+            agg_dict = aggregate_call_reports(reports, mistral_analyzer=mistral)
+            logger.info(
+                "Fas 4.3 aggregate_insights complete | calls=%d hot_topics=%d",
+                len(reports),
+                len(agg_dict.get("hot_topics", [])),
+            )
+
+            # Also run alerting on aggregator output (per plan 4.4.2: trend-based alerts)
+            try:
+                from .alerting import AlertEngine
+                eng = AlertEngine()
+                agg_alerts = eng.check_from_aggregate(agg_dict)
+                if agg_alerts:
+                    agg_dict["alerts_from_trends"] = [a.model_dump() if hasattr(a, "model_dump") else a for a in agg_alerts]
+            except Exception:
+                pass
+
+            return agg_dict
+        except Exception as e:
+            logger.warning("Fas 4.3 aggregate_insights failed (non-fatal): %s", e)
+            return {"error": str(e), "hot_topics": [], "meta": {"num_calls": len(reports)}}
+
+    def semantic_search(
+        self,
+        query: str,
+        top_k: int = 5,
+        filters: dict[str, Any] | None = None,
+        corpus: list[CallAnalysisReport] | list[dict] | None = None,
+    ) -> dict[str, Any]:
+        """Fas 4.3.2: Hybrid semantic + keyword search over call data.
+
+        Explicit integration:
+            hits = pipe.semantic_search("faktura AND låg empati", top_k=5, corpus=reports)
+            # Returns Pydantic-like dict with hits containing score, highlights, evidence_spans, metadata.
+
+        If corpus is None, builds a trivial index (not recommended for large use; pass pre-built reports).
+        Uses optional embeddings/FAISS for vector part + keyword boost.
+        """
+        try:
+            from .semantic_search import SemanticSearchEngine, build_semantic_index_from_reports
+
+            if corpus:
+                engine = build_semantic_index_from_reports(corpus)
+            else:
+                engine = SemanticSearchEngine()
+                # minimal empty
+            res = engine.search(query, top_k=top_k, filters=filters or {})
+            logger.info("Fas 4.3.2 semantic_search | q=%s hits=%d", query[:50], len(res.hits))
+            return res.model_dump()
+        except Exception as e:
+            logger.warning("Fas 4.3.2 semantic_search failed: %s", e)
+            return {"query": query, "hits": [], "meta": {"error": str(e)}}
+
+    # ------------------------------------------------------------------
+    # Fas 4.5.1: Pre-computation & Advanced Caching (explicit integration)
+    # ------------------------------------------------------------------
+    def get_cached_agent_performance(
+        self,
+        agent_id: str,
+        reports: list[CallAnalysisReport],
+        window: str = "7d",
+    ) -> dict[str, Any]:
+        """Pre-computed + cached agent metrics (Fas 4.5.1).
+
+        Uses general AggregateCache (file/Redis). Invalidation: new calls for this agent
+        should call self.cache.invalidate(f"agent:{agent_id}") or use time-bucketed keys.
+
+        Example (dashboard):
+            metrics = pipe.get_cached_agent_performance("Agent-5", recent_reports)
+            # fast even if 10000 calls in reports
+        """
+        from .caching import precompute_agent_aggregates
+        return precompute_agent_aggregates(
+            reports, cache=self.cache, agent_id=agent_id, window=window
+        )
+
+    def get_cached_hot_topics(
+        self,
+        reports: list[CallAnalysisReport],
+        window: str = "7d",
+    ) -> dict[str, Any]:
+        """Pre-computed + cached hot topics/trends (Fas 4.5.1).
+
+        Smart invalidation strategy documented in src/caching.py.
+        """
+        from .caching import precompute_hot_topics
+        return precompute_hot_topics(reports, cache=self.cache, window=window)
+
+    def invalidate_aggregate_cache(self, prefix: str):
+        """Explicit invalidation hook (call on new call data for agent or scheduled)."""
+        self.cache.invalidate(prefix)

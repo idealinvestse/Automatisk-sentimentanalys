@@ -97,6 +97,71 @@ def test_analyze_pipeline_happy(monkeypatch):
         assert "timestamp" in data
 
 
+def test_agent_performance_endpoint(monkeypatch):
+    fake_metrics = {"call_count": 2, "averages": {"empathy_score": 0.75}}
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        fake_report = MagicMock()
+        inst.analyze_segments.return_value = fake_report
+        inst.get_cached_agent_performance.return_value = fake_metrics
+        r = client.post(
+            "/agent_performance/Agent-1",
+            json={"segments_list": [[{"text": "Hej", "start": 0, "end": 1}]], "agent_id": "Agent-1"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["agent_id"] == "Agent-1"
+        assert "metrics" in data
+
+
+def test_semantic_search_endpoint(monkeypatch):
+    fake_hits = {"hits": [{"id": "0", "score": 0.9, "highlights": ["test"]}], "meta": {}}
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = MagicMock()
+        inst.semantic_search.return_value = fake_hits
+        r = client.post(
+            "/search/semantic",
+            json={"segments_list": [[{"text": "test"}]], "query": "test query"},
+        )
+        assert r.status_code == 200
+        assert "hits" in r.json()
+
+
+def test_hot_topics_endpoint(monkeypatch):
+    fake_topics = {"hot_topics": [{"topic": "faktura", "volume": 5}], "meta": {}}
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = MagicMock()
+        inst.get_cached_hot_topics.return_value = fake_topics
+        r = client.post("/insights/hot_topics", json={"segments_list": [[{"text": "faktura"}]]})
+        assert r.status_code == 200
+        assert "hot_topics" in r.json()
+
+
+def test_qa_score_endpoint(monkeypatch):
+    fake_qa = {"overall_qa_score": 85, "passed": True}
+    fake_report = MagicMock()
+    fake_report.results = {"qa": fake_qa}
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = fake_report
+        r = client.post("/qa/score", json={"segments": [{"text": "hej", "start": 0, "end": 1}]})
+        assert r.status_code == 200
+        assert "qa" in r.json()
+
+
+def test_alerts_endpoint(monkeypatch):
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        fake_report = MagicMock()
+        fake_report.results = {"alerts": [{"rule_id": "test", "severity": "high"}]}
+        inst.analyze_segments.return_value = fake_report
+        r = client.post("/alerts", json={"segments_list": [[{"text": "arg"}]]})
+        assert r.status_code == 200
+        assert "alerts" in r.json()
+
+
 def test_run_batch_sequential_and_timeout_per_task():
     """Direct test of the batch helper (covers the per-file timeout fix)."""
     from src.api.batch import run_batch

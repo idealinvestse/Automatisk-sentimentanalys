@@ -245,6 +245,119 @@ class AgentMetrics(BaseModel):
     total_talk_time_s: float = Field(0.0, ge=0.0, description="Total duration of all segments (agent+customer) as proxy for call length.")
 
 
+# =============================================================================
+# Fas 4.3: Aggregated insights models (Pydantic, mergable into report or separate aggregate output)
+# =============================================================================
+
+class HotTopic(BaseModel):
+    """A hot topic aggregated across multiple calls (Fas 4.3.1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    topic: str = Field(..., description="Key e.g. 'fakturering_pris', 'leverans', 'agent_attityd'")
+    volume: int = Field(..., ge=0, description="Number of calls mentioning this topic")
+    avg_sentiment: float = Field(..., ge=-1.0, le=1.0)
+    trend: str = Field("stable", description="up | down | stable (based on time or volume change)")
+    evidence_spans: list[EvidenceSpan] = Field(
+        default_factory=list, description="Concrete quotes from representative calls."
+    )
+    sample_quotes: list[str] = Field(default_factory=list)
+    llm_summary: str | None = Field(
+        None, description="Optional nuanced description generated via Mistral (when available)."
+    )
+
+
+class AggregatedInsights(BaseModel):
+    """Output from InsightsAggregator. Can be stored separately or attached to batch results."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    hot_topics: list[HotTopic] = Field(default_factory=list, description="Top hot topics with volume, sentiment, trend, evidence")
+    sentiment_trends: dict[str, Any] = Field(
+        default_factory=dict, description="Overall sentiment slope, buckets over time, per topic trends"
+    )
+    root_cause_clusters: list[dict[str, Any]] = Field(
+        default_factory=list, description="Clustered root causes (with size, representative evidence)"
+    )
+    top_agent_issues: list[dict[str, Any]] = Field(
+        default_factory=list, description="Issues per agent or team (from agent_performance + assessments)"
+    )
+    meta: dict[str, Any] = Field(
+        default_factory=dict,
+        description="num_calls, time_window, generated_at, llm_used_for_descriptions, embedding_model etc.",
+    )
+
+
+# =============================================================================
+# Fas 4.4.1: PII Redaction Log (structured, evidence-based, for audit + results merge)
+# =============================================================================
+
+class PiiRedactionEvent(BaseModel):
+    """A single PII redaction event (for logging and audit)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = Field(..., description="personnummer | email | phone | credit_card | address | name | other")
+    original: str = Field(..., description="The original matched text (truncated for log safety).")
+    replacement: str = Field(..., description="The token used, e.g. [REDACTED_PNR]")
+    segment_index: int | None = Field(None, description="Index in the segment list.")
+    char_start: int | None = Field(None)
+    char_end: int | None = Field(None)
+
+
+class PiiRedactionLog(BaseModel):
+    """Structured log of all PII redactions performed on a call (early pipeline, Fas 4.4.1).
+
+    Attached to CallAnalysisReport.results["pii_redaction"] when applied.
+    Allows QA/audit to know exactly what was masked without exposing the PII.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    events: list[PiiRedactionEvent] = Field(default_factory=list)
+    total_redacted: int = Field(0, description="Total number of PII items redacted.")
+    types_redacted: list[str] = Field(default_factory=list, description="Unique types found (e.g. ['personnummer', 'email']).")
+    applied_to_local: bool = Field(True, description="Whether redaction affected local analyzers (sentiment, role, etc) and not only LLM.")
+    profile: str = "default"
+    timestamp: str = Field(default_factory=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat())
+
+
+# =============================================================================
+# Fas 4.4.2: Alerting models (Pydantic, evidence-based, mergable into results["alerts"])
+# =============================================================================
+
+class Alert(BaseModel):
+    """A triggered alert (Fas 4.4.2). Actionable with evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rule_id: str = Field(..., description="Identifier for the rule that triggered, e.g. 'high_escalation_risk'")
+    severity: str = Field("medium", description="low | medium | high | critical")
+    message: str = Field(..., description="Human readable Swedish description of the alert.")
+    evidence_spans: list[EvidenceSpan] = Field(
+        default_factory=list, description="Concrete transcript parts that caused the alert."
+    )
+    triggered_values: dict[str, Any] = Field(
+        default_factory=dict, description="The values that matched the rule, e.g. {'customer_sentiment': -0.8, 'escalation_risk': 0.7}"
+    )
+    recommended_actions: list[str] = Field(
+        default_factory=list,
+        description="Actionable next steps, e.g. ['flag_supervisor', 'create_coaching_task:empathy', 'notify_webhook']"
+    )
+    source: str = Field("per_call", description="per_call | aggregator_trend | batch")
+
+
+class AlertSummary(BaseModel):
+    """Summary of alerts for a call or batch."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    alerts: list[Alert] = Field(default_factory=list)
+    highest_severity: str = "none"
+    total: int = 0
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
 class CustomerMetrics(BaseModel):
     """Customer-side signals (symmetric to agent for context in coaching)."""
 

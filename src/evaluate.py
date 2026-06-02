@@ -676,6 +676,57 @@ def compute_coaching_precision(coaching_recs: list[dict[str, Any]], human_judged
     return {"precision": round(with_ev / len(coaching_recs), 3), "n": len(coaching_recs), "note": "heuristic: has_evidence"}
 
 
+def compute_hot_topic_recall(aggregated: dict[str, Any], expected_topics: list[str]) -> dict[str, float]:
+    """Fas 4.3 KPI stub: recall of hot topics identified by the aggregator.
+
+    Simple set-overlap between produced hot_topics and a gold list of expected topics.
+    """
+    produced = {ht.get("topic", "").lower() for ht in aggregated.get("hot_topics", []) if isinstance(ht, dict)}
+    gold = {t.lower() for t in expected_topics}
+    if not gold:
+        return {"recall": 0.0, "n_gold": 0}
+    hit = len(produced & gold)
+    return {"recall": round(hit / len(gold), 3), "n_gold": len(gold), "n_produced": len(produced)}
+
+
+def compute_pii_redaction_coverage(pii_log: dict[str, Any] | None, expected_pii_types: list[str] | None = None) -> dict[str, float]:
+    """Fas 4.4.1 KPI stub: coverage / recall of PII types redacted.
+
+    If expected_pii_types given, measures how many of the expected sensitive types were caught.
+    """
+    if not pii_log or not pii_log.get("events"):
+        return {"coverage": 0.0, "n_events": 0}
+    found_types = {e.get("type") for e in pii_log.get("events", []) if isinstance(e, dict)}
+    if not expected_pii_types:
+        return {"coverage": 1.0 if found_types else 0.0, "n_events": len(pii_log.get("events", []))}
+    gold = set(expected_pii_types)
+    hit = len(found_types & gold)
+    return {"coverage": round(hit / len(gold), 3) if gold else 0.0, "n_events": len(pii_log.get("events", []))}
+
+
+def compute_alert_trigger_rate(alerts: list[dict[str, Any]], total_calls: int) -> dict[str, float]:
+    """Fas 4.4.2 KPI stub: fraction of calls that generated alerts, plus severity breakdown."""
+    if not total_calls:
+        return {"trigger_rate": 0.0, "n_alerts": 0}
+    n_alerts = len(alerts)
+    by_sev = {}
+    for a in alerts:
+        sev = a.get("severity", "medium")
+        by_sev[sev] = by_sev.get(sev, 0) + 1
+    return {
+        "trigger_rate": round(n_alerts / total_calls, 3),
+        "n_alerts": n_alerts,
+        "by_severity": by_sev,
+    }
+
+
+def compute_cache_hit_rate(cache_hits: int, total_queries: int) -> dict[str, float]:
+    """Fas 4.5.1 KPI stub: cache effectiveness for pre-computed aggregates."""
+    if not total_queries:
+        return {"hit_rate": 0.0}
+    return {"hit_rate": round(cache_hits / total_queries, 3), "total_queries": total_queries}
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         sys.argv.extend(["scenarios", "--output", "reports/baseline_results.json"])

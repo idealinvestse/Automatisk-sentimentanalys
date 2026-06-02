@@ -352,3 +352,74 @@ class ScanProcessResponse(BaseModel):
     total: int
     skipped: int
     timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# Fas 4.5.2: New endpoints for call center features (agent perf, search, insights, qa, alerts)
+# These use the extended pipeline methods (cached aggregates, semantic search, etc.)
+# ---------------------------------------------------------------------------
+
+class AgentPerformanceRequest(BaseModel):
+    """Request for /agent_performance endpoint. Provide segments for one or more calls."""
+    segments_list: list[list[dict[str, Any]]] = Field(..., description="List of segment lists (one per call)")
+    agent_id: str = Field(..., description="Agent identifier to aggregate for")
+    window: str = Field("7d", description="Time window e.g. 7d, 30d")
+    profile: str = Field("callcenter")
+    use_mistral_llm: bool = Field(False)
+
+
+class AgentPerformanceResponse(BaseModel):
+    agent_id: str
+    metrics: dict[str, Any]
+    cached: bool = False
+    timestamp: str
+
+
+class SemanticSearchRequest(BaseModel):
+    segments_list: list[list[dict[str, Any]]] = Field(..., description="List of calls to index/search over")
+    query: str
+    top_k: int = Field(5, ge=1, le=50)
+    filters: dict[str, Any] | None = Field(None)
+    profile: str = Field("callcenter")
+
+
+class SemanticSearchResponse(BaseModel):
+    query: str
+    hits: list[dict[str, Any]]
+    meta: dict[str, Any]
+    timestamp: str
+
+
+class HotTopicsRequest(BaseModel):
+    segments_list: list[list[dict[str, Any]]]
+    window: str = "7d"
+    profile: str = "callcenter"
+    use_mistral_llm: bool = False
+
+
+class HotTopicsResponse(BaseModel):
+    hot_topics: list[dict[str, Any]]
+    meta: dict[str, Any]
+    timestamp: str
+
+
+class QAScoreRequest(BaseModel):
+    segments: list[dict[str, Any]]
+    profile: str = "callcenter"
+    use_mistral_llm: bool = False
+
+
+class QAScoreResponse(BaseModel):
+    qa: dict[str, Any]
+    timestamp: str
+
+
+class AlertsRequest(BaseModel):
+    segments_list: list[list[dict[str, Any]]] | None = None  # for per call
+    aggregate: dict[str, Any] | None = None  # for trend alerts from aggregator
+    profile: str = "callcenter"
+
+
+class AlertsResponse(BaseModel):
+    alerts: list[dict[str, Any]]
+    timestamp: str

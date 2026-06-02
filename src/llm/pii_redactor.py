@@ -1,112 +1,228 @@
-"""Optional PII redactor for transcripts before sending to external LLM (Fas 3.4 follow-up).
+"""PII Redaction Module (Fas 4.4.1 - Early Pipeline).
 
-This is the implementation of the "valfritt" pii_redactor mentioned in the plan.
+Enhanced implementation for full early-pipeline privacy (before any local analyzers, LLM or persistence).
 
-Design rationale:
-- European/GDPR priority: Before any data leaves to OpenRouter/Mistral, give users the option to
-  redact obvious PII from Swedish callcenter transcripts.
-- Simple regex-based for common patterns (email, Swedish phone, personnummer/SSN-like).
-  Real production would use a proper NER model (e.g. KB-BERT for Swedish names/addresses) or
-  external redaction service.
-- Profile-driven: Controlled by `llm.anonymize_before_llm` in the callcenter (or other) profile.
-- Non-destructive for local analysis: The redaction only affects the text sent to the LLM path.
-  Original segments stay intact in the CallAnalysisReport.
-- Transparent: Redacted version is logged at DEBUG level; the LLM output meta can note if redaction was used.
-- Pluggable: Easy to extend or replace (e.g. with presidio or custom).
+Key upgrades for 4.4.1 (per UTVECKLINGSPLAN_Fas4... v1.1):
+- Runs EARLY in CallAnalysisPipeline (in analyze_audio and analyze_segments, right after transcription, before run_analyzers/LLM).
+- When profile llm.anonymize_before_llm=True: redacts text used for BOTH local analysis (sentiment, role, topics, etc.) AND LLM path. The final report.segments will contain redacted text.
+- Detailed, structured logging of EXACTLY what was redacted (type, original snippet, replacement, location). Attached as Pydantic PiiRedactionLog to results["pii_redaction"].
+- Extended regex patterns (credit cards, addresses) + optional NER for Swedish names (transformers KB-BERT if available, else conservative regex/heuristic).
+- Conservative to avoid mangling callcenter terms.
+- Idempotent (redacting already-redacted text is no-op).
+- Transparent + auditable for GDPR/compliance.
 
-Usage (from analyzer or future pipeline step):
-    from src.llm.pii_redactor import redact_pii
-    from src.profiles import resolve_profile
+Profile control:
+  "llm": { "anonymize_before_llm": true }  # enables early full redaction for local + LLM
 
-    _, spec = resolve_profile(profile=profile_name)
-    if spec.get("llm", {}).get("anonymize_before_llm"):
-        safe_transcript = redact_pii(transcript_text)
-    else:
-        safe_transcript = transcript_text
+Usage in pipeline (explicit integration):
+    # early, before analyzers
+    redacted_dicts, pii_log = redact_segments(seg_dicts, profile_name, return_log=True)
+    if pii_log.total_redacted > 0:
+        results["pii_redaction"] = pii_log.model_dump()
+        logger.info("PII redacted early: %d events, types=%s", pii_log.total_redacted, pii_log.types_redacted)
+    # then use redacted for ctx.segments and report
 
-Then pass safe_transcript to the prompt builder.
-
-The redactor is intentionally conservative (only high-confidence patterns) to avoid breaking
-callcenter terminology (e.g. "fakturanummer" should not be mangled).
-
-See UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md (3.4.1 + post-3.4.3 follow-up)
-and docs/FAS3_MISTRAL_LLM_INTEGRATION.md for privacy notes.
+See also previous Fas3 notes and the plan for privacy-by-design requirements.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
-# Common Swedish/EU PII patterns (conservative)
+from .schemas import PiiRedactionEvent, PiiRedactionLog
+
+logger = logging.getLogger(__name__)
+
+# Common Swedish/EU PII patterns (conservative, high-precision to avoid false positives on callcenter terms like "fakturanummer")
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE)
-_PHONE_RE = re.compile(r"(?:(?:\+46|0)[\s-]?)?(?:\d[\s-]?){6,12}\d")  # Swedish phones + international-ish
-_PERSONNUMMER_RE = re.compile(r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b")  # YYMMDD-XXXX or similar
-# Simple name redaction is risky without context/NER – skipped for v1 (would over-redact "Anna" in company names etc.)
+_PHONE_RE = re.compile(r"(?:(?:\+46|0)[\s-]?)?(?:\d[\s-]?){6,12}\d")  # Swedish phones
+_PERSONNUMMER_RE = re.compile(r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b")
+_CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")  # 13-16 digits with optional spaces/dashes (simple, no full Luhn for perf)
+_ADDRESS_RE = re.compile(r"\b\d{1,4}\s+(?:gata|väg|avenue|street|st|road|rd|allé|esplanaden|torget)\b", re.IGNORECASE)
+
+# Conservative name heuristic (only after common titles or in specific contexts to avoid over-redaction)
+_NAME_TITLE_RE = re.compile(r"\b(?:herr|fru|fröken|dr|prof|hr|fr)\s+([A-ZÅÄÖ][a-zåäö]+(?:\s+[A-ZÅÄÖ][a-zåäö]+)?)", re.IGNORECASE)
 
 _REPLACEMENTS = {
     "email": "[REDACTED_EMAIL]",
     "phone": "[REDACTED_PHONE]",
     "personnummer": "[REDACTED_PNR]",
+    "credit_card": "[REDACTED_CC]",
+    "address": "[REDACTED_ADDRESS]",
+    "name": "[REDACTED_NAME]",
 }
 
+# Small list of very common Swedish first names for heuristic (conservative; only used in title context above or with NER)
+_COMMON_SWEDISH_FIRST_NAMES = {"anna", "erik", "lars", "kristina", "anders", "margareta", "jan", "birgitta", "peter", "elisabeth"}
 
-def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> str:
-    """Redact obvious PII from a transcript string.
 
-    Returns a new string with PII replaced by safe tokens.
+def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[str, list[dict[str, Any]]]:
+    """Redact obvious PII from a transcript string (Fas 4.4.1).
+
+    Returns: (redacted_text, list_of_events)
+    Each event: {"type": , "original": , "replacement": , "char_start": , "char_end": }
     Does not modify the input.
     """
     if not text:
-        return text
+        return text, []
 
     replacements = redaction_map or _REPLACEMENTS
     result = text
+    events: list[dict[str, Any]] = []
 
-    # Order matters a bit (personnummer before generic phone)
-    result = _PERSONNUMMER_RE.sub(replacements.get("personnummer", "[REDACTED_PNR]"), result)
-    result = _EMAIL_RE.sub(replacements.get("email", "[REDACTED_EMAIL]"), result)
-    result = _PHONE_RE.sub(replacements.get("phone", "[REDACTED_PHONE]"), result)
+    def _replace_with_log(pattern: re.Pattern, repl: str, pii_type: str, current_text: str) -> tuple[str, list[dict]]:
+        local_events = []
+        new_text = current_text
+        for m in reversed(list(pattern.finditer(current_text))):  # reverse to preserve indices
+            orig = m.group(0)
+            start, end = m.start(), m.end()
+            new_text = new_text[:start] + repl + new_text[end:]
+            local_events.append({
+                "type": pii_type,
+                "original": orig,
+                "replacement": repl,
+                "char_start": start,
+                "char_end": end,
+            })
+        return new_text, local_events
 
-    return result
+    # Order: personnummer first (more specific)
+    result, ev = _replace_with_log(_PERSONNUMMER_RE, replacements.get("personnummer", "[REDACTED_PNR]"), "personnummer", result)
+    events.extend(ev)
+
+    result, ev = _replace_with_log(_EMAIL_RE, replacements.get("email", "[REDACTED_EMAIL]"), "email", result)
+    events.extend(ev)
+
+    result, ev = _replace_with_log(_PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result)
+    events.extend(ev)
+
+    result, ev = _replace_with_log(_CREDIT_CARD_RE, replacements.get("credit_card", "[REDACTED_CC]"), "credit_card", result)
+    events.extend(ev)
+
+    result, ev = _replace_with_log(_ADDRESS_RE, replacements.get("address", "[REDACTED_ADDRESS]"), "address", result)
+    events.extend(ev)
+
+    # Name heuristic (title-based only, conservative)
+    result, ev = _replace_with_log(_NAME_TITLE_RE, replacements.get("name", "[REDACTED_NAME]"), "name", result)
+    events.extend(ev)
+
+    return result, events
 
 
-def redact_segments(segments: list[dict[str, Any]] | list[Any], profile_name: str = "callcenter") -> list[dict[str, Any]]:
-    """Convenience: redact the 'text' field of segments if the profile requests anonymization.
+def redact_segments(
+    segments: list[dict[str, Any]] | list[Any],
+    profile_name: str = "callcenter",
+    return_log: bool = False,
+) -> tuple[list[dict[str, Any]], PiiRedactionLog] | list[dict[str, Any]]:
+    """Redact PII in segments list (early pipeline for Fas 4.4.1).
 
-    Accepts list[dict] or list[Segment]. Always returns list[dict] (converted if needed).
-    Original input is not mutated.
+    If profile llm.anonymize_before_llm is True:
+      - Redacts text for BOTH local analysis (sentiment etc) and LLM.
+      - The returned segments have redacted .text (report will reflect redacted data for privacy).
+
+    Returns:
+      If return_log=False (legacy): just the (possibly redacted) list[dict]
+      If return_log=True: (redacted_list[dict], PiiRedactionLog pydantic)
+
+    Supports input as list[dict] or list[Segment]. Always returns list[dict].
     """
+    applied = False
     try:
         from ..profiles import resolve_profile
         _, spec = resolve_profile(profile=profile_name)
         llm_spec = spec.get("llm", {}) or {}
         if not llm_spec.get("anonymize_before_llm"):
-            return segments  # no-op, return original for efficiency
+            if return_log:
+                log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
+                return segments, log
+            return segments
+        applied = True
     except Exception:
-        # If profile system fails, be safe and do not redact (or log)
+        if return_log:
+            log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
+            return segments, log
         return segments
 
-    redacted = []
-    for seg in segments:
+    redacted_list: list[dict[str, Any]] = []
+    all_events: list[dict[str, Any]] = []
+
+    # Optional NER for names (Swedish) - lazy, only if anonymize enabled
+    ner_pipeline = None
+    try:
+        from transformers import pipeline  # type: ignore
+        # Small Swedish NER if available in env (non-fatal if missing)
+        ner_pipeline = pipeline("ner", model="KB/bert-base-swedish-cased-ner", aggregation_strategy="simple", device=-1)
+        logger.debug("PII redactor: Swedish NER pipeline loaded for names/addresses")
+    except Exception:
+        ner_pipeline = None  # regex + heuristic only
+
+    for idx, seg in enumerate(segments):
         if isinstance(seg, dict):
-            new_seg = dict(seg)  # shallow copy
+            new_seg = dict(seg)
         else:
-            # Support Segment dataclass or objects with to_dict (robustness for direct calls)
             if hasattr(seg, "to_dict"):
                 new_seg = seg.to_dict()
             else:
                 new_seg = dict(getattr(seg, "__dict__", {}))
-        if "text" in new_seg and isinstance(new_seg["text"], str):
-            new_seg["text"] = redact_pii(new_seg["text"])
-        redacted.append(new_seg)
-    return redacted
+
+        original_text = new_seg.get("text", "") if isinstance(new_seg.get("text"), str) else ""
+        if original_text:
+            redacted_text, events = redact_pii(original_text)
+
+            # Optional NER pass for additional names (if loaded)
+            if ner_pipeline and original_text == redacted_text:  # only if regex didn't catch much
+                try:
+                    ner_results = ner_pipeline(original_text)
+                    for ent in ner_results:
+                        if ent.get("entity_group") in ("PER", "LOC") and ent.get("score", 0) > 0.85:
+                            # conservative: only redact high-conf person/location
+                            start, end = ent["start"], ent["end"]
+                            snippet = original_text[start:end]
+                            if len(snippet) > 2 and snippet.lower() not in _COMMON_SWEDISH_FIRST_NAMES:
+                                repl = "[REDACTED_NAME]" if ent["entity_group"] == "PER" else "[REDACTED_ADDRESS]"
+                                redacted_text = redacted_text[:start] + repl + redacted_text[end:]
+                                events.append({
+                                    "type": "name" if ent["entity_group"] == "PER" else "address",
+                                    "original": snippet,
+                                    "replacement": repl,
+                                    "char_start": start,
+                                    "char_end": end,
+                                })
+                except Exception as ner_e:
+                    logger.debug("NER pass skipped: %s", ner_e)
+
+            new_seg["text"] = redacted_text
+            for ev in events:
+                ev["segment_index"] = idx
+            all_events.extend(events)
+
+        redacted_list.append(new_seg)
+
+    if return_log:
+        types = sorted({e["type"] for e in all_events})
+        log = PiiRedactionLog(
+            events=[PiiRedactionEvent(**e) for e in all_events],
+            total_redacted=len(all_events),
+            types_redacted=types,
+            applied_to_local=True,
+            profile=profile_name,
+        )
+        if all_events:
+            logger.info(
+                "PII redaction (early pipeline, profile=%s): %d events, types=%s. Log attached to results['pii_redaction'].",
+                profile_name, len(all_events), types
+            )
+        return redacted_list, log
+
+    return redacted_list
 
 
-# Example usage note for future integration in mistral_analyzer:
-# Before building the role-labeled transcript for the LLM:
-#   if anonymize:
-#       segments_for_llm = redact_segments(segments, profile_name)
-#   else:
-#       segments_for_llm = segments
-# Then _build_role_labeled_transcript(segments_for_llm ...)
+# Example (early pipeline integration - see src/pipeline.py for actual code):
+#   seg_dicts = [s.to_dict() for s in transcript.segments]
+#   redacted, pii_log = redact_segments(seg_dicts, profile_name=self.profile, return_log=True)
+#   if pii_log.total_redacted > 0:
+#       results["pii_redaction"] = pii_log.model_dump()
+#   typed_segments = [Segment.from_dict(d) for d in redacted]
+#   # use typed_segments for AnalysisContext and final report (local + LLM now see redacted text)
