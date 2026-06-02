@@ -1,7 +1,7 @@
 # Fas 1: Stabilisering & KB-Whisper Integration – Projektplan
 
 **Datum**: Maj–Juni 2026
-**Status**: Pågående
+**Status**: Genomförd
 **Gren**: `feat/phase1-evaluation`
 
 ---
@@ -19,7 +19,7 @@
 
 - [x] `evaluate.py` finns och körs med baseline-resultat på ett svenskt testset
 - [x] Alla ASR-funktioner använder `KBLab/kb-whisper-large` (med stöd för `strict`/`subtitle`)
-- [x] Minst 80% testtäckning på kärnmoduler (`sentiment.py`, `lexicon.py`, `clean.py`, `asr.py`)
+- [x] Minst 80% testtäckning på kärnmoduler (`sentiment.py`, `lexicon.py`, `clean.py`, `transcription/`, `cli.py`)
 - [x] GitHub Actions CI passerar (pytest + lint)
 - [x] `README.md` är uppdaterad med nya modeller och benchmark-resultat
 - [x] Inga regressioner i befintlig funktionalitet
@@ -45,8 +45,8 @@
 
 ### Steg 3: Integrera KB-Whisper-modellerna
 
-- [ ] Uppdatera `src/asr.py` med revision-stöd
-- [ ] Uppdatera `src/asr_cli.py` och `src/api.py`
+- [x] Uppdatera `src/transcription/` med revision-stöd
+- [x] Uppdatera `src/cli.py` och `src/api/`
 - [ ] Lägg till rekommendation: Använd `strict` för call center
 - [ ] Uppdatera alla exempel i `README.md`
 
@@ -54,7 +54,7 @@
 
 - [ ] Installera och konfigurera `ruff`, `black`, `mypy`
 - [ ] Skapa `pyproject.toml` med konfiguration
-- [ ] Fixa blending-logik i `main.py`
+- [x] Fixa blending-logik i `src/cli.py`
 - [ ] Bättre felhantering i ASR-batch
 - [ ] Skapa `.github/workflows/ci.yml`
 
@@ -64,7 +64,7 @@
 - [ ] `test_sentiment.py`
 - [ ] `test_lexicon.py`
 - [ ] `test_clean.py`
-- [ ] `test_asr.py` (mockad transkribering)
+- [x] `test_pipeline.py` / `test_asr.py` (mockad transkribering)
 - [ ] Mål: ≥ 80% coverage
 
 ### Steg 6: Dokumentation & Avslutning
@@ -87,7 +87,7 @@
 
 ## Analys av Nuvarande Status
 
-### ASR-implementation (`src/asr.py`)
+### ASR-implementation (`src/transcription/`)
 - Alias `kb-whisper-large` → `KBLab/kb-whisper-large` finns redan
 - Stöd för `faster` och `transformers` backends
 - **Saknar**: `revision`-parameter för att välja mellan `standard`/`strict`/`subtitle`
@@ -95,13 +95,13 @@
 ### Sentiment (`src/sentiment.py`)
 - Fungerande pipeline med `cardiffnlp/twitter-xlm-roberta-base-sentiment`
 - Profil-baserad analys med `analyze_smart`
-- **Bug**: Blending-logik i `main.py` när `return_all_scores=False`
+- **Bug**: Blending-logik i `src/cli.py` när `return_all_scores=False`
 
-### CLI (`src/main.py`, `src/asr_cli.py`)
+### CLI (`src/cli.py`)
 - Välfungerande Typer-baserad CLI
-- `asr_cli_refactored.py` har förbättrad struktur med `mode`-parameter
+- `src/cli.py` har förbättrad struktur med `sentiment`, `transcribe` och `analyze-call` kommandon
 
-### API (`src/api.py`)
+### API (`src/api/`)
 - Fullfjädrad FastAPI med batch/scan endpoints
 - Redan konfigurerad för `kb-whisper-large` default
 

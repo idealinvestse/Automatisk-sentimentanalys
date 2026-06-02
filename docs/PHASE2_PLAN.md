@@ -146,7 +146,7 @@ Grundstrukturen är implementerad och pushad till `main`. Se detaljerad status u
 
 ### Steg 5: Integration & Produktionsanpassning (1 vecka) 🔶
 
-- ⬜ Uppdatera `src/sentiment.py` och `src/main.py` att använda den nya finetunade modellen som default.
+- ⬜ Uppdatera `src/sentiment.py` och `src/cli.py` att använda den nya finetunade modellen som default.
 - ✅ Lägg till stöd för modellväxling via `--model` och API.
 - ✅ Uppdatera Docker-image och `requirements.txt`.
 - ✅ Lägg till exempel i `samples/` för call center-användning.

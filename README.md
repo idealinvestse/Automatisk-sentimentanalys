@@ -8,7 +8,7 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 - Output till terminal eller CSV med kolumner: text, label, score, model, timestamp
 - (Ny) Valfritt svenskt lexikon för blending
 - (Ny) ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
-  - CLI: `src/asr_cli.py` med kommandon `transcribe` och `analyze-call`
+  - CLI: `src/cli.py` med kommandon `sentiment`, `transcribe` och `analyze-call`
   - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process`
 - (Ny) Utvärderingsramverk: `src/evaluate.py` för att mäta prestanda mot testset
 
@@ -411,14 +411,14 @@ for seg in result["segments"]:
 ## Projektstruktur
 ```
 src/sentiment.py      # Sentimentanalys (Hugging Face)
-src/asr.py            # ASR (tal-till-text) med faster-whisper/transformers
+src/cli.py            # Huvud-CLI (sentiment, transkribering, samtalsanalys)
+src/transcription/    # ASR (tal-till-text) med faster-whisper/transformers
 src/lexicon.py        # Lexikon-baserad sentiment
 src/clean.py          # Textrensning
 src/profiles.py       # Profilhantering
 src/evaluate.py       # Utvärderingsramverk
-src/main.py           # Huvud-CLI för sentiment
-src/asr_cli.py        # CLI för ASR
-src/api.py            # FastAPI REST-server
+src/api/              # FastAPI REST-server (app.py, routers, schemas)
+src/pipeline.py       # End-to-end samtalsanalyspipeline
 tests/                # Enhetstester
 data/                 # Testdata
 docs/                 # Dokumentation

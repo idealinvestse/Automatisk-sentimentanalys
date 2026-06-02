@@ -222,6 +222,6 @@ No changes needed in CLI or API – the new analyzer will automatically be picke
 
 ## Backward Compatibility
 
-- The old `src/api.py` module still exists on disk but is superseded by the `src/api/` package. Python's import system prefers the package, so `uvicorn src.api:app` transparently uses the new modular API.
+- The monolithic `src/api.py` has been refactored into the modular `src/api/` package. `uvicorn src.api:app` transparently uses the new modular API via `src/api/__init__.py`.
 - All existing CLI commands (`sentiment`, `transcribe`, `analyze-call`) behave identically from a user perspective.
 - All analyzer constructors still accept the same default arguments; parametrization is opt-in via `analyzer_configs`.

@@ -34,7 +34,9 @@ from .transcription import get_transcriber
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
-app = FastAPI(title="Swedish Sentiment API", version="0.2.0")
+# NOTE: This monolithic module is deprecated in favour of the modular src/api/ package.
+# Use `uvicorn src.api:app` to run the up-to-date API (src/api/app.py, version 0.3.0).
+app = FastAPI(title="Swedish Sentiment API [DEPRECATED]", version="0.3.0")
 
 
 def _utc_now_iso(trim_microseconds: bool = True) -> str:

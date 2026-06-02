@@ -58,7 +58,7 @@ Se även `docs/PHASE2_PLAN.md` och `docs/FAS2_SUMMARY.md`.
 
 ## Teknisk Skuld & Förbättringar
 
-- [ ] Migrera från `setup.py` till full `pyproject.toml`-baserad byggning
+- [x] Migrera från `setup.py` till full `pyproject.toml`-baserad byggning
 - [ ] Lägg till pre-commit hooks
 - [ ] Förbättra ASR-felhantering för långa ljudfiler
 - [ ] Dokumentera API med OpenAPI-exempel

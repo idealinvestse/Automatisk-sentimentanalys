@@ -26,7 +26,7 @@ sentimentanalys med stöd för KB-Whisper ASR-modeller. Alla framgångskriterier
 - **Revision-stöd**: `standard`, `strict`, `subtitle`
   - `strict` rekommenderas för call center (verbatim)
   - `subtitle` rekommenderas för visning/bättre läsbarhet
-- **Uppdaterade filer**: `src/asr.py`, `src/asr_cli.py`, `src/api.py`
+- **Uppdaterade filer**: `src/transcription/`, `src/cli.py`, `src/api/`
 
 ### 3. Kodkvalitet
 - **Linting**: 0 fel (ruff check passerar)
@@ -36,7 +36,7 @@ sentimentanalys med stöd för KB-Whisper ASR-modeller. Alla framgångskriterier
 
 ### 4. Tester
 - **76 enhetstester** över 6 testfiler:
-  - `test_asr.py` (17 tester)
+  - `test_pipeline.py` / tidigare `test_asr.py` (17 tester)
   - `test_clean.py` (10 tester)
   - `test_evaluate.py` (6 tester)
   - `test_lexicon.py` (15 tester)
@@ -45,7 +45,7 @@ sentimentanalys med stöd för KB-Whisper ASR-modeller. Alla framgångskriterier
 
 ### 5. Bugfixar
 - Lexikon-blending tvingar nu `return_all_scores=True` (korrekt distribution krävs)
-- Förbättrad felhantering i `main.py` och `asr_cli.py`
+- Förbättrad felhantering i `src/cli.py`
 
 ### 6. Dokumentation
 - `README.md`: Uppdaterad med KB-Whisper-instruktioner, utvärderingsexempel, dev-setup
@@ -59,10 +59,10 @@ sentimentanalys med stöd för KB-Whisper ASR-modeller. Alla framgångskriterier
 
 ```bash
 # Sentimentanalys
-python -m src.main --text "Det här är fantastiskt!" --return-all-scores
+python -m src.cli sentiment --text "Det här är fantastiskt!" --return-all-scores
 
 # ASR med KB-Whisper (strict för call center)
-python -m src.asr_cli transcribe samtal.wav --revision strict
+python -m src.cli transcribe samtal.wav --revision strict
 
 # Utvärdering
 python -m src.evaluate evaluate --testset data/test_swedish.csv

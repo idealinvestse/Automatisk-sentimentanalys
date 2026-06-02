@@ -106,7 +106,7 @@ def sentiment_cmd(
     ),
     log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
 ):
-    """Kör svensk sentimentanalys på text, .txt eller .csv (motsvarande gamla main.py)"""
+    """Kör svensk sentimentanalys på text, .txt eller .csv."""
     setup_logging(log_level)
 
     sources = sum(
