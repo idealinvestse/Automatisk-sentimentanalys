@@ -199,7 +199,7 @@ Införa ett **hybrid LLM-lager** där **Mistral Medium 3.5** (primärt) och **Mi
 | 3.4 | Privacy, caching, docs | DONE | 2026-06-05 | 2026-06-05 | 3.4.3 complete: Created docs/FAS3_MISTRAL_LLM_INTEGRATION.md (full quickstart, privacy, examples, activation matrix – new user <30min target). Updated ARCHITECTURE.md (diagram + dedicated LLM section + references). Enhanced README with links to new doc + evaluate command. Client already provided strong logging/caching/cost (3.4.1/3.4.2). All Fas 3 tasks DONE. Review performed (REVIEW_MISTRAL_FAS3.md) + committed with detailed message. |
 | Post | 3.4.4 PII redactor stub | DONE | 2026-06-05 | 2026-06-05 | Created src/llm/pii_redactor.py (regex email/phone/personnummer). Integrated in ConversationMistralAnalyzer (uses profile llm.anonymize_before_llm). Exported. Conservative redaction, non-mutating, logged via pii_redacted in meta. |
 | Post | 3.4.5 Human pref template | DONE | 2026-06-05 | 2026-06-05 | Added `llm-human-study` command in evaluate.py. Generates ready-to-use Markdown review template + instructions for 20-50 calls (preference, evidence accuracy, QA usefulness). Uses synthetic as placeholder; ready for real anonymized calls. |
-| Post | 3.4.6 Roadmap + tag + clean | DONE | 2026-06-05 | 2026-06-05 | Updated ROADMAP.md with Fas 3 Mistral completion + next steps. Will perform git clean (duplicate plan, gitignore), tag v0.4, and push as part of follow-ups. |
+| Post | 3.4.6 Roadmap + tag + clean | DONE | 2026-06-05 | 2026-06-05 | Updated ROADMAP.md. git rm duplicate long plan + .gitignore for smokes. git tag v0.4. Multiple commits + push --follow-tags executed. All recommended next steps from review complete. |
 
 ---
 
