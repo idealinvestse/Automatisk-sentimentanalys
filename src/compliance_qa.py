@@ -199,7 +199,7 @@ def _score_with_llm_if_needed(
             from .llm.openrouter_client import OpenRouterClient
 
             client = getattr(analyzer, "client", None) or OpenRouterClient()
-            sys_prompt = "Du är en strikt QA-granskare för svensk kundtjänst. Svara ENDAST med JSON."
+            sys_prompt = "Du är en strikt QA-granskare för svensk kundtjänst. Svara ENDAST med exakt giltig JSON, ingen annan text eller markdown."
             user = f"""Bedöm kriteriet: {criterion['description']}
 Prompt hint: {prompt_hint}
 
@@ -211,14 +211,14 @@ Returnera exakt:
 """
             messages = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": user}]
             # We use non-strict text for robustness; in prod use json_schema
-            # Use chat_completion (returns text); fall back to structured if available
+            # chat_completion returns (content: str, meta: dict)
             try:
-                resp = client.chat_completion(messages=messages, model=None, temperature=0.1, max_tokens=300)
-                txt = resp.get("content", "{}") if isinstance(resp, dict) else str(resp)
-                meta = {"used": "chat_completion"}
+                content, meta = client.chat_completion(messages=messages, model=None, temperature=0.1, max_tokens=300)
+                txt = content or "{}"
+                meta = {"used": "chat_completion", **(meta or {})}
             except Exception:
                 raw, meta = client.structured_chat(messages=messages, model=None, temperature=0.1, max_tokens=300, task_name="qa_criterion_judge")
-                txt = raw.get("content", "{}") if isinstance(raw, dict) else str(raw)
+                txt = (raw.get("content", "{}") if isinstance(raw, dict) else str(raw))
             data = {}
             try:
                 # extract json
@@ -364,14 +364,14 @@ def score_call_with_default_scorecard(
     segments: list[dict | Segment],
     role_map: dict | None = None,
     local_signals: dict | None = None,
-    profile: str = "callcenter",
+    profile_name: str = "callcenter",
     use_llm: bool = False,
     analyzer: Any | None = None,
 ) -> dict[str, Any]:
     """Quick entry: load default + optional analyzer, return dict."""
     try:
         scorer = QAScorer(scorecard_path="standard_support_v1", analyzer=analyzer if use_llm else None)
-        result = scorer.score_conversation(segments, role_map=role_map, local_signals=local_signals, profile_name=profile)
+        result = scorer.score_conversation(segments, role_map=role_map, local_signals=local_signals, profile_name=profile_name)
         return result.model_dump()
     except Exception as e:
         logger.error("QA scoring failed: %s", e)

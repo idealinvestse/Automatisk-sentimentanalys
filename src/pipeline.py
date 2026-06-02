@@ -289,7 +289,7 @@ class CallAnalysisPipeline:
                 segments=transcript.segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
                 local_signals={"agent_performance": results.get("agent_performance"), "agent_assessment": results.get("agent_assessment")},
-                profile=self.profile,
+                profile_name=self.profile,
                 use_llm=use_llm_qa,
                 analyzer=qa_analyzer,
             )
@@ -445,7 +445,7 @@ class CallAnalysisPipeline:
                 segments=typed_segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
                 local_signals={"agent_performance": results.get("agent_performance"), "agent_assessment": results.get("agent_assessment")},
-                profile=self.profile,
+                profile_name=self.profile,
                 use_llm=use_llm_qa,
                 analyzer=qa_analyzer,
             )

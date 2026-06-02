@@ -71,11 +71,11 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> str:
     return result
 
 
-def redact_segments(segments: list[dict[str, Any]], profile_name: str = "callcenter") -> list[dict[str, Any]]:
+def redact_segments(segments: list[dict[str, Any]] | list[Any], profile_name: str = "callcenter") -> list[dict[str, Any]]:
     """Convenience: redact the 'text' field of segments if the profile requests anonymization.
 
-    Returns a new list of segments (shallow copy of dicts, redacted text).
-    Original list and dicts are not mutated.
+    Accepts list[dict] or list[Segment]. Always returns list[dict] (converted if needed).
+    Original input is not mutated.
     """
     try:
         from ..profiles import resolve_profile
@@ -89,7 +89,14 @@ def redact_segments(segments: list[dict[str, Any]], profile_name: str = "callcen
 
     redacted = []
     for seg in segments:
-        new_seg = dict(seg)  # shallow copy
+        if isinstance(seg, dict):
+            new_seg = dict(seg)  # shallow copy
+        else:
+            # Support Segment dataclass or objects with to_dict (robustness for direct calls)
+            if hasattr(seg, "to_dict"):
+                new_seg = seg.to_dict()
+            else:
+                new_seg = dict(getattr(seg, "__dict__", {}))
         if "text" in new_seg and isinstance(new_seg["text"], str):
             new_seg["text"] = redact_pii(new_seg["text"])
         redacted.append(new_seg)

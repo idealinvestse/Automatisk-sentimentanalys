@@ -338,6 +338,31 @@ if st.button("Analysera") and live_text:
                         if aa.get("strengths"):
                             st.success("Styrkor: " + "; ".join(aa.get("strengths", [])))
 
+                # Fas 4.1/4.2: surface the new local agent_performance + qa results (explicitly
+                # produced by pipeline and merged into report.results). Complements the LLM
+                # assessment above and makes the backend features visible in the demo UI.
+                r = getattr(report, "results", {}) or {}
+                ap = r.get("agent_performance") or {}
+                if ap and isinstance(ap, dict):
+                    with st.expander("📊 Agent Performance + Customer Metrics (Fas4)"):
+                        a = ap.get("agent", {}) or {}
+                        c = ap.get("customer", {}) or {}
+                        st.metric("Empathy (local)", f"{a.get('empathy_score', 0):.2f}")
+                        st.write("Talk ratio / listen:", a.get("talk_ratio"), a.get("talk_listen_ratio"))
+                        st.write("Compliance flags:", a.get("compliance_flags", []))
+                        if ap.get("local_coaching_hints"):
+                            st.info("Hints: " + " | ".join(ap["local_coaching_hints"][:2]))
+                        st.caption(f"Customer talk_ratio={c.get('talk_ratio')}, slope={c.get('sentiment_slope')}")
+
+                qa = r.get("qa") or r.get("compliance_qa") or {}
+                if qa and isinstance(qa, dict) and qa.get("overall_qa_score") is not None:
+                    with st.expander("✅ Compliance / QA Auto-Score (Fas4)"):
+                        st.metric("Overall QA Score", f"{qa.get('overall_qa_score')}/100")
+                        st.write(f"Passed: {qa.get('passed')} | Risk: {qa.get('risk_level')}")
+                        if qa.get("compliance_flags"):
+                            st.warning("Flags: " + "; ".join(qa["compliance_flags"][:3]))
+                        st.caption("See results['qa'] for full per-criterion evidence.")
+
                 # Trajectory / root cause (textual)
                 if llm.get("trajectory"):
                     with st.expander("📈 Trajectory (kundresa)"):

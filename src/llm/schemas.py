@@ -242,7 +242,7 @@ class AgentMetrics(BaseModel):
     )
     num_agent_turns: int = Field(0, ge=0)
     num_customer_turns: int = Field(0, ge=0)
-    total_talk_time_s: float = Field(0.0, ge=0.0)
+    total_talk_time_s: float = Field(0.0, ge=0.0, description="Total duration of all segments (agent+customer) as proxy for call length.")
 
 
 class CustomerMetrics(BaseModel):

@@ -10,14 +10,15 @@ Design (per UTVECKLINGSPLAN_Fas4... v1.1):
 - Evidence-oriented: compliance_flags and local_coaching_hints are actionable.
 - Hybrid-ready: local metrics feed into mistral_analyzer for detailed recs.
 - Explicit integration point: call from pipeline.py (see _run_agent_performance).
-- Pre-computation friendly: lru_cache on hot paths; aggregate functions for trends.
+- Pre-computation friendly: bounded content-hash cache on main entrypoint; aggregate functions for trends.
 - Privacy: operates on original segments (PII redaction only affects LLM path).
 
 Caching / invalidation strategy (v1.1):
-- Per-call results are deterministic given (segments, role_map, sentiment_snapshot) -> key by content hash.
-- For aggregates (agent trends): caller (e.g. insights_aggregator or batch job) is responsible for
-  cache key including time window + agent_id. Invalidate on new calls for that agent or explicit TTL.
-- Simple file/Redis cache layer can wrap these functions later (see Fas 4.5).
+- Per-call results use internal bounded OrderedDict cache keyed by _hash_for_cache(segments, role_map, sentiment_sig).
+  Deterministic for identical input content. Invalidate naturally on new/different transcripts.
+- For aggregates (agent trends/benchmark): caller (e.g. 4.3 insights_aggregator) should key by (agent_id, time_window).
+  Recompute/invalidate on new calls for agent or TTL/scheduled.
+- No external Redis yet (see Fas 4.5); this satisfies "smart caching from the beginning".
 
 KPIs this enables (see plan):
 - % of calls with specific coaching recs
@@ -39,6 +40,7 @@ import hashlib
 import json
 import logging
 from datetime import UTC, datetime
+from collections import OrderedDict
 from functools import lru_cache
 from typing import Any
 
@@ -52,6 +54,13 @@ from .llm.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Simple bounded cache for per-call perf (keyed by content hash). Addresses plan requirement
+# for pre-computation/smart caching "from the beginning". Invalidation is content-based (new
+# transcript/role/sentiment -> new key). For cross-call agent aggregates use time/agent keys
+# in caller (4.3/4.5). Size limited to avoid memory growth.
+_PERF_CACHE: OrderedDict[str, "CallAgentPerformance"] = OrderedDict()
+_MAX_PERF_CACHE_SIZE = 128
 
 # -----------------------------------------------------------------------------
 # Swedish callcenter lexical resources (conservative, extensible)
@@ -414,6 +423,17 @@ def compute_call_agent_performance(
         zero_cust = CustomerMetrics(talk_ratio=0.5)
         return CallAgentPerformance(agent=zero_agent, customer=zero_cust)
 
+    # Check bounded content-hash cache (see module docstring for invalidation strategy)
+    cache_key = _hash_for_cache(
+        segments,
+        role_map,
+        json.dumps(sentiment_results or [], default=str, ensure_ascii=False)[:256] if sentiment_results else None,
+    )
+    if cache_key in _PERF_CACHE:
+        _PERF_CACHE.move_to_end(cache_key)
+        logger.debug("agent_performance cache hit for %s", cache_key)
+        return _PERF_CACHE[cache_key]
+
     # 1. Ratios (cached inner)
     ratios = compute_talk_ratios(segments, role_map)
     qdens = compute_question_density(segments, role_map)
@@ -499,18 +519,17 @@ def compute_call_agent_performance(
         agent_m.empathy_score,
         flags,
     )
+
+    # Store in bounded cache
+    _PERF_CACHE[cache_key] = perf
+    if len(_PERF_CACHE) > _MAX_PERF_CACHE_SIZE:
+        _PERF_CACHE.popitem(last=False)
     return perf
 
 
-# Lightweight cached wrapper (for repeated calls on same transcript in batch/eval)
-@lru_cache(maxsize=128)
-def _compute_call_agent_performance_cached(
-    segments_key: str, role_json: str, sent_sig: str
-) -> dict[str, Any]:
-    """Internal cached version returning dict (for lru). Callers use the non-cached primarily."""
-    # NOTE: real caller reconstructs; this is placeholder for future redis/file wrapper.
-    # For now we do not use it in hot path to keep types clean.
-    return {}
+# (Removed dead placeholder _compute..._cached per review. Real bounded content-hash cache
+# is now wired into compute_call_agent_performance above. See _PERF_CACHE and module docstring
+# for pre-computation + invalidation strategy. Full Redis/file layer planned for 4.5.)
 
 
 # -----------------------------------------------------------------------------

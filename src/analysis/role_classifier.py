@@ -3,9 +3,12 @@
 Extended with talk_ratio, lexical_formality, question_density, sentiment_variance (if avail),
 intervention_count per the UTVECKLINGSPLAN_Fas4 v1.1.
 
-Returns richer structure for downstream (agent_performance.py does the authoritative
-full AgentMetrics/CustomerMetrics Pydantic models). This keeps backward compat for
-role_map = results.get("role") while providing "role_features" etc.
+Heuristics for the 4.1.1 features are delegated to the pure functions in agent_performance
+(single source of truth, avoids duplication while satisfying the "utöka role_classifier" requirement).
+
+Returns richer structure for downstream (agent_performance.py produces the authoritative
+Pydantic AgentMetrics/CustomerMetrics/CallAgentPerformance). Backward compat for
+role_map = results.get("role") (or role_res.get("roles")) is preserved.
 
 Integration note: pipeline.py and mistral_analyzer.py now do:
     role_res = results.get("role") or {}
@@ -24,11 +27,23 @@ from .registry import register_analyzer
 logger = logging.getLogger(__name__)
 
 
-# Light-weight Swedish markers (duplicated small set to keep role independent of agent_performance
-# for early pipeline stages; authoritative logic lives in src/agent_performance.py).
-_GREET = {"hej", "hallå", "god dag", "välkommen"}
-_FORM = {"jag förstår", "beklagar", "tyvärr", "jag kontrollerar", "vi ska"}
-_CAS = {"okej", "japp", "fixar", "kollar"}
+# Delegate to shared pure heuristics in agent_performance (single source of truth for 4.1.1 features).
+# This eliminates duplication while keeping role_classifier lightweight and early in the analyzer graph.
+# Role still owns the basic speaker->role heuristic.
+try:
+    from ..agent_performance import (
+        compute_intervention_count,
+        compute_lexical_formality,
+        compute_question_density,
+        compute_sentiment_variance,
+        compute_talk_ratios,
+    )
+except Exception:  # fallback if circular/import during very early load (should not happen)
+    compute_talk_ratios = None
+    compute_question_density = None
+    compute_lexical_formality = None
+    compute_sentiment_variance = None
+    compute_intervention_count = None
 
 
 def _role_from_speaker(sp: str) -> str:
@@ -84,84 +99,36 @@ class RoleAnalyzer(Analyzer):
             for sp in speakers:
                 roles[sp] = _role_from_speaker(sp) or "unknown"
 
-        # --- Extended Fas 4.1 features (light, no heavy deps) ---
-        total_dur_agent = 0.0
-        total_dur_cust = 0.0
-        for s in segments:
-            dur = 0.0
-            try:
-                dur = max(0.0, float(getattr(s, "end", 0)) - float(getattr(s, "start", 0)))
-            except Exception:
-                dur = 0.0
-            sp = getattr(s, "speaker", None) or (s.get("speaker") if isinstance(s, dict) else None)
-            r = roles.get(sp, _role_from_speaker(sp or ""))
-            if r == "agent":
-                total_dur_agent += dur
-            elif r == "customer":
-                total_dur_cust += dur
+        # --- Extended Fas 4.1 features (delegated to shared logic in agent_performance to avoid dupe) ---
+        # Use the full compute_* when available (they handle dict/Segment, role_map etc.)
+        if compute_talk_ratios:
+            ratios = compute_talk_ratios(segments, roles)
+            a_talk = ratios.get("agent_talk_ratio", 0.5)
+            c_talk = ratios.get("customer_talk_ratio", 0.5)
+            talk_listen = ratios.get("talk_listen_ratio", 1.0)
+        else:
+            a_talk = c_talk = 0.5
+            talk_listen = 1.0
 
-        tot = total_dur_agent + total_dur_cust
-        a_talk = round(total_dur_agent / tot, 3) if tot > 0 else 0.5
-        c_talk = round(total_dur_cust / tot, 3) if tot > 0 else 0.5
-        talk_listen = round(total_dur_agent / total_dur_cust, 2) if total_dur_cust > 0 else 2.0
+        if compute_question_density:
+            qd = compute_question_density(segments, roles)
+            qdens_a = qd.get("agent_question_density", 0.0)
+            qdens_c = qd.get("customer_question_density", 0.0)
+            a_turns = qd.get("num_agent_turns", 0)
+            c_turns = qd.get("num_customer_turns", 0)
+        else:
+            qdens_a = qdens_c = 0.0
+            a_turns = c_turns = 0
 
-        # question density (simple)
-        a_qs = 0
-        c_qs = 0
-        a_turns = 0
-        c_turns = 0
-        for s in segments:
-            txt = (getattr(s, "text", "") or (s.get("text", "") if isinstance(s, dict) else "")).lower()
-            sp = getattr(s, "speaker", None) or (s.get("speaker") if isinstance(s, dict) else None)
-            r = roles.get(sp, _role_from_speaker(sp or ""))
-            qs = txt.count("?")
-            if r == "agent":
-                a_turns += 1
-                a_qs += qs
-            elif r == "customer":
-                c_turns += 1
-                c_qs += qs
-        qdens_a = round(a_qs / max(1, a_turns), 2)
-        qdens_c = round(c_qs / max(1, c_turns), 2)
+        form_score = compute_lexical_formality(segments, roles) if compute_lexical_formality else 0.5
 
-        # lexical_formality (agent only)
-        formal = 0
-        casual = 0
-        for s in segments:
-            txt = (getattr(s, "text", "") or (s.get("text", "") if isinstance(s, dict) else "")).lower()
-            sp = getattr(s, "speaker", None) or (s.get("speaker") if isinstance(s, dict) else None)
-            if roles.get(sp, _role_from_speaker(sp or "")) != "agent":
-                continue
-            formal += sum(1 for m in _FORM if m in txt)
-            casual += sum(1 for m in _CAS if m in txt)
-        form_score = max(0.0, min(1.0, round(0.55 + 0.12 * (formal - casual), 2)))
+        inter = compute_intervention_count(segments, roles) if compute_intervention_count else 0
 
-        # intervention proxy (agent follows customer)
-        inter = 0
-        prev_r = None
-        for s in segments:
-            sp = getattr(s, "speaker", None) or (s.get("speaker") if isinstance(s, dict) else None)
-            r = roles.get(sp, _role_from_speaker(sp or ""))
-            if prev_r == "customer" and r == "agent":
-                inter += 1
-            prev_r = r
-
-        # sentiment_variance if available from prior analyzer (ctx.results)
+        # sentiment_variance (needs prior sentiment results)
         var = 0.0
         sent = ctx.results.get("sentiment") if hasattr(ctx, "results") else None
-        if isinstance(sent, list) and len(sent) == len(segments) and a_turns > 1:
-            ag_scores: list[float] = []
-            for i, s in enumerate(segments):
-                sp = getattr(s, "speaker", None) or (s.get("speaker") if isinstance(s, dict) else None)
-                if roles.get(sp, _role_from_speaker(sp or "")) != "agent":
-                    continue
-                sr = sent[i] if i < len(sent) else {}
-                lab = str(sr.get("label", "")).lower() if isinstance(sr, dict) else ""
-                sc = -1.0 if "neg" in lab else (1.0 if "pos" in lab else 0.0)
-                ag_scores.append(sc)
-            if len(ag_scores) >= 2:
-                m = sum(ag_scores) / len(ag_scores)
-                var = round(sum((x - m) ** 2 for x in ag_scores) / len(ag_scores), 3)
+        if compute_sentiment_variance and sent and len(sent) == len(segments):
+            var = compute_sentiment_variance(segments, roles, sent)
 
         out: dict[str, Any] = {
             "roles": roles,  # primary for role_map extraction

@@ -664,6 +664,32 @@ def analyze_call_cmd(
                         )
                 console.print("\n")
 
+            # Fas 4 call-center highlights (agent performance + QA) if present in results
+            # Makes the new actionable features visible in CLI (addresses plan "syns i CLI").
+            res = report_dict.get("results", {}) or {}
+            ap = res.get("agent_performance") or {}
+            if ap and isinstance(ap, dict):
+                a = ap.get("agent", {}) or {}
+                console.print(
+                    f"[bold green]Agent Performance (Fas4):[/bold green] "
+                    f"empathy={a.get('empathy_score', 0):.2f} "
+                    f"talk_ratio={a.get('talk_ratio', 0):.2f} "
+                    f"flags={a.get('compliance_flags', [])}"
+                )
+                hints = ap.get("local_coaching_hints", []) or []
+                if hints:
+                    console.print("[yellow]Local coaching hints:[/yellow]")
+                    for h in hints[:2]:
+                        console.print(f"  - {h}")
+            qa = res.get("qa") or res.get("compliance_qa") or {}
+            if qa and isinstance(qa, dict) and "overall_qa_score" in qa:
+                console.print(
+                    f"[bold green]QA / Compliance (Fas4):[/bold green] "
+                    f"{qa.get('overall_qa_score', 0):.1f}/100 "
+                    f"passed={qa.get('passed')} risk={qa.get('risk_level')} "
+                    f"flags={len(qa.get('compliance_flags', []))}"
+                )
+
             ok += 1
             progress.advance(task, 1)
 
