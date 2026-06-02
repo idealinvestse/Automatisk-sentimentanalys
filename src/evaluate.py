@@ -573,6 +573,76 @@ def evaluate_llm_quality(
         console.print(f"[green]LLM quality report saved:[/green] {output}")
 
 
+@app.command("llm-human-study")
+def llm_human_preference_template(
+    n_calls: int = typer.Option(30, "--n-calls", help="Antal calls att föreslå för manuell review (20-50 rekommenderat)"),
+    output: str | None = typer.Option("reports/llm_human_study_template.md", "--output"),
+):
+    """Generera mall + instruktioner för human preference study på LLM-insikter (Fas 3 follow-up).
+
+    Per plan 3.3.3 och review: Rekommenderar manuell review av 20–50 calls för att mäta
+    human preference på insights, evidence accuracy och consistency mellan lokal vs Mistral.
+
+    Output: Markdown-mall som en reviewer kan fylla i (eller exportera till Google Form/Excel).
+    """
+    samples = _synthetic_callcenter_samples()
+    template_lines = [
+        "# Human Preference Study – Mistral vs Local Insights (Call Center)",
+        "",
+        f"**Mål:** Jämför lokal analys vs Mistral holistisk output på {n_calls} riktiga (anonymiserade) calls.",
+        "Fokus: actionable insights quality, evidence accuracy, overall preference för QA/coachning.",
+        "",
+        "## Instruktioner för reviewer",
+        "1. För varje call: kör pipeline både utan och med --use-mistral-llm.",
+        "2. Blinda gärna (dölj källan) eller använd två reviewers.",
+        "3. Fyll i tabellen nedan (1-5 skalor eller forced choice).",
+        "4. Samla evidence quotes som stödjer din bedömning.",
+        "",
+        "## Sammanfattnings-metrics att räkna ut efteråt",
+        "- % där LLM föredras för 'actionable för coachning'",
+        "- % där LLM ger bättre 'evidence accuracy' (kan verifieras mot transkript)",
+        "- Genomsnittlig consistency score (samma call, två runs)",
+        "- Kommentarer om svenska nyans / hallucinationer",
+        "",
+        "## Per-call review mall",
+    ]
+
+    for i in range(min(n_calls, len(samples) * 5)):
+        call_id = f"CALL-{i+1:04d}"
+        template_lines.extend([
+            f"### {call_id}",
+            "- **Lokal actionable (kort):** [klistra in från report]",
+            "- **Mistral actionable (kort):** [klistra in från report.llm]",
+            "- **Preferens (forced choice):** [ ] Lokal bättre  [ ] Mistral bättre  [ ] Lika  [ ] Vet ej",
+            "- **Evidence accuracy (1-5):** Lokal __  Mistral __  (5 = alla claims har verifierbara citat i transkript)",
+            "- **Användbarhet för QA (1-5):** Lokal __  Mistral __",
+            "- **Kommentar / exempel på bra/dålig insikt:**",
+            "  > ",
+            "",
+        ])
+
+    template_lines.extend([
+        "## Slutlig sammanfattning (efter alla calls)",
+        "- Totalt antal calls: ",
+        "- LLM föredras för actionable: X/Y (Z%)",
+        "- Bättre evidence: X/Y",
+        "- Övriga observationer (svenska nyans, kostnad, latens, hallucinationer):",
+        "",
+        "Rekommenderad storlek: 20-50 calls för statistisk känsla. Använd riktiga anonymiserade callcenter-samtal.",
+        "Se också `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` och planens 3.3.3.",
+    ])
+
+    content = "\n".join(template_lines)
+
+    if output:
+        os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(content)
+        console.print(f"[green]Human study template sparad:[/green] {output}")
+    else:
+        console.print(content)
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         sys.argv.extend(["scenarios", "--output", "reports/baseline_results.json"])

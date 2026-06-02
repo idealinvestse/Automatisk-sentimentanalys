@@ -60,6 +60,7 @@ from typing import Any
 
 from ..core.models import Segment
 from .openrouter_client import OpenRouterClient
+from .pii_redactor import redact_segments
 from .prompts import build_user_prompt, get_system_prompt
 from .schemas import CallLLMOutput, LLM_OUTPUT_JSON_SCHEMA
 
@@ -155,7 +156,11 @@ class ConversationMistralAnalyzer:
         tasks = tasks or self.SUPPORTED_TASKS
         tasks = [t for t in tasks if t in self.SUPPORTED_TASKS]
 
-        transcript = _build_role_labeled_transcript(segments, role_map)
+        # Optional PII redaction before any external LLM call (Fas 3.4 follow-up)
+        segments_for_llm = redact_segments(segments, profile_name=profile_name)
+        anonymized = segments_for_llm is not segments  # simple heuristic: if list identity changed or content redacted
+
+        transcript = _build_role_labeled_transcript(segments_for_llm, role_map)
         transcript_hash = _make_transcript_hash(transcript, role_map)
 
         # Lightweight local context (do not send huge objects)
@@ -195,7 +200,7 @@ class ConversationMistralAnalyzer:
 
             # Merge client meta into the model meta
             output = validated.model_dump()
-            output["meta"] = {**validated.meta, **meta, "profile": profile_name, "tasks": tasks}
+            output["meta"] = {**validated.meta, **meta, "profile": profile_name, "tasks": tasks, "pii_redacted": bool(anonymized)}
 
             # Ensure we always have the top-level model key for convenience
             if "model" not in output["meta"]:

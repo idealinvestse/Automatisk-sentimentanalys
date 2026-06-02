@@ -25,6 +25,7 @@ from __future__ import annotations
 # Re-exports (populated as modules are implemented)
 from .mistral_analyzer import ConversationMistralAnalyzer
 from .openrouter_client import OpenRouterClient
+from .pii_redactor import redact_pii, redact_segments
 from .prompts import SYSTEM_PROMPT as LLM_SYSTEM_PROMPT, build_user_prompt, get_system_prompt
 from .schemas import (
     ActionableSummary,
@@ -53,4 +54,6 @@ __all__ = [
     "build_user_prompt",
     "get_system_prompt",
     "LLM_SYSTEM_PROMPT",
+    "redact_pii",
+    "redact_segments",
 ]
