@@ -7,8 +7,10 @@ previously existed in every batch endpoint.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError, as_completed
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -48,22 +50,21 @@ def run_batch(
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures: dict[Any, str] = {executor.submit(worker_fn, p): p for p in files}
-        try:
-            for fut in as_completed(futures, timeout=worker_timeout):
-                p = futures[fut]
-                try:
-                    results.append((p, fut.result(), None))
-                except Exception as e:
-                    logger.error("Worker failed for %s: %s", p, e, exc_info=True)
-                    results.append((p, None, e))
-        except FuturesTimeoutError:
-            # Some futures timed out globally; collect remaining as errors
-            completed_paths = {path for path, _, _ in results}
-            for fut, p in futures.items():
-                if p not in completed_paths:
-                    logger.error("Worker timed out for %s", p)
-                    if not fut.done():
-                        fut.cancel()
-                    results.append((p, None, TimeoutError(f"Worker timed out after {worker_timeout}s")))
+        for fut in as_completed(futures):
+            p = futures[fut]
+            try:
+                if worker_timeout is not None:
+                    res = fut.result(timeout=worker_timeout)
+                else:
+                    res = fut.result()
+                results.append((p, res, None))
+            except FuturesTimeoutError:
+                logger.error("Worker timed out for %s after %ss", p, worker_timeout)
+                if not fut.done():
+                    fut.cancel()
+                results.append((p, None, TimeoutError(f"Worker timed out after {worker_timeout}s")))
+            except Exception as e:
+                logger.error("Worker failed for %s: %s", p, e, exc_info=True)
+                results.append((p, None, e))
 
     return results
