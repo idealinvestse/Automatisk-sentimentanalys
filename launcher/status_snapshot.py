@@ -7,10 +7,9 @@ import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 from src.install.config_schema import UserConfig
 from src.install.secrets_win import secret_status
@@ -24,7 +23,7 @@ API_VERSION = "0.4.0"
 _HEALTH_TIMEOUT_SEC = 0.5
 
 
-class ServiceState(str, Enum):
+class ServiceState(StrEnum):
     STOPPED = "stopped"
     STARTING = "starting"
     LISTENING = "listening"
@@ -177,7 +176,7 @@ def collect_snapshot(
     app_root = cfg.resolved_app_root()
     py = resolve_python(cfg)
     secrets = secret_status(app_root)
-    collected = datetime.now(timezone.utc).astimezone().isoformat(timespec="milliseconds")
+    collected = datetime.now(UTC).astimezone().isoformat(timespec="milliseconds")
 
     system = SystemSnapshot(
         launcher_root=root,

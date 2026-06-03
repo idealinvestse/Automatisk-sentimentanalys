@@ -108,9 +108,10 @@ class LauncherApp(tk.Tk):
                         start_dashboard(self.cfg, log=self.event_log)
                 else:
                     stop_service(self.cfg, name, log=self.event_log)
-            except Exception as e:
-                self.event_log.error(str(e), phase=f"{name}.{action}")
-                self.after(0, lambda: messagebox.showerror(name.upper(), str(e)))
+            except Exception as exc:
+                msg = str(exc)
+                self.event_log.error(msg, phase=f"{name}.{action}")
+                self.after(0, lambda m=msg, n=name: messagebox.showerror(n.upper(), m))
             finally:
                 self.after(0, self._on_action_done)
 
