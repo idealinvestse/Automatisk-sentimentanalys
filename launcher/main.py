@@ -30,7 +30,7 @@ def _app_root() -> Path:
 class LauncherApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Sentimentanalys")
+        self.title("Sentimentanalys — Kontrollpanel")
         self.geometry("540x720")
         self.minsize(520, 640)
         self.cfg = load_user_config(_app_root())
