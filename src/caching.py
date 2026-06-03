@@ -26,7 +26,7 @@ Usage in pipeline (explicit):
 
 Pydantic friendly: caches .model_dump() outputs.
 
-See plan: "Vanliga dashboard-frågor (t.ex. "agent performance senaste 7 dagarna") är snabba även på stora dataset."
+See plan: "Vanliga dashboard-fr├Ñgor (t.ex. "agent performance senaste 7 dagarna") ├ñr snabba ├ñven p├Ñ stora dataset."
 """
 
 from __future__ import annotations

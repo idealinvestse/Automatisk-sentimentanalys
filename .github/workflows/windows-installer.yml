@@ -1,0 +1,96 @@
+name: Windows Installer
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Install profile"
+        required: true
+        default: "cli"
+        type: choice
+        options:
+          - minimal
+          - cli
+          - api
+          - full
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version and profile
+        id: meta
+        shell: pwsh
+        run: |
+          $ver = (Get-Content pyproject.toml | Select-String 'version = "(.+)"').Matches.Groups[1].Value
+          if ("${{ github.ref_type }}" -eq "tag") { $ver = "${{ github.ref_name }}".TrimStart("v") }
+          $profile = "${{ inputs.profile }}"
+          if (-not $profile) {
+            if ("${{ github.ref_type }}" -eq "tag") { $profile = "full" } else { $profile = "cli" }
+          }
+          "version=$ver" >> $env:GITHUB_OUTPUT
+          "profile=$profile" >> $env:GITHUB_OUTPUT
+
+      - name: Build portable ZIP
+        shell: pwsh
+        run: ./installer/build-portable.ps1 -Version ${{ steps.meta.outputs.version }} -Profile ${{ steps.meta.outputs.profile }}
+
+      - name: Upload portable staging
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-staging
+          path: build/portable-staging/
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentimentanalys-portable
+          path: dist/*.zip
+
+  installer:
+    runs-on: windows-latest
+    needs: portable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download portable staging
+        uses: actions/download-artifact@v4
+        with:
+          name: portable-staging
+          path: build/portable-staging
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: Resolve version and profile
+        id: meta
+        shell: pwsh
+        run: |
+          $ver = (Get-Content pyproject.toml | Select-String 'version = "(.+)"').Matches.Groups[1].Value
+          if ("${{ github.ref_type }}" -eq "tag") { $ver = "${{ github.ref_name }}".TrimStart("v") }
+          $profile = "${{ inputs.profile }}"
+          if (-not $profile) {
+            if ("${{ github.ref_type }}" -eq "tag") { $profile = "full" } else { $profile = "cli" }
+          }
+          "version=$ver" >> $env:GITHUB_OUTPUT
+          "profile=$profile" >> $env:GITHUB_OUTPUT
+
+      - name: Build installer (reuse staging)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup not found at $iscc" }
+          $iss = "./installer/inno/sentimentanalys.iss"
+          & $iscc $iss /DMyAppVersion=${{ steps.meta.outputs.version }} /DInstallProfile=${{ steps.meta.outputs.profile }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentimentanalys-setup
+          path: dist/*.exe
+          if-no-files-found: ignore
