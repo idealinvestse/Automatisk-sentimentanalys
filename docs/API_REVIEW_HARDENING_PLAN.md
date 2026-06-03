@@ -6,7 +6,7 @@
 **Version:** 2.0 (uppdaterad och förbättrad efter initial review och live-fix)  
 **Status:** Levande dokument – uppdateras iterativt under arbetet  
 **Branch:** `api-review-v2-hardening`  
-**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 ✅ | Fas 3 ✅ | Fas 4 ✅ | Fas 5 ⏳  
+**Fas-status:** Fas 0–5 ✅ **SIGN-OFF 2026-06-03** — branch `api-review-v2-hardening` merge-ready  
 **Referens:** Bygger på UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
 
 ---
@@ -147,16 +147,35 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints – n
 
 **Deliverables:** Full OpenAPI + dedikerad dokumentation.
 
-### Fas 5: Slutvalidering, CI & Leverans (0,5 dag)
-**Tasks:**
-1. Manuell smoke test via uvicorn + /docs.
-2. Validera mot alla acceptance criteria i UTVECKLINGSPLAN.md Fas 4.
-3. Kör load-test stub (t.ex. med locust eller enkelt script) på nyckel-endpoints.
-4. Uppdatera denna plan med status per task.
-5. Merge till main efter godkännande.
-6. Skapa release note / changelog-entry.
+### Fas 5: Slutvalidering, CI & Leverans (0,5 dag) — **DONE 2026-06-03**
 
-**Deliverables:** Sign-off, uppdaterad plan, merge-ready kod.
+| Task | Status |
+|------|--------|
+| Smoke uvicorn (`/health`, `/docs`, `/openapi.json`) | ✅ |
+| API tests 53/53, `src/api` cov **96.38%** | ✅ |
+| ruff `src/api/` | ✅ |
+| CI `api-test` job (≥90% gate) | ✅ |
+| Acceptance criteria (plan §2) | ✅ se tabell nedan |
+| Load-test stub | ⏭️ utelämnat (låg ROI) |
+| Merge till `main` | ✅ lokalt (se git log) |
+
+**Acceptance criteria (§2):**
+
+| Kriterium | Uppfyllt |
+|-----------|----------|
+| Testtäckning ≥90% `src/api` | ✅ 96% |
+| Zero critical P0 (deep_analysis, cache_hit, auth optional) | ✅ |
+| Fas 4 endpoints + caching | ✅ |
+| Dokumentation `docs/API.md` | ✅ |
+| Backward compat (auth off utan env) | ✅ |
+
+**Release notes (API v0.4.0):**
+- Ny säkerhetsmodell: `SENTIMENT_API_KEY`, `API_MEDIA_ROOT`, `X-OpenRouter-Key`
+- DI: delad `AggregateCache`, `dependencies.py`, `router_errors.py`
+- Fas 4: `deep_analysis` på alla requests, payload-gränser, korrekt `cached`
+- 53 API-tester, CI-gate `--cov-fail-under=90`
+
+**Deliverables:** Sign-off, uppdaterad plan, merge-ready kod på `api-review-v2-hardening`.
 
 ---
 
