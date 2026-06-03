@@ -184,9 +184,16 @@ class LauncherApp(tk.Tk):
 
 
 def main() -> None:
-    os.environ.setdefault("SENTIMENT_APP_ROOT", str(Path.cwd().resolve()))
-    app = LauncherApp()
-    app.mainloop()
+    root = Path.cwd().resolve()
+    os.environ.setdefault("SENTIMENT_APP_ROOT", str(root))
+    try:
+        app = LauncherApp()
+        app.mainloop()
+    except Exception:
+        import traceback
+
+        (root / "launcher_crash.log").write_text(traceback.format_exc(), encoding="utf-8")
+        raise
 
 
 if __name__ == "__main__":

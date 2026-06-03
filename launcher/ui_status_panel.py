@@ -15,33 +15,41 @@ if TYPE_CHECKING:
 
 
 _STATE_STYLES: dict[ServiceState, str] = {
-    ServiceState.RUNNING: "Status.Running",
-    ServiceState.LISTENING: "Status.Listening",
-    ServiceState.STARTING: "Status.Starting",
-    ServiceState.DEGRADED: "Status.Warning",
-    ServiceState.ERROR: "Status.Error",
-    ServiceState.STOPPED: "Status.Stopped",
+    ServiceState.RUNNING: "Status.Running.TLabel",
+    ServiceState.LISTENING: "Status.Listening.TLabel",
+    ServiceState.STARTING: "Status.Starting.TLabel",
+    ServiceState.DEGRADED: "Status.Warning.TLabel",
+    ServiceState.ERROR: "Status.Error.TLabel",
+    ServiceState.STOPPED: "Status.Stopped.TLabel",
+}
+
+_STATUS_COLORS: dict[str, str] = {
+    "Status.Running.TLabel": "#0d7a3e",
+    "Status.Listening.TLabel": "#0b6e8c",
+    "Status.Starting.TLabel": "#9a6b00",
+    "Status.Warning.TLabel": "#b45309",
+    "Status.Error.TLabel": "#b91c1c",
+    "Status.Stopped.TLabel": "#6b7280",
 }
 
 
 def configure_status_styles(root: tk.Misc) -> None:
+    """Register ttk label styles (Windows requires TLabel-based style names)."""
     style = ttk.Style(root)
-    style.configure("Status.Running", foreground="#0d7a3e")
-    style.configure("Status.Listening", foreground="#0b6e8c")
-    style.configure("Status.Starting", foreground="#9a6b00")
-    style.configure("Status.Warning", foreground="#b45309")
-    style.configure("Status.Error", foreground="#b91c1c")
-    style.configure("Status.Stopped", foreground="#6b7280")
+    for name, color in _STATUS_COLORS.items():
+        style.configure(name, foreground=color)
     style.configure("Header.TLabel", font=("Segoe UI", 14, "bold"))
     style.configure("CardTitle.TLabel", font=("Segoe UI", 10, "bold"))
     style.configure("Meta.TLabel", font=("Segoe UI", 8), foreground="#4b5563")
+    style.configure("Url.TLabel", foreground="#2563eb")
+    style.configure("UrlIdle.TLabel", foreground="#111827")
 
 
 class ServiceCard(ttk.LabelFrame):
     def __init__(self, master: tk.Misc, title: str) -> None:
         super().__init__(master, text=title, padding=8)
         self._url: str | None = None
-        self.state_lbl = ttk.Label(self, text="—", style="Status.Stopped")
+        self.state_lbl = ttk.Label(self, text="—", style="Status.Stopped.TLabel")
         self.state_lbl.grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 6))
 
         fields = [
@@ -67,14 +75,14 @@ class ServiceCard(ttk.LabelFrame):
             webbrowser.open(self._url)
 
     def update_from(self, snap: ServiceSnapshot) -> None:
-        style = _STATE_STYLES.get(snap.state, "Status.Stopped")
+        style = _STATE_STYLES.get(snap.state, "Status.Stopped.TLabel")
         self.state_lbl.configure(text=snap.state_label, style=style)
         self._url = snap.url if snap.port_open else None
         self._values["pid"].configure(text=str(snap.pid) if snap.pid else "—")
         url_text = snap.url if snap.port_open else "—"
         self._values["url"].configure(
             text=url_text,
-            foreground="#2563eb" if snap.port_open else "#111827",
+            style="Url.TLabel" if snap.port_open else "UrlIdle.TLabel",
             cursor="hand2" if snap.port_open else "",
         )
         self._values["port"].configure(
@@ -181,8 +189,8 @@ class StatusPanel(ttk.Frame):
     """Top section: service cards, system info, activity log, footer."""
 
     def __init__(self, master: tk.Misc, event_log: EventLog) -> None:
+        configure_status_styles(master)
         super().__init__(master)
-        configure_status_styles(master.winfo_toplevel())
 
         header = ttk.Frame(self)
         header.pack(fill=tk.X, padx=12, pady=(10, 4))
