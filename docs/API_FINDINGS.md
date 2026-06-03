@@ -11,13 +11,13 @@
 
 | ID | Issue | Location | Status |
 |----|-------|----------|--------|
-| P0-1 | `deep_analysis` wired to `use_mistral_llm` on `/agent_performance` | `pipeline.py:82` | **FIXED** (commit Fas 1) |
-| P0-2 | No authentication on mutating endpoints | `app.py`, all routers | Open |
-| P0-3 | `llm_api_key` accepted in JSON body | `schemas.py` Fas 4 models | Open |
+| P0-1 | `deep_analysis` wired to `use_mistral_llm` on `/agent_performance` | `pipeline.py:82` | **FIXED** (Fas 1) |
+| P0-2 | No authentication on mutating endpoints | `app.py`, all routers | **PARTIAL** — `SENTIMENT_API_KEY` + `X-API-Key` (Fas 2) |
+| P0-3 | `llm_api_key` accepted in JSON body | `schemas.py` Fas 4 models | **PARTIAL** — header preferred; body needs `API_ALLOW_CLIENT_LLM_KEY` |
 | P0-4 | Server filesystem access via `audio_path` / `directory` | `schemas.py`, `scan.py` | Open |
 | P0-5 | `detail=str(e)` leaks internals on Fas 4 routes | `pipeline.py` except blocks | Open |
-| P0-6 | No payload limits (`segments_list`, `segments`) | `schemas.py` | Open |
-| P0-7 | `cached` flag heuristic incorrect | `pipeline.py:87-88` | Open |
+| P0-6 | No payload limits (`segments_list`, `segments`) | `schemas.py` | **FIXED** — max 50 calls × 200 segments (Fas 2) |
+| P0-7 | `cached` flag heuristic incorrect | `pipeline.py:87-88` | **FIXED** — `cache_hit` from `precompute_and_cache` (Fas 2) |
 
 ---
 
@@ -25,12 +25,12 @@
 
 | ID | Issue | Location |
 |----|-------|----------|
-| P1-1 | No DI; new `CallAnalysisPipeline` + cache per request | `pipeline.py` |
-| P1-2 | Routers catch `Exception` → bypass `app.py` domain handlers | All routers |
+| P1-1 | No DI; new `CallAnalysisPipeline` + cache per request | `pipeline.py` | **FIXED** — shared cache + `create_pipeline` (Fas 2) |
+| P1-2 | Routers catch `Exception` → bypass `app.py` domain handlers | All routers | **PARTIAL** — pipeline router fixed |
 | P1-3 | Fas 4 always runs full `analyze_segments` before cache | `pipeline.py` |
-| P1-4 | Missing `deep_analysis` / `llm_model` on Fas 4 requests | `schemas.py:366-429` |
-| P1-5 | `getattr(req, 'llm_api_key')` redundant | `pipeline.py:110,150,162` |
-| P1-6 | No CORS, rate limit, security headers, request ID | `app.py` |
+| P1-4 | Missing `deep_analysis` / `llm_model` on Fas 4 requests | `schemas.py` | **FIXED** — `Fas4LlmFlags` (Fas 2) |
+| P1-5 | `getattr(req, 'llm_api_key')` redundant | `pipeline.py` | **FIXED** |
+| P1-6 | No CORS, rate limit, security headers, request ID | `app.py` | **PARTIAL** — CORS/headers/request-ID; rate limit open |
 | P1-7 | `profile="call"` vs `callcenter` in conversation/scan | `conversation.py`, `scan.py` |
 | P1-8 | Path/body `agent_id` not validated | `pipeline.py:71-72` |
 | P1-9 | Blocking work in `async def` handlers | All routers |
@@ -77,8 +77,8 @@
 
 | Metric | Value |
 |--------|-------|
-| `src/api` coverage (`test_api.py`) | **74.96%** |
-| Tests | 14 passed |
+| `src/api` coverage (`test_api.py`) | **~78%** |
+| Tests | 18 passed |
 | ruff `src/api` | 1 error (E402 mid-file imports) |
 | mypy `src/api` | 2 errors |
 | bandit | Skipped (bandit not in venv; install in Fas 5) |

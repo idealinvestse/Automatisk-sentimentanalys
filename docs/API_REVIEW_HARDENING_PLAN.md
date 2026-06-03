@@ -6,7 +6,7 @@
 **Version:** 2.0 (uppdaterad och förbättrad efter initial review och live-fix)  
 **Status:** Levande dokument – uppdateras iterativt under arbetet  
 **Branch:** `api-review-v2-hardening`  
-**Fas-status:** Fas 0 ✅ | Fas 1 🔄 | Fas 2–5 ⏳  
+**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 🔄 | Fas 3–5 ⏳  
 **Referens:** Bygger på UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
 
 ---
@@ -56,9 +56,10 @@ Skapa en production-ready, vältestad, säker och väldokumenterad API som fullt
 
 **Baseline:** coverage 74.96%, ruff 0 errors (efter import-fix), mypy 2 errors, bandit pending.
 
-### Fas 1: Djupgående Kodgranskning & Bugghunt (1 dag) — **IN PROGRESS**
+### Fas 1: Djupgående Kodgranskning & Bugghunt (1 dag) — **DONE 2026-06-03**
 **Fokus:** Statisk + semantisk analys av alla API-filer.  
-**Findings:** `docs/API_FINDINGS.md` (P0×7, P1×12, P2×6)
+**Findings:** `docs/API_FINDINGS.md` (P0×7, P1×12, P2×6)  
+**Fix:** P0-1 `deep_analysis` på `/agent_performance` + regressionstest
 
 **Tasks:**
 1. Granska `src/api/app.py`: Exception handlers, lifespan, middleware-frånvaro, CORS, tracing.
@@ -74,7 +75,10 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints – n
 
 **Deliverables:** Uppdaterad findings-lista, förslag på refaktoriseringar.
 
-### Fas 2: Förbättringar & Refaktorering (1,5–2 dagar)
+### Fas 2: Förbättringar & Refaktorering (1,5–2 dagar) — **IN PROGRESS**
+**Klart (2026-06-03):** `dependencies.py`, `settings.py`, shared cache/alert lifespan, API key auth (opt-in via `SENTIMENT_API_KEY`), CORS env, request-ID + security headers, `LLMError` handler, Fas4 `deep_analysis` på alla requests, payload limits, korrekt `cache_hit`, pipeline DI, version 0.4.0, coverage ~78%.  
+**Kvar:** rate limiting, RFC 7807, `API_MEDIA_ROOT` sandbox, övriga routers exception taxonomy, rate limit, ≥90% coverage (Fas 3).
+
 **Prioriterad ordning (högst ROI först):**
 
 **2.1 Säkerhet & Auth (hög prioritet)**

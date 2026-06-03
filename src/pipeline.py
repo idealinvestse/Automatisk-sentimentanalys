@@ -53,6 +53,7 @@ class CallAnalysisPipeline:
         deep_analysis: bool = False,
         # explicit override (e.g. from dashboard UI or API). Highest priority in get_openrouter_api_key.
         llm_api_key: str | None = None,
+        cache: Any | None = None,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -82,7 +83,11 @@ class CallAnalysisPipeline:
 
         # Fas 4.5.1: Advanced caching / pre-computation (file by default, Redis optional)
         from .caching import AggregateCache
-        self.cache = AggregateCache(use_redis=False)  # set True + redis_url for prod
+
+        if cache is not None:
+            self.cache = cache
+        else:
+            self.cache = AggregateCache(use_redis=False)  # set True + redis_url for prod
 
     def _build_analyzer_configs(self) -> dict[str, dict[str, Any]]:
         """Build per-analyzer configuration from pipeline settings.

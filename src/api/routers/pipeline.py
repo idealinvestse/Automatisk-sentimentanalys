@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 import logging
+from typing import Annotated, TypeVar
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from ...alerting import AlertEngine
+from ...caching import AggregateCache
+from ...core.errors import BaseAnalysisError
 from ...core.serialization import utc_now_iso
 from ...pipeline import CallAnalysisPipeline
+from ..dependencies import (
+    PUBLIC_ERROR_DETAIL,
+    create_pipeline,
+    get_alert_engine,
+    get_cache,
+    get_openrouter_header_key,
+    resolve_llm_api_key,
+)
 from ..schemas import (
     AgentPerformanceRequest,
     AgentPerformanceResponse,
@@ -25,153 +37,198 @@ from ..schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Pipeline"])
+_T = TypeVar("_T")
 
 
-@router.post("/analyze_pipeline", response_model=PipelineResponse)
-async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
-    """Run the full call analysis pipeline on pre-transcribed segments.
-
-    Orchestrates sentiment, intent, summarization, topic modelling,
-    insights, and predictive analytics in a single call.
-
-    Returns:
-        Complete analysis results with a UTC timestamp.
-    """
-    logger.info("Running full pipeline on %d segment(s)", len(req.segments))
+async def _run_safe(endpoint: str, fn) -> _T:
     try:
-        pipe = CallAnalysisPipeline(
-            sentiment_model=req.sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
-            device=req.device,
-            use_mistral_llm=req.use_mistral_llm,
-            llm_model=req.llm_model,
-            deep_analysis=req.deep_analysis,
-            llm_api_key=req.llm_api_key,
-        )
-        report = pipe.analyze_segments(req.segments)
+        return await fn()  # type: ignore[no-any-return]
+    except HTTPException:
+        raise
+    except BaseAnalysisError:
+        raise
     except Exception as e:
-        logger.error("Pipeline analysis failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Pipeline analysis failed: {e}") from e
+        logger.error("%s failed: %s", endpoint, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_DETAIL) from e
 
-    return PipelineResponse(
-        sentiment_results=report.sentiment_results,
-        intent_results=[
-            {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
-        ],
-        summary=report.summary,
-        topics=report.topics,
-        insights=report.insights,
-        risks=report.risks,
-        processing_time_s=report.processing_time_s,
-        timestamp=utc_now_iso(),
-        llm=report.llm,
-        results=report.results,  # Fas 4: agent_performance, qa/compliance_qa, agent_assessment, customer_metrics etc.
+
+def _fas4_pipeline(
+    req: AgentPerformanceRequest
+    | SemanticSearchRequest
+    | HotTopicsRequest
+    | QAScoreRequest
+    | AlertsRequest,
+    cache: AggregateCache,
+    header_key: str | None,
+) -> CallAnalysisPipeline:
+    return create_pipeline(
+        cache=cache,
+        profile=req.profile,
+        use_mistral_llm=req.use_mistral_llm,
+        llm_model=req.llm_model,
+        deep_analysis=req.deep_analysis,
+        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
     )
 
 
-# ---------------------------------------------------------------------------
-# Fas 4.5.2 new endpoints - explicit integration with pipeline caching/aggregates/search/alerts
-# ---------------------------------------------------------------------------
+@router.post("/analyze_pipeline", response_model=PipelineResponse)
+async def analyze_pipeline(
+    req: PipelineRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> PipelineResponse:
+    """Run the full call analysis pipeline on pre-transcribed segments."""
+    logger.info("Running full pipeline on %d segment(s)", len(req.segments))
+    pipe = create_pipeline(
+        cache=cache,
+        sentiment_model=req.sentiment_model,
+        device=req.device,
+        use_mistral_llm=req.use_mistral_llm,
+        llm_model=req.llm_model,
+        deep_analysis=req.deep_analysis,
+        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
+    )
+
+    async def _do() -> PipelineResponse:
+        report = pipe.analyze_segments(req.segments)
+        return PipelineResponse(
+            sentiment_results=report.sentiment_results,
+            intent_results=[
+                {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
+            ],
+            summary=report.summary,
+            topics=report.topics,
+            insights=report.insights,
+            risks=report.risks,
+            processing_time_s=report.processing_time_s,
+            timestamp=utc_now_iso(),
+            llm=report.llm,
+            results=report.results,
+        )
+
+    return await _run_safe("analyze_pipeline", _do)
 
 
 @router.post("/agent_performance/{agent_id}", response_model=AgentPerformanceResponse)
-async def get_agent_performance(agent_id: str, req: AgentPerformanceRequest) -> AgentPerformanceResponse:
-    """Get pre-computed/cached agent performance aggregates (Fas 4.5.1 + 4.5.2).
-
-    Internally runs pipeline on provided segments_list, then uses cached aggregates.
-    """
-    logger.info("Agent performance request for %s, %d calls", agent_id, len(req.segments_list))
-    try:
-        pipe = CallAnalysisPipeline(
-            profile=req.profile,
-            use_mistral_llm=req.use_mistral_llm,
-            deep_analysis=req.deep_analysis,
-            llm_model=req.llm_model,
-            llm_api_key=req.llm_api_key,
+async def get_agent_performance(
+    agent_id: str,
+    req: AgentPerformanceRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> AgentPerformanceResponse:
+    """Get pre-computed/cached agent performance aggregates (Fas 4.5.1 + 4.5.2)."""
+    if req.agent_id != agent_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Path agent_id must match body agent_id",
         )
+    logger.info("Agent performance request for %s, %d calls", agent_id, len(req.segments_list))
+    pipe = _fas4_pipeline(req, cache, header_key)
+
+    async def _do() -> AgentPerformanceResponse:
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
-        metrics = pipe.get_cached_agent_performance(agent_id, reports, window=req.window)
-        # Check if it came from cache (simplified)
-        cached = "computed_at" in metrics and metrics.get("call_count", 0) > 0
+        metrics = dict(pipe.get_cached_agent_performance(agent_id, reports, window=req.window))
+        cached = bool(metrics.pop("cache_hit", False))
         return AgentPerformanceResponse(
             agent_id=agent_id,
             metrics=metrics,
             cached=cached,
             timestamp=utc_now_iso(),
         )
-    except Exception as e:
-        logger.error("Agent performance endpoint failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return await _run_safe("agent_performance", _do)
 
 
 @router.post("/search/semantic", response_model=SemanticSearchResponse)
-async def semantic_search(req: SemanticSearchRequest) -> SemanticSearchResponse:
+async def semantic_search(
+    req: SemanticSearchRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> SemanticSearchResponse:
     """Hybrid semantic + keyword search over provided calls (Fas 4.3.2 + 4.5.2)."""
     logger.info("Semantic search: %s", req.query[:50])
-    try:
-        pipe = CallAnalysisPipeline(profile=req.profile, llm_api_key=getattr(req, 'llm_api_key', None))
+    pipe = _fas4_pipeline(req, cache, header_key)
+
+    async def _do() -> SemanticSearchResponse:
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
-        hits = pipe.semantic_search(req.query, top_k=req.top_k, filters=req.filters or {}, corpus=reports)
+        hits = pipe.semantic_search(
+            req.query, top_k=req.top_k, filters=req.filters or {}, corpus=reports
+        )
         return SemanticSearchResponse(
             query=req.query,
             hits=hits.get("hits", []),
             meta=hits.get("meta", {}),
             timestamp=utc_now_iso(),
         )
-    except Exception as e:
-        logger.error("Semantic search failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return await _run_safe("semantic_search", _do)
 
 
 @router.post("/insights/hot_topics", response_model=HotTopicsResponse)
-async def get_hot_topics(req: HotTopicsRequest) -> HotTopicsResponse:
-    """Get cached hot topics and trends (Fas 4.3.1 + 4.5.2). Uses pre-computation cache."""
+async def get_hot_topics(
+    req: HotTopicsRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> HotTopicsResponse:
+    """Get cached hot topics and trends (Fas 4.3.1 + 4.5.2)."""
     logger.info("Hot topics request, window=%s, calls=%d", req.window, len(req.segments_list))
-    try:
-        pipe = CallAnalysisPipeline(
-            profile=req.profile,
-            use_mistral_llm=req.use_mistral_llm,
-            llm_api_key=req.llm_api_key,
-        )
+    pipe = _fas4_pipeline(req, cache, header_key)
+
+    async def _do() -> HotTopicsResponse:
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
-        topics = pipe.get_cached_hot_topics(reports, window=req.window)
+        topics = dict(pipe.get_cached_hot_topics(reports, window=req.window))
+        topics.pop("cache_hit", None)
         return HotTopicsResponse(
             hot_topics=topics.get("hot_topics", []),
             meta=topics.get("meta", {}),
             timestamp=utc_now_iso(),
         )
-    except Exception as e:
-        logger.error("Hot topics failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return await _run_safe("hot_topics", _do)
 
 
 @router.post("/qa/score", response_model=QAScoreResponse)
-async def get_qa_score(req: QAScoreRequest) -> QAScoreResponse:
+async def get_qa_score(
+    req: QAScoreRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> QAScoreResponse:
     """Run QA scoring on segments (Fas 4.2 + 4.5.2)."""
-    try:
-        pipe = CallAnalysisPipeline(profile=req.profile, use_mistral_llm=req.use_mistral_llm, llm_api_key=getattr(req, 'llm_api_key', None))
+    pipe = _fas4_pipeline(req, cache, header_key)
+
+    async def _do() -> QAScoreResponse:
         report = pipe.analyze_segments(req.segments)
         qa = report.results.get("qa") or report.results.get("compliance_qa", {})
         return QAScoreResponse(qa=qa, timestamp=utc_now_iso())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return await _run_safe("qa_score", _do)
 
 
 @router.post("/alerts", response_model=AlertsResponse)
-async def get_alerts(req: AlertsRequest) -> AlertsResponse:
+async def get_alerts(
+    req: AlertsRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    alert_engine: Annotated[AlertEngine, Depends(get_alert_engine)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> AlertsResponse:
     """Get alerts from per-call results or aggregate trends (Fas 4.4.2 + 4.5.2)."""
-    try:
-        pipe = CallAnalysisPipeline(profile=req.profile, llm_api_key=getattr(req, 'llm_api_key', None))
+    pipe = _fas4_pipeline(req, cache, header_key)
+
+    async def _do() -> AlertsResponse:
         alerts: list[dict] = []
         if req.segments_list:
             for segs in req.segments_list:
                 r = pipe.analyze_segments(segs)
                 alerts.extend(r.results.get("alerts", []))
         if req.aggregate:
-            # Simulate from aggregator data
-            from ...alerting import AlertEngine
-            eng = AlertEngine()
-            trend_alerts = eng.check_from_aggregate(req.aggregate)
-            alerts.extend([a.model_dump() if hasattr(a, "model_dump") else a for a in trend_alerts])
+            trend_alerts = alert_engine.check_from_aggregate(req.aggregate)
+            for a in trend_alerts:
+                if hasattr(a, "model_dump"):
+                    alerts.append(a.model_dump())
+                elif isinstance(a, dict):
+                    alerts.append(a)
+                else:
+                    alerts.append({"detail": str(a)})
         return AlertsResponse(alerts=alerts, timestamp=utc_now_iso())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return await _run_safe("alerts", _do)

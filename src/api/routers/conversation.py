@@ -158,7 +158,7 @@ async def batch_analyze_conversation(
     items: list[BatchAnalyzeConversationItem] = []
     ok = failed = 0
     for path, result, error in raw:
-        if error is None:
+        if error is None and result is not None:
             tr, segs, meta = result
             items.append(
                 BatchAnalyzeConversationItem(

@@ -9,7 +9,10 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+MAX_FAS4_CALLS = 50
+MAX_SEGMENTS_PER_CALL = 200
 
 # ---------------------------------------------------------------------------
 # /analyze
@@ -167,6 +170,8 @@ class PipelineRequest(BaseModel):
     def segments_must_not_be_empty(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not v:
             raise ValueError("segments must not be empty")
+        if len(v) > MAX_SEGMENTS_PER_CALL:
+            raise ValueError(f"segments must have at most {MAX_SEGMENTS_PER_CALL} items")
         return v
 
 
@@ -363,16 +368,50 @@ class ScanProcessResponse(BaseModel):
 # These use the extended pipeline methods (cached aggregates, semantic search, etc.)
 # ---------------------------------------------------------------------------
 
-class AgentPerformanceRequest(BaseModel):
+
+def _validate_fas4_segments_list(v: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+    if not v:
+        raise ValueError("segments_list must not be empty")
+    if len(v) > MAX_FAS4_CALLS:
+        raise ValueError(f"segments_list must have at most {MAX_FAS4_CALLS} calls")
+    for i, call_segs in enumerate(v):
+        if not call_segs:
+            raise ValueError(f"segments_list[{i}] must not be empty")
+        if len(call_segs) > MAX_SEGMENTS_PER_CALL:
+            raise ValueError(
+                f"segments_list[{i}] must have at most {MAX_SEGMENTS_PER_CALL} segments"
+            )
+    return v
+
+
+class Fas4LlmFlags(BaseModel):
+    """Shared LLM flags for Fas 4 pipeline endpoints."""
+
+    use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
+    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
+    deep_analysis: bool = Field(False, description="Force deep LLM path")
+    llm_api_key: str | None = Field(
+        None,
+        description="Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY.",
+    )
+
+
+class AgentPerformanceRequest(Fas4LlmFlags):
     """Request for /agent_performance endpoint. Provide segments for one or more calls."""
     segments_list: list[list[dict[str, Any]]] = Field(..., description="List of segment lists (one per call)")
     agent_id: str = Field(..., description="Agent identifier to aggregate for")
     window: str = Field("7d", description="Time window e.g. 7d, 30d")
     profile: str = Field("callcenter")
-    use_mistral_llm: bool = Field(False)
-    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
-    deep_analysis: bool = Field(False, description="Force deep LLM path")
-    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
+
+    @field_validator("segments_list")
+    @classmethod
+    def validate_segments_list(cls, v: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+        return _validate_fas4_segments_list(v)
+
+    @model_validator(mode="after")
+    def path_agent_matches_body(self) -> AgentPerformanceRequest:
+        # Path param validated in router; body agent_id must match when both present
+        return self
 
 
 class AgentPerformanceResponse(BaseModel):
@@ -382,13 +421,17 @@ class AgentPerformanceResponse(BaseModel):
     timestamp: str
 
 
-class SemanticSearchRequest(BaseModel):
+class SemanticSearchRequest(Fas4LlmFlags):
     segments_list: list[list[dict[str, Any]]] = Field(..., description="List of calls to index/search over")
-    query: str
+    query: str = Field(..., min_length=1, max_length=500)
     top_k: int = Field(5, ge=1, le=50)
     filters: dict[str, Any] | None = Field(None)
     profile: str = Field("callcenter")
-    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
+
+    @field_validator("segments_list")
+    @classmethod
+    def validate_segments_list(cls, v: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+        return _validate_fas4_segments_list(v)
 
 
 class SemanticSearchResponse(BaseModel):
@@ -398,12 +441,15 @@ class SemanticSearchResponse(BaseModel):
     timestamp: str
 
 
-class HotTopicsRequest(BaseModel):
+class HotTopicsRequest(Fas4LlmFlags):
     segments_list: list[list[dict[str, Any]]]
     window: str = "7d"
     profile: str = "callcenter"
-    use_mistral_llm: bool = False
-    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
+
+    @field_validator("segments_list")
+    @classmethod
+    def validate_segments_list(cls, v: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
+        return _validate_fas4_segments_list(v)
 
 
 class HotTopicsResponse(BaseModel):
@@ -412,11 +458,18 @@ class HotTopicsResponse(BaseModel):
     timestamp: str
 
 
-class QAScoreRequest(BaseModel):
+class QAScoreRequest(Fas4LlmFlags):
     segments: list[dict[str, Any]]
     profile: str = "callcenter"
-    use_mistral_llm: bool = False
-    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
+
+    @field_validator("segments")
+    @classmethod
+    def segments_must_not_be_empty(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not v:
+            raise ValueError("segments must not be empty")
+        if len(v) > MAX_SEGMENTS_PER_CALL:
+            raise ValueError(f"segments must have at most {MAX_SEGMENTS_PER_CALL} items")
+        return v
 
 
 class QAScoreResponse(BaseModel):
@@ -424,11 +477,18 @@ class QAScoreResponse(BaseModel):
     timestamp: str
 
 
-class AlertsRequest(BaseModel):
+class AlertsRequest(Fas4LlmFlags):
     segments_list: list[list[dict[str, Any]]] | None = None  # for per call
     aggregate: dict[str, Any] | None = None  # for trend alerts from aggregator
     profile: str = "callcenter"
-    llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
+
+    @model_validator(mode="after")
+    def require_input(self) -> AlertsRequest:
+        if not self.segments_list and not self.aggregate:
+            raise ValueError("Either segments_list or aggregate must be provided")
+        if self.segments_list:
+            _validate_fas4_segments_list(self.segments_list)
+        return self
 
 
 class AlertsResponse(BaseModel):

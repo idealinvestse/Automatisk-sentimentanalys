@@ -166,13 +166,21 @@ def precompute_and_cache(
     compute_fn: Callable[[], dict[str, Any]],
     ttl: Optional[int] = None,
 ) -> dict[str, Any]:
-    """Generic precompute wrapper with cache + invalidation support."""
+    """Generic precompute wrapper with cache + invalidation support.
+
+    Adds ``cache_hit`` (bool) so API layers can expose accurate cache semantics.
+    """
     cached = cache.get(key)
     if cached is not None:
-        return cached
+        out = dict(cached)
+        out["cache_hit"] = True
+        return out
     result = compute_fn()
     cache.set(key, result, ttl=ttl)
-    return result
+    stored = cache.get(key) or result
+    out = dict(stored)
+    out["cache_hit"] = False
+    return out
 
 
 # Concrete precompute helpers (use existing aggregate fns)

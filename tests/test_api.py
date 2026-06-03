@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.api import app  # uses the factory via __init__
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 
 def test_health():
@@ -86,7 +86,7 @@ def test_analyze_pipeline_happy(monkeypatch):
     fake_report.llm = {}
     fake_report.results = {}
 
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         inst.analyze_segments.return_value = fake_report
         r = client.post(
@@ -101,7 +101,7 @@ def test_analyze_pipeline_happy(monkeypatch):
 
 def test_agent_performance_endpoint(monkeypatch):
     fake_metrics = {"call_count": 2, "averages": {"empathy_score": 0.75}}
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         fake_report = MagicMock()
         inst.analyze_segments.return_value = fake_report
@@ -116,9 +116,49 @@ def test_agent_performance_endpoint(monkeypatch):
         assert "metrics" in data
 
 
+def test_agent_performance_cache_hit_flag():
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = MagicMock()
+        inst.get_cached_agent_performance.return_value = {
+            "call_count": 1,
+            "cache_hit": True,
+        }
+        r = client.post(
+            "/agent_performance/Agent-1",
+            json={
+                "segments_list": [[{"text": "Hej"}]],
+                "agent_id": "Agent-1",
+            },
+        )
+        assert r.status_code == 200
+        assert r.json()["cached"] is True
+        assert "cache_hit" not in r.json()["metrics"]
+
+
+def test_agent_performance_agent_id_mismatch_422():
+    r = client.post(
+        "/agent_performance/Agent-1",
+        json={
+            "segments_list": [[{"text": "Hej"}]],
+            "agent_id": "Agent-2",
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_fas4_segments_list_max_calls_validation():
+    too_many = [[{"text": "x"}] for _ in range(51)]
+    r = client.post(
+        "/insights/hot_topics",
+        json={"segments_list": too_many},
+    )
+    assert r.status_code == 422
+
+
 def test_agent_performance_deep_analysis_independent_of_use_mistral_llm():
     """P0-1: deep_analysis must not be aliased to use_mistral_llm."""
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         inst.analyze_segments.return_value = MagicMock()
         inst.get_cached_agent_performance.return_value = {"call_count": 1, "computed_at": "t"}
@@ -138,7 +178,7 @@ def test_agent_performance_deep_analysis_independent_of_use_mistral_llm():
 
 def test_semantic_search_endpoint(monkeypatch):
     fake_hits = {"hits": [{"id": "0", "score": 0.9, "highlights": ["test"]}], "meta": {}}
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         inst.analyze_segments.return_value = MagicMock()
         inst.semantic_search.return_value = fake_hits
@@ -152,7 +192,7 @@ def test_semantic_search_endpoint(monkeypatch):
 
 def test_hot_topics_endpoint(monkeypatch):
     fake_topics = {"hot_topics": [{"topic": "faktura", "volume": 5}], "meta": {}}
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         inst.analyze_segments.return_value = MagicMock()
         inst.get_cached_hot_topics.return_value = fake_topics
@@ -165,7 +205,7 @@ def test_qa_score_endpoint(monkeypatch):
     fake_qa = {"overall_qa_score": 85, "passed": True}
     fake_report = MagicMock()
     fake_report.results = {"qa": fake_qa}
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         inst.analyze_segments.return_value = fake_report
         r = client.post("/qa/score", json={"segments": [{"text": "hej", "start": 0, "end": 1}]})
@@ -174,7 +214,7 @@ def test_qa_score_endpoint(monkeypatch):
 
 
 def test_alerts_endpoint(monkeypatch):
-    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
         fake_report = MagicMock()
         fake_report.results = {"alerts": [{"rule_id": "test", "severity": "high"}]}

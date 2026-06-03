@@ -7,21 +7,67 @@ hooks, and all registered routers.
 from __future__ import annotations
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..core.errors import AnalysisError, BaseAnalysisError, ConfigurationError, TranscriptionError
+from ..alerting import AlertEngine
+from ..caching import AggregateCache
+from ..core.errors import (
+    AnalysisError,
+    BaseAnalysisError,
+    ConfigurationError,
+    LLMError,
+    TranscriptionError,
+)
+from .dependencies import require_api_key
 from .routers import conversation, health, pipeline, scan, text, transcription
+from .settings import get_api_settings
 
 logger = logging.getLogger(__name__)
 
 
+def _init_app_state(application: FastAPI) -> None:
+    """Eager init for TestClient when lifespan context is not entered."""
+    if hasattr(application.state, "cache"):
+        return
+    settings = get_api_settings()
+    application.state.cache = AggregateCache(
+        use_redis=settings.use_redis_cache,
+        redis_url=settings.redis_url,
+        cache_dir=settings.cache_dir,
+    )
+    application.state.alert_engine = AlertEngine()
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
-    """Application lifespan – startup and shutdown hooks."""
-    logger.info("Swedish Sentiment API starting up")
+    """Application lifespan – shared cache and alert engine."""
+    settings = get_api_settings()
+    app.state.cache = AggregateCache(
+        use_redis=settings.use_redis_cache,
+        redis_url=settings.redis_url,
+        cache_dir=settings.cache_dir,
+    )
+    app.state.alert_engine = AlertEngine()
+    logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
     yield
     logger.info("Swedish Sentiment API shutting down")
 
@@ -42,9 +88,10 @@ def create_app() -> FastAPI:
         Configured :class:`~fastapi.FastAPI` instance with all routers and
         exception handlers registered.
     """
+    settings = get_api_settings()
     app = FastAPI(
         title="Swedish Sentiment API",
-        version="0.3.0",
+        version="0.4.0",
         description=(
             "REST API for Swedish sentiment analysis, ASR transcription, "
             "call-center conversation analysis, and batch processing."
@@ -52,7 +99,31 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(RequestIdMiddleware)
+    if settings.cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     # --- Exception handlers --------------------------------------------------
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": jsonable_encoder(exc.errors())},
+        )
+
+    @app.exception_handler(LLMError)
+    async def handle_llm_error(request: Request, exc: LLMError) -> JSONResponse:
+        logger.error("LLM error: %s", exc)
+        return _error_response(502, f"LLM request failed: {exc}")
 
     @app.exception_handler(ConfigurationError)
     async def handle_config_error(request: Request, exc: ConfigurationError) -> JSONResponse:
@@ -76,13 +147,16 @@ def create_app() -> FastAPI:
 
     # --- Routers -------------------------------------------------------------
 
-    app.include_router(health.router)
-    app.include_router(text.router)
-    app.include_router(transcription.router)
-    app.include_router(conversation.router)
-    app.include_router(pipeline.router)
-    app.include_router(scan.router)
+    _auth = [Depends(require_api_key)]
 
+    app.include_router(health.router)
+    app.include_router(text.router, dependencies=_auth)
+    app.include_router(transcription.router, dependencies=_auth)
+    app.include_router(conversation.router, dependencies=_auth)
+    app.include_router(pipeline.router, dependencies=_auth)
+    app.include_router(scan.router, dependencies=_auth)
+
+    _init_app_state(app)
     return app
 
 
