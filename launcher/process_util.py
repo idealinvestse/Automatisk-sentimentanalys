@@ -1,9 +1,11 @@
-"""Cross-platform process existence checks."""
+"""Cross-platform process existence and service reachability checks."""
 
 from __future__ import annotations
 
 import ctypes
+import socket
 import sys
+import time
 
 
 def is_process_running(pid: int) -> bool:
@@ -35,3 +37,28 @@ def _is_running_windows(pid: int) -> bool:
         return exit_code.value == still_active
     finally:
         kernel32.CloseHandle(handle)
+
+
+def is_port_open(host: str, port: int, *, timeout: float = 0.5) -> bool:
+    """Return True when ``host:port`` accepts a TCP connection."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def wait_for_port(
+    host: str,
+    port: int,
+    *,
+    timeout_sec: float = 30.0,
+    interval_sec: float = 0.25,
+) -> bool:
+    """Poll until ``host:port`` listens or ``timeout_sec`` elapses."""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if is_port_open(host, port, timeout=min(interval_sec, 1.0)):
+            return True
+        time.sleep(interval_sec)
+    return False

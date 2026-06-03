@@ -79,18 +79,23 @@ class LauncherApp(tk.Tk):
 
     def _start_api(self) -> None:
         try:
-            info = start_api(self.cfg)
-            messagebox.showinfo("API", f"Started (pid {info.pid})")
+            start_api(self.cfg)
+            status = service_status(self.cfg, "api")
+            messagebox.showinfo(
+                "API",
+                f"{status}\nhttp://{self.cfg.services.api_host}:{self.cfg.services.api_port}",
+            )
         except Exception as e:
             messagebox.showerror("API", str(e))
         self._refresh_status()
 
     def _start_dashboard(self) -> None:
         try:
-            info = start_dashboard(self.cfg)
+            start_dashboard(self.cfg)
+            status = service_status(self.cfg, "dashboard")
             messagebox.showinfo(
                 "Dashboard",
-                f"Started (pid {info.pid})\nhttp://localhost:{self.cfg.services.dashboard_port}",
+                f"{status}\nhttp://localhost:{self.cfg.services.dashboard_port}",
             )
         except Exception as e:
             messagebox.showerror("Dashboard", str(e))
