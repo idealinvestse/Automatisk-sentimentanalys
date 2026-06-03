@@ -1,0 +1,104 @@
+# Build portable Windows ZIP with bundled Python embed + venv + app
+param(
+    [string]$Version = "0.3.0",
+    [ValidateSet("minimal", "cli", "api", "full")]
+    [string]$Profile = "full",
+    [string]$OutDir = "dist",
+    [string]$PythonVersion = "3.11.9"
+)
+
+$ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent $PSScriptRoot
+$Staging = Join-Path $Root "build\portable-staging"
+$StageApp = Join-Path $Staging "Sentimentanalys"
+
+if (Test-Path $Staging) { Remove-Item $Staging -Recurse -Force }
+New-Item -ItemType Directory -Path $StageApp -Force | Out-Null
+
+Write-Host "==> Stage application files"
+$copyItems = @("src", "app", "configs", "data", "samples", "docs", "launcher", "launcher.ps1",
+    "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
+    "requirements.txt", "requirements-desktop.txt", "requirements-install.txt",
+    "pyproject.toml", "README.md")
+foreach ($item in $copyItems) {
+    $src = Join-Path $Root $item
+    if (Test-Path $src) {
+        Copy-Item $src (Join-Path $StageApp $item) -Recurse -Force
+    }
+}
+
+New-Item -ItemType Directory -Path (Join-Path $StageApp "cache\hf") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $StageApp "cache\llm") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $StageApp "outputs") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $StageApp "user_data") -Force | Out-Null
+
+@'
+version: 1
+install_profile: cli
+sentiment_profile: callcenter
+portable_mode: true
+paths:
+  app_root: .
+  hf_cache: cache/hf
+  outputs: outputs
+'@ | Set-Content (Join-Path $StageApp "user_data\user_config.yaml") -Encoding UTF8
+
+Write-Host "==> Download Python embed ($PythonVersion)"
+$pyZip = "python-$PythonVersion-embed-amd64.zip"
+$pyUrl = "https://www.python.org/ftp/python/$PythonVersion/$pyZip"
+$pyDir = Join-Path $StageApp "python"
+New-Item -ItemType Directory -Path $pyDir -Force | Out-Null
+$zipPath = Join-Path $env:TEMP $pyZip
+Invoke-WebRequest -Uri $pyUrl -OutFile $zipPath
+Expand-Archive $zipPath $pyDir -Force
+
+# Enable pip in embeddable Python
+$pth = Get-ChildItem $pyDir -Filter "*._pth" | Select-Object -First 1
+if ($pth) {
+    (Get-Content $pth.FullName) -replace '#import site', 'import site' | Set-Content $pth.FullName
+}
+$embedPy = Join-Path $pyDir "python.exe"
+Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile (Join-Path $pyDir "get-pip.py")
+& $embedPy (Join-Path $pyDir "get-pip.py")
+
+Write-Host "==> Create venv and install requirements ($Profile)"
+$venv = Join-Path $StageApp ".venv"
+& $embedPy -m venv $venv
+$venvPy = Join-Path $venv "Scripts\python.exe"
+& $venvPy -m pip install -U pip
+
+$reqMap = @{
+    minimal = @("requirements-min.txt", "requirements-install.txt")
+    cli     = @("requirements-min.txt", "requirements-cli.txt", "requirements-install.txt")
+    api     = @("requirements-min.txt", "requirements-api.txt", "requirements-install.txt")
+    full    = @(
+        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
+        "requirements.txt", "requirements-desktop.txt", "requirements-install.txt"
+    )
+}
+foreach ($rf in $reqMap[$Profile]) {
+    & $venvPy -m pip install -r (Join-Path $StageApp $rf)
+}
+
+# Launcher entry script
+@'
+@echo off
+set SENTIMENT_APP_ROOT=%~dp0
+cd /d %SENTIMENT_APP_ROOT%
+.venv\Scripts\pythonw.exe -m launcher.main
+'@ | Set-Content (Join-Path $StageApp "Sentimentanalys.bat") -Encoding ASCII
+
+@{
+    version = $Version
+    profile = $Profile
+    build = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json | Set-Content (Join-Path $StageApp "VERSION.json")
+
+Write-Host "==> Optional: download ffmpeg (manual step if offline)"
+Write-Host "    Place ffmpeg.exe in tools\ffmpeg\bin\ for ASR preprocess"
+
+New-Item -ItemType Directory -Path (Join-Path $Root $OutDir) -Force | Out-Null
+$zipName = Join-Path $Root $OutDir "Sentimentanalys-$Version-win64-portable-$Profile.zip"
+if (Test-Path $zipName) { Remove-Item $zipName -Force }
+Compress-Archive -Path $StageApp -DestinationPath $zipName
+Write-Host "==> Created $zipName"

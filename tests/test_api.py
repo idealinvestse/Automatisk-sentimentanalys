@@ -83,6 +83,8 @@ def test_analyze_pipeline_happy(monkeypatch):
     fake_report.insights = {}
     fake_report.risks = {}
     fake_report.processing_time_s = 0.12
+    fake_report.llm = {}
+    fake_report.results = {}
 
     with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value

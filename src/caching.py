@@ -172,7 +172,8 @@ def precompute_and_cache(
         return cached
     result = compute_fn()
     cache.set(key, result, ttl=ttl)
-    return result
+    # Return the stored envelope (includes computed_at/ttl) so callers see consistent shape
+    return cache.get(key) or result
 
 
 # Concrete precompute helpers (use existing aggregate fns)

@@ -228,9 +228,12 @@ class TestCallAnalysisPipeline:
             assert "score" in h
             assert "highlights" in h or "evidence_spans" in h
 
-    def test_caching_fas4_5_1(self, monkeypatch):
+    def test_caching_fas4_5_1(self, monkeypatch, tmp_path):
         """Fas 4.5.1: get_cached_* uses cache, invalidate works, hit rate metric."""
+        from src.caching import AggregateCache
+
         self._mock_sentiment(monkeypatch)
+        self.pipe.cache = AggregateCache(cache_dir=str(tmp_path / "aggregates"))
         segs = [{"start": 0, "end": 2, "text": "Faktura fel", "speaker": "C"}]
         r1 = self.pipe.analyze_segments(segs)
         r2 = self.pipe.analyze_segments(segs)
@@ -241,7 +244,7 @@ class TestCallAnalysisPipeline:
 
         # Second should hit (same data)
         m2 = self.pipe.get_cached_agent_performance("unknown", [r1, r2])
-        assert m1 == m2  # cached result identical
+        assert m1 == m2
 
         # Invalidate
         self.pipe.invalidate_aggregate_cache("agent:unknown")

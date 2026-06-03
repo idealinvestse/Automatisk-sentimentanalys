@@ -23,10 +23,10 @@ jobs:
           pip install ruff black
 
       - name: Ruff check
-        run: ruff check src/ tests/ scripts/
+        run: ruff check src/ launcher/ tests/ scripts/ app/setup_hub.py
 
       - name: Black check
-        run: black --check src/ tests/ scripts/
+        run: black --check src/ launcher/ tests/ scripts/ app/setup_hub.py
 
   test:
     needs: lint
@@ -47,6 +47,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-min.txt
           pip install -r requirements-cli.txt
+          pip install -r requirements-install.txt
           pip install pytest pytest-cov
 
       - name: Run tests

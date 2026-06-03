@@ -1,0 +1,35 @@
+# Install-time defaults (shipped with app). Overridden by %AppData%\Sentimentanalys\user_config.yaml
+version: 1
+install_profile: cli
+sentiment_profile: callcenter
+device: auto
+portable_mode: false
+log_level: INFO
+
+paths:
+  hf_cache: cache/hf
+  llm_cache: cache/llm
+  outputs: outputs
+
+asr:
+  backend: faster
+  model: kb-whisper-large
+  revision: strict
+  language: sv
+  hotwords_file: configs/callcenter_hotwords.txt
+  preprocess: false
+
+llm:
+  enabled: false
+  provider: openrouter
+  default_model: mistralai/mistral-medium-3.5
+  cost_budget_per_call: 0.08
+  anonymize_before_llm: false
+  log_external_calls: true
+
+services:
+  api_enabled: true
+  api_host: 127.0.0.1
+  api_port: 8000
+  dashboard_enabled: true
+  dashboard_port: 8501
