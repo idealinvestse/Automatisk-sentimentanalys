@@ -77,8 +77,8 @@
 
 | Metric | Value |
 |--------|-------|
-| `src/api` coverage (`test_api.py`) | **~78%** |
-| Tests | 18 passed |
+| `src/api` coverage (`test_api.py` + `test_api_coverage.py`) | **96.64%** |
+| Tests | 52 passed |
 | ruff `src/api` | 1 error (E402 mid-file imports) |
 | mypy `src/api` | 2 errors |
 | bandit | Skipped (bandit not in venv; install in Fas 5) |

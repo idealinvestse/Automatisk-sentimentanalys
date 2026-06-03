@@ -6,7 +6,7 @@
 **Version:** 2.0 (uppdaterad och förbättrad efter initial review och live-fix)  
 **Status:** Levande dokument – uppdateras iterativt under arbetet  
 **Branch:** `api-review-v2-hardening`  
-**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 🔄 | Fas 3–5 ⏳  
+**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 🔄 | Fas 3 ✅ | Fas 4–5 ⏳  
 **Referens:** Bygger på UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
 
 ---
@@ -113,10 +113,13 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints – n
 
 **Deliverables:** Refaktorerad kod, nya dependencies.py, uppdaterade schemas.
 
-### Fas 3: Testutveckling & Validering (1,5 dagar)
+### Fas 3: Testutveckling & Validering (1,5 dagar) — **DONE 2026-06-03**
+**Resultat:** `tests/test_api_coverage.py` (+34 tester), **52 passed**, **`src/api` coverage 96.64%** (mål ≥90%).  
+**Kör:** `pytest tests/test_api.py tests/test_api_coverage.py --cov=src/api --cov-fail-under=90`
+
 **Tasks:**
-1. Analysera befintlig `tests/test_api.py` – identifiera gap för Fas 4 endpoints.
-2. Skapa/utöka tester:
+1. ✅ Analysera befintlig `tests/test_api.py` – identifiera gap för Fas 4 endpoints.
+2. ✅ Skapa/utöka tester:
    - Unit tests för varje ny endpoint (mock pipeline & cache).
    - Integration tests med TestClient + sample segments.
    - Error path tests (LLM fail, invalid input, cache miss, large payload).
