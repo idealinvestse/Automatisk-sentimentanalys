@@ -14,8 +14,8 @@
 | P0-1 | `deep_analysis` wired to `use_mistral_llm` on `/agent_performance` | `pipeline.py:82` | **FIXED** (Fas 1) |
 | P0-2 | No authentication on mutating endpoints | `app.py`, all routers | **PARTIAL** — `SENTIMENT_API_KEY` + `X-API-Key` (Fas 2) |
 | P0-3 | `llm_api_key` accepted in JSON body | `schemas.py` Fas 4 models | **PARTIAL** — header preferred; body needs `API_ALLOW_CLIENT_LLM_KEY` |
-| P0-4 | Server filesystem access via `audio_path` / `directory` | `schemas.py`, `scan.py` | Open |
-| P0-5 | `detail=str(e)` leaks internals on Fas 4 routes | `pipeline.py` except blocks | Open |
+| P0-4 | Server filesystem access via `audio_path` / `directory` | `path_validation.py` | **PARTIAL** — `API_MEDIA_ROOT` sandbox (Fas 2) |
+| P0-5 | `detail=str(e)` leaks internals | routers | **FIXED** — `router_errors.run_route` (Fas 2) |
 | P0-6 | No payload limits (`segments_list`, `segments`) | `schemas.py` | **FIXED** — max 50 calls × 200 segments (Fas 2) |
 | P0-7 | `cached` flag heuristic incorrect | `pipeline.py:87-88` | **FIXED** — `cache_hit` from `precompute_and_cache` (Fas 2) |
 
@@ -77,8 +77,9 @@
 
 | Metric | Value |
 |--------|-------|
-| `src/api` coverage (`test_api.py` + `test_api_coverage.py`) | **96.64%** |
-| Tests | 52 passed |
+| `src/api` coverage (`test_api.py` + `test_api_coverage.py`) | **96.38%** |
+| Tests | 53 passed |
+| CI | `api-test` job, `--cov-fail-under=90` |
 | ruff `src/api` | 1 error (E402 mid-file imports) |
 | mypy `src/api` | 2 errors |
 | bandit | Skipped (bandit not in venv; install in Fas 5) |

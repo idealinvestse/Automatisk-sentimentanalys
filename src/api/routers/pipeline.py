@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated, TypeVar
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...alerting import AlertEngine
 from ...caching import AggregateCache
-from ...core.errors import BaseAnalysisError
 from ...core.serialization import utc_now_iso
 from ...pipeline import CallAnalysisPipeline
 from ..dependencies import (
-    PUBLIC_ERROR_DETAIL,
     create_pipeline,
     get_alert_engine,
     get_cache,
     get_openrouter_header_key,
     resolve_llm_api_key,
 )
+from ..router_errors import run_route
 from ..schemas import (
     AgentPerformanceRequest,
     AgentPerformanceResponse,
@@ -37,19 +36,6 @@ from ..schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Pipeline"])
-_T = TypeVar("_T")
-
-
-async def _run_safe(endpoint: str, fn) -> _T:
-    try:
-        return await fn()  # type: ignore[no-any-return]
-    except HTTPException:
-        raise
-    except BaseAnalysisError:
-        raise
-    except Exception as e:
-        logger.error("%s failed: %s", endpoint, e, exc_info=True)
-        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_DETAIL) from e
 
 
 def _fas4_pipeline(
@@ -106,7 +92,7 @@ async def analyze_pipeline(
             results=report.results,
         )
 
-    return await _run_safe("analyze_pipeline", _do)
+    return await run_route("analyze_pipeline", _do)
 
 
 @router.post("/agent_performance/{agent_id}", response_model=AgentPerformanceResponse)
@@ -136,7 +122,7 @@ async def get_agent_performance(
             timestamp=utc_now_iso(),
         )
 
-    return await _run_safe("agent_performance", _do)
+    return await run_route("agent_performance", _do)
 
 
 @router.post("/search/semantic", response_model=SemanticSearchResponse)
@@ -161,7 +147,7 @@ async def semantic_search(
             timestamp=utc_now_iso(),
         )
 
-    return await _run_safe("semantic_search", _do)
+    return await run_route("semantic_search", _do)
 
 
 @router.post("/insights/hot_topics", response_model=HotTopicsResponse)
@@ -184,7 +170,7 @@ async def get_hot_topics(
             timestamp=utc_now_iso(),
         )
 
-    return await _run_safe("hot_topics", _do)
+    return await run_route("hot_topics", _do)
 
 
 @router.post("/qa/score", response_model=QAScoreResponse)
@@ -201,7 +187,7 @@ async def get_qa_score(
         qa = report.results.get("qa") or report.results.get("compliance_qa", {})
         return QAScoreResponse(qa=qa, timestamp=utc_now_iso())
 
-    return await _run_safe("qa_score", _do)
+    return await run_route("qa_score", _do)
 
 
 @router.post("/alerts", response_model=AlertsResponse)
@@ -231,4 +217,4 @@ async def get_alerts(
                     alerts.append({"detail": str(a)})
         return AlertsResponse(alerts=alerts, timestamp=utc_now_iso())
 
-    return await _run_safe("alerts", _do)
+    return await run_route("alerts", _do)

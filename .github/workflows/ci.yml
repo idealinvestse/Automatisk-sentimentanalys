@@ -23,10 +23,10 @@ jobs:
           pip install ruff black
 
       - name: Ruff check
-        run: ruff check src/ tests/ scripts/
+        run: ruff check src/ launcher/ tests/ scripts/ app/setup_hub.py
 
       - name: Black check
-        run: black --check src/ tests/ scripts/
+        run: black --check src/ launcher/ tests/ scripts/ app/setup_hub.py
 
   test:
     needs: lint
@@ -47,10 +47,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-min.txt
           pip install -r requirements-cli.txt
+          pip install -r requirements-install.txt
           pip install pytest pytest-cov
 
       - name: Run tests
         run: pytest tests/ -v --cov=src --cov-report=term --cov-fail-under=80
+
+  api-test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-min.txt
+          pip install -r requirements-api.txt
+          pip install pytest pytest-cov httpx
+
+      - name: API layer tests (≥90% coverage on src/api)
+        run: |
+          pytest tests/test_api.py tests/test_api_coverage.py -q \
+            --cov=src/api --cov-report=term-missing --cov-fail-under=90
 
   docker:
     needs: lint

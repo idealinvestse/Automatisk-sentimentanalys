@@ -11,6 +11,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .path_validation import validate_audio_path, validate_directory_path
+
 MAX_FAS4_CALLS = 50
 MAX_SEGMENTS_PER_CALL = 200
 
@@ -78,9 +80,7 @@ class TranscribeRequest(BaseModel):
     @field_validator("audio_path")
     @classmethod
     def audio_path_must_exist(cls, v: str) -> str:
-        if not os.path.isfile(v):
-            raise ValueError(f"Audio file not found on server: {v!r}")
-        return v
+        return validate_audio_path(v)
 
 
 class TranscribeResponse(BaseModel):
@@ -116,9 +116,7 @@ class AnalyzeConversationRequest(BaseModel):
     @field_validator("audio_path")
     @classmethod
     def audio_path_must_exist(cls, v: str) -> str:
-        if not os.path.isfile(v):
-            raise ValueError(f"Audio file not found on server: {v!r}")
-        return v
+        return validate_audio_path(v)
 
 
 class SegmentSentiment(BaseModel):
@@ -334,9 +332,7 @@ class ScanProcessRequest(BaseModel):
     @field_validator("directory")
     @classmethod
     def directory_must_exist(cls, v: str) -> str:
-        if not os.path.isdir(v):
-            raise ValueError(f"Directory not found on server: {v!r}")
-        return v
+        return validate_directory_path(v)
 
     @field_validator("operation")
     @classmethod

@@ -9,7 +9,7 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 - (Ny) Valfritt svenskt lexikon för blending
 - (Ny) ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
   - CLI: `src/cli.py` med kommandon `sentiment`, `transcribe` och `analyze-call`
-  - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process`
+  - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process` — se **[docs/API.md](docs/API.md)** (v0.4.0, auth, Fas 4, exempel)
 - (Ny) Utvärderingsramverk: `src/evaluate.py` för att mäta prestanda mot testset
 
 ## Funktioner (v0.3 – Call Center Intelligence)
@@ -60,29 +60,30 @@ Ett minimalt, körbart system för svensk sentimentanalys med Hugging Face Trans
 
 Se även `configs/llm_config.yaml` (exempel) och `reports/llm_quality_smoke.json` (efter evaluate).
 
-## Installation (Windows PowerShell)
+## Installation (Windows)
+
+**Rekommenderat:** installer, portable ZIP eller dev-setup — se **[docs/WINDOWS_INSTALL.md](docs/WINDOWS_INSTALL.md)**.
+
 ```powershell
-# 1) Skapa och aktivera virtuell miljö
+# Utvecklare (git clone)
+.\scripts\dev-setup.ps1 -Profile cli -InitConfig
+.\launcher.ps1 doctor
+Sentimentanalys.bat              # GUI launcher (dubbelklick / Start-meny)
+streamlit run app/setup_hub.py   # konfiguration
+```
+
+Manuell venv (samma som tidigare):
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-
-# 2) Uppgradera pip
 python -m pip install -U pip
-
-# Alternativ A: Minimal modul (endast inferens)
-pip install -r requirements-min.txt
-
-# Alternativ B: CLI (modul + kommandoradsverktyg)
-pip install -r requirements-min.txt -r requirements-cli.txt
-
-# (Valfritt) API (FastAPI) - inkluderar ASR-beroenden
-pip install -r requirements-min.txt -r requirements-api.txt
-
-# (Kompatibilitet) Allt-i-ett
-# pip install -r requirements.txt
-
-# Notera (ASR): För bästa prestanda, installera ffmpeg i systemet (Dockerfilen hanterar detta).
+pip install -r requirements-min.txt -r requirements-cli.txt -r requirements-install.txt
+# API: även -r requirements-api.txt
+# Desktop: även -r requirements-desktop.txt
 ```
+
+Notera (ASR): ffmpeg krävs för `--preprocess` (portable/installer kan bunda under `tools\ffmpeg\bin`).
 
 ## Körningsexempel
 ```powershell

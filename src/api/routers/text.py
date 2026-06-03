@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ...core.serialization import utc_now_iso
 from ...sentiment import analyze_smart
+from ..router_errors import run_route
 from ..schemas import AnalyzeRequest, AnalyzeResponse
 
 logger = logging.getLogger(__name__)
@@ -16,17 +17,10 @@ router = APIRouter(tags=["Sentiment"])
 
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
-    """Analyze sentiment of Swedish texts.
-
-    Supports profile-based analysis (forum, news, callcenter, etc.) and
-    optional lexicon blending for improved accuracy with domain-specific
-    language.
-
-    Returns:
-        Sentiment results, meta-information, and a UTC timestamp.
-    """
+    """Analyze sentiment of Swedish texts."""
     logger.info("Analyzing sentiment for %d text(s)", len(req.texts))
-    try:
+
+    async def _do() -> AnalyzeResponse:
         results, meta = analyze_smart(
             texts=req.texts,
             datatype=req.datatype,
@@ -42,9 +36,7 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
             lexicon_file=req.lexicon_file,
             lexicon_weight=req.lexicon_weight,
         )
-    except Exception as e:
-        logger.error("Sentiment analysis failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {e}") from e
+        logger.info("Analysis complete – profile=%s model=%s", meta.get("profile"), meta.get("model"))
+        return AnalyzeResponse(meta=meta, timestamp=utc_now_iso(), results=results)
 
-    logger.info("Analysis complete – profile=%s model=%s", meta.get("profile"), meta.get("model"))
-    return AnalyzeResponse(meta=meta, timestamp=utc_now_iso(), results=results)
+    return await run_route("analyze", _do)

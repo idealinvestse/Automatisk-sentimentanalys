@@ -6,7 +6,7 @@
 **Version:** 2.0 (uppdaterad och förbättrad efter initial review och live-fix)  
 **Status:** Levande dokument – uppdateras iterativt under arbetet  
 **Branch:** `api-review-v2-hardening`  
-**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 🔄 | Fas 3 ✅ | Fas 4–5 ⏳  
+**Fas-status:** Fas 0 ✅ | Fas 1 ✅ | Fas 2 ✅ | Fas 3 ✅ | Fas 4 ✅ | Fas 5 ⏳  
 **Referens:** Bygger på UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
 
 ---
@@ -75,9 +75,9 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints – n
 
 **Deliverables:** Uppdaterad findings-lista, förslag på refaktoriseringar.
 
-### Fas 2: Förbättringar & Refaktorering (1,5–2 dagar) — **IN PROGRESS**
-**Klart (2026-06-03):** `dependencies.py`, `settings.py`, shared cache/alert lifespan, API key auth (opt-in via `SENTIMENT_API_KEY`), CORS env, request-ID + security headers, `LLMError` handler, Fas4 `deep_analysis` på alla requests, payload limits, korrekt `cache_hit`, pipeline DI, version 0.4.0, coverage ~78%.  
-**Kvar:** rate limiting, RFC 7807, `API_MEDIA_ROOT` sandbox, övriga routers exception taxonomy, rate limit, ≥90% coverage (Fas 3).
+### Fas 2: Förbättringar & Refaktorering (1,5–2 dagar) — **DONE 2026-06-03**
+**Levererat:** `dependencies.py`, `settings.py`, `path_validation.py`, `router_errors.py`, shared cache/alert, API key auth, CORS, request-ID + security headers, `LLMError` handler, Fas4 schemas, payload limits, `cache_hit`, DI, v0.4.0, saniterade fel på alla routers, `API_MEDIA_ROOT` sandbox.  
+**Kvar (låg prio):** rate limiting, RFC 7807 Problem Details.
 
 **Prioriterad ordning (högst ROI först):**
 
@@ -130,11 +130,14 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints – n
 
 **Deliverables:** ≥ 90 % coverage, alla tester gröna, nya testfiler eller utökningar.
 
-### Fas 4: Dokumentation & OpenAPI (0,5 dag)
+### Fas 4: Dokumentation & OpenAPI (0,5 dag) — **DONE 2026-06-03**
+**Levererat:** `docs/API.md` (quickstart, auth, env, endpoints, Fas 4, curl/Python), README-länk, OpenAPI via `/docs`.  
+**Kvar (låg prio):** `json_schema_extra` examples på alla Pydantic-modeller.
+
 **Tasks:**
-1. Berika alla endpoints med detaljerade docstrings, tags, summaries, descriptions.
-2. Lägg till rika examples i Pydantic-modeller.
-3. Skapa/uppdatera `docs/API.md` med:
+1. ⏳ Berika alla endpoints med detaljerade docstrings, tags, summaries, descriptions.
+2. ⏳ Lägg till rika examples i Pydantic-modeller.
+3. ✅ Skapa/uppdatera `docs/API.md` med:
    - Quickstart
    - Exempel för varje endpoint (curl + Python)
    - Autentisering & rate limiting

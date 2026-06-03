@@ -364,6 +364,21 @@ def test_analyze_text_500():
     with patch("src.api.routers.text.analyze_smart", side_effect=RuntimeError("nlp fail")):
         r = client.post("/analyze", json={"texts": ["hej"]})
     assert r.status_code == 500
+    assert "internal error" in r.json()["detail"].lower()
+
+
+def test_media_root_rejects_path_outside_sandbox(audio_file, monkeypatch, tmp_path):
+    import os
+    from pathlib import Path
+
+    media = Path(audio_file).parent
+    monkeypatch.setenv("API_MEDIA_ROOT", str(media))
+    get_api_settings.cache_clear()
+    outside = tmp_path.parent / "outside_sandbox.wav"
+    outside.write_bytes(b"RIFF")
+    r = client.post("/transcribe", json={"audio_path": str(outside)})
+    assert r.status_code == 422
+    assert "API_MEDIA_ROOT" in r.text
 
 
 def test_helpers_transcribe_helper():
