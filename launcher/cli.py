@@ -18,12 +18,8 @@ from src.install.secrets_win import delete_secret, set_secret
 from src.install.user_config import load_user_config, save_user_config
 
 from .env_builder import resolve_python, working_directory
-from .process_manager import (
-    service_status,
-    start_api,
-    start_dashboard,
-    stop_service,
-)
+from .process_manager import start_api, start_dashboard, stop_service
+from .status_snapshot import collect_snapshot
 
 app = typer.Typer(help="Sentimentanalys Windows launcher")
 console = Console()
@@ -168,12 +164,29 @@ def stop_dashboard_cmd(app_root: Path | None = None) -> None:
 
 @app.command("status")
 def status_cmd(app_root: Path | None = None) -> None:
-    from src.install.user_config import default_user_config_path
+    root = app_root or _app_root_option()
+    cfg = load_user_config(root)
+    snap = collect_snapshot(cfg, launcher_root=root.resolve())
 
-    cfg = load_user_config(app_root or _app_root_option())
-    console.print(f"API: {service_status(cfg, 'api')}")
-    console.print(f"Dashboard: {service_status(cfg, 'dashboard')}")
-    console.print(f"Config: {default_user_config_path(cfg.portable_mode, cfg.resolved_app_root())}")
+    table = Table(title="Launcher status")
+    table.add_column("Field")
+    table.add_column("Value")
+    for svc in (snap.api, snap.dashboard):
+        table.add_row(f"{svc.name} state", svc.state_label)
+        table.add_row(f"{svc.name} url", svc.url if svc.port_open else "—")
+        table.add_row(f"{svc.name} pid", str(svc.pid) if svc.pid else "—")
+        table.add_row(f"{svc.name} port", "open" if svc.port_open else "closed")
+        if svc.health_ok is not None:
+            table.add_row(f"{svc.name} health", "ok" if svc.health_ok else "fail")
+    table.add_row("app_root", str(snap.system.app_root))
+    table.add_row("launcher_root", str(snap.system.launcher_root))
+    table.add_row("config", str(snap.system.config_path))
+    table.add_row("python", str(snap.system.python_exe))
+    table.add_row("profile", f"{snap.system.install_profile} / {snap.system.sentiment_profile}")
+    table.add_row("device", snap.system.device)
+    table.add_row("llm", "on" if snap.system.llm_enabled else "off")
+    table.add_row("collected_at", snap.collected_at)
+    console.print(table)
 
 
 @app.command("open-cli")

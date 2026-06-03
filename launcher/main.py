@@ -5,20 +5,22 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
 from src.install.preflight import run_preflight
-from src.install.user_config import default_user_config_path, load_user_config
+from src.install.user_config import load_user_config
 
 from .env_builder import build_child_env, resolve_python, working_directory
-from .process_manager import (
-    service_status,
-    start_api,
-    start_dashboard,
-    stop_service,
-)
+from .event_log import EventLog
+from .process_manager import start_api, start_dashboard, stop_service
+from .status_snapshot import collect_snapshot
+from .ui_status_panel import StatusPanel
+
+_AUTO_REFRESH_MS = 2000
+_POLL_LOG_MS = 100
 
 
 def _app_root() -> Path:
@@ -29,27 +31,33 @@ class LauncherApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Sentimentanalys")
-        self.geometry("420x480")
+        self.geometry("540x720")
+        self.minsize(520, 640)
         self.cfg = load_user_config(_app_root())
-        self._build_ui()
+        self.event_log = EventLog()
+        self._busy = False
+        self._action_buttons: list[ttk.Button] = []
+
+        self.status_panel = StatusPanel(self, self.event_log)
+        self.status_panel.pack(fill=tk.BOTH, expand=True)
+
+        self._build_buttons()
+        self.event_log.phase("launcher", "Launcher started")
+        self.status_panel.activity.load_all()
         self._refresh_status()
+        self._schedule_poll_log()
+        self._schedule_auto_refresh()
 
-    def _build_ui(self) -> None:
-        pad = {"padx": 12, "pady": 6}
-        ttk.Label(self, text="Automatisk sentimentanalys", font=("Segoe UI", 14, "bold")).pack(
-            **pad
-        )
-        self.status_var = tk.StringVar(value="")
-        ttk.Label(self, textvariable=self.status_var, justify=tk.LEFT).pack(fill=tk.X, **pad)
-
+    def _build_buttons(self) -> None:
+        pad = {"padx": 12, "pady": 4}
         frame = ttk.Frame(self)
-        frame.pack(fill=tk.BOTH, expand=True, **pad)
+        frame.pack(fill=tk.X, **pad)
 
-        buttons = [
-            ("Start API", self._start_api),
-            ("Stop API", lambda: self._stop("api")),
-            ("Start Dashboard", self._start_dashboard),
-            ("Stop Dashboard", lambda: self._stop("dashboard")),
+        specs: list[tuple[str, object]] = [
+            ("Start API", lambda: self._run_service_action("api", "start")),
+            ("Stop API", lambda: self._run_service_action("api", "stop")),
+            ("Start Dashboard", lambda: self._run_service_action("dashboard", "start")),
+            ("Stop Dashboard", lambda: self._run_service_action("dashboard", "stop")),
             ("Configure (Setup Hub)", self._open_setup_hub),
             ("Doctor / Health check", self._run_doctor),
             ("Open CLI (PowerShell)", self._open_cli),
@@ -57,58 +65,78 @@ class LauncherApp(tk.Tk):
             ("Open logs folder", self._open_logs),
             ("Repair dependencies", self._repair),
         ]
-        for label, cmd in buttons:
-            ttk.Button(frame, text=label, command=cmd).pack(fill=tk.X, pady=3)
+        for label, cmd in specs:
+            btn = ttk.Button(frame, text=label, command=cmd)
+            btn.pack(fill=tk.X, pady=2)
+            if "Start" in label or "Stop" in label:
+                self._action_buttons.append(btn)
 
-        ttk.Label(
-            self,
-            text=f"Config: {default_user_config_path(self.cfg.portable_mode, self.cfg.resolved_app_root())}",
-            wraplength=380,
-            font=("Segoe UI", 8),
-        ).pack(side=tk.BOTTOM, pady=8)
+    def _set_busy(self, busy: bool) -> None:
+        self._busy = busy
+        state = tk.DISABLED if busy else tk.NORMAL
+        for btn in self._action_buttons:
+            btn.configure(state=state)
+
+    def _schedule_poll_log(self) -> None:
+        self._poll_log()
+        self.after(_POLL_LOG_MS, self._schedule_poll_log)
+
+    def _poll_log(self) -> None:
+        events = self.event_log.poll_queue()
+        self.status_panel.activity.append_events(events)
+
+    def _schedule_auto_refresh(self) -> None:
+        if not self._busy:
+            self._refresh_status()
+        self.after(_AUTO_REFRESH_MS, self._schedule_auto_refresh)
 
     def _refresh_status(self) -> None:
         self.cfg = load_user_config(_app_root())
-        api = service_status(self.cfg, "api")
-        dash = service_status(self.cfg, "dashboard")
-        self.status_var.set(
-            f"API ({self.cfg.services.api_port}): {api}\n"
-            f"Dashboard ({self.cfg.services.dashboard_port}): {dash}\n"
-            f"Profile: {self.cfg.sentiment_profile} | Device: {self.cfg.device}"
-        )
+        snap = collect_snapshot(self.cfg, launcher_root=_app_root())
+        self.status_panel.apply_snapshot(snap)
 
-    def _start_api(self) -> None:
-        try:
-            start_api(self.cfg)
-            status = service_status(self.cfg, "api")
-            messagebox.showinfo(
-                "API",
-                f"{status}\nhttp://{self.cfg.services.api_host}:{self.cfg.services.api_port}",
-            )
-        except Exception as e:
-            messagebox.showerror("API", str(e))
-        self._refresh_status()
+    def _run_service_action(self, name: str, action: str) -> None:
+        if self._busy:
+            return
 
-    def _start_dashboard(self) -> None:
-        try:
-            start_dashboard(self.cfg)
-            status = service_status(self.cfg, "dashboard")
-            messagebox.showinfo(
-                "Dashboard",
-                f"{status}\nhttp://localhost:{self.cfg.services.dashboard_port}",
-            )
-        except Exception as e:
-            messagebox.showerror("Dashboard", str(e))
-        self._refresh_status()
+        def work() -> None:
+            try:
+                if action == "start":
+                    if name == "api":
+                        start_api(self.cfg, log=self.event_log)
+                    else:
+                        start_dashboard(self.cfg, log=self.event_log)
+                else:
+                    stop_service(self.cfg, name, log=self.event_log)
+            except Exception as e:
+                self.event_log.error(str(e), phase=f"{name}.{action}")
+                self.after(0, lambda: messagebox.showerror(name.upper(), str(e)))
+            finally:
+                self.after(0, self._on_action_done)
 
-    def _stop(self, name: str) -> None:
-        stop_service(self.cfg, name)
+        self._set_busy(True)
+        self.event_log.phase(f"{name}.{action}", f"{action.capitalize()} {name}")
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_action_done(self) -> None:
+        self._set_busy(False)
         self._refresh_status()
 
     def _run_doctor(self) -> None:
         report = run_preflight(self.cfg)
-        lines = [f"{'OK' if c.ok else 'FAIL'}: {c.name} — {c.message}" for c in report.checks]
-        messagebox.showinfo("Doctor", "\n".join(lines[:20]))
+        for c in report.checks:
+            msg = f"{c.name}: {c.message}"
+            if c.detail:
+                msg += f" ({c.detail})"
+            if c.ok:
+                self.event_log.info(msg, phase="doctor")
+            else:
+                self.event_log.error(msg, phase="doctor")
+        if not report.ok:
+            messagebox.showwarning(
+                "Doctor",
+                "Vissa kontroller misslyckades. Se aktivitetsloggen.",
+            )
 
     def _open_setup_hub(self) -> None:
         self.cfg = load_user_config(_app_root())
@@ -119,11 +147,13 @@ class LauncherApp(tk.Tk):
             cwd=str(root),
             env=build_child_env(self.cfg),
         )
+        self.event_log.info("Opened Setup Hub (Streamlit)", phase="launcher")
 
     def _open_cli(self) -> None:
         from .cli import open_cli_cmd
 
         open_cli_cmd()
+        self.event_log.info("Opened PowerShell CLI", phase="launcher")
 
     def _open_folder(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
@@ -147,8 +177,9 @@ class LauncherApp(tk.Tk):
 
         try:
             repair_cmd(profile=InstallProfile(self.cfg.install_profile.value))
-            messagebox.showinfo("Repair", "Done")
+            self.event_log.info("Repair complete", phase="launcher")
         except Exception as e:
+            self.event_log.error(str(e), phase="launcher")
             messagebox.showerror("Repair", str(e))
 
 
