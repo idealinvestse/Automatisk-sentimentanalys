@@ -83,6 +83,8 @@ def test_analyze_pipeline_happy(monkeypatch):
     fake_report.insights = {}
     fake_report.risks = {}
     fake_report.processing_time_s = 0.12
+    fake_report.llm = {}
+    fake_report.results = {}
 
     with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
@@ -112,6 +114,26 @@ def test_agent_performance_endpoint(monkeypatch):
         data = r.json()
         assert data["agent_id"] == "Agent-1"
         assert "metrics" in data
+
+
+def test_agent_performance_deep_analysis_independent_of_use_mistral_llm():
+    """P0-1: deep_analysis must not be aliased to use_mistral_llm."""
+    with patch("src.api.routers.pipeline.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = MagicMock()
+        inst.get_cached_agent_performance.return_value = {"call_count": 1, "computed_at": "t"}
+        client.post(
+            "/agent_performance/Agent-1",
+            json={
+                "segments_list": [[{"text": "Hej"}]],
+                "agent_id": "Agent-1",
+                "use_mistral_llm": False,
+                "deep_analysis": True,
+            },
+        )
+        _, kwargs = mock_pipe.call_args
+        assert kwargs["deep_analysis"] is True
+        assert kwargs["use_mistral_llm"] is False
 
 
 def test_semantic_search_endpoint(monkeypatch):

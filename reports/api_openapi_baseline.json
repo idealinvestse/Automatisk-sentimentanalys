@@ -1,0 +1,2599 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Swedish Sentiment API",
+    "description": "REST API for Swedish sentiment analysis, ASR transcription, call-center conversation analysis, and batch processing.",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health",
+        "description": "Simple health check endpoint.\n\nReturns:\n    ``{\"status\": \"ok\"}`` when the service is running.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "tags": [
+          "Sentiment"
+        ],
+        "summary": "Analyze",
+        "description": "Analyze sentiment of Swedish texts.\n\nSupports profile-based analysis (forum, news, callcenter, etc.) and\noptional lexicon blending for improved accuracy with domain-specific\nlanguage.\n\nReturns:\n    Sentiment results, meta-information, and a UTC timestamp.",
+        "operationId": "analyze_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transcribe": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Transcribe",
+        "description": "Transcribe an audio file using ASR.\n\nUses a cached transcriber instance so that model weights are only loaded\nonce per unique (backend, model, device) combination.\n\nReturns:\n    Transcription result dict and a UTC timestamp.",
+        "operationId": "transcribe_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/batch_transcribe": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Batch Transcribe",
+        "description": "Transcribe multiple audio files, optionally in parallel.\n\nFiles can be specified as explicit paths, directories, or glob patterns.\n\nReturns:\n    Per-file results with ok/failed counts and a UTC timestamp.",
+        "operationId": "batch_transcribe_batch_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchTranscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchTranscribeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze_conversation": {
+      "post": {
+        "tags": [
+          "Conversation"
+        ],
+        "summary": "Analyze Conversation",
+        "description": "Transcribe a call and run sentiment analysis per segment.\n\nUses the ``callcenter`` profile which is optimised for spoken,\nconversational Swedish.\n\nReturns:\n    Transcription, per-segment sentiments, meta-information, and timestamp.",
+        "operationId": "analyze_conversation_analyze_conversation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeConversationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/batch_analyze_conversation": {
+      "post": {
+        "tags": [
+          "Conversation"
+        ],
+        "summary": "Batch Analyze Conversation",
+        "description": "Analyze sentiment for multiple conversation audio files, optionally in parallel.\n\nEach conversation is transcribed, split into segments, and analyzed\nwith the ``callcenter`` sentiment profile.\n\nReturns:\n    Per-file results with ok/failed counts and a UTC timestamp.",
+        "operationId": "batch_analyze_conversation_batch_analyze_conversation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAnalyzeConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAnalyzeConversationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze_pipeline": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Analyze Pipeline",
+        "description": "Run the full call analysis pipeline on pre-transcribed segments.\n\nOrchestrates sentiment, intent, summarization, topic modelling,\ninsights, and predictive analytics in a single call.\n\nReturns:\n    Complete analysis results with a UTC timestamp.",
+        "operationId": "analyze_pipeline_analyze_pipeline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent_performance/{agent_id}": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Agent Performance",
+        "description": "Get pre-computed/cached agent performance aggregates (Fas 4.5.1 + 4.5.2).\n\nInternally runs pipeline on provided segments_list, then uses cached aggregates.",
+        "operationId": "get_agent_performance_agent_performance__agent_id__post",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPerformanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPerformanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/semantic": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Semantic Search",
+        "description": "Hybrid semantic + keyword search over provided calls (Fas 4.3.2 + 4.5.2).",
+        "operationId": "semantic_search_search_semantic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/insights/hot_topics": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Hot Topics",
+        "description": "Get cached hot topics and trends (Fas 4.3.1 + 4.5.2). Uses pre-computation cache.",
+        "operationId": "get_hot_topics_insights_hot_topics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HotTopicsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotTopicsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/qa/score": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Qa Score",
+        "description": "Run QA scoring on segments (Fas 4.2 + 4.5.2).",
+        "operationId": "get_qa_score_qa_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QAScoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAScoreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Alerts",
+        "description": "Get alerts from per-call results or aggregate trends (Fas 4.4.2 + 4.5.2).",
+        "operationId": "get_alerts_alerts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan_process": {
+      "post": {
+        "tags": [
+          "Scan"
+        ],
+        "summary": "Scan Process",
+        "description": "Scan a directory and process new/changed audio files incrementally.\n\nTracks processed files via an optional state JSON file so that re-runs\nonly process files that are new or have been modified since the last run.\n\n**Race-condition fix:** State is written to disk after *each batch*\n(not only at the end) so that progress is preserved if the process is\ninterrupted mid-run.\n\nArgs:\n    req: Scan parameters including directory, pattern, batch size,\n         workers, and ASR/sentiment settings.\n\nReturns:\n    Per-file results, counts, and a UTC timestamp.",
+        "operationId": "scan_process_scan_process_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanProcessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanProcessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentPerformanceRequest": {
+        "properties": {
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List",
+            "description": "List of segment lists (one per call)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "Agent identifier to aggregate for"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window",
+            "description": "Time window e.g. 7d, 30d",
+            "default": "7d"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list",
+          "agent_id"
+        ],
+        "title": "AgentPerformanceRequest",
+        "description": "Request for /agent_performance endpoint. Provide segments for one or more calls."
+      },
+      "AgentPerformanceResponse": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "metrics",
+          "timestamp"
+        ],
+        "title": "AgentPerformanceResponse"
+      },
+      "AlertsRequest": {
+        "properties": {
+          "segments_list": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segments List"
+          },
+          "aggregate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "title": "AlertsRequest"
+      },
+      "AlertsResponse": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Alerts"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerts",
+          "timestamp"
+        ],
+        "title": "AlertsResponse"
+      },
+      "AnalyzeConversationRequest": {
+        "properties": {
+          "audio_path": {
+            "type": "string",
+            "title": "Audio Path",
+            "description": "Path to audio file accessible by the server"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR"
+          },
+          "return_all_scores": {
+            "type": "boolean",
+            "title": "Return All Scores",
+            "default": true
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model",
+            "description": "Optional override for sentiment model"
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_path"
+        ],
+        "title": "AnalyzeConversationRequest"
+      },
+      "AnalyzeConversationResponse": {
+        "properties": {
+          "transcript": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transcript"
+          },
+          "segment_sentiments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentSentiment"
+            },
+            "type": "array",
+            "title": "Segment Sentiments"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transcript",
+          "segment_sentiments",
+          "meta",
+          "timestamp"
+        ],
+        "title": "AnalyzeConversationResponse"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Texts",
+            "description": "List of texts to analyze"
+          },
+          "datatype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datatype",
+            "description": "Data type: post, comment, article, review, ..."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source: forum, magazine, news, social, ..."
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile",
+            "description": "Explicit profile name to use"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Optional model override"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device",
+            "description": "Device: auto, cpu, cuda, cuda:0, mps",
+            "default": "auto"
+          },
+          "batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "default": 16
+          },
+          "return_all_scores": {
+            "type": "boolean",
+            "title": "Return All Scores",
+            "default": false
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4096.0,
+                "minimum": 8.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          },
+          "clean": {
+            "type": "boolean",
+            "title": "Clean",
+            "default": true
+          },
+          "normalize": {
+            "type": "boolean",
+            "title": "Normalize",
+            "default": true
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File",
+            "description": "Path to Swedish lexicon (CSV/TSV) with columns term|word and polarity|score|sentiment"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "description": "Blend weight [0..1]",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "texts"
+        ],
+        "title": "AnalyzeRequest"
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "results": {
+            "items": {},
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meta",
+          "timestamp",
+          "results"
+        ],
+        "title": "AnalyzeResponse"
+      },
+      "BatchAnalyzeConversationItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "segment_sentiments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SegmentSentiment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Sentiments"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "BatchAnalyzeConversationItem"
+      },
+      "BatchAnalyzeConversationRequest": {
+        "properties": {
+          "audio_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Paths"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory"
+          },
+          "glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glob"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "sentiment_batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Sentiment Batch Size",
+            "description": "Batch size for sentiment inference",
+            "default": 16
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "BatchAnalyzeConversationRequest"
+      },
+      "BatchAnalyzeConversationResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BatchAnalyzeConversationItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "timestamp"
+        ],
+        "title": "BatchAnalyzeConversationResponse"
+      },
+      "BatchTranscribeItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "BatchTranscribeItem"
+      },
+      "BatchTranscribeRequest": {
+        "properties": {
+          "audio_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Paths"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory"
+          },
+          "glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glob",
+            "description": "Glob pattern within directory, e.g. **/*.wav"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR"
+          }
+        },
+        "type": "object",
+        "title": "BatchTranscribeRequest"
+      },
+      "BatchTranscribeResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BatchTranscribeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "timestamp"
+        ],
+        "title": "BatchTranscribeResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HotTopicsRequest": {
+        "properties": {
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window",
+            "default": "7d"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list"
+        ],
+        "title": "HotTopicsRequest"
+      },
+      "HotTopicsResponse": {
+        "properties": {
+          "hot_topics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hot Topics"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hot_topics",
+          "meta",
+          "timestamp"
+        ],
+        "title": "HotTopicsResponse"
+      },
+      "PipelineRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "ASR segments with 'text' and optionally 'speaker' keys"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model",
+            "description": "Optional sentiment model override"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable Mistral/OpenRouter holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override Mistral model slug on OpenRouter"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "PipelineRequest",
+        "description": "Request for the full call analysis pipeline."
+      },
+      "PipelineResponse": {
+        "properties": {
+          "sentiment_results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sentiment Results"
+          },
+          "intent_results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Intent Results"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "topics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Topics"
+          },
+          "insights": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Insights"
+          },
+          "risks": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Risks"
+          },
+          "processing_time_s": {
+            "type": "number",
+            "title": "Processing Time S"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "llm": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Llm",
+            "description": "Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)"
+          },
+          "results": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Results",
+            "description": "Complete analyzer results (Fas4: agent_performance, qa, agent_assessment, customer_metrics, ...). Use this for new call center features."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentiment_results",
+          "intent_results",
+          "summary",
+          "topics",
+          "insights",
+          "risks",
+          "processing_time_s",
+          "timestamp"
+        ],
+        "title": "PipelineResponse",
+        "description": "Response from the full call analysis pipeline.\n\nFas 4 additions: `results` contains the full analyzer output dict (including\n\"agent_performance\", \"qa\"/\"compliance_qa\", \"agent_assessment\", \"customer_metrics\",\n\"agent_assessment_local\" etc.). This makes the new call-center features\navailable over the API as required by the plan."
+      },
+      "QAScoreRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "QAScoreRequest"
+      },
+      "QAScoreResponse": {
+        "properties": {
+          "qa": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Qa"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qa",
+          "timestamp"
+        ],
+        "title": "QAScoreResponse"
+      },
+      "ScanItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "batch_index": {
+            "type": "integer",
+            "title": "Batch Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "ok",
+          "batch_index"
+        ],
+        "title": "ScanItem"
+      },
+      "ScanProcessRequest": {
+        "properties": {
+          "directory": {
+            "type": "string",
+            "title": "Directory",
+            "description": "Directory to scan"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern",
+            "description": "Glob pattern relative to directory (e.g., **/*.wav)"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "batch_size": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "description": "Number of files per processing batch",
+            "default": 4
+          },
+          "max_files": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Files"
+          },
+          "state_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State File",
+            "description": "Optional JSON file to track processed files"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "description": "Parallel workers per batch",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "transcribe | analyze_conversation",
+            "default": "transcribe"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "sentiment_batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Sentiment Batch Size",
+            "description": "Batch size for sentiment inference",
+            "default": 16
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "directory"
+        ],
+        "title": "ScanProcessRequest"
+      },
+      "ScanProcessResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScanItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "skipped",
+          "timestamp"
+        ],
+        "title": "ScanProcessResponse"
+      },
+      "SegmentSentiment": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "negativ": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negativ"
+          },
+          "neutral": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neutral"
+          },
+          "positiv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positiv"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "intent_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "start",
+          "end",
+          "text",
+          "label",
+          "score"
+        ],
+        "title": "SegmentSentiment"
+      },
+      "SemanticSearchRequest": {
+        "properties": {
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List",
+            "description": "List of calls to index/search over"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP."
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list",
+          "query"
+        ],
+        "title": "SemanticSearchRequest"
+      },
+      "SemanticSearchResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "hits": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hits"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "hits",
+          "meta",
+          "timestamp"
+        ],
+        "title": "SemanticSearchResponse"
+      },
+      "TranscribeRequest": {
+        "properties": {
+          "audio_path": {
+            "type": "string",
+            "title": "Audio Path",
+            "description": "Path to audio file accessible by the server"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "preprocess": {
+            "type": "boolean",
+            "title": "Preprocess",
+            "description": "Enable audio preprocessing before ASR",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_path"
+        ],
+        "title": "TranscribeRequest"
+      },
+      "TranscribeResponse": {
+        "properties": {
+          "transcript": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transcript"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transcript",
+          "timestamp"
+        ],
+        "title": "TranscribeResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

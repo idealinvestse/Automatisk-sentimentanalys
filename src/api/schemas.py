@@ -370,6 +370,8 @@ class AgentPerformanceRequest(BaseModel):
     window: str = Field("7d", description="Time window e.g. 7d, 30d")
     profile: str = Field("callcenter")
     use_mistral_llm: bool = Field(False)
+    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
+    deep_analysis: bool = Field(False, description="Force deep LLM path")
     llm_api_key: str | None = Field(None, description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.")
 
 

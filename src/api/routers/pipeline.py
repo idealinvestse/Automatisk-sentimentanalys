@@ -8,7 +8,20 @@ from fastapi import APIRouter, HTTPException
 
 from ...core.serialization import utc_now_iso
 from ...pipeline import CallAnalysisPipeline
-from ..schemas import PipelineRequest, PipelineResponse
+from ..schemas import (
+    AgentPerformanceRequest,
+    AgentPerformanceResponse,
+    AlertsRequest,
+    AlertsResponse,
+    HotTopicsRequest,
+    HotTopicsResponse,
+    PipelineRequest,
+    PipelineResponse,
+    QAScoreRequest,
+    QAScoreResponse,
+    SemanticSearchRequest,
+    SemanticSearchResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Pipeline"])
@@ -59,14 +72,6 @@ async def analyze_pipeline(req: PipelineRequest) -> PipelineResponse:
 # Fas 4.5.2 new endpoints - explicit integration with pipeline caching/aggregates/search/alerts
 # ---------------------------------------------------------------------------
 
-from ..schemas import (
-    AgentPerformanceRequest, AgentPerformanceResponse,
-    SemanticSearchRequest, SemanticSearchResponse,
-    HotTopicsRequest, HotTopicsResponse,
-    QAScoreRequest, QAScoreResponse,
-    AlertsRequest, AlertsResponse,
-)
-
 
 @router.post("/agent_performance/{agent_id}", response_model=AgentPerformanceResponse)
 async def get_agent_performance(agent_id: str, req: AgentPerformanceRequest) -> AgentPerformanceResponse:
@@ -79,7 +84,8 @@ async def get_agent_performance(agent_id: str, req: AgentPerformanceRequest) -> 
         pipe = CallAnalysisPipeline(
             profile=req.profile,
             use_mistral_llm=req.use_mistral_llm,
-            deep_analysis=req.use_mistral_llm,
+            deep_analysis=req.deep_analysis,
+            llm_model=req.llm_model,
             llm_api_key=req.llm_api_key,
         )
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
