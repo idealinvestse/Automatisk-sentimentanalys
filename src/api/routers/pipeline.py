@@ -79,7 +79,7 @@ async def get_agent_performance(agent_id: str, req: AgentPerformanceRequest) -> 
         pipe = CallAnalysisPipeline(
             profile=req.profile,
             use_mistral_llm=req.use_mistral_llm,
-            deep_analysis=req.use_mistral_llm,
+            deep_analysis=getattr(req, 'deep_analysis', req.use_mistral_llm),
             llm_api_key=req.llm_api_key,
         )
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
@@ -124,6 +124,7 @@ async def get_hot_topics(req: HotTopicsRequest) -> HotTopicsResponse:
         pipe = CallAnalysisPipeline(
             profile=req.profile,
             use_mistral_llm=req.use_mistral_llm,
+            deep_analysis=getattr(req, 'deep_analysis', req.use_mistral_llm),
             llm_api_key=req.llm_api_key,
         )
         reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
@@ -142,7 +143,7 @@ async def get_hot_topics(req: HotTopicsRequest) -> HotTopicsResponse:
 async def get_qa_score(req: QAScoreRequest) -> QAScoreResponse:
     """Run QA scoring on segments (Fas 4.2 + 4.5.2)."""
     try:
-        pipe = CallAnalysisPipeline(profile=req.profile, use_mistral_llm=req.use_mistral_llm, llm_api_key=getattr(req, 'llm_api_key', None))
+        pipe = CallAnalysisPipeline(profile=req.profile, use_mistral_llm=req.use_mistral_llm, deep_analysis=getattr(req, 'deep_analysis', req.use_mistral_llm), llm_api_key=getattr(req, 'llm_api_key', None))
         report = pipe.analyze_segments(req.segments)
         qa = report.results.get("qa") or report.results.get("compliance_qa", {})
         return QAScoreResponse(qa=qa, timestamp=utc_now_iso())
