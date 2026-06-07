@@ -71,6 +71,9 @@ jobs:
           pip install -r requirements-api.txt
           pip install pytest pytest-cov httpx
 
+      - name: API smoke (fast)
+        run: pytest tests/test_api_smoke.py -q
+
       - name: API layer tests (≥90% coverage on src/api)
         run: |
           pytest tests/test_api.py tests/test_api_coverage.py -q \
