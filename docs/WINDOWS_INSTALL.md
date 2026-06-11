@@ -1,115 +1,110 @@
-# Windows installation guide
+# Windows Installation Guide
 
-Three ways to run **Automatisk sentimentanalys** on Windows:
+This guide covers installation on Windows 10/11.
 
-| Tier | Audience | How |
-|------|----------|-----|
-| **Dev** | Developers (git clone) | [`scripts/dev-setup.ps1`](../scripts/dev-setup.ps1) |
-| **Portable** | Power users, no admin | ZIP from releases or `installer/build-portable.ps1` |
-| **Installer** | Analysts / IT | `Sentimentanalys-Setup-*.exe` (Inno Setup) |
+## Recommended: Modern Python Installation (Cross-platform)
 
-## Developer setup
+The project now uses modern Python packaging via `pyproject.toml`.
 
 ```powershell
-git clone https://github.com/ideal-invest/Automatisk-sentimentanalys.git
+# 1. Clone
+git clone https://github.com/idealinvestse/Automatisk-sentimentanalys.git
 cd Automatisk-sentimentanalys
-.\scripts\dev-setup.ps1 -Profile full -InitConfig
+
+# 2. Create virtual environment
+python -m venv .venv
+.\ .venv\Scripts\Activate.ps1
+
+# 3. Install (choose profile)
+pip install -U pip
+
+# Basic CLI + ASR
+pip install -e ".[cli]"
+
+# Full call center with Speaker Diarization (recommended)
+pip install -e ".[cli,diarize]"
+
+# API + Dashboard
+pip install -e ".[api]"
+
+# Development (includes tests, linting)
+pip install -e ".[dev]"
+```
+
+> **Note on Diarization**: After installing the `diarize` extra, you usually need a Hugging Face token:
+> ```powershell
+huggingface-cli login
+```
+> or set the `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` environment variable.
+
+## Legacy / Windows-specific Methods
+
+For users who prefer a more integrated Windows experience, the following options are still supported:
+
+### Developer Setup (PowerShell)
+
+```powershell
+.\scripts\dev-setup.ps1 -Profile cli -InitConfig
 .\launcher.ps1 doctor
 ```
 
-Profiles: `minimal`, `cli`, `api`, `full`, `dev`.
+### Portable Mode & Installer
 
-Optional CUDA torch:
+See the original portable ZIP and Inno Setup installer instructions below (maintained for compatibility).
 
-```powershell
-.\scripts\dev-setup.ps1 -Profile full -Cuda
-```
+---
 
-## Launcher
+## Original Windows-specific Instructions (Legacy)
 
-After setup, double-click **`Sentimentanalys.bat`** in the project or install folder (starts the GUI without a console window when `.venv` exists).
+### Prerequisites
 
-Or from PowerShell:
+- Windows 10 or 11
+- Python 3.11+ (recommended from python.org)
+- Optional: NVIDIA GPU + CUDA for best ASR/diarization performance
+- ffmpeg (required for `--preprocess`)
 
-```powershell
-# GUI hub (tkinter)
-python -m launcher.main
-
-# CLI (IT automation)
-.\launcher.ps1 doctor
-.\launcher.ps1 start-api
-.\launcher.ps1 start-dashboard
-.\launcher.ps1 configure --init
-.\launcher.ps1 set-secret openrouter --from-file configs\openrouter.key
-```
-
-Setup Hub (Streamlit):
+### Developer Setup (Detailed)
 
 ```powershell
-streamlit run app/setup_hub.py
+# Activate environment
+.\ .venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements-min.txt -r requirements-cli.txt
+
+# For diarization (if not using the [diarize] extra above)
+pip install pyannote.audio torchaudio
+
+# Optional: API
+pip install -r requirements-api.txt
 ```
 
-## Configuration
+### Launcher & GUI
 
-User settings: `%AppData%\Sentimentanalys\user_config.yaml`
+- `Sentimentanalys.bat` – Simple GUI launcher
+- `streamlit run app/setup_hub.py` – Configuration hub
+- `launcher.ps1` – Advanced CLI launcher
 
-Portable mode: `{install}\user_data\user_config.yaml`
+### API as Windows Service (NSSM)
 
-Shipped defaults: [`configs/install_defaults.yaml`](../configs/install_defaults.yaml)
+See older instructions for running the API as a background service.
 
-**Secrets (recommended):** Windows Credential Manager via Setup Hub or:
+### Troubleshooting
 
-```powershell
-.\launcher.ps1 set-secret openrouter --value "sk-or-..."
-.\launcher.ps1 set-secret huggingface --value "hf_..."
-```
+- **Diarization fails**: Install `pyannote.audio` + login to Hugging Face (`huggingface-cli login`)
+- **ffmpeg not found**: Install from https://ffmpeg.org or use the portable bundle
+- **Torch / CUDA issues**: Ensure matching CUDA version or fall back to CPU
+- **LLM (OpenRouter)**: Set `OPENROUTER_API_KEY` environment variable
 
-Environment variables still work: `OPENROUTER_API_KEY`, `HF_TOKEN`.
+## Environment Variables
 
-## Portable ZIP
+Common variables (can be set in Windows Environment Variables or via `.env`):
 
-1. Extract ZIP to e.g. `C:\Tools\Sentimentanalys`
-2. Run `Sentimentanalys.bat` (GUI launcher)
-3. First run: Setup Hub → Save → Doctor
+- `OPENROUTER_API_KEY`
+- `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN`
+- `SENTIMENT_API_KEY` (for API authentication)
+- `API_MEDIA_ROOT`
 
-Bundled: embedded Python, `.venv`, app code. Models download on first use (HF cache under `cache/hf`).
+## Next Steps
 
-## Full installer
-
-1. Run `Sentimentanalys-Setup-*.exe`
-2. Choose install profile (minimal / cli / api / full)
-3. Finish wizard → optional Setup Hub
-4. Start Menu → **Sentimentanalys Launcher**
-
-Uninstall removes the program folder by default. User data under `%AppData%\Sentimentanalys` is only removed if you select **Ta bort användardata** during uninstall. API keys in Windows Credential Manager are not removed automatically.
-
-## API as a service (IT)
-
-Optional NSSM (not bundled by default):
-
-```powershell
-nssm install SentimentanalysAPI "C:\Program Files\Sentimentanalys\.venv\Scripts\uvicorn.exe" "src.api:app" --host 0.0.0.0 --port 8000
-```
-
-Or use `.\launcher.ps1 start-api` for interactive sessions.
-
-## Requirements
-
-- Windows 10/11 x64
-- ~5–15 GB disk (full profile + models)
-- NVIDIA driver optional (CUDA ASR/sentiment)
-- **ffmpeg** for `--preprocess` (bundled path `tools\ffmpeg\bin` or system PATH)
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| Doctor: ffmpeg FAIL | Install ffmpeg or add to `tools\ffmpeg\bin` |
-| Doctor: torch missing | `.\launcher.ps1 repair --profile cli` |
-| LLM disabled | Set OpenRouter key in Setup Hub → Secrets |
-| pyannote diarization | Set `HF_TOKEN` in Secrets |
-| API port in use | Setup Hub → change API port → Save |
-
-## Build from source
-
-See [`installer/README.md`](../installer/README.md).
+After installation, see the main [README.md](../README.md) Quickstart section and `docs/ROADMAP.md` for current capabilities.
