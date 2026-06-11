@@ -124,6 +124,7 @@ För `--preprocess` (Task 1.4) krävs `ffmpeg` installerat på systemet:
 - Praktisk quickstart + privacy + exempel: `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` (mål: igång på <30 min)
 - Full plan, tasks & status: `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`
 - Arkitektur: `docs/ARCHITECTURE.md` (uppdaterad med LLM-lager)
+- **För LLM-agenter / coding agents**: `docs/LLM_AGENT_GUIDE.md` + `AGENTS.md` (optimerad för Grok, Claude, GPT m.fl.)
 
 Se även `configs/llm_config.yaml` (exempel) och `reports/llm_quality_smoke.json` (efter evaluate).
 
