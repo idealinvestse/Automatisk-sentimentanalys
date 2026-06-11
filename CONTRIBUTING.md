@@ -2,7 +2,17 @@
 
 Thank you for your interest in contributing! This project aims to build a high-quality, production-ready Swedish call center intelligence platform.
 
-## How to Contribute
+## For LLM Coding Agents (Grok, Claude, GPT, Cursor, etc.)
+
+**Please read this first:**
+
+- `docs/LLM_AGENT_GUIDE.md` – Primary guide for agents. Contains architecture, extension patterns, coding standards, and playbooks.
+- `docs/ROADMAP.md` – Current status and completed features.
+- `README.md` – High-level overview and quickstart.
+
+Agents should follow the patterns described in `LLM_AGENT_GUIDE.md` (especially the Analyzer Registry pattern and graceful degradation principles).
+
+## How to Contribute (Humans)
 
 1. **Fork** the repository and create your feature branch from `main`:
    ```bash
@@ -12,7 +22,7 @@ Thank you for your interest in contributing! This project aims to build a high-q
    ```bash
    pip install -e ".[dev,diarize]"
    ```
-3. Make your changes.
+3. Make your changes following the guidelines in `docs/LLM_AGENT_GUIDE.md`.
 4. **Run tests and linting**:
    ```bash
    pytest
