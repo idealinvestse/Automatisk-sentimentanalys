@@ -1,14 +1,14 @@
 [project]
 name = "automatisk-sentimentanalys"
-version = "0.3.0"
-description = "Svenskt sentimentanalyssystem med ASR-stöd"
+version = "0.4.0"
+description = "Svenskt sentimentanalys- och Call Center Intelligence-system med ASR, diarization och LLM-stöd (Mistral/OpenRouter)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
     { name = "ideal-invest" },
 ]
-keywords = ["sentiment-analysis", "swedish", "nlp", "asr", "whisper"]
+keywords = ["sentiment-analysis", "swedish", "nlp", "asr", "whisper", "call-center", "diarization"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -26,6 +26,11 @@ min = ["transformers>=4.44.0", "torch>=2.2.0,<3.0", "sentencepiece>=0.1.99", "pr
 cli = ["pandas>=2.2.0", "typer>=0.12.3", "rich>=13.7.0", "faster-whisper>=1.0.0"]
 api = ["fastapi>=0.111.0", "uvicorn[standard]>=0.30.0", "pydantic>=2.7.0", "faster-whisper>=1.0.0", "python-multipart>=0.0.9"]
 dev = ["pytest>=8.0", "pytest-cov>=6.0", "ruff>=0.11", "black>=25.0", "mypy>=1.16"]
+diarize = [
+    "pyannote.audio>=3.1.0",
+    "torchaudio>=2.2.0",
+]
+# whisperx and noisereduce är valfria för avancerade ASR-backends (se kommentarer i requirements-cli.txt)
 
 [tool.ruff]
 target-version = "py311"
