@@ -16,4 +16,4 @@ plotly>=5.22.0
 
 # Optional: for notebook development
 jupyter>=1.0.0
-ipython>=8.24.0
+ipython>=9.14.1
