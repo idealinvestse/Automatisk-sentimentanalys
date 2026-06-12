@@ -21,7 +21,7 @@ jobs:
   portable:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve version and profile
         id: meta
@@ -56,7 +56,7 @@ jobs:
     runs-on: windows-latest
     needs: portable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download portable staging
         uses: actions/download-artifact@v4
