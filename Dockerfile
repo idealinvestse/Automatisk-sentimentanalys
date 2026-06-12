@@ -8,22 +8,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps (minimal + ffmpeg for ASR and libgomp for ctranslate2)
+# System dependencies
+# - ffmpeg: required for audio preprocessing (--preprocess)
+# - libgomp1: required by some ML libraries (ctranslate2, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     ffmpeg \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirement files first for better caching
+# Copy requirement files first for better layer caching
 COPY requirements-min.txt requirements-cli.txt requirements-api.txt requirements.txt ./
 
-# Install Python deps (API + minimal inference + fine-tuning dependencies)
+# Install Python dependencies
+# Note: For GPU support, use a CUDA base image or install torch with CUDA separately.
+# Example GPU image: FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 RUN python -m pip install -U pip && \
     pip install -r requirements-min.txt -r requirements-api.txt && \
     pip install -r requirements-cli.txt
 
-# Copy source, configs, data, and docs
+# Copy source code and assets
 COPY src/ ./src/
 COPY configs/ ./configs/
 COPY data/ ./data/
@@ -31,11 +35,19 @@ COPY samples/ ./samples/
 COPY docs/ ./docs/
 COPY README.md ROADMAP.md ./
 
-# Create cache, outputs, and models directories
-RUN mkdir -p /cache/hf /app/outputs /app/models
-VOLUME ["/cache/hf"]
+# Create necessary directories
+RUN mkdir -p /cache/hf /app/outputs /app/models /app/state
+
+VOLUME ["/cache/hf", "/app/outputs", "/app/state"]
 
 EXPOSE 8000
 
-# Default: run API server
+# Default command: Start API server
+# For GPU workloads, ensure the host has NVIDIA drivers and use --gpus all when running the container.
 CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# =============================================================================
+# Usage examples:
+#   CPU: docker build -t sentimentanalys .
+#   GPU: Use a CUDA base image + docker run --gpus all ...
+# =============================================================================
