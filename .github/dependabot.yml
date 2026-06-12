@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Enable version updates for Python (pip)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Only update direct dependencies in pyproject.toml
+    allow:
+      - dependency-type: "direct"
+    # Ignore very frequent patch updates if desired
+    # ignore:
+    #   - dependency-name: "ruff"
+    #     versions: ["<0.5"]
+
+  # You can add Docker if you want automatic base image updates
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
