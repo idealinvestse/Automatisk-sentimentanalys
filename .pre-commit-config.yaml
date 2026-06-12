@@ -1,0 +1,36 @@
+# .pre-commit-config.yaml
+# Run with: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  # Optional: Add pytest as a hook if you want it to run on every commit
+  # - repo: local
+  #   hooks:
+  #   - id: pytest
+  #     name: pytest
+  #     entry: pytest
+  #     language: system
+  #     pass_filenames: false
+  #     always_run: true
