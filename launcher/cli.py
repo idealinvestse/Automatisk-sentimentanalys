@@ -217,7 +217,12 @@ def repair_cmd(
     _install = "requirements-install.txt"
     req_files = {
         InstallProfile.minimal: ["requirements-min.txt", _install],
-        InstallProfile.cli: ["requirements-min.txt", "requirements-cli.txt", _install],
+        InstallProfile.cli: [
+            "requirements-min.txt",
+            "requirements-cli.txt",
+            "requirements-api.txt",
+            _install,
+        ],
         InstallProfile.api: ["requirements-min.txt", "requirements-api.txt", _install],
         InstallProfile.full: [
             "requirements-min.txt",

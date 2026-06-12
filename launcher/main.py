@@ -170,14 +170,21 @@ class LauncherApp(tk.Tk):
         self._open_folder(self.cfg.resolved_logs_dir())
 
     def _repair(self) -> None:
-        if not messagebox.askyesno("Repair", "Re-install pip packages for current profile?"):
+        profile = self.cfg.install_profile.value
+        hint = ""
+        if self.cfg.services.api_enabled and profile == "cli":
+            hint = "\n\nAPI är aktiverat — cli-profilen inkluderar nu API-beroenden."
+        if not messagebox.askyesno(
+            "Repair",
+            f"Re-install pip packages for profile '{profile}'?{hint}",
+        ):
             return
         from src.install.config_schema import InstallProfile
 
         from .cli import repair_cmd
 
         try:
-            repair_cmd(profile=InstallProfile(self.cfg.install_profile.value))
+            repair_cmd(profile=InstallProfile(profile))
             self.event_log.info("Repair complete", phase="launcher")
         except Exception as e:
             self.event_log.error(str(e), phase="launcher")

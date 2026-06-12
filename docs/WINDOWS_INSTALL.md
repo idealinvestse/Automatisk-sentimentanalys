@@ -24,8 +24,8 @@ pip install -e ".[cli]"
 # Full call center with Speaker Diarization (recommended)
 pip install -e ".[cli,diarize]"
 
-# API + Dashboard
-pip install -e ".[api]"
+# API + Dashboard (api extra includes core ML deps; cli adds ASR CLI tools)
+pip install -e ".[cli,api]"
 
 # Development (includes tests, linting)
 pip install -e ".[dev]"

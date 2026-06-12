@@ -26,6 +26,12 @@ def test_app_imports() -> None:
     assert callable(create_app)
 
 
+def test_server_shim_imports() -> None:
+    from src.api.server import app as server_app
+
+    assert server_app.title == "Swedish Sentiment API"
+
+
 def test_health_ok() -> None:
     r = client.get("/health")
     assert r.status_code == 200

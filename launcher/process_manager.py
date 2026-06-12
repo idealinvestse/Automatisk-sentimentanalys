@@ -12,10 +12,11 @@ from pathlib import Path
 
 from src.install.config_schema import UserConfig
 
+from .api_deps import check_api_dependencies
 from .env_builder import build_child_env, resolve_python, working_directory
 from .event_log import EventLog
 from .pid_store import clear_pid_file, get_pid_info, save_pid, service_log_paths
-from .process_util import is_port_open, is_process_running
+from .process_util import is_port_open, is_process_running, resolve_connect_host
 
 _START_TIMEOUT_SEC = 30.0
 _LOG_TAIL_CHARS = 1500
@@ -86,8 +87,12 @@ def _wait_for_service(
         return
 
     host, port = endpoint
+    connect_host = resolve_connect_host(host)
     if log:
-        log.info(f"Waiting for {host}:{port} (timeout {_START_TIMEOUT_SEC:.0f}s)", phase=phase)
+        log.info(
+            f"Waiting for {connect_host}:{port} (bind {host}, timeout {_START_TIMEOUT_SEC:.0f}s)",
+            phase=phase,
+        )
 
     deadline = time.monotonic() + _START_TIMEOUT_SEC
     last_logged_sec = -1.0
@@ -112,7 +117,7 @@ def _wait_for_service(
 
                 if log:
                     log.info("Checking GET /health", phase=f"{name}.health")
-                if check_api_health(host, port):
+                if check_api_health(connect_host, port):
                     if log:
                         log.info("Health check OK", phase=f"{name}.health")
                 elif log:
@@ -181,6 +186,13 @@ def start_api(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessInfo:
         log.phase("api.start", "Starting API")
     stop_service(cfg, "api", log=log)
     py = resolve_python(cfg)
+    child_env = build_child_env(cfg)
+    root = working_directory(cfg)
+    dep_error = check_api_dependencies(python=py, env=child_env, cwd=root)
+    if dep_error:
+        if log:
+            log.error(dep_error, phase="api.start")
+        raise RuntimeError(dep_error)
     cmd = [
         str(py),
         "-m",
@@ -193,7 +205,7 @@ def start_api(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessInfo:
     ]
     if log:
         log.info(f"Command: {' '.join(cmd)}", phase="api.start")
-        log.info(f"Working directory: {working_directory(cfg)}", phase="api.start")
+        log.info(f"Working directory: {root}", phase="api.start")
     proc = _popen_service(cfg, "api", cmd)
     pid_path = save_pid(cfg, "api", proc.pid, cmd)
     if log:

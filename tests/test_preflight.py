@@ -18,3 +18,21 @@ def test_preflight_optional_openrouter() -> None:
     report = run_preflight(cfg, require_openrouter=False)
     or_check = next(c for c in report.checks if c.name == "openrouter_key")
     assert or_check.ok
+
+
+def test_preflight_api_checks_when_enabled() -> None:
+    cfg = UserConfig(services={"api_enabled": True})
+    report = run_preflight(cfg, require_torch=False)
+    names = [c.name for c in report.checks]
+    assert "import_fastapi" in names
+    assert "import_uvicorn" in names
+    assert "import_src_api" in names
+    assert any(c.name == "import_src_api" and c.ok for c in report.checks)
+
+
+def test_preflight_skips_api_checks_when_disabled() -> None:
+    cfg = UserConfig(services={"api_enabled": False})
+    report = run_preflight(cfg, require_torch=False)
+    names = [c.name for c in report.checks]
+    assert "import_fastapi" not in names
+    assert "import_uvicorn" not in names

@@ -17,7 +17,7 @@ install:  ## Install with CLI profile (basic usage)
 install-dev:  ## Install with dev + diarize (recommended for development)
 	pip install -e ".[dev,diarize]"
 
-install-api:  ## Install with API profile
+install-api:  ## Install with API profile (includes core ML + REST deps)
 	pip install -e ".[api]"
 
 install-diarize:  ## Install diarization support only

@@ -17,7 +17,7 @@ from src.install.user_config import default_user_config_path
 
 from .env_builder import resolve_python
 from .pid_store import get_pid_info, service_log_paths
-from .process_util import is_port_open, is_process_running
+from .process_util import is_port_open, is_process_running, resolve_connect_host
 
 API_VERSION = "0.4.0"
 _HEALTH_TIMEOUT_SEC = 0.5
@@ -105,7 +105,8 @@ def _read_log_tail(path: Path, max_chars: int = 400) -> str:
 
 
 def check_api_health(host: str, port: int, *, timeout_sec: float = _HEALTH_TIMEOUT_SEC) -> bool:
-    url = f"http://{host}:{port}/health"
+    connect_host = resolve_connect_host(host)
+    url = f"http://{connect_host}:{port}/health"
     try:
         with urllib.request.urlopen(url, timeout=timeout_sec) as resp:
             if resp.status != 200:

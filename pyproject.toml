@@ -24,7 +24,17 @@ sentimentanalys-launcher = "launcher.cli:main"
 [project.optional-dependencies]
 min = ["transformers>=4.44.0", "torch>=2.2.0,<3.0", "sentencepiece>=0.1.99", "protobuf>=3.20.0"]
 cli = ["pandas>=2.2.0", "typer>=0.12.3", "rich>=13.7.0", "faster-whisper>=1.0.0"]
-api = ["fastapi>=0.111.0", "uvicorn[standard]>=0.30.0", "pydantic>=2.7.0", "faster-whisper>=1.0.0", "python-multipart>=0.0.9"]
+api = [
+    "transformers>=4.44.0",
+    "torch>=2.2.0,<3.0",
+    "sentencepiece>=0.1.99",
+    "protobuf>=3.20.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.7.0",
+    "faster-whisper>=1.0.0",
+    "python-multipart>=0.0.9",
+]
 dev = ["pytest>=8.0", "pytest-cov>=6.0", "ruff>=0.11", "black>=25.0", "mypy>=1.16"]
 diarize = [
     "pyannote.audio>=3.1.0",

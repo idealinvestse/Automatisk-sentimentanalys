@@ -29,7 +29,7 @@ python -m pip install -U pip
 
 $reqSets = @{
     minimal = @("requirements-min.txt")
-    cli     = @("requirements-min.txt", "requirements-cli.txt", "requirements-install.txt")
+    cli     = @("requirements-min.txt", "requirements-cli.txt", "requirements-api.txt", "requirements-install.txt")
     api     = @("requirements-min.txt", "requirements-api.txt", "requirements-install.txt")
     full    = @(
         "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",

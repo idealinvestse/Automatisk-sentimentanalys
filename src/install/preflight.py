@@ -105,6 +105,23 @@ def _check_writable(report: PreflightReport, path: Path, label: str) -> None:
         report.add(f"writable_{label}", False, f"Not writable: {path}", str(e))
 
 
+def _check_api_deps(report: PreflightReport, cfg: UserConfig) -> None:
+    if not cfg.services.api_enabled:
+        return
+    for mod in ("fastapi", "uvicorn"):
+        _check_import(report, mod)
+    try:
+        import src.api  # noqa: F401
+        report.add("import_src_api", True, "API application importable")
+    except Exception as exc:
+        report.add(
+            "import_src_api",
+            False,
+            "API application import failed",
+            str(exc),
+        )
+
+
 def _check_secrets(report: PreflightReport, cfg: UserConfig, *, require_openrouter: bool) -> None:
     status = secret_status(cfg.resolved_app_root())
     or_ok = status["openrouter"]["configured"]
@@ -149,6 +166,7 @@ def run_preflight(
 
     need_or = require_openrouter if require_openrouter is not None else cfg.llm.enabled
     _check_secrets(report, cfg, require_openrouter=need_or)
+    _check_api_deps(report, cfg)
 
     venv_py = app_root / ".venv" / "Scripts" / "python.exe"
     if venv_py.is_file():

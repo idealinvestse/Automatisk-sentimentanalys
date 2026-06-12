@@ -25,6 +25,30 @@ def cfg(tmp_path: Path) -> UserConfig:
     )
 
 
+def test_check_api_health_resolves_bind_all_host() -> None:
+    seen_url: list[str] = []
+
+    class FakeResp:
+        status = 200
+
+        def read(self) -> bytes:
+            return b'{"status":"ok"}'
+
+        def __enter__(self) -> FakeResp:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+    def fake_urlopen(url: str, timeout: float = 0.5) -> FakeResp:
+        seen_url.append(url)
+        return FakeResp()
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        assert check_api_health("0.0.0.0", 8765) is True
+    assert seen_url == ["http://127.0.0.1:8765/health"]
+
+
 def test_check_api_health_ok() -> None:
     class FakeResp:
         status = 200

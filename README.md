@@ -29,9 +29,9 @@ pip install -e ".[cli,diarize]"
 ### 3. REST API + Dashboard
 
 ```bash
-pip install -e ".[api]"
+pip install -e ".[cli,api]"
 # Starta API
-uvicorn src.api.server:app --reload
+uvicorn src.api:app --reload
 # Starta Streamlit dashboard
 streamlit run app/dashboard.py
 ```

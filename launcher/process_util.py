@@ -39,10 +39,19 @@ def _is_running_windows(pid: int) -> bool:
         kernel32.CloseHandle(handle)
 
 
+def resolve_connect_host(bind_host: str) -> str:
+    """Map bind-all addresses to a loopback host for client-side probes."""
+    normalized = bind_host.strip().lower()
+    if normalized in ("0.0.0.0", "::", "[::]"):
+        return "127.0.0.1"
+    return bind_host
+
+
 def is_port_open(host: str, port: int, *, timeout: float = 0.5) -> bool:
     """Return True when ``host:port`` accepts a TCP connection."""
+    connect_host = resolve_connect_host(host)
     try:
-        with socket.create_connection((host, port), timeout=timeout):
+        with socket.create_connection((connect_host, port), timeout=timeout):
             return True
     except OSError:
         return False
