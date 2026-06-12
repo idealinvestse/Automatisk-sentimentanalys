@@ -1,8 +1,30 @@
+"""
 # Projektplan (Roadmap)
 
 ## Översikt
 
 Projektet "Automatisk-sentimentanalys" utvecklas i faser med tydliga mål per fas.
+
+**Senaste tillägg (Juni 2026)**: Ny fas för migrering av dashboard från Streamlit till NiceGUI för bättre prestanda och UX.
+
+---
+
+## Fas 6.0: Dashboard-migrering till NiceGUI (Pågående planering)
+
+**Mål**: Migrera den befintliga Streamlit-dashboarden till NiceGUI för bättre reaktivitet, modern UX och långsiktig skalbarhet.
+
+**Officiell plan**: Se `docs/MIGRATION_TO_NICEGUI_PLAN.md` (detaljerad guide + task breakdown, 5 faser, 8–12 veckor).
+
+**Nyckel-fördelar**:
+- Event-driven reaktivitet (bättre än Streamlit reruns)
+- Starkare state management
+- Naturlig integration med befintlig FastAPI-backend
+- Modern Tailwind-baserad UI
+- Bättre stöd för real-time (transkriberings-progress, logs)
+
+**Status**: Plan skapad och PoC implementerad (`app/nicegui_poc/main.py`).
+
+**Nästa steg**: Börja Fas 1 enligt migreringsplanen (Foundation & PoC-validering).
 
 ---
 
@@ -61,9 +83,6 @@ Se även uppdaterad `docs/ARCHITECTURE.md`, `docs/FAS3_MISTRAL_LLM_INTEGRATION.m
 
 ---
 
-
----
-
 ## Teknisk Skuld & Förbättringar
 
 - [x] Migrera från `setup.py` till full `pyproject.toml`-baserad byggning
@@ -74,4 +93,5 @@ Se även uppdaterad `docs/ARCHITECTURE.md`, `docs/FAS3_MISTRAL_LLM_INTEGRATION.m
 
 ---
 
-*Senast uppdaterad: Juni 2026 (se UTVECKLINGSPLAN.md för full Fas 1-3 completion)*
+*Senast uppdaterad: Juni 2026 – Se `docs/MIGRATION_TO_NICEGUI_PLAN.md` för den nya Fas 6.0 dashboard-migreringen.*
+"""
