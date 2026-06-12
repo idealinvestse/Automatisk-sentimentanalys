@@ -9,6 +9,6 @@ peft>=0.11.0
 datasets>=2.20.0
 accelerate>=0.31.0
 pyyaml>=6.0.0
-scikit-learn>=1.4.0
+scikit-learn>=1.9.0
 openai>=1.30.0
 pydantic>=2.7.0
