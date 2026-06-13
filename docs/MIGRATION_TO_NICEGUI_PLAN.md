@@ -136,7 +136,7 @@ Baserat på:
 - **Kvar**: `app/setup_hub.py` (Streamlit konfigurationshub, ej call center-dashboard)
 - **Migrering klar** – NiceGUI är standarddashboard
 
-## Fas 6.1: UX-förbättringar (pågående)
+## Fas 6.1: UX-förbättringar ✅ (2026-06-13)
 
 ### Uppgift 1 – Paginering + sökning i calls-tabellen ✅ (2026-06-13)
 - [x] `services/calls_filter.py` – sök i call_id, title, agent, alla segment
@@ -167,6 +167,42 @@ Baserat på:
 - [x] `tests/test_nicegui_dashboard.py` – API-klient, paginering, WS reconnect, TranscriptionState
 - [x] `tests/test_nicegui_dashboard_ui.py` – NiceGUI User fixture rendering (overview, call detail, transcription, analytics)
 - [x] `tests/fixtures/nicegui_test_pages.py` – isolerad test harness
+
+## Fas 6.2: UX-polish (2026-06-13)
+
+### Uppgift 1 – Global Reload i header ✅
+- [x] `layout.py` – refresh-knapp i header (synlig när API-klient finns)
+- [x] `main.py` – trådar `reload_from_api` till header; uppdaterar alla flikar
+
+### Uppgift 2 – Tomma tillstånd ✅
+- [x] `components/empty_state.py` – återanvändbar komponent
+- [x] Översikt: ingen data, filter utan träffar, sök utan träffar
+- [x] Transkribering: tom kö och tom logg
+
+### Uppgift 3 – Sök-highlight i transkript ✅
+- [x] `highlight_search_text()` i `transcript_virtualizer.py`
+- [x] `<mark class="search-hit">` i `virtual_transcript.py`
+- [x] Träffräknare under sökfält i Call Detail
+
+### Uppgift 4 – Antal träffar ovanför tabellen ✅
+- [x] `format_search_hit_label()` + prominent label i `calls_table.py`
+
+### Uppgift 5 – Färgkodning QA-poäng ✅
+- [x] `services/qa_display.py` – tier/CSS/chip-färger
+- [x] Quasar-slot `body-cell-qa_score` i calls-tabellen
+- [x] QA-chip i Call Detail
+
+### Uppgift 6 – WebSocket reconnect
+- Hoppad över (redan klar i Fas 6.1)
+
+### Uppgift 7 – Plotly-tooltips ✅
+- [x] `hovertemplate` för trajectory, agent trends, escalation i `chart_data.py`
+
+### Uppgift 8 – Kollapsbar agent leaderboard ✅
+- [x] `ui.expansion` hopfälld som standard i `overview.py`
+
+### Uppgift 9 – Segment-räknare i timeline ✅
+- [x] `[n/total]` på timeline-knappar + caption i `virtual_transcript.py`
 
 # 4. Teknisk Mapping (Streamlit → NiceGUI)
 

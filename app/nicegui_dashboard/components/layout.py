@@ -23,6 +23,7 @@ def render_header(
     *,
     phase_label: str = "Fas 4",
     dark_mode: ui.dark_mode | None = None,
+    on_reload: Callable[[], None] | None = None,
 ) -> Callable[[], None] | None:
     """Render header; returns callback to refresh API status label."""
     status_label: ui.label | None = None
@@ -39,6 +40,10 @@ def render_header(
                 status_label = ui.label(f"{txt} {state.api_client.base_url}").classes(
                     f"text-caption {cls}"
                 )
+                if on_reload:
+                    ui.button(icon="refresh", on_click=on_reload).props(
+                        "flat round dense"
+                    ).tooltip("Ladda om data från API")
 
             if dark_mode is not None:
                 ui.button(

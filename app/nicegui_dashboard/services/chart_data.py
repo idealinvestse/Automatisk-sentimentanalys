@@ -155,9 +155,14 @@ def build_trajectory_figure(report: dict[str, Any] | None) -> go.Figure:
             y=[p["y"] for p in points],
             mode="lines+markers",
             name="Kundsentiment",
-            customdata=[p["call_id"] for p in points],
-            hovertext=[p.get("label", "") for p in points],
-            hoverinfo="text+y+x",
+            customdata=[[p["call_id"], p.get("label", "")] for p in points],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Tid/tur: %{x}<br>"
+                "Sentiment: %{y:.2f}<br>"
+                "%{customdata[1]}"
+                "<extra></extra>"
+            ),
             line={"color": "#42a5f5", "width": 2},
             marker={"size": 8},
         )
@@ -182,13 +187,21 @@ def build_agent_trends_figure(rows: list[dict[str, Any]]) -> go.Figure:
         return fig
 
     x_labels = [r["call_id"] for r in rows]
+    meta = [[r["call_id"], r.get("agent", ""), r.get("title", "")] for r in rows]
     fig.add_trace(
         go.Scatter(
             x=x_labels,
             y=[r.get("empathy") for r in rows],
             mode="lines+markers",
             name="Empathy",
-            customdata=[r["call_id"] for r in rows],
+            customdata=meta,
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "%{customdata[2]}<br>"
+                "Agent: %{customdata[1]}<br>"
+                "Empathy: %{y:.2f}"
+                "<extra></extra>"
+            ),
             line={"color": "#66bb6a"},
             marker={"size": 9},
         ),
@@ -200,7 +213,14 @@ def build_agent_trends_figure(rows: list[dict[str, Any]]) -> go.Figure:
             y=[r.get("qa") for r in rows],
             mode="lines+markers",
             name="QA-score",
-            customdata=[r["call_id"] for r in rows],
+            customdata=meta,
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "%{customdata[2]}<br>"
+                "Agent: %{customdata[1]}<br>"
+                "QA: %{y:.0f}"
+                "<extra></extra>"
+            ),
             line={"color": "#ffa726", "dash": "dash"},
             marker={"size": 8},
         ),
@@ -268,9 +288,17 @@ def build_escalation_figure(rows: list[dict[str, Any]]) -> go.Figure:
             x=[r["call_id"] for r in rows],
             y=[r.get("escalation", 0) for r in rows],
             marker={"color": colors},
-            customdata=[r["call_id"] for r in rows],
-            hovertext=[r.get("title", "") for r in rows],
-            hoverinfo="text+y+x",
+            customdata=[
+                [r["call_id"], r.get("title", ""), r.get("agent", "")]
+                for r in rows
+            ],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "%{customdata[1]}<br>"
+                "Agent: %{customdata[2]}<br>"
+                "Alerts: %{y}"
+                "<extra></extra>"
+            ),
         )
     )
     fig.update_layout(

@@ -43,13 +43,25 @@ def dashboard_page() -> None:
         transcription=create_transcription_state(api_client=api_client),
     )
 
-    refresh_header = render_header(state, phase_label="Produktion", dark_mode=dark)
+    reload_ref: dict = {}
+
+    async def header_reload() -> None:
+        reload_fn = reload_ref.get("reload")
+        if reload_fn:
+            await reload_fn()
+
+    refresh_header = render_header(
+        state,
+        phase_label="Produktion",
+        dark_mode=dark,
+        on_reload=header_reload,
+    )
 
     with ui.column().classes("w-full nicegui-dashboard"):
-        _render_tabs(state, refresh_header)
+        _render_tabs(state, refresh_header, reload_ref)
 
 
-def _render_tabs(state: DashboardState, refresh_header) -> None:
+def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> None:
     with ui.tabs().classes("w-full") as tabs:
         overview_tab = ui.tab("Översikt")
         analytics_tab = ui.tab("Analys & Trender")
@@ -75,6 +87,8 @@ def _render_tabs(state: DashboardState, refresh_header) -> None:
 
     async def reload_from_api() -> None:
         await load_from_api(notify=True)
+
+    reload_ref["reload"] = reload_from_api
 
     async def load_from_api(*, notify: bool = True) -> None:
         if not state.api_client:
@@ -119,7 +133,7 @@ def _render_tabs(state: DashboardState, refresh_header) -> None:
                 state,
                 on_call_select=go_to_detail,
                 on_show_example_detail=show_example_detail,
-                on_reload_api=reload_from_api,
+                on_reload_api=reload_from_api if state.api_client else None,
             )
             refresh_overview.append(refresh_fn)
 

@@ -10,6 +10,7 @@ import logging
 from functools import lru_cache
 from typing import Any
 
+from app.nicegui_dashboard.services.qa_display import qa_score_css_class
 from app.services.data_services import (
     _generate_fallback_reports,
     get_demo_transcripts,
@@ -118,13 +119,15 @@ def reports_to_table_rows(reports: list[dict[str, Any]]) -> list[dict[str, Any]]
         qa = (r.get("results") or {}).get("qa") or {}
         qa_score = qa.get("overall_qa_score")
         sentiment = get_overall_sentiment(r)
+        display_score = qa_score if qa_score is not None else "—"
         rows.append(
             {
                 "call_id": call_id,
                 "title": r.get("title", call_id),
                 "agent": meta.get("agent", "Okänd"),
                 "sentiment": sentiment.get("label", "neutral"),
-                "qa_score": qa_score if qa_score is not None else "—",
+                "qa_score": display_score,
+                "qa_class": qa_score_css_class(display_score),
             }
         )
     return rows

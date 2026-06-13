@@ -15,6 +15,8 @@ from app.nicegui_dashboard.components.virtual_transcript import (
     render_transcript_panel,
     scroll_transcript_to_index,
 )
+from app.nicegui_dashboard.services.qa_display import qa_chip_color
+from app.nicegui_dashboard.services.transcript_virtualizer import filter_segments_with_index
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import enrich_segments_with_sentiment, get_overall_sentiment
 
@@ -116,7 +118,7 @@ def render_call_detail_tab(
                 ui.chip(f"Agent: {meta.get('agent', 'Okänd')}", color="primary")
                 ui.chip(f"Duration: {_format_duration(meta.get('duration_s'))}")
                 ui.chip(f"Sentiment: {sentiment.get('label', 'neutral')}", color="secondary")
-                ui.chip(f"QA: {qa_score}/100", color="warning")
+                ui.chip(f"QA: {qa_score}/100", color=qa_chip_color(qa_score))
 
         ui.separator()
         enriched = enrich_segments_with_sentiment(
@@ -161,10 +163,21 @@ def render_call_detail_tab(
                 detail_state.update({"search": e.value or ""}),
                 virt_state.pop("tx_start", None),
                 virt_state.pop("tx_end", None),
+                _update_search_hint(),
                 refresh_transcript.refresh(),
             ),
         ).classes("w-full")
+        search_hint = ui.label("").classes("text-caption q-mb-xs")
 
+        def _update_search_hint() -> None:
+            query = detail_state.get("search", "").strip()
+            if not query:
+                search_hint.set_text("")
+                return
+            hits = len(filter_segments_with_index(enriched, query))
+            search_hint.set_text(f"{hits} segment matchar «{query}»")
+
+        _update_search_hint()
         refresh_transcript()
 
         ui.label("Structured Insights (LLM + Fas4)").classes("text-subtitle2 q-mt-md")

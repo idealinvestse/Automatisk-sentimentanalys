@@ -20,6 +20,15 @@ DASHBOARD_CSS = """
 .nicegui-dashboard .log-error { color: #f87171; }
 .nicegui-dashboard .api-status-connected { color: #4ade80; }
 .nicegui-dashboard .api-status-offline { color: #fbbf24; }
+.nicegui-dashboard .empty-state {
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+}
+.nicegui-dashboard .search-hit {
+    background: rgba(251, 191, 36, 0.35);
+    border-radius: 2px;
+    padding: 0 2px;
+}
 """
 
 

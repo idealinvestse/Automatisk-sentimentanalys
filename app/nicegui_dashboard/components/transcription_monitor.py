@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.metric_card import metric_card
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
@@ -158,7 +159,11 @@ def render_transcription_tab(
         with queue_container:
             files = trans_state.queue
             if not files:
-                ui.label("Inga filer i kön.").classes("text-caption")
+                render_empty_state(
+                    icon="queue",
+                    title="Inga filer i kön",
+                    hint=f"Lägg ljudfiler i {trans_state.pending_folder} och skanna igen.",
+                )
             else:
                 for f in files[:8]:
                     ui.label(f"• {f.name}")
@@ -173,6 +178,13 @@ def render_transcription_tab(
     def refresh_log() -> None:
         log_container.clear()
         with log_container:
+            if not trans_state.logs:
+                render_empty_state(
+                    icon="history",
+                    title="Inga händelser ännu",
+                    hint="Starta batch eller vänta på WebSocket-loggar från backend.",
+                )
+                return
             for entry in trans_state.logs[-30:]:
                 level = entry.get("level", "INFO")
                 css = {

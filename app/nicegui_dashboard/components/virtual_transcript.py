@@ -6,10 +6,12 @@ Uses ui.scroll_area + spacer-based window rendering.
 
 from __future__ import annotations
 
+import html
 from collections.abc import Callable
 from typing import Any
 
 from nicegui import ui
+from nicegui.elements.label import Label
 from nicegui.events import ScrollEventArguments
 
 from app.nicegui_dashboard.services.transcript_virtualizer import (
@@ -17,6 +19,7 @@ from app.nicegui_dashboard.services.transcript_virtualizer import (
     TRANSCRIPT_ROW_HEIGHT,
     compute_visible_range,
     filter_segments_with_index,
+    highlight_search_text,
     scroll_pixels_for_index,
     should_virtualize,
     window_around_index,
@@ -40,27 +43,36 @@ def _sentiment_css(seg: dict[str, Any]) -> str:
     return ""
 
 
+def _timeline_caption_text(selected_idx: int, total: int, *, virtual: bool) -> str:
+    if virtual:
+        return f"Valt segment {selected_idx + 1} av {total}"
+    return f"Segment {selected_idx + 1} av {total}"
+
+
 def render_timeline(
     enriched: list[dict[str, Any]],
     *,
     selected_idx: int,
     on_select: Callable[[int], None],
     virt_state: dict[str, Any],
-) -> None:
-    """Render timeline; virtualized when segment count is large."""
+) -> Label:
+    """Render timeline; virtualized when segment count is large. Returns caption label."""
     total = len(enriched)
     if total == 0:
         ui.label("Inga segment.").classes("text-caption")
-        return
+        return ui.label("")
 
     use_virtual = should_virtualize(total)
     if use_virtual:
         start, end = window_around_index(selected_idx, total)
         virt_state["timeline_start"] = start
         virt_state["timeline_end"] = end
-        ui.label(f"Timeline (virtualiserad · {total} segment)").classes("text-caption q-mb-xs")
     else:
         start, end = 0, total
+
+    caption = ui.label(_timeline_caption_text(selected_idx, total, virtual=use_virtual)).classes(
+        "text-caption q-mb-xs"
+    )
 
     scroll = ui.scroll_area().classes("w-full").style("height: 12rem")
 
@@ -77,13 +89,16 @@ def render_timeline(
                 seg = enriched[i]
                 is_selected = selected_idx == i
                 label = (
-                    f"{_segment_time_label(seg)} {seg.get('speaker', '?')}: "
+                    f"[{i + 1}/{total}] {_segment_time_label(seg)} {seg.get('speaker', '?')}: "
                     f"{seg.get('text', '')[:60]}..."
                 )
 
                 def make_select(idx: int) -> Callable[[], None]:
                     def _select() -> None:
                         on_select(idx)
+                        caption.set_text(
+                            _timeline_caption_text(idx, total, virtual=use_virtual)
+                        )
                         if use_virtual:
                             ns, ne = window_around_index(idx, total)
                             virt_state["timeline_start"] = ns
@@ -104,6 +119,8 @@ def render_timeline(
 
     with scroll:
         timeline_body()
+
+    return caption
 
 
 def render_transcript_panel(
@@ -157,7 +174,15 @@ def render_transcript_panel(
                 text = seg.get("text", "")
                 speaker = seg.get("speaker", "?")
                 prefix = ">> " if selected_idx == orig_idx else ""
-                ui.markdown(f"{prefix}**{speaker}:** {text}").classes(_sentiment_css(seg))
+                css = _sentiment_css(seg)
+                if search:
+                    body = (
+                        f"{prefix}<strong>{html.escape(speaker)}:</strong> "
+                        f"{highlight_search_text(text, search)}"
+                    )
+                    ui.html(body).classes(css)
+                else:
+                    ui.markdown(f"{prefix}**{speaker}:** {text}").classes(css)
 
         if use_virtual and e < count:
             ui.element("div").style(f"height: {(count - e) * row_height}px; width: 100%;")

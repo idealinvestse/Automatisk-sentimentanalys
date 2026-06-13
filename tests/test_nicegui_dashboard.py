@@ -18,7 +18,12 @@ from app.nicegui_dashboard.components.call_detail import (
     _format_duration,
 )
 from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER
-from app.nicegui_dashboard.services.calls_filter import paginate_items, search_table_reports
+from app.nicegui_dashboard.services.calls_filter import (
+    format_search_hit_label,
+    paginate_items,
+    search_table_reports,
+)
+from app.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
 from app.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
     build_escalation_figure,
@@ -34,6 +39,7 @@ from app.nicegui_dashboard.services.transcript_virtualizer import (
     VIRTUALIZE_THRESHOLD,
     compute_visible_range,
     filter_segments_with_index,
+    highlight_search_text,
     make_synthetic_segments,
     should_virtualize,
     window_around_index,
@@ -357,6 +363,43 @@ class TestDemoProvider:
         assert len(rows) == 5
         assert "call_id" in rows[0]
         assert "sentiment" in rows[0]
+        assert "qa_class" in rows[0]
+
+
+class TestFas62Helpers:
+    def test_highlight_search_text_case_insensitive(self):
+        out = highlight_search_text("Hej Faktura och faktura", "faktura")
+        assert out.count("search-hit") == 2
+        assert "Faktura" in out
+
+    def test_highlight_search_text_escapes_html(self):
+        out = highlight_search_text("<script>alert(1)</script>", "script")
+        assert "<script>" not in out
+        assert "search-hit" in out
+
+    def test_highlight_search_text_empty_query(self):
+        assert highlight_search_text("plain text", "") == "plain text"
+
+    def test_qa_score_tiers(self):
+        assert qa_score_tier(85) == "high"
+        assert qa_score_tier(70) == "mid"
+        assert qa_score_tier(45) == "low"
+        assert qa_score_tier(None) == "none"
+        assert qa_score_css_class(85) == "text-positive"
+        assert qa_score_css_class("—") == "text-grey"
+
+    def test_format_search_hit_label(self):
+        assert "1 träff" in format_search_hit_label(1, "faktura")
+        assert "3 träffar" in format_search_hit_label(3, "faktura")
+
+    def test_plotly_figures_have_hovertemplate(self):
+        load_demo_reports.cache_clear()
+        reports = list(load_demo_reports())
+        report = reports[0]
+        trend_rows = extract_agent_trend_rows(reports)
+        assert build_trajectory_figure(report).data[0].hovertemplate
+        assert build_agent_trends_figure(trend_rows).data[0].hovertemplate
+        assert build_escalation_figure(trend_rows).data[0].hovertemplate
 
 
 class TestCallDetailHelpers:

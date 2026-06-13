@@ -10,6 +10,12 @@ from typing import Any
 DEFAULT_TABLE_PAGE_SIZE = 20
 
 
+def format_search_hit_label(count: int, query: str) -> str:
+    """Human-readable search hit count for calls table."""
+    word = "träff" if count == 1 else "träffar"
+    return f"{count} {word} för «{query.strip()}»"
+
+
 def search_table_reports(
     reports: list[dict[str, Any]],
     query: str,

@@ -11,6 +11,7 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.calls_table import render_calls_table
+from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.kpi_cards import render_kpi_row
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import filter_reports, get_agent_leaderboard, get_hot_topics
@@ -19,6 +20,12 @@ from app.services.data_services import filter_reports, get_agent_leaderboard, ge
 def _unique_agents(reports: list[dict[str, Any]]) -> list[str]:
     agents = sorted({(r.get("meta") or {}).get("agent", "Okänd") for r in reports})
     return ["Alla"] + agents
+
+
+def _filters_active(state: DashboardState) -> bool:
+    sentiment = state.filters.get("sentiment_filter", "all")
+    agent = state.filters.get("agent_filter")
+    return sentiment != "all" or bool(agent)
 
 
 def render_overview_tab(
@@ -32,8 +39,16 @@ def render_overview_tab(
     with ui.row().classes("w-full items-center justify-between q-mb-md"):
         ui.label("📊 Översikt – KPI:er & Filter").classes("text-h6")
         source_label = ui.label(f"Data: {state.data_source}").classes("text-caption")
-        if state.api_client and on_reload_api:
-            ui.button("↻ Ladda från API", on_click=on_reload_api).props("flat dense")
+
+    if not state.reports:
+        render_empty_state(
+            icon="inbox",
+            title="Ingen data laddad",
+            hint="Starta backend-API eller ladda om för att hämta samtal.",
+            action=on_reload_api,
+            action_label="Ladda från API",
+        )
+        return lambda: source_label.set_text(f"Data: {state.data_source}")
 
     agents = _unique_agents(state.reports)
 
@@ -59,24 +74,26 @@ def render_overview_tab(
                         ui.chip(topic, color="primary").classes("q-ma-xs")
 
             with ui.card().classes("flex-1"):
-                ui.label("👥 Agent Leaderboard").classes("text-subtitle2")
-                board = get_agent_leaderboard(reports)
-                ui.table(
-                    columns=[
-                        {"name": "agent", "label": "Agent", "field": "agent"},
-                        {"name": "calls", "label": "Samtal", "field": "calls"},
-                        {"name": "avg_qa", "label": "QA", "field": "avg_qa"},
-                    ],
-                    rows=[
-                        {
-                            "agent": row["agent"],
-                            "calls": row["calls"],
-                            "avg_qa": row["avg_qa"] if row["avg_qa"] is not None else "—",
-                        }
-                        for row in board
-                    ],
-                    row_key="agent",
-                ).classes("w-full")
+                with ui.expansion("👥 Agent Leaderboard", icon="groups", value=False).classes(
+                    "w-full"
+                ):
+                    board = get_agent_leaderboard(reports)
+                    ui.table(
+                        columns=[
+                            {"name": "agent", "label": "Agent", "field": "agent"},
+                            {"name": "calls", "label": "Samtal", "field": "calls"},
+                            {"name": "avg_qa", "label": "QA", "field": "avg_qa"},
+                        ],
+                        rows=[
+                            {
+                                "agent": row["agent"],
+                                "calls": row["calls"],
+                                "avg_qa": row["avg_qa"] if row["avg_qa"] is not None else "—",
+                            }
+                            for row in board
+                        ],
+                        row_key="agent",
+                    ).classes("w-full")
 
     def apply_filters() -> None:
         state.table_page = 1
@@ -107,9 +124,22 @@ def render_overview_tab(
                     apply_filters(),
                 ),
             ).classes("min-w-40")
+
+    @ui.refreshable
+    def filter_empty_hint() -> None:
+        filtered = get_filtered()
+        if filtered or not _filters_active(state):
+            return
+        render_empty_state(
+            icon="filter_alt_off",
+            title="Inga samtal matchar valda filter",
+            hint="Ändra sentiment- eller agent-filter för att se fler samtal.",
+        )
+
     kpi_section()
     ui.separator()
     topics_and_board()
+    filter_empty_hint()
 
     refresh_calls_table = render_calls_table(
         state,
@@ -124,6 +154,7 @@ def render_overview_tab(
         source_label.set_text(f"Data: {state.data_source}")
         kpi_section.refresh()
         topics_and_board.refresh()
+        filter_empty_hint.refresh()
         refresh_calls_table()
 
     return refresh_all

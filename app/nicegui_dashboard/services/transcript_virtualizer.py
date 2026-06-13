@@ -5,6 +5,8 @@ Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (virtualisering av transkript)
 
 from __future__ import annotations
 
+import html
+import re
 from typing import Any
 
 # Approximate row heights (px) for spacer-based virtual scrolling
@@ -18,6 +20,16 @@ OVERSCAN_ROWS = 4
 def should_virtualize(segment_count: int) -> bool:
     """Use virtual scrolling when segment count exceeds threshold."""
     return segment_count >= VIRTUALIZE_THRESHOLD
+
+
+def highlight_search_text(text: str, query: str) -> str:
+    """Escape HTML and wrap case-insensitive query matches in <mark>."""
+    escaped = html.escape(text)
+    q = (query or "").strip()
+    if not q:
+        return escaped
+    pattern = re.compile(re.escape(q), re.IGNORECASE)
+    return pattern.sub(lambda m: f'<mark class="search-hit">{m.group(0)}</mark>', escaped)
 
 
 def filter_segments_with_index(
