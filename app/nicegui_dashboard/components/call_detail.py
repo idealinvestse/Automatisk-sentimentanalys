@@ -1,6 +1,6 @@
 """Call Detail View – header, timeline, transcript, structured insights.
 
-Fas 2 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (virtualiserat transkript)
 """
 
 from __future__ import annotations
@@ -10,6 +10,11 @@ from typing import Any
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.virtual_transcript import (
+    render_timeline,
+    render_transcript_panel,
+    scroll_transcript_to_index,
+)
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import enrich_segments_with_sentiment, get_overall_sentiment
 
@@ -80,14 +85,6 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     return "\n\n".join(parts)
 
 
-def _segment_time_label(seg: dict[str, Any]) -> str:
-    start = seg.get("start")
-    end = seg.get("end")
-    if start is not None and end is not None:
-        return f"[{start:.0f}s–{end:.0f}s]"
-    return f"[#{seg.get('turn_idx', 0)}]"
-
-
 def render_call_detail_tab(
     state: DashboardState,
     *,
@@ -96,6 +93,7 @@ def render_call_detail_tab(
     """Render call detail; returns refresh callback for external updates."""
 
     detail_state: dict[str, Any] = {"selected_idx": 0, "search": ""}
+    virt_state: dict[str, Any] = {}
 
     @ui.refreshable
     def _render_content() -> None:
@@ -125,60 +123,52 @@ def render_call_detail_tab(
             report.get("segments") or [],
             report.get("sentiment_results") or [],
         )
+        n_seg = len(enriched)
+        if n_seg >= 40:
+            ui.chip(f"{n_seg} segment · virtualiserad vy", color="info").classes("q-mb-sm")
+
+        def on_timeline_select(idx: int) -> None:
+            detail_state["selected_idx"] = idx
+            if virt_state.get("tx_refresh"):
+                scroll_transcript_to_index(virt_state, idx)
+            else:
+                refresh_transcript.refresh()
 
         ui.label("Interaktiv Timeline").classes("text-subtitle2 q-mt-md")
-        with ui.card().classes("w-full max-h-48 overflow-auto"):
-            if not enriched:
-                ui.label("Inga segment.").classes("text-caption")
-            else:
-                for i, seg in enumerate(enriched):
-                    is_selected = detail_state["selected_idx"] == i
-                    label = (
-                        f"{_segment_time_label(seg)} {seg.get('speaker', '?')}: "
-                        f"{seg.get('text', '')[:60]}..."
-                    )
-
-                    def make_select(idx: int) -> Callable[[], None]:
-                        def _select() -> None:
-                            detail_state["selected_idx"] = idx
-                            _render_transcript.refresh()
-
-                        return _select
-
-                    ui.button(
-                        label,
-                        on_click=make_select(i),
-                        color="primary" if is_selected else None,
-                    ).props("flat dense align=left").classes("w-full text-left")
+        with ui.card().classes("w-full"):
+            render_timeline(
+                enriched,
+                selected_idx=detail_state["selected_idx"],
+                on_select=on_timeline_select,
+                virt_state=virt_state,
+            )
 
         ui.label("Transkript (sökbart)").classes("text-subtitle2 q-mt-md")
 
         @ui.refreshable
-        def _render_transcript() -> None:
-            search = detail_state.get("search", "").lower()
-            with ui.card().classes("w-full max-h-64 overflow-auto q-pa-md"):
-                if not enriched:
-                    ui.label("Inget transkript.").classes("text-caption")
-                    return
-                for i, seg in enumerate(enriched):
-                    text = seg.get("text", "")
-                    if search and search not in text.lower():
-                        continue
-                    speaker = seg.get("speaker", "?")
-                    prefix = ">> " if detail_state["selected_idx"] == i else ""
-                    sent = seg.get("sentiment_label", "neutral")
-                    color = "text-negative" if "neg" in sent else ("text-positive" if "pos" in sent else "")
-                    ui.markdown(f"{prefix}**{speaker}:** {text}").classes(color or "")
+        def refresh_transcript() -> None:
+            render_transcript_panel(
+                enriched,
+                selected_idx=detail_state["selected_idx"],
+                search=detail_state.get("search", ""),
+                virt_state=virt_state,
+            )
 
         ui.input(
             "Sök i transkript",
-            on_change=lambda e: (detail_state.update({"search": e.value or ""}), _render_transcript.refresh()),
+            value=detail_state.get("search", ""),
+            on_change=lambda e: (
+                detail_state.update({"search": e.value or ""}),
+                virt_state.pop("tx_start", None),
+                virt_state.pop("tx_end", None),
+                refresh_transcript.refresh(),
+            ),
         ).classes("w-full")
 
-        _render_transcript()
+        refresh_transcript()
 
         ui.label("Structured Insights (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
-        with ui.expander("Actionable Summary & Agent Assessment", icon="insights").classes("w-full"):
+        with ui.expansion("Actionable Summary & Agent Assessment", icon="insights").classes("w-full"):
             ui.markdown(_build_insights_markdown(report))
 
         with ui.row().classes("gap-2 q-mt-md"):

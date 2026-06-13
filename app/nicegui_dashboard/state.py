@@ -19,6 +19,9 @@ class DashboardState:
     reports: list[dict[str, Any]]
     selected_call_id: str | None = None
     filters: dict[str, Any] = field(default_factory=dict)
+    table_page: int = 1
+    table_page_size: int = 20
+    table_search: str = ""
     transcription: TranscriptionState | None = None
     api_client: NiceGUIAPIClient | None = None
     api_connected: bool = False

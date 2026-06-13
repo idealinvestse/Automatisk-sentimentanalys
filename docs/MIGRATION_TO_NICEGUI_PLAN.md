@@ -136,13 +136,45 @@ Baserat på:
 - **Kvar**: `app/setup_hub.py` (Streamlit konfigurationshub, ej call center-dashboard)
 - **Migrering klar** – NiceGUI är standarddashboard
 
+## Fas 6.1: UX-förbättringar (pågående)
+
+### Uppgift 1 – Paginering + sökning i calls-tabellen ✅ (2026-06-13)
+- [x] `services/calls_filter.py` – sök i call_id, title, agent, alla segment
+- [x] `components/calls_table.py` – sökfält, paginering (10/20/50), föregående/nästa
+- [x] `state.py` – `table_page`, `table_page_size`, `table_search`
+- [x] Radklick → Call Detail bevarad
+
+### Uppgift 2 – WebSocket reconnect ✅ (2026-06-13)
+- [x] `transcription_ws_client.py` – exponential backoff, obegränsade försök under batch
+- [x] UI-status: Connected / Reconnecting / Disconnected
+- [x] Polling-fallback (2s) när WS nere under API-batch
+- [x] Manuell **Reconnect WS**-knapp
+- [x] Fix: `_start_ws_listener` startar nu korrekt (krävde inte job_id före skapande)
+
+### Uppgift 3 – Plotly trajectory & agent trends ✅ (2026-06-13)
+- [x] Ny flik **Analys & Trender** (`components/analytics_trends.py`)
+- [x] `services/chart_data.py` – trajectory, agent empathy/QA, hot topics, escalation
+- [x] `ui.plotly` interaktivt – klick på punkt/stapel → Call Detail
+- [x] `plotly>=5.22.0` i `dashboard-nicegui` extra
+
+### Uppgift 4 – Virtualisering av transkript ✅ (2026-06-13)
+- [x] `services/transcript_virtualizer.py` – window/spacer-beräkning, sökfilter
+- [x] `components/virtual_transcript.py` – `ui.scroll_area` + `@ui.refreshable` fönster
+- [x] `call_detail.py` – virtualisering vid ≥40 segment, timeline + transkript
+- [x] Klick i timeline scrollar transkript till rätt segment
+
+### Uppgift 5 – Utökade tester ✅ (2026-06-13)
+- [x] `tests/test_nicegui_dashboard.py` – API-klient, paginering, WS reconnect, TranscriptionState
+- [x] `tests/test_nicegui_dashboard_ui.py` – NiceGUI User fixture rendering (overview, call detail, transcription, analytics)
+- [x] `tests/fixtures/nicegui_test_pages.py` – isolerad test harness
+
 # 4. Teknisk Mapping (Streamlit → NiceGUI)
 
 | Streamlit-koncept          | NiceGUI-motsvarighet                  | Kommentar |
 |----------------------------|---------------------------------------|---------|
-| `st.metric` / `st.columns` | `ui.metric`, `ui.row`, `ui.card`     | Mycket likt |
+| `st.metric` / `st.columns` | `ui.card` + labels, `ui.row`         | NiceGUI 3.x saknar `ui.metric` |
 | `st.dataframe` / `st.table`| `ui.table`                           | Bra stöd |
-| `st.expander`              | `ui.expander`                        | Direkt motsvarighet |
+| `st.expander`              | `ui.expansion`                       | NiceGUI 3.x namn |
 | `st.button` + `on_click`   | `ui.button(on_click=...)`            | Event-driven (bättre) |
 | `st.session_state`         | `app.storage` eller egna klasser     | Explicitare hantering |
 | `st.rerun()`               | Inte behövs (reaktivitet inbyggd)    | Stor vinst |

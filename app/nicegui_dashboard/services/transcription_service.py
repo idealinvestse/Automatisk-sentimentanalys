@@ -67,6 +67,7 @@ class TranscriptionState:
     api_strategy: str = "transcribe"  # transcribe | scan_process | batch_transcribe
     job_id: str | None = None
     ws_connected: bool = False
+    ws_status: str = "disconnected"  # connected | reconnecting | disconnected
     _worker_task: asyncio.Task | None = field(default=None, repr=False)
     _ws_listener: Any = field(default=None, repr=False)
     _listeners: list[Callable[[str, dict[str, Any]], None]] = field(default_factory=list, repr=False)
@@ -169,8 +170,7 @@ class TranscriptionState:
         elif event_type == "done":
             self._notify("done", event)
         elif event_type == "connected":
-            self.ws_connected = True
-            self._notify("ws", {"connected": True})
+            self._set_ws_status("connected")
 
     def scan_pending(self) -> list[Path]:
         folder = Path(self.pending_folder)
@@ -203,8 +203,16 @@ class TranscriptionState:
         """True when API batch is tagged with a job id (server streams logs via WS)."""
         return bool(self.status.get("use_api") and self.api_client and self.job_id)
 
+    def _set_ws_status(self, status: str) -> None:
+        self.ws_status = status
+        self.ws_connected = status == "connected"
+        self._notify("ws", {"status": status, "connected": self.ws_connected})
+
+    def _on_ws_status_change(self, status: str) -> None:
+        self._set_ws_status(status)
+
     async def _start_ws_listener(self) -> None:
-        if not self._api_logs_via_ws():
+        if not (self.status.get("use_api") and self.api_client):
             return
         from app.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
 
@@ -214,19 +222,48 @@ class TranscriptionState:
             self._ws_listener = TranscriptionWSListener(
                 self.api_client,
                 on_event=self.apply_ws_event,
+                on_status_change=self._on_ws_status_change,
+                max_attempts=0,
             )
         await self._ws_listener.start(self.job_id)
-        self.ws_connected = self._ws_listener.connected
         if self.ws_connected:
             self.add_log("INFO", f"WebSocket ansluten (job {self.job_id[:8]}…)", source="local")
 
     async def _stop_ws_listener(self) -> None:
         if self._ws_listener:
             await self._ws_listener.stop()
-        self.ws_connected = False
+        self._set_ws_status("disconnected")
         if self.api_client:
             self.api_client.set_job_id(None)
         self.job_id = None
+
+    async def request_ws_reconnect(self) -> None:
+        """Manual WebSocket reconnect (e.g. from UI button)."""
+        if not self.api_client or not self.status.get("use_api"):
+            self.add_log("WARNING", "WebSocket reconnect kräver API-läge", source="local")
+            return
+        if not self.job_id:
+            self.job_id = str(uuid.uuid4())
+            self.api_client.set_job_id(self.job_id)
+        if self._ws_listener is None:
+            from app.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
+
+            self._ws_listener = TranscriptionWSListener(
+                self.api_client,
+                on_event=self.apply_ws_event,
+                on_status_change=self._on_ws_status_change,
+                max_attempts=0,
+            )
+        self.add_log("INFO", "WebSocket reconnect begärd…", source="local")
+        await self._ws_listener.reconnect_now(self.job_id)
+
+    def needs_polling_fallback(self) -> bool:
+        """True when API batch runs but WebSocket is not connected."""
+        return bool(
+            self.status.get("use_api")
+            and self.status.get("is_running")
+            and self.ws_status != "connected"
+        )
 
     async def _ensure_api_ready(self) -> bool:
         if not self.api_client:

@@ -87,10 +87,10 @@ def render_live_analysis_tab(state: DashboardState) -> None:
                 llm = report.get("llm") or {}
                 actionable = llm.get("actionable_summary") or {}
                 if isinstance(actionable, dict) and actionable.get("problem"):
-                    with ui.expander("Actionable Summary", icon="insights"):
+                    with ui.expansion("Actionable Summary", icon="insights"):
                         ui.markdown(f"**Problem:** {actionable.get('problem', '')}")
 
-                with ui.expander("Fullständigt svar (JSON)", icon="data_object"):
+                with ui.expansion("Fullständigt svar (JSON)", icon="data_object"):
                     ui.code(json.dumps(report, indent=2, ensure_ascii=False, default=str))
 
             notify_success("Pipeline-analys slutförd")

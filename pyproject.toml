@@ -46,6 +46,7 @@ dashboard-nicegui = [
     "httpx>=0.27.0",
     "websockets>=12.0",
     "pandas>=2.2.0",
+    "plotly>=5.22.0",
 ]
 # whisperx and noisereduce är valfria för avancerade ASR-backends (se kommentarer i requirements-cli.txt)
 
@@ -103,6 +104,9 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short --strict-markers"
+markers = [
+    "nicegui_main_file(path): NiceGUI User test entry script (see nicegui.testing)",
+]
 
 [tool.coverage.run]
 source = ["src"]

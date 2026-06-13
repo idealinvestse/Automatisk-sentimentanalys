@@ -76,12 +76,15 @@ def test_transcription_state_apply_ws_event() -> None:
     state.apply_ws_event(
         {"type": "progress", "job_id": "j1", "processed": 2, "total": 5, "progress": 0.4}
     )
+    state.apply_ws_event({"type": "connected"})
 
     assert state.logs[-1]["msg"] == "Server log"
     assert state.logs[-1]["source"] == "ws"
     assert state.status["processed"] == 2
+    assert state.ws_status == "connected"
     assert "log" in events
     assert "progress" in events
+    assert "ws" in events
 
 
 def test_ws_listener_url_builds() -> None:

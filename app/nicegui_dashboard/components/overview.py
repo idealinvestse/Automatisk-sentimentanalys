@@ -79,16 +79,17 @@ def render_overview_tab(
                 ).classes("w-full")
 
     def apply_filters() -> None:
+        state.table_page = 1
         kpi_section.refresh()
         topics_and_board.refresh()
-        calls_section.refresh()
+        refresh_calls_table()
 
     with ui.card().classes("w-full q-mb-md"):
         ui.label("Filter").classes("text-subtitle2")
         with ui.row().classes("w-full gap-4 flex-wrap"):
             ui.select(
-                "Sentiment",
                 options=["all", "positiv", "negativ"],
+                label="Sentiment",
                 value=state.filters.get("sentiment_filter", "all"),
                 on_change=lambda e: (
                     state.filters.update({"sentiment_filter": e.value}),
@@ -96,8 +97,8 @@ def render_overview_tab(
                 ),
             ).classes("min-w-32")
             ui.select(
-                "Agent",
                 options=agents,
+                label="Agent",
                 value=state.filters.get("agent_filter") or "Alla",
                 on_change=lambda e: (
                     state.filters.update(
@@ -106,24 +107,15 @@ def render_overview_tab(
                     apply_filters(),
                 ),
             ).classes("min-w-40")
-            ui.input(
-                "Sök",
-                value=state.filters.get("search", ""),
-                on_change=lambda e: (
-                    state.filters.update({"search": e.value or ""}),
-                    apply_filters(),
-                ),
-            ).classes("flex-grow")
-
     kpi_section()
     ui.separator()
     topics_and_board()
 
-    @ui.refreshable
-    def calls_section() -> None:
-        render_calls_table(state, reports=get_filtered(), on_select=on_call_select)
-
-    calls_section()
+    refresh_calls_table = render_calls_table(
+        state,
+        reports=get_filtered(),
+        on_select=on_call_select,
+    )
 
     if on_show_example_detail:
         ui.button("Visa exempel Call Detail", on_click=on_show_example_detail).classes("q-mt-md")
@@ -132,6 +124,6 @@ def render_overview_tab(
         source_label.set_text(f"Data: {state.data_source}")
         kpi_section.refresh()
         topics_and_board.refresh()
-        calls_section.refresh()
+        refresh_calls_table()
 
     return refresh_all

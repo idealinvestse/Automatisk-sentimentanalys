@@ -1,15 +1,23 @@
 """Transcription Monitor UI – persistent queue, controls, live log.
 
-Fas 3 WebSocket – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
-Push updates via TranscriptionState listeners; fallback ui.timer for queue drift.
+Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect + polling fallback)
 """
 
 from __future__ import annotations
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.metric_card import metric_card
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
+
+
+def _ws_status_label(status: str) -> str:
+    return {
+        "connected": "Connected",
+        "reconnecting": "Reconnecting",
+        "disconnected": "Disconnected",
+    }.get(status, "Disconnected")
 
 
 def render_transcription_tab(
@@ -27,30 +35,39 @@ def render_transcription_tab(
     status = trans_state.status
     pending = trans_state.scan_pending()
 
-    metrics_row = ui.row().classes("w-full gap-4 q-mb-md")
-    pending_metric = ui.metric("Väntande (persistent)", len(pending))
-    status_metric = ui.metric("Status", "Pågår" if status.get("is_running") else "Idle")
-    progress_metric = ui.metric("Progress", f"{status.get('processed', 0)}/{status.get('total', 0)}")
-    api_metric = ui.metric("API Mode", "På" if status.get("use_api") else "Av")
-    ws_metric = ui.metric("WebSocket", "—")
+    with ui.row().classes("w-full gap-4 q-mb-md"):
+        pending_metric = metric_card("Väntande (persistent)", len(pending))
+        status_metric = metric_card("Status", "Pågår" if status.get("is_running") else "Idle")
+        progress_metric = metric_card("Progress", f"{status.get('processed', 0)}/{status.get('total', 0)}")
+        api_metric = metric_card("API Mode", "På" if status.get("use_api") else "Av")
+        ws_metric = metric_card("WebSocket", _ws_status_label(trans_state.ws_status))
 
     progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes("w-full q-mb-md")
     current_label = ui.label(f"Aktuell fil: {status.get('current_file') or '—'}").classes("text-caption")
+    poll_hint = ui.label("").classes("text-caption text-warning")
 
     def _refresh_metrics() -> None:
         s = trans_state.status
-        pending_metric.set_value(len(trans_state.queue))
-        status_metric.set_value("Pågår" if s.get("is_running") else "Idle")
-        progress_metric.set_value(f"{s.get('processed', 0)}/{s.get('total', 0)}")
-        api_metric.set_value("På" if s.get("use_api") else "Av")
-        ws_metric.set_value("Live" if trans_state.ws_connected else "Av")
+        pending_metric.set_text(str(len(trans_state.queue)))
+        status_metric.set_text("Pågår" if s.get("is_running") else "Idle")
+        progress_metric.set_text(f"{s.get('processed', 0)}/{s.get('total', 0)}")
+        api_metric.set_text("På" if s.get("use_api") else "Av")
+        ws_metric.set_text(_ws_status_label(trans_state.ws_status))
         progress_bar.set_value(float(s.get("progress", 0)))
         current_label.set_text(f"Aktuell fil: {s.get('current_file') or '—'}")
+        if trans_state.needs_polling_fallback():
+            poll_hint.set_text("⚠ WebSocket nere – polling-fallback aktiv (2s)")
+        else:
+            poll_hint.set_text("")
+
+    def _update_poll_timer() -> None:
+        poll_timer.active = trans_state.needs_polling_fallback()
 
     def start_batch() -> None:
         if trans_state.start_batch():
             ui.notify("Transkribering startad i bakgrunden")
             _refresh_metrics()
+            _update_poll_timer()
         else:
             ui.notify("Inga filer i kön eller redan igång", type="warning")
 
@@ -66,13 +83,20 @@ def render_transcription_tab(
         trans_state.request_stop()
         ui.notify("Stopp begärd")
 
-    with ui.row().classes("gap-2 q-mb-md"):
+    async def reconnect_ws() -> None:
+        await trans_state.request_ws_reconnect()
+        _refresh_metrics()
+        _update_poll_timer()
+        ui.notify("WebSocket reconnect initierad")
+
+    with ui.row().classes("gap-2 q-mb-md flex-wrap"):
         ui.button("▶️ Start batch", color="primary", on_click=start_batch)
         ui.button("⏸️ Paus", on_click=pause_batch)
         ui.button("▶️ Återuppta", on_click=resume_batch)
         ui.button("⏹️ Stopp", color="negative", on_click=stop_batch)
+        ui.button("🔌 Reconnect WS", on_click=reconnect_ws).props("outline")
 
-    with ui.expander("⚙️ Inställningar"):
+    with ui.expansion("⚙️ Inställningar"):
         settings = trans_state.settings
 
         def _set_backend(e) -> None:
@@ -92,8 +116,8 @@ def render_transcription_tab(
             trans_state.save()
 
         ui.select(
-            "Backend",
             options=["faster", "transformers", "whisperx"],
+            label="Backend",
             value=settings.get("backend", "faster"),
             on_change=_set_backend,
         )
@@ -114,8 +138,8 @@ def render_transcription_tab(
             trans_state.api_strategy = e.value or "transcribe"
 
         ui.select(
-            "API-strategi",
             options=["transcribe", "batch_transcribe", "scan_process"],
+            label="API-strategi",
             value=trans_state.api_strategy,
             on_change=_set_strategy,
         ).classes("w-full")
@@ -169,6 +193,7 @@ def render_transcription_tab(
         _refresh_metrics()
         refresh_log()
         refresh_queue()
+        _update_poll_timer()
 
     def on_push_event(event_type: str, _payload: dict) -> None:
         if event_type in {"log", "progress", "status", "done", "ws"}:
@@ -176,7 +201,9 @@ def render_transcription_tab(
 
     trans_state.add_listener(on_push_event)
 
-    # Fallback poll for queue file-system drift (WS handles log/progress push)
+    # Push via WebSocket listeners; 2s polling fallback when WS is down during batch
+    poll_timer = ui.timer(2.0, refresh_all, active=False)
+    # Slow poll for queue file-system drift when WS is healthy
     ui.timer(5.0, refresh_queue)
 
     def clear_all() -> None:

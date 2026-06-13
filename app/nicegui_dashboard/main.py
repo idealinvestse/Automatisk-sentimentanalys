@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
 from app.nicegui_dashboard.components.layout import apply_dark_theme, render_header
 from app.nicegui_dashboard.components.live_analysis import render_live_analysis_tab
@@ -51,12 +52,14 @@ def dashboard_page() -> None:
 def _render_tabs(state: DashboardState, refresh_header) -> None:
     with ui.tabs().classes("w-full") as tabs:
         overview_tab = ui.tab("Översikt")
+        analytics_tab = ui.tab("Analys & Trender")
         detail_tab = ui.tab("Call Detail")
         trans_tab = ui.tab("Transkribering")
         live_tab = ui.tab("Live-analys")
 
     refresh_call_detail: list = []
     refresh_overview: list = []
+    refresh_analytics: list = []
 
     def go_to_detail(call_id: str | None = None) -> None:
         if call_id:
@@ -89,6 +92,8 @@ def _render_tabs(state: DashboardState, refresh_header) -> None:
             state.data_source = "api"
             if refresh_overview:
                 refresh_overview[0]()
+            if refresh_analytics:
+                refresh_analytics[0]()
             if refresh_call_detail:
                 refresh_call_detail[0]()
             if refresh_header:
@@ -117,6 +122,10 @@ def _render_tabs(state: DashboardState, refresh_header) -> None:
                 on_reload_api=reload_from_api,
             )
             refresh_overview.append(refresh_fn)
+
+        with ui.tab_panel(analytics_tab):
+            refresh_fn = render_analytics_tab(state, on_call_select=go_to_detail)
+            refresh_analytics.append(refresh_fn)
 
         with ui.tab_panel(detail_tab):
             refresh_fn = render_call_detail_tab(
