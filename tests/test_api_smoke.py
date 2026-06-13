@@ -97,3 +97,14 @@ def test_request_id_header() -> None:
     r = client.get("/health")
     assert r.status_code == 200
     assert "X-Request-ID" in r.headers
+
+
+def test_request_id_preserved_in_error_body() -> None:
+    r = client.post(
+        "/analyze",
+        json={"texts": []},
+        headers={"X-Request-ID": "client-provided-id"},
+    )
+    assert r.status_code == 422
+    assert r.headers["X-Request-ID"] == "client-provided-id"
+    assert r.json()["request_id"] == "client-provided-id"

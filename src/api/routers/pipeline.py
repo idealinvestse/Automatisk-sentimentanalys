@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Annotated
 
@@ -33,6 +34,7 @@ from ..schemas import (
     SemanticSearchRequest,
     SemanticSearchResponse,
 )
+from ..services.pipeline_cache import resolve_reports
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Pipeline"])
@@ -76,7 +78,7 @@ async def analyze_pipeline(
     )
 
     async def _do() -> PipelineResponse:
-        report = pipe.analyze_segments(req.segments)
+        report = await asyncio.to_thread(pipe.analyze_segments, req.segments)
         return PipelineResponse(
             sentiment_results=report.sentiment_results,
             intent_results=[
@@ -112,7 +114,9 @@ async def get_agent_performance(
     pipe = _fas4_pipeline(req, cache, header_key)
 
     async def _do() -> AgentPerformanceResponse:
-        reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
+        reports, _ = await asyncio.to_thread(
+            resolve_reports, pipe, req.segments_list, reanalyze=req.reanalyze
+        )
         metrics = dict(pipe.get_cached_agent_performance(agent_id, reports, window=req.window))
         cached = bool(metrics.pop("cache_hit", False))
         return AgentPerformanceResponse(
@@ -136,7 +140,9 @@ async def semantic_search(
     pipe = _fas4_pipeline(req, cache, header_key)
 
     async def _do() -> SemanticSearchResponse:
-        reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
+        reports, _ = await asyncio.to_thread(
+            resolve_reports, pipe, req.segments_list, reanalyze=req.reanalyze
+        )
         hits = pipe.semantic_search(
             req.query, top_k=req.top_k, filters=req.filters or {}, corpus=reports
         )
@@ -161,7 +167,9 @@ async def get_hot_topics(
     pipe = _fas4_pipeline(req, cache, header_key)
 
     async def _do() -> HotTopicsResponse:
-        reports = [pipe.analyze_segments(segs) for segs in req.segments_list]
+        reports, _ = await asyncio.to_thread(
+            resolve_reports, pipe, req.segments_list, reanalyze=req.reanalyze
+        )
         topics = dict(pipe.get_cached_hot_topics(reports, window=req.window))
         topics.pop("cache_hit", None)
         return HotTopicsResponse(
@@ -183,7 +191,10 @@ async def get_qa_score(
     pipe = _fas4_pipeline(req, cache, header_key)
 
     async def _do() -> QAScoreResponse:
-        report = pipe.analyze_segments(req.segments)
+        reports, _ = await asyncio.to_thread(
+            resolve_reports, pipe, [req.segments], reanalyze=req.reanalyze
+        )
+        report = reports[0]
         qa = report.results.get("qa") or report.results.get("compliance_qa", {})
         return QAScoreResponse(qa=qa, timestamp=utc_now_iso())
 
@@ -203,8 +214,10 @@ async def get_alerts(
     async def _do() -> AlertsResponse:
         alerts: list[dict] = []
         if req.segments_list:
-            for segs in req.segments_list:
-                r = pipe.analyze_segments(segs)
+            reports, _ = await asyncio.to_thread(
+                resolve_reports, pipe, req.segments_list, reanalyze=req.reanalyze
+            )
+            for r in reports:
                 alerts.extend(r.results.get("alerts", []))
         if req.aggregate:
             trend_alerts = alert_engine.check_from_aggregate(req.aggregate)

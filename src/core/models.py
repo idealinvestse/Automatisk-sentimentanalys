@@ -179,3 +179,27 @@ class CallAnalysisReport:
             "results": self.results,
             "llm": self.llm,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CallAnalysisReport:
+        """Reconstruct a report from :meth:`to_dict` output (e.g. aggregate cache)."""
+        raw_intent = data.get("intent_results") or []
+        intent_results: list[tuple[str, float]] = []
+        for item in raw_intent:
+            if isinstance(item, dict):
+                intent_results.append((str(item.get("intent", "")), float(item.get("confidence", 0.0))))
+            elif isinstance(item, list | tuple) and len(item) >= 2:
+                intent_results.append((str(item[0]), float(item[1])))
+        return cls(
+            segments=list(data.get("segments") or []),
+            sentiment_results=list(data.get("sentiment_results") or []),
+            intent_results=intent_results,
+            diarization=data.get("diarization"),
+            summary=dict(data.get("summary") or {}),
+            topics=dict(data.get("topics") or {}),
+            insights=dict(data.get("insights") or {}),
+            risks=dict(data.get("risks") or {}),
+            processing_time_s=float(data.get("processing_time_s") or 0.0),
+            results=dict(data.get("results") or {}),
+            llm=dict(data.get("llm") or {}),
+        )

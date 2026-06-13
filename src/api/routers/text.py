@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter
@@ -21,7 +22,8 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     logger.info("Analyzing sentiment for %d text(s)", len(req.texts))
 
     async def _do() -> AnalyzeResponse:
-        results, meta = analyze_smart(
+        results, meta = await asyncio.to_thread(
+            analyze_smart,
             texts=req.texts,
             datatype=req.datatype,
             source=req.source,

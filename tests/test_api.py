@@ -136,6 +136,14 @@ def test_agent_performance_cache_hit_flag():
         assert "cache_hit" not in r.json()["metrics"]
 
 
+def test_agent_performance_invalid_agent_id_422():
+    r = client.post(
+        "/agent_performance/Agent-1",
+        json={"segments_list": [[{"text": "Hej"}]], "agent_id": "bad id!"},
+    )
+    assert r.status_code == 422
+
+
 def test_agent_performance_agent_id_mismatch_422():
     r = client.post(
         "/agent_performance/Agent-1",

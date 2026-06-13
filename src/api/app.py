@@ -11,7 +11,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,10 +27,19 @@ from ..core.errors import (
     LLMError,
     TranscriptionError,
 )
-from .dependencies import require_api_key
+from .dependencies import PUBLIC_ERROR_DETAIL, require_api_key
+from .error_responses import (
+    ERROR_CODE_INTERNAL,
+    ERROR_CODE_RATE_LIMITED,
+    ERROR_CODE_UNAUTHORIZED,
+    ERROR_CODE_VALIDATION,
+    error_code_for,
+    error_response,
+)
+from .middleware_rate_limit import RateLimitMiddleware
 from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription
-from .transcription_events import TranscriptionEventHub
 from .settings import get_api_settings
+from .transcription_events import TranscriptionEventHub
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +93,6 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
 # ---------------------------------------------------------------------------
 
 
-def _error_response(status_code: int, detail: str) -> JSONResponse:
-    return JSONResponse(status_code=status_code, content={"detail": detail})
-
-
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -107,6 +112,8 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(RequestIdMiddleware)
+    if settings.rate_limit_rpm > 0:
+        app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.rate_limit_rpm)
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -122,35 +129,64 @@ def create_app() -> FastAPI:
     async def handle_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        return JSONResponse(
-            status_code=422,
-            content={"detail": jsonable_encoder(exc.errors())},
+        return error_response(
+            request,
+            422,
+            jsonable_encoder(exc.errors()),
+            error_code=ERROR_CODE_VALIDATION,
         )
+
+    @app.exception_handler(HTTPException)
+    async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+        if exc.status_code == 401:
+            code = ERROR_CODE_UNAUTHORIZED
+        elif exc.status_code == 429:
+            code = ERROR_CODE_RATE_LIMITED
+        elif exc.status_code == 422 and exc.detail != PUBLIC_ERROR_DETAIL:
+            code = ERROR_CODE_VALIDATION
+        else:
+            code = ERROR_CODE_INTERNAL
+        return error_response(request, exc.status_code, exc.detail, error_code=code)
 
     @app.exception_handler(LLMError)
     async def handle_llm_error(request: Request, exc: LLMError) -> JSONResponse:
         logger.error("LLM error: %s", exc)
-        return _error_response(502, f"LLM request failed: {exc}")
+        return error_response(
+            request,
+            502,
+            f"LLM request failed: {exc}",
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(ConfigurationError)
     async def handle_config_error(request: Request, exc: ConfigurationError) -> JSONResponse:
         logger.warning("Configuration error: %s", exc)
-        return _error_response(422, str(exc))
+        return error_response(request, 422, str(exc), error_code=error_code_for(exc))
 
     @app.exception_handler(TranscriptionError)
     async def handle_transcription_error(request: Request, exc: TranscriptionError) -> JSONResponse:
         logger.error("Transcription error: %s", exc)
-        return _error_response(500, f"Transcription failed: {exc}")
+        return error_response(
+            request,
+            500,
+            f"Transcription failed: {exc}",
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(AnalysisError)
     async def handle_analysis_error(request: Request, exc: AnalysisError) -> JSONResponse:
         logger.error("Analysis error: %s", exc)
-        return _error_response(500, f"Analysis failed: {exc}")
+        return error_response(
+            request,
+            500,
+            f"Analysis failed: {exc}",
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(BaseAnalysisError)
     async def handle_base_error(request: Request, exc: BaseAnalysisError) -> JSONResponse:
         logger.error("Analysis system error: %s", exc)
-        return _error_response(500, str(exc))
+        return error_response(request, 500, str(exc), error_code=error_code_for(exc))
 
     # --- Routers -------------------------------------------------------------
 

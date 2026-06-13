@@ -18,6 +18,7 @@ class APISettings:
     use_redis_cache: bool
     redis_url: str | None
     cache_dir: str
+    rate_limit_rpm: int
 
     @property
     def auth_enabled(self) -> bool:
@@ -37,4 +38,5 @@ def get_api_settings() -> APISettings:
         use_redis_cache=os.getenv("API_USE_REDIS_CACHE", "false").lower() in ("1", "true", "yes"),
         redis_url=os.getenv("REDIS_URL"),
         cache_dir=os.getenv("API_CACHE_DIR", ".cache/aggregates"),
+        rate_limit_rpm=int(os.getenv("API_RATE_LIMIT_RPM", "0") or "0"),
     )

@@ -6,14 +6,37 @@ file/directory existence, device string format, etc.).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .path_validation import validate_audio_path, validate_directory_path
 
+_AGENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
 MAX_FAS4_CALLS = 50
 MAX_SEGMENTS_PER_CALL = 200
+
+
+class AsrParamsMixin(BaseModel):
+    """Shared ASR parameters used across transcription-related endpoints."""
+
+    model: str = Field("kb-whisper-large")
+    backend: str = Field(
+        "faster", description="faster | transformers | whisperx (alignment + diarization)"
+    )
+    device: str = Field("auto")
+    language: str = Field("sv")
+    beam_size: int = Field(5, ge=1, le=10)
+    vad: bool = Field(True)
+    chunk_length_s: int = Field(30, ge=5, le=60)
+    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
+    diarize: bool = Field(False, description="Run speaker diarization")
+    num_speakers: int | None = Field(None, description="Expected number of speakers (None=auto)")
+    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost (callcenter terms etc.)")
+    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR decoder")
+
 
 # ---------------------------------------------------------------------------
 # /analyze
@@ -57,23 +80,9 @@ class AnalyzeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class TranscribeRequest(BaseModel):
+class TranscribeRequest(AsrParamsMixin):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
-    model: str = Field("kb-whisper-large")
-    backend: str = Field(
-        "faster", description="faster | transformers | whisperx (alignment + diarization)"
-    )
-    device: str = Field("auto")
-    language: str = Field("sv")
-    beam_size: int = Field(5, ge=1, le=10)
-    vad: bool = Field(True)
     word_timestamps: bool = Field(True)
-    chunk_length_s: int = Field(30, ge=5, le=60)
-    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
-    diarize: bool = Field(False, description="Run speaker diarization")
-    num_speakers: int | None = Field(None, description="Expected number of speakers (None=auto)")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost (callcenter terms etc.)")
-    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR decoder")
     preprocess: bool = Field(False, description="Enable audio preprocessing before ASR")
 
     @field_validator("audio_path")
@@ -92,22 +101,18 @@ class TranscribeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class AnalyzeConversationRequest(BaseModel):
+class AnalyzeConversationRequest(AsrParamsMixin):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
-    model: str = Field("kb-whisper-large")
-    backend: str = Field("faster", description="faster | transformers | whisperx")
-    device: str = Field("auto")
-    language: str = Field("sv")
-    beam_size: int = Field(5, ge=1, le=10)
-    vad: bool = Field(True)
     word_timestamps: bool = Field(False)
-    chunk_length_s: int = Field(30, ge=5, le=60)
-    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
-    diarize: bool = Field(False, description="Run speaker diarization")
-    num_speakers: int | None = Field(None, description="Expected number of speakers")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
-    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
     return_all_scores: bool = Field(True)
+    use_full_pipeline: bool = Field(
+        False,
+        description="Use CallAnalysisPipeline (PII, QA, agent metrics) instead of light transcribe+sentiment path",
+    )
+    sentiment_profile: str = Field(
+        "callcenter",
+        description="Sentiment profile for light path (call, callcenter, default, ...)",
+    )
     sentiment_model: str | None = Field(None, description="Optional override for sentiment model")
     lexicon_file: str | None = Field(None)
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
@@ -137,6 +142,10 @@ class AnalyzeConversationResponse(BaseModel):
     segment_sentiments: list[SegmentSentiment]
     meta: dict[str, Any]
     timestamp: str
+    pipeline_results: dict[str, Any] | None = Field(
+        None,
+        description="Full analyzer output when use_full_pipeline=True (agent_performance, qa, pii_redaction, ...)",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +210,7 @@ class PipelineResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class BatchTranscribeRequest(BaseModel):
+class BatchTranscribeRequest(AsrParamsMixin):
     audio_paths: list[str] | None = None
     directory: str | None = None
     glob: str | None = Field(None, description="Glob pattern within directory, e.g. **/*.wav")
@@ -209,20 +218,7 @@ class BatchTranscribeRequest(BaseModel):
     limit: int | None = Field(None, ge=1)
     workers: int = Field(1, ge=1, le=8)
     worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
-    # ASR params
-    model: str = Field("kb-whisper-large")
-    backend: str = Field("faster", description="faster | transformers | whisperx")
-    device: str = Field("auto")
-    language: str = Field("sv")
-    beam_size: int = Field(5, ge=1, le=10)
-    vad: bool = Field(True)
     word_timestamps: bool = Field(True)
-    chunk_length_s: int = Field(30, ge=5, le=60)
-    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
-    diarize: bool = Field(False, description="Run speaker diarization")
-    num_speakers: int | None = Field(None, description="Expected number of speakers")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
-    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
 
 
 class BatchTranscribeItem(BaseModel):
@@ -244,7 +240,7 @@ class BatchTranscribeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class BatchAnalyzeConversationRequest(BaseModel):
+class BatchAnalyzeConversationRequest(AsrParamsMixin):
     audio_paths: list[str] | None = None
     directory: str | None = None
     glob: str | None = Field(None)
@@ -252,21 +248,9 @@ class BatchAnalyzeConversationRequest(BaseModel):
     limit: int | None = Field(None, ge=1)
     workers: int = Field(1, ge=1, le=8)
     worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
-    # ASR
-    model: str = Field("kb-whisper-large")
-    backend: str = Field("faster", description="faster | transformers | whisperx")
-    device: str = Field("auto")
-    language: str = Field("sv")
-    beam_size: int = Field(5, ge=1, le=10)
-    vad: bool = Field(True)
     word_timestamps: bool = Field(False)
-    chunk_length_s: int = Field(30, ge=5, le=60)
-    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
-    diarize: bool = Field(False, description="Run speaker diarization")
-    num_speakers: int | None = Field(None, description="Expected number of speakers")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
-    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
     # Sentiment
+    sentiment_profile: str = Field("callcenter", description="Sentiment profile for light path")
     sentiment_model: str | None = Field(None)
     sentiment_batch_size: int = Field(16, ge=1, le=128, description="Batch size for sentiment inference")
     lexicon_file: str | None = Field(None)
@@ -294,7 +278,7 @@ class BatchAnalyzeConversationResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ScanProcessRequest(BaseModel):
+class ScanProcessRequest(AsrParamsMixin):
     directory: str = Field(..., description="Directory to scan")
     pattern: str | None = Field(
         None, description="Glob pattern relative to directory (e.g., **/*.wav)"
@@ -306,21 +290,13 @@ class ScanProcessRequest(BaseModel):
     workers: int = Field(1, ge=1, le=8, description="Parallel workers per batch")
     worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
     operation: str = Field("transcribe", description="transcribe | analyze_conversation")
-    # ASR
-    model: str = Field("kb-whisper-large")
-    backend: str = Field("faster", description="faster | transformers | whisperx")
-    device: str = Field("auto")
-    language: str = Field("sv")
-    beam_size: int = Field(5, ge=1, le=10)
-    vad: bool = Field(True)
     word_timestamps: bool = Field(False)
-    chunk_length_s: int = Field(30, ge=5, le=60)
-    revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
-    diarize: bool = Field(False, description="Run speaker diarization")
-    num_speakers: int | None = Field(None, description="Expected number of speakers")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost")
-    initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR")
+    use_full_pipeline: bool = Field(
+        False,
+        description="When operation=analyze_conversation, use full CallAnalysisPipeline per file",
+    )
     # Sentiment (used when operation=analyze_conversation)
+    sentiment_profile: str = Field("callcenter", description="Sentiment profile for light analyze path")
     sentiment_model: str | None = Field(None)
     sentiment_batch_size: int = Field(
         16, ge=1, le=128, description="Batch size for sentiment inference"
@@ -382,6 +358,10 @@ def _validate_fas4_segments_list(v: list[list[dict[str, Any]]]) -> list[list[dic
 class Fas4LlmFlags(BaseModel):
     """Shared LLM flags for Fas 4 pipeline endpoints."""
 
+    reanalyze: bool = Field(
+        False,
+        description="Force re-analysis of all calls; default uses per-call report cache",
+    )
     use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
     llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
     deep_analysis: bool = Field(False, description="Force deep LLM path")
@@ -402,6 +382,15 @@ class AgentPerformanceRequest(Fas4LlmFlags):
     @classmethod
     def validate_segments_list(cls, v: list[list[dict[str, Any]]]) -> list[list[dict[str, Any]]]:
         return _validate_fas4_segments_list(v)
+
+    @field_validator("agent_id")
+    @classmethod
+    def agent_id_format(cls, v: str) -> str:
+        if not _AGENT_ID_RE.match(v):
+            raise ValueError(
+                "agent_id must be 1-64 chars: alphanumeric start, then letters, digits, . _ -"
+            )
+        return v
 
     @model_validator(mode="after")
     def path_agent_matches_body(self) -> AgentPerformanceRequest:

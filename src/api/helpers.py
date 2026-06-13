@@ -10,6 +10,36 @@ from ..transcription import get_transcriber
 logger = logging.getLogger(__name__)
 
 
+def asr_kwargs_from(
+    req: object,
+    *,
+    audio_path: str | None = None,
+    word_timestamps: bool | None = None,
+    preprocess: bool = False,
+) -> dict[str, Any]:
+    """Build keyword arguments for :func:`transcribe_helper` from an ASR request model."""
+    kwargs: dict[str, Any] = {
+        "model": req.model,
+        "backend": req.backend,
+        "device": req.device,
+        "language": req.language,
+        "beam_size": req.beam_size,
+        "vad": req.vad,
+        "chunk_length_s": req.chunk_length_s,
+        "revision": req.revision,
+        "diarize": req.diarize,
+        "num_speakers": req.num_speakers,
+        "hotwords": getattr(req, "hotwords", None),
+        "initial_prompt": getattr(req, "initial_prompt", None),
+        "preprocess": preprocess,
+    }
+    if audio_path is not None:
+        kwargs["audio_path"] = audio_path
+    wt = word_timestamps if word_timestamps is not None else getattr(req, "word_timestamps", True)
+    kwargs["word_timestamps"] = wt
+    return kwargs
+
+
 def transcribe_helper(
     audio_path: str,
     model: str = "kb-whisper-large",

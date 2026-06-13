@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from ...caching import AggregateCache
 from ...core.audio import resolve_audio_paths
-from ...core.serialization import map_results_to_segment_dicts, texts_from_segments, utc_now_iso
-from ...sentiment import analyze_smart
+from ...core.serialization import utc_now_iso
 from ..batch import run_batch
-from ..helpers import transcribe_helper
+from ..dependencies import get_cache
 from ..router_errors import run_route
 from ..schemas import (
     AnalyzeConversationRequest,
@@ -18,66 +20,29 @@ from ..schemas import (
     BatchAnalyzeConversationItem,
     BatchAnalyzeConversationRequest,
     BatchAnalyzeConversationResponse,
-    SegmentSentiment,
 )
+from ..services.conversation import run_analyze_conversation, run_batch_analyze_file
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Conversation"])
 
 
-def _build_segment_sentiments(
-    texts: list[str],
-    results: list,
-    segments: list[dict],
-) -> list[SegmentSentiment]:
-    dicts = map_results_to_segment_dicts(texts, results, segments)
-    return [SegmentSentiment(**d) for d in dicts]
-
-
 @router.post("/analyze_conversation", response_model=AnalyzeConversationResponse)
-async def analyze_conversation(req: AnalyzeConversationRequest) -> AnalyzeConversationResponse:
+async def analyze_conversation(
+    req: AnalyzeConversationRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+) -> AnalyzeConversationResponse:
     """Transcribe a call and run sentiment analysis per segment."""
     logger.info(
-        "Analyzing conversation: %s (backend=%s model=%s)", req.audio_path, req.backend, req.model
+        "Analyzing conversation: %s (backend=%s model=%s full_pipeline=%s)",
+        req.audio_path,
+        req.backend,
+        req.model,
+        req.use_full_pipeline,
     )
 
     async def _do() -> AnalyzeConversationResponse:
-        tr = transcribe_helper(
-            audio_path=req.audio_path,
-            model=req.model,
-            backend=req.backend,
-            device=req.device,
-            language=req.language,
-            beam_size=req.beam_size,
-            vad=req.vad,
-            word_timestamps=req.word_timestamps,
-            chunk_length_s=req.chunk_length_s,
-            revision=req.revision,
-            diarize=req.diarize,
-            num_speakers=req.num_speakers,
-        )
-        segments = tr.get("segments", []) or []
-        tr_texts = texts_from_segments(segments)
-        results, meta = analyze_smart(
-            tr_texts,
-            profile="call",
-            model_name=req.sentiment_model,
-            device=req.device,
-            batch_size=16,
-            normalize=True,
-            return_all_scores=True,
-            max_length=None,
-            clean=True,
-            lexicon_file=req.lexicon_file,
-            lexicon_weight=req.lexicon_weight,
-        )
-        seg_out = _build_segment_sentiments(tr_texts, results, segments)
-        return AnalyzeConversationResponse(
-            transcript=tr,
-            segment_sentiments=seg_out,
-            meta=meta,
-            timestamp=utc_now_iso(),
-        )
+        return await asyncio.to_thread(run_analyze_conversation, req, cache=cache)
 
     return await run_route("analyze_conversation", _do)
 
@@ -101,39 +66,16 @@ async def batch_analyze_conversation(
         )
 
         def _worker(p: str) -> tuple:
-            tr = transcribe_helper(
-                audio_path=p,
-                model=req.model,
-                backend=req.backend,
-                device=req.device,
-                language=req.language,
-                beam_size=req.beam_size,
-                vad=req.vad,
-                word_timestamps=req.word_timestamps,
-                chunk_length_s=req.chunk_length_s,
-                revision=req.revision,
-                diarize=req.diarize,
-                num_speakers=req.num_speakers,
-            )
-            segments = tr.get("segments", []) or []
-            tr_texts = texts_from_segments(segments)
-            results, meta = analyze_smart(
-                tr_texts,
-                profile="call",
-                model_name=req.sentiment_model,
-                device=req.device,
-                batch_size=req.sentiment_batch_size,
-                normalize=True,
-                return_all_scores=True,
-                max_length=None,
-                clean=True,
-                lexicon_file=req.lexicon_file,
-                lexicon_weight=req.lexicon_weight,
-            )
-            seg_out = _build_segment_sentiments(tr_texts, results, segments)
-            return tr, seg_out, meta
+            tr, segs, meta, _pipe = run_batch_analyze_file(req, p)
+            return tr, segs, meta
 
-        raw = run_batch(files, _worker, workers=req.workers, worker_timeout=req.worker_timeout)
+        raw = await asyncio.to_thread(
+            run_batch,
+            files,
+            _worker,
+            workers=req.workers,
+            worker_timeout=req.worker_timeout,
+        )
         items: list[BatchAnalyzeConversationItem] = []
         ok = failed = 0
         for path, result, error in raw:

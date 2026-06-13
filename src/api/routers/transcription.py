@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Request
 
 from ...core.audio import resolve_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
-from ..helpers import transcribe_helper
+from ..helpers import asr_kwargs_from, transcribe_helper
 from ..router_errors import run_route
 from ..schemas import (
     BatchTranscribeItem,
@@ -42,22 +42,9 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
 
     async def _do() -> TranscribeResponse:
         try:
-            tr = transcribe_helper(
-                audio_path=req.audio_path,
-                model=req.model,
-                backend=req.backend,
-                device=req.device,
-                language=req.language,
-                beam_size=req.beam_size,
-                vad=req.vad,
-                word_timestamps=req.word_timestamps,
-                chunk_length_s=req.chunk_length_s,
-                revision=req.revision,
-                diarize=req.diarize,
-                num_speakers=req.num_speakers,
-                hotwords=getattr(req, "hotwords", None),
-                initial_prompt=getattr(req, "initial_prompt", None),
-                preprocess=getattr(req, "preprocess", False),
+            tr = await asyncio.to_thread(
+                transcribe_helper,
+                **asr_kwargs_from(req, audio_path=req.audio_path, preprocess=req.preprocess),
             )
             n_seg = len(tr.get("segments") or [])
             hub.log(
@@ -101,23 +88,7 @@ async def batch_transcribe(req: BatchTranscribeRequest, request: Request) -> Bat
         def _worker(p: str) -> dict:
             fname = file_display_name(p)
             hub.log(job_id=job_id, level="INFO", msg=f"Bearbetar {fname}...", file=fname)
-            return transcribe_helper(
-                audio_path=p,
-                model=req.model,
-                backend=req.backend,
-                device=req.device,
-                language=req.language,
-                beam_size=req.beam_size,
-                vad=req.vad,
-                word_timestamps=req.word_timestamps,
-                chunk_length_s=req.chunk_length_s,
-                revision=req.revision,
-                diarize=req.diarize,
-                num_speakers=req.num_speakers,
-                hotwords=getattr(req, "hotwords", None),
-                initial_prompt=getattr(req, "initial_prompt", None),
-                preprocess=getattr(req, "preprocess", False),
-            )
+            return transcribe_helper(**asr_kwargs_from(req, audio_path=p))
 
         def _on_complete(
             path: str,
@@ -146,7 +117,8 @@ async def batch_transcribe(req: BatchTranscribeRequest, request: Request) -> Bat
             elif error is not None:
                 hub.log(job_id=job_id, level="ERROR", msg=str(error), file=fname)
 
-        raw = run_batch(
+        raw = await asyncio.to_thread(
+            run_batch,
             files,
             _worker,
             workers=req.workers,

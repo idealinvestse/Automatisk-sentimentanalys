@@ -69,6 +69,7 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 | `API_ALLOW_CLIENT_LLM_KEY` | Allow `llm_api_key` in JSON body |
 | `API_CACHE_DIR` | Aggregate cache directory (default `.cache/aggregates`) |
 | `API_USE_REDIS_CACHE` | `true` to use Redis (`REDIS_URL`) |
+| `API_RATE_LIMIT_RPM` | Requests/minute per client IP (`0` = disabled, default) |
 | `OPENROUTER_API_KEY` | Mistral/OpenRouter for LLM paths |
 
 ---
@@ -101,7 +102,9 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 
 ### Conversation
 
-- `POST /analyze_conversation` — transcribe + per-segment sentiment
+- `POST /analyze_conversation` — transcribe + per-segment sentiment (light path, default)
+  - `use_full_pipeline: true` — full `CallAnalysisPipeline` (PII, QA, agent metrics); response includes optional `pipeline_results`
+  - `sentiment_profile` — default `callcenter` (light path only)
 - `POST /batch_analyze_conversation` — batch variant
 
 ### Full pipeline
@@ -119,11 +122,14 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 | POST | `/qa/score` | QA / compliance scoring |
 | POST | `/alerts` | Per-call or aggregate alerts |
 
-Shared flags on Fas 4 bodies: `use_mistral_llm`, `deep_analysis`, `llm_model`, `profile`.
+Shared flags on Fas 4 bodies: `reanalyze`, `use_mistral_llm`, `deep_analysis`, `llm_model`, `profile`.
+
+- `reanalyze: false` (default) — reuse per-call report cache before aggregate steps
+- `reanalyze: true` — force fresh `analyze_segments` for every call
 
 ### Scan
 
-- `POST /scan_process` — incremental directory scan (`transcribe` or `analyze_conversation`), optional `state_file`
+- `POST /scan_process` — incremental directory scan (`transcribe` or `analyze_conversation`), optional `state_file`, `use_full_pipeline` for analyze operation
 
 ---
 
@@ -169,22 +175,24 @@ print(r.json()["results"])
 
 ## Errors
 
-| Code | Meaning |
-|------|---------|
-| 401 | Missing/invalid `X-API-Key` |
-| 422 | Validation (Pydantic) or `ConfigurationError` |
-| 500 | Analysis/transcription failure (sanitized `detail`) |
-| 502 | `LLMError` (OpenRouter/Mistral) |
+| HTTP | `error_code` | Meaning |
+|------|----------------|---------|
+| 401 | `unauthorized` | Missing/invalid `X-API-Key` |
+| 422 | `validation_error` | Pydantic validation or `ConfigurationError` |
+| 429 | `rate_limit_exceeded` | `API_RATE_LIMIT_RPM` exceeded |
+| 500 | `internal_error` / domain codes | Sanitized `detail`; domain errors include e.g. `transcription_failed`, `analysis_failed` |
+| 502 | `llm_request_failed` | OpenRouter/Mistral failure |
 
-Responses include `X-Request-ID` for tracing.
+All error JSON bodies include backward-compatible `detail` plus `request_id` (matches `X-Request-ID` header) and `error_code`.
 
 ---
 
 ## Testing
 
 ```bash
-pytest tests/test_api.py tests/test_api_coverage.py \
+pytest tests/test_api.py tests/test_api_coverage.py tests/test_api_services.py \
+  tests/test_scan_logic.py tests/contracts/test_api_error_contract.py \
   --cov=src/api --cov-fail-under=90
 ```
 
-Coverage target for `src/api/`: **≥ 90%** (currently ~97% in CI).
+Coverage target for `src/api/`: **≥ 90%**.

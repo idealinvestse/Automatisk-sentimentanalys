@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeoutError
+from pathlib import Path
 from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)

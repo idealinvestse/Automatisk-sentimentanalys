@@ -25,6 +25,13 @@ from src.core.errors import (
 client = TestClient(default_app, raise_server_exceptions=False)
 
 
+@pytest.fixture(autouse=True)
+def _clear_api_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prevent auth/env leakage between tests."""
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+
+
 @pytest.fixture
 def audio_file(tmp_path):
     p = tmp_path / "call.wav"
@@ -130,9 +137,9 @@ def test_batch_transcribe_ok_and_worker_error(audio_file):
 def test_analyze_conversation_happy(audio_file):
     tr = {"segments": [{"text": "hej", "start": 0.0, "end": 1.0, "speaker": "A"}]}
     with (
-        patch("src.api.routers.conversation.transcribe_helper", return_value=tr),
+        patch("src.api.services.conversation.transcribe_helper", return_value=tr),
         patch(
-            "src.api.routers.conversation.analyze_smart",
+            "src.api.services.conversation.analyze_smart",
             return_value=([{"label": "positiv", "score": 0.9}], {"profile": "call"}),
         ),
     ):
@@ -145,7 +152,7 @@ def test_analyze_conversation_happy(audio_file):
 
 def test_analyze_conversation_transcribe_500(audio_file):
     with patch(
-        "src.api.routers.conversation.transcribe_helper",
+        "src.api.services.conversation.transcribe_helper",
         side_effect=RuntimeError("tx fail"),
     ):
         r = client.post("/analyze_conversation", json={"audio_path": audio_file})
@@ -155,8 +162,8 @@ def test_analyze_conversation_transcribe_500(audio_file):
 def test_analyze_conversation_sentiment_500(audio_file):
     tr = {"segments": [{"text": "hej", "start": 0, "end": 1}]}
     with (
-        patch("src.api.routers.conversation.transcribe_helper", return_value=tr),
-        patch("src.api.routers.conversation.analyze_smart", side_effect=RuntimeError("sent fail")),
+        patch("src.api.services.conversation.transcribe_helper", return_value=tr),
+        patch("src.api.services.conversation.analyze_smart", side_effect=RuntimeError("sent fail")),
     ):
         r = client.post("/analyze_conversation", json={"audio_path": audio_file})
     assert r.status_code == 500
@@ -176,9 +183,9 @@ def test_batch_analyze_conversation_mixed(audio_file):
 
     with (
         patch("src.api.routers.conversation.resolve_audio_paths", return_value=[audio_file, b]),
-        patch("src.api.routers.conversation.transcribe_helper", side_effect=tx),
+        patch("src.api.services.conversation.transcribe_helper", side_effect=tx),
         patch(
-            "src.api.routers.conversation.analyze_smart",
+            "src.api.services.conversation.analyze_smart",
             return_value=([{"label": "neutral", "score": 0.5}], {"profile": "call"}),
         ),
     ):
@@ -229,11 +236,11 @@ def test_scan_process_analyze_operation(scan_directory):
             return_value=[f"{scan_directory}/a.wav"],
         ),
         patch(
-            "src.api.routers.scan.transcribe_helper",
+            "src.api.services.conversation.transcribe_helper",
             return_value={"segments": [{"text": "hi", "start": 0, "end": 1}]},
         ),
         patch(
-            "src.api.routers.scan.analyze_smart",
+            "src.api.services.conversation.analyze_smart",
             return_value=([{"label": "positiv", "score": 0.8}], {"profile": "call"}),
         ),
     ):
@@ -326,7 +333,7 @@ def test_qa_score_compliance_qa_fallback():
     report.results = {"compliance_qa": {"overall_qa_score": 70}}
     with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         mock_pipe.return_value.analyze_segments.return_value = report
-        r = client.post("/qa/score", json={"segments": [{"text": "a"}]})
+        r = client.post("/qa/score", json={"segments": [{"text": "a"}], "reanalyze": True})
     assert r.status_code == 200
     assert r.json()["qa"]["overall_qa_score"] == 70
 
@@ -451,15 +458,54 @@ def test_app_exception_handlers():
 
     app = create_app()
     req = MagicMock()
+    req.state.request_id = "test-req-id"
 
     async def _run():
-        assert (await app.exception_handlers[ConfigurationError](req, ConfigurationError("cfg"))).status_code == 422
-        assert (await app.exception_handlers[TranscriptionError](req, TranscriptionError("tx"))).status_code == 500
-        assert (await app.exception_handlers[AnalysisError](req, AnalysisError("an"))).status_code == 500
-        assert (await app.exception_handlers[LLMError](req, LLMError("llm"))).status_code == 502
-        assert (await app.exception_handlers[BaseAnalysisError](req, BaseAnalysisError("base"))).status_code == 500
+        cfg = await app.exception_handlers[ConfigurationError](req, ConfigurationError("cfg"))
+        assert cfg.status_code == 422
+        assert json.loads(cfg.body)["error_code"] == "configuration_error"
+        assert json.loads(cfg.body)["request_id"] == "test-req-id"
+
+        tx = await app.exception_handlers[TranscriptionError](req, TranscriptionError("tx"))
+        assert tx.status_code == 500
+        assert json.loads(tx.body)["error_code"] == "transcription_failed"
+
+        an = await app.exception_handlers[AnalysisError](req, AnalysisError("an"))
+        assert an.status_code == 500
+        assert json.loads(an.body)["error_code"] == "analysis_failed"
+
+        llm = await app.exception_handlers[LLMError](req, LLMError("llm"))
+        assert llm.status_code == 502
+        assert json.loads(llm.body)["error_code"] == "llm_request_failed"
+
+        base = await app.exception_handlers[BaseAnalysisError](req, BaseAnalysisError("base"))
+        assert base.status_code == 500
+        assert json.loads(base.body)["error_code"] == "analysis_system_error"
 
     asyncio.run(_run())
+
+
+def test_structured_error_body_on_validation():
+    r = client.post("/analyze", json={"texts": []})
+    assert r.status_code == 422
+    body = r.json()
+    assert "detail" in body
+    assert body["error_code"] == "validation_error"
+    assert "request_id" in body
+    assert r.headers["X-Request-ID"] == body["request_id"]
+
+
+def test_structured_error_body_on_internal_route_failure():
+    with patch(
+        "src.api.routers.text.analyze_smart",
+        side_effect=RuntimeError("boom"),
+    ):
+        r = client.post("/analyze", json={"texts": ["hej"]})
+    assert r.status_code == 500
+    body = r.json()
+    assert body["detail"] == "An internal error occurred. Please try again later."
+    assert body["error_code"] == "internal_error"
+    assert "request_id" in body
 
 
 def test_health_has_request_id_header():
