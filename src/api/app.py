@@ -6,6 +6,7 @@ hooks, and all registered routers.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -27,7 +28,8 @@ from ..core.errors import (
     TranscriptionError,
 )
 from .dependencies import require_api_key
-from .routers import conversation, health, pipeline, scan, text, transcription
+from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription
+from .transcription_events import TranscriptionEventHub
 from .settings import get_api_settings
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,8 @@ def _init_app_state(application: FastAPI) -> None:
         cache_dir=settings.cache_dir,
     )
     application.state.alert_engine = AlertEngine()
+    if not hasattr(application.state, "transcription_events"):
+        application.state.transcription_events = TranscriptionEventHub()
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -67,6 +71,9 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
         cache_dir=settings.cache_dir,
     )
     app.state.alert_engine = AlertEngine()
+    hub = TranscriptionEventHub()
+    hub.bind_loop(asyncio.get_running_loop())
+    app.state.transcription_events = hub
     logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
     yield
     logger.info("Swedish Sentiment API shutting down")
@@ -155,6 +162,7 @@ def create_app() -> FastAPI:
     app.include_router(conversation.router, dependencies=_auth)
     app.include_router(pipeline.router, dependencies=_auth)
     app.include_router(scan.router, dependencies=_auth)
+    app.include_router(ws_transcription.router)
 
     _init_app_state(app)
     return app

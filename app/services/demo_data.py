@@ -22,9 +22,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from functools import lru_cache
 from typing import Any
-
-import streamlit as st
 
 # Ensure project root on path when run via streamlit
 import sys
@@ -132,8 +131,8 @@ def _hash_segments(segments: list[dict[str, Any]]) -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:16]
 
 
-@st.cache_data(show_spinner="Kör pipeline på demo-samtal (endast första gången)...", ttl=3600)
-def get_demo_reports(use_llm: bool = False, profile: str = "callcenter") -> list[dict[str, Any]]:
+@lru_cache(maxsize=8)
+def get_demo_reports(use_llm: bool = False, profile: str = "callcenter") -> tuple[dict[str, Any], ...]:
     """Generate (or retrieve cached) full CallAnalysisReport dicts for the demo calls.
 
     Runs the *real* CallAnalysisPipeline so that results contain:
@@ -194,7 +193,7 @@ def get_demo_reports(use_llm: bool = False, profile: str = "callcenter") -> list
                     "error": True,
                 }
             )
-    return reports
+    return tuple(reports)
 
 
 def get_call_summary(report: dict[str, Any]) -> dict[str, Any]:

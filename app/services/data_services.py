@@ -2,7 +2,7 @@
 
 This module provides:
 - Realistic canned Swedish call center demo transcripts (4-6 short conversations).
-- @st.cache_data generate_demo_reports(...) that runs the *real* CallAnalysisPipeline
+- generate_demo_reports(...) that runs the *real* CallAnalysisPipeline (lru_cache)
   (profile="callcenter") on them and returns serializable dicts (r.to_dict()).
 - Filter, KPI, summary and enrichment helpers that power the enhanced dashboard + Call Detail View.
 - Support for user-uploaded full CallAnalysisReport JSON (single or list).
@@ -27,9 +27,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+from functools import lru_cache
 from typing import Any
 
-import streamlit as st  # for @st.cache_data only (kept here for single source of caching policy)
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # CANNED REALISTIC SWEDISH CALL CENTER DEMO TRANSCRIPTS
@@ -154,16 +156,13 @@ def _transcript_hash(transcripts: list[dict]) -> str:
 # CORE CACHED GENERATOR – runs REAL pipeline (the heart of "use real pipeline data")
 # ---------------------------------------------------------------------------
 
-@st.cache_data(
-    show_spinner="Kör pipeline på demo-transkript (callcenter-profil) – första gången kan ta 30-90s...",
-    ttl=3600 * 6,  # 6h cache (demo data is static)
-)
+@lru_cache(maxsize=8)
 def generate_demo_reports(
     use_llm: bool = False,
     profile: str = "callcenter",
-    force_refresh: bool = False,  # for dev: caller can ignore but cache still respects inputs
-    llm_api_key: str | None = None,  # support dashboard override
-) -> list[dict]:
+    force_refresh: bool = False,  # noqa: ARG001 – kept for API compatibility
+    llm_api_key: str | None = None,
+) -> tuple[dict, ...]:
     """Run CallAnalysisPipeline on the 5 canned transcripts and return list of report.to_dict().
 
     Each returned dict is a full serializable CallAnalysisReport (with .results, .llm, .segments etc).
@@ -173,7 +172,7 @@ def generate_demo_reports(
     - Always uses profile="callcenter" by default (enables Fas4 features + LLM heuristics).
     - use_llm=True will attempt Mistral holistic (requires OPENROUTER_API_KEY env var or configs/openrouter.key for dev).
     - llm_api_key can be passed to override (from dashboard UI for example).
-    - st.cache_data ensures we do NOT re-run full pipeline (incl. model loads + LLM calls) on every rerun.
+    - lru_cache ensures we do NOT re-run full pipeline on every dashboard reload.
     - Hash key includes use_llm + profile + transcript content hash.
 
     Returns:
@@ -186,9 +185,8 @@ def generate_demo_reports(
     try:
         from src.pipeline import CallAnalysisPipeline
     except Exception as import_err:
-        # Graceful: return minimal synthetic reports if pipeline unavailable (tests / dev)
-        st.warning(f"Kunde inte importera pipeline: {import_err}. Använder fallback synthetic reports.")
-        return _generate_fallback_reports(transcripts)
+        logger.warning("Kunde inte importera pipeline: %s. Använder fallback.", import_err)
+        return tuple(_generate_fallback_reports(transcripts))
 
     reports: list[dict] = []
     for t in transcripts:
@@ -203,7 +201,7 @@ def generate_demo_reports(
             report = pipe.analyze_segments(t["segments"])
             rdict: dict = report.to_dict()
         except Exception as run_err:
-            st.error(f"Pipeline-fel på {t['id']}: {run_err}. Hoppar över.")
+            logger.warning("Pipeline-fel på %s: %s", t["id"], run_err)
             # Minimal fallback for this one
             rdict = {
                 "segments": t["segments"],
@@ -222,7 +220,7 @@ def generate_demo_reports(
         rdict.setdefault("demo_meta", {})["transcript_id"] = t["id"]
         reports.append(rdict)
 
-    return reports
+    return tuple(reports)
 
 
 def _generate_fallback_reports(transcripts: list[dict]) -> list[dict]:

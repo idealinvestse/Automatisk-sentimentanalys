@@ -26,14 +26,32 @@ pip install -e ".[cli,diarize]"
 
 > **Viktigt**: `pyannote.audio` kräver ofta en Hugging Face token (`huggingface-cli login` eller `HF_TOKEN` env). Se [pyannote documentation](https://huggingface.co/pyannote/speaker-diarization-3.1) för modellåtkomst.
 
-### 3. REST API + Dashboard
+### 3. REST API + Dashboard (NiceGUI)
 
 ```bash
-pip install -e ".[cli,api]"
-# Starta API
-uvicorn src.api:app --reload
-# Starta Streamlit dashboard
-streamlit run app/dashboard.py
+pip install -e ".[dashboard-nicegui,api]"
+# Terminal 1 – API
+uvicorn src.api:app --port 8000
+# Terminal 2 – Dashboard (feature flag default: nicegui)
+sentimentanalys-dashboard
+# eller: python -m app.nicegui_dashboard.main
+# Öppna http://localhost:8080
+```
+
+Migrering från Streamlit: se `docs/MIGRATION_TO_NICEGUI_PLAN.md` (Fas 5 – Streamlit avvecklad).
+
+Miljövariabler (valfritt):
+
+| Variabel | Beskrivning |
+|----------|-------------|
+| `SENTIMENT_API_BASE_URL` | Backend-URL (default `http://localhost:8000`) |
+| `SENTIMENT_API_KEY` | `X-API-Key` om API kräver auth |
+| `NICEGUI_PORT` | Dashboard-port (default `8080`) |
+
+Docker (API + dashboard):
+
+```bash
+docker compose -f docker-compose.nicegui.yml up --build
 ```
 
 ### Docker (rekommenderas för produktion/test)

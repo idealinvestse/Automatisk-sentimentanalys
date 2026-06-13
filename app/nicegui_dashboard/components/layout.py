@@ -1,0 +1,54 @@
+"""Layout helpers: header, theme, API status.
+
+Fas 4 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from nicegui import ui
+
+from app.nicegui_dashboard.components.theme import apply_dashboard_theme
+from app.nicegui_dashboard.state import DashboardState
+
+
+def apply_dark_theme() -> ui.dark_mode:
+    """Enable dark mode + custom CSS. Returns dark_mode for toggle."""
+    return apply_dashboard_theme()
+
+
+def render_header(
+    state: DashboardState | None = None,
+    *,
+    phase_label: str = "Fas 4",
+    dark_mode: ui.dark_mode | None = None,
+) -> Callable[[], None] | None:
+    """Render header; returns callback to refresh API status label."""
+    status_label: ui.label | None = None
+
+    with ui.header(elevated=True).classes("items-center justify-between nicegui-dashboard"):
+        with ui.row().classes("items-center gap-2"):
+            ui.label("📞 Svensk Call Center – Samtalsintelligens").classes("text-h5")
+            ui.label(f"| {phase_label}").classes("text-caption text-grey")
+
+        with ui.row().classes("items-center gap-3"):
+            if state and state.api_client:
+                cls = "api-status-connected" if state.api_connected else "api-status-offline"
+                txt = "API ●" if state.api_connected else "API ○"
+                status_label = ui.label(f"{txt} {state.api_client.base_url}").classes(
+                    f"text-caption {cls}"
+                )
+
+            if dark_mode is not None:
+                ui.button(
+                    icon="dark_mode",
+                    on_click=dark_mode.toggle,
+                ).props("flat round dense").tooltip("Växla ljust/mörkt tema")
+
+    def refresh_status() -> None:
+        if status_label and state and state.api_client:
+            txt = "API ●" if state.api_connected else "API ○"
+            status_label.set_text(f"{txt} {state.api_client.base_url}")
+
+    return refresh_status if status_label else None

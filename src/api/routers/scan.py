@@ -8,14 +8,15 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from ...core.audio import resolve_audio_paths
 from ...core.serialization import map_results_to_segment_dicts, texts_from_segments, utc_now_iso
 from ...sentiment import analyze_smart
-from ..batch import run_batch
+from ..batch import file_display_name, run_batch
 from ..helpers import transcribe_helper
 from ..schemas import ScanItem, ScanProcessRequest, ScanProcessResponse
+from ..transcription_events import JOB_HEADER, get_hub
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Scan"])
@@ -60,7 +61,7 @@ def _chunk(lst: list, size: int) -> list[list]:
 
 
 @router.post("/scan_process", response_model=ScanProcessResponse)
-async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
+async def scan_process(req: ScanProcessRequest, request: Request) -> ScanProcessResponse:
     """Scan a directory and process new/changed audio files incrementally.
 
     Tracks processed files via an optional state JSON file so that re-runs
@@ -78,6 +79,8 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         Per-file results, counts, and a UTC timestamp.
     """
     logger.info("scan_process: directory=%s pattern=%s operation=%s", req.directory, req.pattern, req.operation)
+    job_id = request.headers.get(JOB_HEADER)
+    hub = get_hub(request.app)
 
     # --- Resolve files -------------------------------------------------------
     files = resolve_audio_paths(
@@ -157,9 +160,43 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
     batches = _chunk(new_files, req.batch_size)
     items: list[ScanItem] = []
     ok = failed = 0
+    total = len(new_files)
+    processed_count = 0
+
+    hub.log(job_id=job_id, level="INFO", msg=f"scan_process startar – {total} nya filer")
+    hub.status(job_id=job_id, is_running=True, total=total, processed=0)
 
     for bidx, batch in enumerate(batches):
-        raw = run_batch(batch, worker_fn, workers=req.workers, worker_timeout=req.worker_timeout)
+        def _on_complete(
+            path: str,
+            result: dict[str, Any] | None,
+            error: Exception | None,
+            done: int,
+            batch_total: int,
+        ) -> None:
+            nonlocal processed_count
+            processed_count += 1
+            fname = file_display_name(path)
+            progress = round(processed_count / max(1, total), 2)
+            hub.progress(
+                job_id=job_id,
+                processed=processed_count,
+                total=total,
+                current_file=fname,
+                progress=progress,
+            )
+            if error is None:
+                hub.log(job_id=job_id, level="INFO", msg=f"[scan_process] Klart: {fname}", file=fname)
+            else:
+                hub.log(job_id=job_id, level="ERROR", msg=str(error), file=fname)
+
+        raw = run_batch(
+            batch,
+            worker_fn,
+            workers=req.workers,
+            worker_timeout=req.worker_timeout,
+            on_file_complete=_on_complete,
+        )
 
         for path, result, error in raw:
             if error is None:
@@ -182,6 +219,12 @@ async def scan_process(req: ScanProcessRequest) -> ScanProcessResponse:
         state["processed"] = processed
         _save_state(req.state_file, state)
         logger.debug("scan_process: batch %d/%d done (ok=%d failed=%d)", bidx + 1, len(batches), ok, failed)
+
+    if skipped:
+        hub.log(job_id=job_id, level="INFO", msg=f"Hoppade över {skipped} redan bearbetade filer")
+    hub.log(job_id=job_id, level="INFO", msg=f"scan_process slutförd – {ok} ok, {failed} fel")
+    hub.done(job_id=job_id, ok=ok, failed=failed)
+    hub.status(job_id=job_id, is_running=False)
 
     return ScanProcessResponse(
         items=items,

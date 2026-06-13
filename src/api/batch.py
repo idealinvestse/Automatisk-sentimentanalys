@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any, TypeVar
@@ -22,6 +23,8 @@ def run_batch(
     worker_fn: Callable[[str], T],
     workers: int = 1,
     worker_timeout: float | None = 300.0,
+    *,
+    on_file_complete: Callable[[str, T | None, Exception | None, int, int], None] | None = None,
 ) -> list[tuple[str, T | None, Exception | None]]:
     """Process *files* with *worker_fn*, optionally in parallel.
 
@@ -39,17 +42,25 @@ def run_batch(
     """
     results: list[tuple[str, T | None, Exception | None]] = []
 
+    total = len(files)
+
     if workers <= 1:
-        for p in files:
+        for i, p in enumerate(files):
             try:
-                results.append((p, worker_fn(p), None))
+                result = worker_fn(p)
+                results.append((p, result, None))
+                if on_file_complete:
+                    on_file_complete(p, result, None, i + 1, total)
             except Exception as e:
                 logger.error("Worker failed for %s: %s", p, e, exc_info=True)
                 results.append((p, None, e))
+                if on_file_complete:
+                    on_file_complete(p, None, e, i + 1, total)
         return results
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures: dict[Any, str] = {executor.submit(worker_fn, p): p for p in files}
+        completed = 0
         for fut in as_completed(futures):
             p = futures[fut]
             try:
@@ -58,13 +69,27 @@ def run_batch(
                 else:
                     res = fut.result()
                 results.append((p, res, None))
+                completed += 1
+                if on_file_complete:
+                    on_file_complete(p, res, None, completed, total)
             except FuturesTimeoutError:
                 logger.error("Worker timed out for %s after %ss", p, worker_timeout)
                 if not fut.done():
                     fut.cancel()
-                results.append((p, None, TimeoutError(f"Worker timed out after {worker_timeout}s")))
+                err = TimeoutError(f"Worker timed out after {worker_timeout}s")
+                results.append((p, None, err))
+                completed += 1
+                if on_file_complete:
+                    on_file_complete(p, None, err, completed, total)
             except Exception as e:
                 logger.error("Worker failed for %s: %s", p, e, exc_info=True)
                 results.append((p, None, e))
+                completed += 1
+                if on_file_complete:
+                    on_file_complete(p, None, e, completed, total)
 
     return results
+
+
+def file_display_name(path: str) -> str:
+    return Path(path).name

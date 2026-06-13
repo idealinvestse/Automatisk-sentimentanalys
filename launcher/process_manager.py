@@ -1,7 +1,8 @@
-"""Start/stop API and Streamlit child processes."""
+"""Start/stop API and NiceGUI dashboard child processes."""
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 import sys
@@ -45,9 +46,18 @@ def _windows_creationflags() -> int:
     return flags
 
 
-def _popen_service(cfg: UserConfig, name: str, cmd: list[str]) -> subprocess.Popen[bytes]:
+def _popen_service(
+    cfg: UserConfig,
+    name: str,
+    cmd: list[str],
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.Popen[bytes]:
     """Start a detached child; redirect stdio so pythonw parents do not kill it."""
     out_path, err_path = service_log_paths(cfg, name)
+    env = build_child_env(cfg)
+    if extra_env:
+        env.update(extra_env)
     with (
         out_path.open("a", encoding="utf-8") as stdout,
         err_path.open("a", encoding="utf-8") as stderr,
@@ -55,7 +65,7 @@ def _popen_service(cfg: UserConfig, name: str, cmd: list[str]) -> subprocess.Pop
         return subprocess.Popen(
             cmd,
             cwd=str(working_directory(cfg)),
-            env=build_child_env(cfg),
+            env=env,
             stdout=stdout,
             stderr=stderr,
             creationflags=_windows_creationflags() if sys.platform == "win32" else 0,
@@ -224,20 +234,22 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
         log.phase("dashboard.start", "Starting Dashboard")
     stop_service(cfg, "dashboard", log=log)
     py = resolve_python(cfg)
-    cmd = [
-        str(py),
-        "-m",
-        "streamlit",
-        "run",
-        "app/dashboard.py",
-        "--server.port",
-        str(cfg.services.dashboard_port),
-        "--server.headless",
-        "true",
-    ]
+    dashboard_ui = getattr(cfg.services, "dashboard_ui", "nicegui") or "nicegui"
+    if dashboard_ui == "streamlit":
+        if log:
+            log.warning(
+                "DASHBOARD_UI=streamlit är avvecklad. Startar NiceGUI istället.",
+                phase="dashboard.start",
+            )
+        dashboard_ui = "nicegui"
+    extra_env = {
+        "DASHBOARD_UI": dashboard_ui,
+        "NICEGUI_PORT": str(cfg.services.dashboard_port),
+    }
+    cmd = [str(py), "-m", "app.dashboard_launcher"]
     if log:
-        log.info(f"Command: {' '.join(cmd)}", phase="dashboard.start")
-    proc = _popen_service(cfg, "dashboard", cmd)
+        log.info(f"Command: {' '.join(cmd)} (ui={dashboard_ui})", phase="dashboard.start")
+    proc = _popen_service(cfg, "dashboard", cmd, extra_env=extra_env)
     pid_path = save_pid(cfg, "dashboard", proc.pid, cmd)
     if log:
         log.info(f"Spawned pid {proc.pid}", phase="dashboard.start")

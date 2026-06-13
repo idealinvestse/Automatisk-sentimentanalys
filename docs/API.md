@@ -97,6 +97,7 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 
 - `POST /transcribe` — single file ASR
 - `POST /batch_transcribe` — parallel ASR (`audio_paths` or `directory` + `glob`)
+- `WS /ws/transcription` — real-time log/progress stream during transcription (optional `?api_key=` when auth enabled). Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`.
 
 ### Conversation
 

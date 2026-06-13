@@ -1,64 +1,59 @@
-"""Tests for dashboard helper functions."""
+"""Tests for dashboard data layer (post–Fas 5 Streamlit removal)."""
 
 from __future__ import annotations
 
-import json
-import os
-import sys
-import tempfile
-from pathlib import Path
-
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from app.dashboard import load_report, load_sample_data
+from app.dashboard_launcher import resolve_dashboard_ui
+from app.services.data_services import (
+    _generate_fallback_reports,
+    filter_reports,
+    get_demo_transcripts,
+    get_overall_sentiment,
+)
 
 
-class TestLoadReport:
-    def test_load_existing_file(self):
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as f:
-            json.dump({"key": "value"}, f)
-            path = f.name
-
-        try:
-            result = load_report(path)
-            assert result == {"key": "value"}
-        finally:
-            os.unlink(path)
-
-    def test_load_missing_file(self):
-        result = load_report("/nonexistent/path/report.json")
-        assert result == {}
+def _fast_demo_reports() -> list[dict]:
+    """Synthetic reports for unit tests (avoids slow full pipeline)."""
+    return _generate_fallback_reports(get_demo_transcripts())
 
 
-class TestLoadSampleData:
-    def test_load_sample_data_structure(self):
-        data = load_sample_data()
-        assert "calls" in data
-        assert "agents" in data
-        assert len(data["calls"]) == 20
-        assert len(data["agents"]) == 5
+class TestDashboardLauncher:
+    def test_resolve_dashboard_ui_default(self, monkeypatch):
+        monkeypatch.delenv("DASHBOARD_UI", raising=False)
+        assert resolve_dashboard_ui() == "nicegui"
 
-        # Check call structure
-        call = data["calls"][0]
-        assert "id" in call
-        assert "timestamp" in call
-        assert "overall_sentiment" in call
-        assert call["overall_sentiment"] in ("positiv", "neutral", "negativ")
+    def test_resolve_dashboard_ui_explicit(self, monkeypatch):
+        monkeypatch.setenv("DASHBOARD_UI", "nicegui")
+        assert resolve_dashboard_ui() == "nicegui"
 
-        # Check agent structure
-        agent = data["agents"][0]
-        assert "name" in agent
-        assert "calls" in agent
-        assert "avg_resolution_rate" in agent
+    def test_streamlit_deprecated_exits(self, monkeypatch):
+        import pytest
 
-    def test_load_sample_data_deterministic(self):
-        """Verify local RNG gives deterministic output."""
-        data1 = load_sample_data()
-        data2 = load_sample_data()
+        from app.dashboard_launcher import main
 
-        assert data1["calls"][0]["id"] == data2["calls"][0]["id"]
-        assert data1["calls"][0]["duration_s"] == data2["calls"][0]["duration_s"]
-        assert data1["agents"][0]["calls"] == data2["agents"][0]["calls"]
+        monkeypatch.setenv("DASHBOARD_UI", "streamlit")
+        with pytest.raises(SystemExit) as exc:
+            main()
+        assert exc.value.code == 1
+
+
+class TestDataServicesDashboard:
+    def test_get_demo_transcripts_count(self):
+        transcripts = get_demo_transcripts()
+        assert len(transcripts) == 5
+        assert "segments" in transcripts[0]
+
+    def test_generate_fallback_reports_shape(self):
+        reports = _fast_demo_reports()
+        assert len(reports) == 5
+        assert "call_id" in reports[0]
+
+    def test_filter_reports_sentiment(self):
+        reports = _fast_demo_reports()
+        filtered = filter_reports(reports, {"sentiment_filter": "all"})
+        assert len(filtered) == len(reports)
+
+    def test_get_overall_sentiment_shape(self):
+        report = _fast_demo_reports()[0]
+        sent = get_overall_sentiment(report)
+        assert "label" in sent
+        assert "score" in sent

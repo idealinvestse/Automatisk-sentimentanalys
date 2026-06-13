@@ -54,7 +54,8 @@ class ServicesConfig(BaseModel):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     dashboard_enabled: bool = True
-    dashboard_port: int = 8501
+    dashboard_port: int = 8080
+    dashboard_ui: Literal["nicegui", "streamlit"] = "nicegui"
 
 
 class UserConfig(BaseModel):

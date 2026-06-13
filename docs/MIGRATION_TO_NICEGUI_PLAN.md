@@ -68,36 +68,73 @@ Baserat på:
 # 3. Detaljerad Task Breakdown
 
 ## Fas 1 Tasks
-- [ ] Skapa `app/nicegui_dashboard/` struktur (main.py, components/, services/)
-- [ ] Grundläggande layout med ui.header, ui.tabs, ui.tab_panels
-- [ ] Portning av KPI-metrics (ui.metric eller ui.card)
-- [ ] Enkel tabell-komponent (ui.table)
-- [ ] Validering att PoC matchar Streamlit-funktionalitet
+- [x] Skapa `app/nicegui_dashboard/` struktur (main.py, components/, services/)
+- [x] Grundläggande layout med ui.header, ui.tabs, ui.tab_panels
+- [x] Portning av KPI-metrics (ui.metric eller ui.card)
+- [x] Enkel tabell-komponent (ui.table)
+- [x] Validering att PoC matchar Streamlit-funktionalitet
+
+### Fas 1 Status: ✅ Klar (2026-06-13)
+- **Struktur**: `app/nicegui_dashboard/` (modulär: `components/`, `services/`, `state.py`)
+- **Kör**: `pip install -e ".[dashboard-nicegui]"` → `python -m app.nicegui_dashboard.main`
+- **Levererat**: dark mode header, 4 flikar (Översikt full, övriga stubs), KPI via `compute_kpis`, samtalstabell med radklick, demo-data via `demo_provider.py` + `data_services`
+- **Nästa**: Fas 2 (Core Views)
 
 ## Fas 2 Tasks
-- [ ] Översiktsvy: Hot Topics chips, Agent Leaderboard tabell, filtrerad calls-tabell med on_click
-- [ ] Call Detail: ui.card för header, timeline (ui.timeline eller custom), sökbart transcript (ui.textarea + markdown)
-- [ ] Structured Insights: ui.expander + ui.markdown för LLM + Fas4-data
-- [ ] Transkriberings Monitor: Full implementation av persistent JSON-kö, start/paus/stopp, live progress, loggruta, settings-form
+- [x] Översiktsvy: Hot Topics chips, Agent Leaderboard tabell, filtrerad calls-tabell med on_click
+- [x] Call Detail: ui.card för header, timeline (ui.timeline eller custom), sökbart transcript (ui.textarea + markdown)
+- [x] Structured Insights: ui.expander + ui.markdown för LLM + Fas4-data
+- [x] Transkriberings Monitor: Full implementation av persistent JSON-kö, start/paus/stopp, live progress, loggruta, settings-form
+
+### Fas 2 Status: ✅ Klar (2026-06-13)
+- **Översikt**: Sentiment/agent/sök-filter med `@ui.refreshable`, KPI + tabell uppdateras reaktivt
+- **Call Detail**: Header, klickbar timeline, sökbart transkript, structured insights (LLM/Fas4)
+- **Transkribering**: `services/transcription_service.py` + `components/transcription_monitor.py` – persistent `.cache/transcription_queue.json`, asyncio worker, `ui.timer` live-uppdatering
+- **Nästa**: Fas 3 (nicegui_api_client + riktig backend-integration)
 
 ## Fas 3 Tasks
-- [ ] Skapa `services/nicegui_api_client.py` (httpx-wrapper mot er FastAPI)
-- [ ] Ersätt simulerad data med riktiga API-anrop (`/analyze_pipeline`, `/scan_process`)
-- [ ] Implementera polling-loop för transkriberingsstatus
-- [ ] Lägg till WebSocket-stöd för real-time logs/progress (valfritt i Fas 3)
+- [x] Skapa `services/nicegui_api_client.py` (httpx-wrapper mot er FastAPI)
+- [x] Ersätt simulerad data med riktiga API-anrop (`/analyze_pipeline`, `/scan_process`)
+- [x] Implementera polling-loop för transkriberingsstatus
+- [x] Lägg till WebSocket-stöd för real-time logs/progress (valfritt i Fas 3)
+
+### Fas 3 Status: ✅ Klar (2026-06-13, WebSocket 2026-06-13)
+- **API-klient**: `app/nicegui_dashboard/services/nicegui_api_client.py` – `/health`, `/analyze_pipeline`, `/transcribe`, `/batch_transcribe`, `/scan_process`
+- **Data**: Bakgrundsladdning från API vid start + manuell reload; fallback till demo-data
+- **Live-analys**: `components/live_analysis.py` – pipeline via httpx med spinner och felhantering
+- **Transkribering**: Riktiga API-anrop med strategival (transcribe/batch/scan_process), health-polling före batch
+- **WebSocket**: `GET /ws/transcription` (backend) + `transcription_ws_client.py` (dashboard) – live loggar/progress via `X-Transcription-Job-Id`
+- **Env**: `SENTIMENT_API_BASE_URL`, `SENTIMENT_API_KEY`, `SENTIMENT_API_TIMEOUT`
+- **Nästa**: Fas 4 (polering, tester, deployment)
 
 ## Fas 4 Tasks
-- [ ] Teman & styling (ui.dark_mode, custom CSS)
-- [ ] Felhantering & loading states (ui.spinner, ui.notify)
-- [ ] Skriv tester (pytest + nicegui testing utilities)
-- [ ] Uppdatera README.md, ROADMAP.md och denna plan
-- [ ] Docker-compose för NiceGUI + backend
+- [x] Teman & styling (ui.dark_mode, custom CSS)
+- [x] Felhantering & loading states (ui.spinner, ui.notify)
+- [x] Skriv tester (pytest + nicegui testing utilities)
+- [x] Uppdatera README.md, ROADMAP.md och denna plan
+- [x] Docker-compose för NiceGUI + backend
+
+### Fas 4 Status: ✅ Klar (2026-06-13)
+- **Tema**: `components/theme.py` – custom CSS, dark mode toggle i header
+- **UX**: `services/ui_helpers.py` – centraliserade notify + `with_loading`
+- **Tester**: `tests/test_nicegui_dashboard.py` – api client, demo provider, transcription, call detail
+- **Deploy**: `docker-compose.nicegui.yml` – api + dashboard med healthcheck
+- **Docs**: README.md utökad med NiceGUI quickstart
+- **Nästa**: Fas 5 (avveckla Streamlit, feature flag)
 
 ## Fas 5 Tasks
-- [ ] Feature flag i main-appen
-- [ ] Parallell deployment
-- [ ] Användarutbildning / intern dokumentation
-- [ ] Ta bort Streamlit-kod
+- [x] Feature flag i main-appen
+- [x] Parallell deployment
+- [x] Användarutbildning / intern dokumentation
+- [x] Ta bort Streamlit-kod
+
+### Fas 5 Status: ✅ Klar (2026-06-13)
+- **Feature flag**: `DASHBOARD_UI=nicegui` (default) via `app/dashboard_launcher.py` + `sentimentanalys-dashboard` CLI
+- **Launcher**: `launcher/process_manager.py` startar NiceGUI (port 8080 default)
+- **Borttaget**: `app/dashboard.py`, `app/nicegui_poc/`, `app/transcription_monitor.py`, `app/components/` (Streamlit)
+- **Refaktorerat**: `data_services.py` / `demo_data.py` – `lru_cache` istället för `@st.cache_data`
+- **Kvar**: `app/setup_hub.py` (Streamlit konfigurationshub, ej call center-dashboard)
+- **Migrering klar** – NiceGUI är standarddashboard
 
 # 4. Teknisk Mapping (Streamlit → NiceGUI)
 

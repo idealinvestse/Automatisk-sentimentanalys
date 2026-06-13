@@ -1,0 +1,51 @@
+# Fas 5 – NiceGUI Dashboard + FastAPI backend (Streamlit dashboard avvecklad)
+# docs/MIGRATION_TO_NICEGUI_PLAN.md
+#
+# Usage:
+#   docker compose -f docker-compose.nicegui.yml up --build
+#   Dashboard: http://localhost:8080
+#   API docs:  http://localhost:8000/docs
+
+services:
+  api:
+    build: .
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - hf_cache:/cache/hf
+      - app_outputs:/app/outputs
+    environment:
+      - HF_HOME=/cache/hf
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  dashboard:
+    build: .
+    command: >
+      bash -c "pip install -q nicegui httpx pandas &&
+      python -m app.nicegui_dashboard.main"
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - app_cache:/app/.cache
+      - app_inputs:/app/inputs
+      - app_outputs:/app/outputs
+    environment:
+      - SENTIMENT_API_BASE_URL=http://api:8000
+      - NICEGUI_PORT=8080
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  hf_cache:
+  app_outputs:
+  app_cache:
+  app_inputs:

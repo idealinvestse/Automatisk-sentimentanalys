@@ -22,9 +22,9 @@ Projektet "Automatisk-sentimentanalys" utvecklas i faser med tydliga mål per fa
 - Modern Tailwind-baserad UI
 - Bättre stöd för real-time (transkriberings-progress, logs)
 
-**Status**: Plan skapad och PoC implementerad (`app/nicegui_poc/main.py`).
+**Status**: ✅ Migrering klar (Fas 5) — NiceGUI är standarddashboard (`app/nicegui_dashboard/`). Streamlit call center-dashboard borttagen. `DASHBOARD_UI=nicegui` via `app/dashboard_launcher.py`.
 
-**Nästa steg**: Börja Fas 1 enligt migreringsplanen (Foundation & PoC-validering).
+**Drift**: `sentimentanalys-dashboard` eller `docker compose -f docker-compose.nicegui.yml up`
 
 ---
 
