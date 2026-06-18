@@ -221,6 +221,12 @@ class TestDetailNavigation:
         state = DashboardState(reports=[])
         assert state.detail_source_tab == "overview"
 
+    def test_fas4_state_fields(self):
+        state = DashboardState(reports=[])
+        assert state.selected_agent_id is None
+        assert state.semantic_search_query == ""
+        assert state.dismissed_alert_keys == []
+
 
 class TestCallsTableFilter:
     def test_search_by_call_id(self):

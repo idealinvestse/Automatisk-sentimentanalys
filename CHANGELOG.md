@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Fas 3 – NiceGUI Dashboard (Fas 4-visualisering)**:
+  - Nya flikar: **Agent Performance**, **Fas 4 Insikter**
+  - Komponenter: `agent_performance.py`, `qa_scorecard.py`, `insights_hot_topics.py`, `alerts_panel.py`
+  - `fas4_data.py` – lokal extraktion + API-fallback för alla 5 Fas 4-endpoints
+  - `NiceGUIAPIClient` utökad med `get_agent_performance`, `semantic_search`, `get_hot_topics`, `score_qa`, `get_alerts`
+  - Alerts-badge i header, drill-down till Samtalsdetalj, markera alert som hanterad (stub)
+  - Tester: `tests/test_fas4_dashboard_data.py`
+
 ## [0.4.1] - 2026-06-19 (v0.5-prep)
 
 ### Added

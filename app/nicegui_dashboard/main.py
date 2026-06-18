@@ -16,8 +16,10 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.agent_performance import render_agent_performance_tab
 from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
+from app.nicegui_dashboard.components.fas4_insights import render_fas4_insights_tab
 from app.nicegui_dashboard.components.layout import apply_dark_theme, render_header
 from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.overview import render_overview_tab
@@ -68,6 +70,8 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
     with ui.tabs().classes("w-full") as tabs:
         overview_tab = ui.tab("Översikt")
         analytics_tab = ui.tab("Analys & Trender")
+        agent_tab = ui.tab("Agent Performance")
+        fas4_tab = ui.tab("Fas 4 Insikter")
         detail_tab = ui.tab("Samtalsdetalj")
         trans_tab = ui.tab("Transkribering")
         test_tab = ui.tab("Testlabb") if is_dev_mode() else None
@@ -75,6 +79,8 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
     refresh_call_detail: list = []
     refresh_overview: list = []
     refresh_analytics: list = []
+    refresh_agent: list = []
+    refresh_fas4: list = []
 
     def go_to_detail(
         call_id: str | None = None,
@@ -94,7 +100,15 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
         go_to_detail(source="overview")
 
     def go_back_from_detail() -> None:
-        target = analytics_tab if state.detail_source_tab == "analytics" else overview_tab
+        source = state.detail_source_tab
+        if source == "analytics":
+            target = analytics_tab
+        elif source == "agent_performance":
+            target = agent_tab
+        elif source == "fas4":
+            target = fas4_tab
+        else:
+            target = overview_tab
         tabs.set_value(target)
 
     async def reload_from_api() -> None:
@@ -120,6 +134,10 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
                 refresh_overview[0]()
             if refresh_analytics:
                 refresh_analytics[0]()
+            if refresh_agent:
+                refresh_agent[0]()
+            if refresh_fas4:
+                refresh_fas4[0]()
             if refresh_call_detail:
                 refresh_call_detail[0]()
             if refresh_header:
@@ -155,6 +173,21 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
                 on_call_select=lambda cid: go_to_detail(cid, source="analytics"),
             )
             refresh_analytics.append(refresh_fn)
+
+        with ui.tab_panel(agent_tab):
+            refresh_fn = render_agent_performance_tab(
+                state,
+                on_call_select=lambda cid: go_to_detail(cid, source="agent_performance"),
+            )
+            refresh_agent.append(refresh_fn)
+
+        with ui.tab_panel(fas4_tab):
+            refresh_fn = render_fas4_insights_tab(
+                state,
+                on_call_select=lambda cid: go_to_detail(cid, source="fas4"),
+                on_alerts_change=refresh_header,
+            )
+            refresh_fas4.append(refresh_fn)
 
         with ui.tab_panel(detail_tab):
             refresh_fn = render_call_detail_tab(state, on_back=go_back_from_detail)

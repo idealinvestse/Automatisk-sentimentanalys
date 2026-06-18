@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.alerts_panel import count_active_alerts
 from app.nicegui_dashboard.components.theme import apply_dashboard_theme
 from app.nicegui_dashboard.state import DashboardState
 
@@ -27,6 +28,7 @@ def render_header(
 ) -> Callable[[], None] | None:
     """Render header; returns callback to refresh API status label."""
     status_label: ui.label | None = None
+    alerts_badge: ui.badge | None = None
 
     with ui.header(elevated=True).classes("items-center justify-between nicegui-dashboard"):
         with ui.row().classes("items-center gap-2"):
@@ -34,6 +36,15 @@ def render_header(
             ui.label(f"| {phase_label}").classes("text-caption text-grey")
 
         with ui.row().classes("items-center gap-3"):
+            if state:
+                n_alerts = count_active_alerts(state)
+                with ui.row().classes("items-center gap-1"):
+                    ui.icon("notifications_active", size="sm")
+                    alerts_badge = ui.badge(
+                        str(n_alerts) if n_alerts > 0 else "0",
+                        color="negative" if n_alerts > 0 else "grey",
+                    )
+
             if state and state.api_client:
                 cls = "api-status-connected" if state.api_connected else "api-status-offline"
                 txt = "API ●" if state.api_connected else "API ○"
@@ -55,5 +66,8 @@ def render_header(
         if status_label and state and state.api_client:
             txt = "API ●" if state.api_connected else "API ○"
             status_label.set_text(f"{txt} {state.api_client.base_url}")
+        if alerts_badge and state:
+            n_alerts = count_active_alerts(state)
+            alerts_badge.set_text(str(n_alerts) if n_alerts > 0 else "")
 
-    return refresh_status if status_label else None
+    return refresh_status if (status_label or alerts_badge) else None

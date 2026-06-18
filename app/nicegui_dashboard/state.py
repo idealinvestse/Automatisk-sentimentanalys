@@ -26,4 +26,8 @@ class DashboardState:
     api_client: NiceGUIAPIClient | None = None
     api_connected: bool = False
     data_source: str = "fallback"  # fallback | api | local_pipeline
-    detail_source_tab: str = "overview"  # overview | analytics — for Tillbaka navigation
+    detail_source_tab: str = "overview"  # overview | analytics | fas4 | agent_performance
+    selected_agent_id: str | None = None
+    selected_qa_call_id: str | None = None
+    semantic_search_query: str = ""
+    dismissed_alert_keys: list[str] = field(default_factory=list)

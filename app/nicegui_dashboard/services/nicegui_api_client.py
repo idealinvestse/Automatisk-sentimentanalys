@@ -289,3 +289,109 @@ class NiceGUIAPIClient:
     async def cancel_job(self, job_id: str) -> dict[str, Any]:
         """POST /transcription/jobs/{job_id}/cancel – request job cancellation."""
         return await self._post(f"/transcription/jobs/{job_id}/cancel", {})
+
+    # ------------------------------------------------------------------
+    # Fas 4 call center endpoints (agent perf, search, insights, qa, alerts)
+    # ------------------------------------------------------------------
+
+    async def get_agent_performance(
+        self,
+        agent_id: str,
+        segments_list: list[list[dict[str, Any]]],
+        *,
+        window: str = "7d",
+        profile: str = "callcenter",
+        reanalyze: bool = False,
+        use_mistral_llm: bool = False,
+        deep_analysis: bool = False,
+        llm_model: str | None = None,
+    ) -> dict[str, Any]:
+        """POST /agent_performance/{agent_id} – cached agent aggregates."""
+        payload: dict[str, Any] = {
+            "agent_id": agent_id,
+            "segments_list": segments_list,
+            "window": window,
+            "profile": profile,
+            "reanalyze": reanalyze,
+            "use_mistral_llm": use_mistral_llm,
+            "deep_analysis": deep_analysis,
+        }
+        if llm_model:
+            payload["llm_model"] = llm_model
+        return await self._post(f"/agent_performance/{agent_id}", payload)
+
+    async def semantic_search(
+        self,
+        query: str,
+        segments_list: list[list[dict[str, Any]]],
+        *,
+        top_k: int = 5,
+        filters: dict[str, Any] | None = None,
+        profile: str = "callcenter",
+        reanalyze: bool = False,
+    ) -> dict[str, Any]:
+        """POST /search/semantic – hybrid search over calls."""
+        payload: dict[str, Any] = {
+            "query": query,
+            "segments_list": segments_list,
+            "top_k": top_k,
+            "profile": profile,
+            "reanalyze": reanalyze,
+        }
+        if filters:
+            payload["filters"] = filters
+        return await self._post("/search/semantic", payload)
+
+    async def get_hot_topics(
+        self,
+        segments_list: list[list[dict[str, Any]]],
+        *,
+        window: str = "7d",
+        profile: str = "callcenter",
+        reanalyze: bool = False,
+    ) -> dict[str, Any]:
+        """POST /insights/hot_topics – aggregated hot topics."""
+        return await self._post(
+            "/insights/hot_topics",
+            {
+                "segments_list": segments_list,
+                "window": window,
+                "profile": profile,
+                "reanalyze": reanalyze,
+            },
+        )
+
+    async def score_qa(
+        self,
+        segments: list[dict[str, Any]],
+        *,
+        profile: str = "callcenter",
+        use_mistral_llm: bool = False,
+        deep_analysis: bool = False,
+    ) -> dict[str, Any]:
+        """POST /qa/score – compliance QA scorecard for one call."""
+        return await self._post(
+            "/qa/score",
+            {
+                "segments": segments,
+                "profile": profile,
+                "use_mistral_llm": use_mistral_llm,
+                "deep_analysis": deep_analysis,
+            },
+        )
+
+    async def get_alerts(
+        self,
+        *,
+        segments_list: list[list[dict[str, Any]]] | None = None,
+        aggregate: dict[str, Any] | None = None,
+        profile: str = "callcenter",
+        reanalyze: bool = False,
+    ) -> dict[str, Any]:
+        """POST /alerts – per-call or aggregate trend alerts."""
+        payload: dict[str, Any] = {"profile": profile, "reanalyze": reanalyze}
+        if segments_list is not None:
+            payload["segments_list"] = segments_list
+        if aggregate is not None:
+            payload["aggregate"] = aggregate
+        return await self._post("/alerts", payload)

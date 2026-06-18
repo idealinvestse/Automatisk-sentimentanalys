@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.agent_performance import render_agent_performance_tab
 from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
 from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
+from app.nicegui_dashboard.components.fas4_insights import render_fas4_insights_tab
 from app.nicegui_dashboard.components.overview import render_overview_tab
 from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
@@ -75,6 +77,18 @@ def _transcription_page() -> None:
 def _analytics_page() -> None:
     state = DashboardState(reports=_REPORTS)
     render_analytics_tab(state, on_call_select=lambda _cid: None)
+
+
+@ui.page("/agent-performance")
+def _agent_performance_page() -> None:
+    state = DashboardState(reports=_REPORTS)
+    render_agent_performance_tab(state, on_call_select=lambda _cid: None)
+
+
+@ui.page("/fas4-insights")
+def _fas4_insights_page() -> None:
+    state = DashboardState(reports=_REPORTS)
+    render_fas4_insights_tab(state, on_call_select=lambda _cid: None)
 
 
 @ui.page("/test-lab")
