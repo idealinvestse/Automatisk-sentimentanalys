@@ -1,14 +1,10 @@
-"""Unified CLI for Swedish sentiment and call analysis.
-
-Provides commands for text sentiment analysis, audio transcription, and full call analysis.
-"""
-
 from __future__ import annotations
 
 import json
 import logging
 import os
 import time
+from pathlib import Path
 
 import pandas as pd
 import typer
@@ -175,8 +171,7 @@ def sentiment_cmd(
             raise typer.Exit(code=1) from e
         if text_column not in df.columns:
             console.print(
-                f"[red]Kolumn '{text_column}' finns inte i CSV. Tillgängliga kolumner: {list(df.columns)}[/red]"
-            )
+                f"[red]Kolumn '{text_column}' finns inte i CSV. Tillgängliga kolumner: {list(df.columns)}[/red]")
             raise typer.Exit(code=1)
         if max_rows is not None:
             df = df.head(max_rows)
@@ -532,8 +527,7 @@ def analyze_call_cmd(
             console.print(f"[green]Lexicon loaded:[/green] {lexicon_file} ({len(lex)} terms)")
         except Exception as e:
             console.print(
-                f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]"
-            )
+                f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]")
             use_lex = False
 
     all_rows = []
@@ -725,6 +719,70 @@ def analyze_call_cmd(
     console.print(
         f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
     )
+
+
+# =============================================================================
+# NEW: Fas 3 - YouTube Ingest CLI
+# =============================================================================
+
+@app.command("download-youtube")
+def download_youtube_cmd(
+    url: str = typer.Argument(..., help="YouTube video or playlist URL"),
+    playlist: bool = typer.Option(False, "--playlist", help="Download entire playlist"),
+    no_wav: bool = typer.Option(False, "--no-wav", help="Keep original audio format (m4a/webm)"),
+    auto_transcribe: bool = typer.Option(False, "--auto-transcribe", help="Queue transcription after download (via background)"),
+    auto_analyze: bool = typer.Option(False, "--auto-analyze", help="Queue full pipeline analysis after download"),
+    output_dir: str = typer.Option("data/ingested/youtube", "--output-dir", help="Output directory for files and metadata JSON"),
+    log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
+):
+    """Download audio from YouTube for Swedish test data (call center sentiment analysis).
+
+    Uses the integrated YouTubeAudioDownloader (16kHz mono WAV by default).
+    Great for bootstrapping test datasets.
+    """
+    setup_logging(log_level)
+    from .data_ingestion.youtube_downloader import YouTubeAudioDownloader
+
+    console.print(f"[cyan]📥 Downloading from: {url}[/cyan]")
+    if playlist:
+        console.print("[yellow]Playlist mode enabled[/yellow]")
+
+    downloader = YouTubeAudioDownloader(output_base=Path(output_dir))
+
+    try:
+        result = downloader.download(
+            url,
+            playlist=playlist,
+            convert_to_wav=not no_wav,
+        )
+
+        if isinstance(result, list):
+            successful = [r for r in result if r.success]
+            console.print(f"[green]✅ Playlist download complete: {len(successful)}/{len(result)} videos[/green]")
+            for r in successful[:5]:
+                if r.file_path:
+                    console.print(f"  - {r.file_path.name}")
+            if len(successful) > 5:
+                console.print(f"  ... and {len(successful)-5} more")
+            return
+
+        if result.success and result.file_path:
+            console.print(f"[green]✅ Download successful![/green]")
+            console.print(f"   File: {result.file_path}")
+            console.print(f"   Metadata: {result.file_path.with_suffix('.json')}")
+            if result.metadata.get("duration_seconds"):
+                console.print(f"   Duration: {result.metadata['duration_seconds']:.1f} seconds")
+
+            if auto_transcribe or auto_analyze:
+                console.print("[yellow]Auto-transcribe/analyze queued (integrate with pipeline in next phase)[/yellow]")
+                # Future: background task or call to pipeline
+        else:
+            console.print(f"[red]❌ Download failed: {result.error}[/red]")
+            raise typer.Exit(code=1)
+
+    except Exception as e:
+        console.print(f"[red]Error during download: {e}[/red]")
+        raise typer.Exit(code=1) from e
 
 
 if __name__ == "__main__":
