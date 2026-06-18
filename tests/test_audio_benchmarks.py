@@ -38,8 +38,9 @@ def test_smoke_dry_run_selects_three_files():
     assert report.dry_run is True
 
 
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
 @patch("src.transcription.get_transcriber")
-def test_smoke_with_mocked_asr(mock_get_transcriber):
+def test_smoke_with_mocked_asr(mock_get_transcriber, _mock_requires_ml):
     _skip_if_disabled()
     mock_transcriber = MagicMock()
     mock_segment = MagicMock()

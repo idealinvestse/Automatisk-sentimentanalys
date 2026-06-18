@@ -90,3 +90,43 @@ class TestCallcenterHeuristics:
         dist = {"negativ": 0.1, "neutral": 0.2, "positiv": 0.7}
         adjusted = adjust_distribution_for_callcenter("Jag är inte nöjd", dist)
         assert adjusted["negativ"] > adjusted["positiv"]
+
+    def test_adjust_distribution_polite_positive(self):
+        dist = {"negativ": 0.1, "neutral": 0.6, "positiv": 0.3}
+        adjusted = adjust_distribution_for_callcenter("Tack för hjälpen, väldigt vänlig!", dist)
+        assert adjusted["positiv"] >= 0.3
+
+    def test_normalize_label_none(self):
+        assert normalize_label(None) == "neutral"
+
+
+class TestAnalyzeSmartMocked:
+    def test_callcenter_profile_collapses_scores(self, monkeypatch):
+        from src.sentiment import analyze_smart
+
+        def fake_analyze(texts, **kwargs):
+            row = [
+                {"label": "negativ", "score": 0.6},
+                {"label": "neutral", "score": 0.2},
+                {"label": "positiv", "score": 0.2},
+            ]
+            return [row for _ in texts]
+
+        monkeypatch.setattr("src.sentiment.analyze", fake_analyze)
+        results, meta = analyze_smart(
+            ["Jag är inte nöjd med fakturan"],
+            profile="callcenter",
+            return_all_scores=False,
+        )
+        assert meta["profile"] == "callcenter"
+        assert results[0]["label"] in {"negativ", "neutral", "positiv"}
+
+    def test_analyze_one_mocked(self, monkeypatch):
+        from src.sentiment import analyze_one
+
+        monkeypatch.setattr(
+            "src.sentiment.analyze",
+            lambda texts, **kwargs: [{"label": "positiv", "score": 0.9}],
+        )
+        result = analyze_one("Bra!")
+        assert result["label"] == "positiv"

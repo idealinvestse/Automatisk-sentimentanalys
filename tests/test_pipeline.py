@@ -242,9 +242,13 @@ class TestCallAnalysisPipeline:
         m1 = self.pipe.get_cached_agent_performance("unknown", [r1, r2])
         assert "call_count" in m1 or "error" not in m1
 
-        # Second should hit (same data)
+        # Second should hit (same data); cache_hit metadata differs by design
         m2 = self.pipe.get_cached_agent_performance("unknown", [r1, r2])
-        assert m1 == m2
+        assert m1["cache_hit"] is False
+        assert m2["cache_hit"] is True
+        assert {k: v for k, v in m1.items() if k != "cache_hit"} == {
+            k: v for k, v in m2.items() if k != "cache_hit"
+        }
 
         # Invalidate
         self.pipe.invalidate_aggregate_cache("agent:unknown")

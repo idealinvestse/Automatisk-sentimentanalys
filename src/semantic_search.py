@@ -162,7 +162,7 @@ class SemanticSearchEngine:
             doc = {
                 "id": str(item.get(id_field, len(self.docs))),
                 "text": " ".join(str(item.get(f, "")) for f in text_fields if item.get(f)),
-                "metadata": {k: v for k, v in item.items() if k not in text_fields + [id_field]},
+                "metadata": {k: v for k, v in item.items() if k not in list(text_fields) + [id_field]},
             }
             self.docs.append(doc)
             texts_for_embed.append(doc["text"][:2000])
