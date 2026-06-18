@@ -118,7 +118,7 @@ def _keyword_score(text: str, query: str, topics: list[str] | None = None) -> fl
     base = hits / max(1, len(q_terms))
     # boost if topic overlap
     if topics:
-        tset = set(topics)
+        tset = {str(t).lower() for t in topics if t is not None}
         topic_hits = len(q_terms & tset)
         base += 0.3 * (topic_hits / max(1, len(q_terms)))
     return min(1.0, base)
