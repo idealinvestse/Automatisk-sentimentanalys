@@ -94,7 +94,7 @@ För `--preprocess` (Task 1.4) krävs `ffmpeg` installerat på systemet:
 - Valfritt svenskt lexikon för blending
 - ASR (tal-till-text) för telefonsamtal: KBLab `kb-whisper-large` och OpenAI `whisper-large-v3`
   - CLI: `src/cli.py` med kommandon `sentiment`, `transcribe` och `analyze-call`
-  - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process` — se **[docs/API.md](docs/API.md)** (v0.4.0, auth, Fas 4, exempel)
+  - REST API: `/transcribe`, `/analyze_conversation`, `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process` — se **[docs/API.md](docs/API.md)** (v0.4.1, auth, Fas 4, exempel)
 - Utvärderingsramverk: `src/evaluate.py` för att mäta prestanda mot testset
 
 ## Funktioner (v0.3 – Call Center Intelligence)
@@ -145,6 +145,76 @@ För `--preprocess` (Task 1.4) krävs `ffmpeg` installerat på systemet:
 - **För LLM-agenter / coding agents**: `docs/LLM_AGENT_GUIDE.md` + `AGENTS.md` (optimerad för Grok, Claude, GPT m.fl.)
 
 Se även `configs/llm_config.yaml` (exempel) och `reports/llm_quality_smoke.json` (efter evaluate).
+
+## Funktioner (v0.4+ – Fas 4 Call Center Backend)
+
+Fas 4 levererar **action-oriented backend** för supervisors, QA och coachning. Alla moduler är integrerade i `CallAnalysisPipeline` och exponerade via REST API.
+
+| Modul | Beskrivning | CLI / API |
+|-------|-------------|-----------|
+| **Agent Performance** | Empati, talk ratio, compliance flags, coaching hints | `results["agent_performance"]`, `POST /agent_performance/{id}` |
+| **QA & Compliance** | YAML scorecards, hybrid scoring, evidence spans | `results["qa"]`, `POST /qa/score` |
+| **Insights & Hot Topics** | Volym, sentiment, trend per ämne | `pipe.aggregate_insights()`, `POST /insights/hot_topics` |
+| **Semantic Search** | Naturliga frågor över samtalskorpus | `pipe.semantic_search()`, `POST /search/semantic` |
+| **Alerts** | Regelbaserade triggers + recommended actions | `results["alerts"]`, `POST /alerts` |
+| **Caching** | Snabba dashboard-frågor (agent metrics 7d) | `cached: true` i API-svar |
+
+### Exempel: full pipeline via API
+
+```bash
+curl -X POST http://localhost:8000/analyze_pipeline \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "segments": [
+      {"text": "Hej, fakturan är fel.", "speaker": "customer", "start": 0, "end": 3},
+      {"text": "Jag förstår, jag fixar det direkt.", "speaker": "agent", "start": 3, "end": 7}
+    ],
+    "profile": "callcenter",
+    "use_mistral_llm": false
+  }'
+```
+
+Svaret innehåller `results.agent_performance`, `results.qa`, `results.pii_redaction` m.m.
+
+### Exempel: agent performance (aggregerat)
+
+```bash
+curl -X POST http://localhost:8000/agent_performance/Agent-42 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "agent_id": "Agent-42",
+    "segments_list": [[
+      {"text": "Hej, välkommen.", "speaker": "agent", "start": 0, "end": 2},
+      {"text": "Min faktura stämmer inte.", "speaker": "customer", "start": 2, "end": 5}
+    ]],
+    "window": "7d"
+  }'
+```
+
+### Exempel: QA-score och hot topics
+
+```bash
+# QA-scorecard på ett samtal
+curl -X POST http://localhost:8000/qa/score \
+  -H "Content-Type: application/json" \
+  -d '{"segments": [{"text": "Hej och välkommen.", "speaker": "agent"}]}'
+
+# Hot topics över flera samtal
+curl -X POST http://localhost:8000/insights/hot_topics \
+  -H "Content-Type: application/json" \
+  -d '{"segments_list": [[{"text": "faktura fel"}], [{"text": "faktura igen"}]]}'
+```
+
+### Validering (Fas 1)
+
+```bash
+python -m src.evaluate fas4-validation --output reports/evaluate_fas4_validation.md
+pytest tests/ -q --cov=src --cov-fail-under=85
+```
+
+Se **[docs/FAS4_COMPLETION.md](docs/FAS4_COMPLETION.md)** och **[docs/API.md](docs/API.md)** för fullständig referens.
 
 ## Installation (Windows) - Legacy / Avancerad
 

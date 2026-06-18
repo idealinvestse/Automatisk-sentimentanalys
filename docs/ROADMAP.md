@@ -4,9 +4,9 @@ This document provides a high-level overview of the project's maturity and futur
 
 ## Current Status (June 2026)
 
-**Version**: 0.4.0
+**Version**: 0.4.1 (v0.5-prep)
 
-The project has reached a **mature beta / early production** stage. Most planned features from Fas 1–4 are implemented and integrated.
+The project has reached a **mature beta / early production** stage. **Fas 4 (Call Center Backend) is complete** and validated (Fas 1 gate: 509 tests, 86 %+ coverage). Release documentation updated in CHANGELOG, README, API.md, and FAS4_COMPLETION.md.
 
 ### Completed Features
 
@@ -23,10 +23,11 @@ The project has reached a **mature beta / early production** stage. Most planned
 | **Insights & Search**       | ✅ Done    | `insights_aggregator.py`, `semantic_search.py` (FAISS) |
 | **Alerting**                | ✅ Done    | `alerting.py`, per-call and aggregate alerts        |
 | **PII Protection**          | ✅ Done    | Early redaction in pipeline for `callcenter` profile |
-| **REST API (v0.4.0)**       | ✅ Done    | Full FastAPI with auth (`X-API-Key`), batch, scan, pipeline endpoints |
+| **REST API (v0.4.1)**       | ✅ Done    | Full FastAPI + 5 Fas 4 endpoints, auth, rate limit, caching |
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
-| **Dashboard**               | ✅ Done    | Streamlit dashboard                                 |
-| **Evaluation Framework**    | ✅ Done    | `evaluate.py` + LLM quality metrics                 |
+| **Dashboard**               | 🔄 Partial | NiceGUI dashboard (Streamlit avvecklad); Fas 4-vyer planerade |
+| **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
+| **Fas 4 Backend**           | ✅ Done    | Agent perf, QA, insights, search, alerts, caching (validated) |
 
 ### Partially / Recently Added
 
@@ -41,18 +42,16 @@ The project has reached a **mature beta / early production** stage. Most planned
 - **Privacy by design**: Explicit logging of external LLM calls, PII redaction, no hardcoded secrets.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 
-## Next Priorities (Suggested)
+## Next Priorities (post-Fas 4)
 
 | Priority | Area                        | Description                                                                 |
 |----------|-----------------------------|-----------------------------------------------------------------------------|
-| High     | Production Hardening        | Improve error messages, add request tracing, better rate limiting in API   |
-| High     | Documentation               | Expand examples in `docs/API.md`, decision guide for LLM usage             |
-| High     | GPU / Docker                | Official GPU-enabled Dockerfile + better CUDA documentation                |
-| Medium   | Dependency Cleanup          | Make `pyproject.toml` the single source of truth for dependencies          |
+| High     | **Dashboard (Fas 3)**         | NiceGUI-vyer: Agent Performance, QA Scorecard, Hot Topics, Alerts, Search  |
+| High     | **Data & Finetuning (Fas 2)** | Domänanpassning, utökad testkorpus, WER/sentiment-förbättring             |
+| High     | Production                  | GPU Docker, observability, prod rate limiting, secrets management          |
 | Medium   | Pipeline Refactoring        | Reduce complexity in `CallAnalysisPipeline` (more explicit steps)          |
 | Medium   | Observability               | Structured logging, Prometheus metrics, better tracing for long calls      |
 | Low      | Fine-tuning UX              | Make `finetune.py` easier to use for domain adaptation on call center data |
-| Low      | Dashboard v2                | More interactive visualizations and agent comparison views                 |
 
 ## Long-term Vision
 

@@ -1,4 +1,4 @@
-# Swedish Sentiment API (v0.4.0)
+# Swedish Sentiment API (v0.4.1)
 
 REST API for Swedish sentiment analysis, ASR transcription, call-center pipelines, and Fas 4 aggregates.
 
@@ -150,16 +150,211 @@ curl -X POST http://localhost:8000/analyze_pipeline \
 
 ### Agent performance
 
+Aggregates cached agent metrics over one or more calls. Path `agent_id` must match body `agent_id`.
+
+**Auth:** `X-API-Key` when `SENTIMENT_API_KEY` is set. **Rate limit:** `API_RATE_LIMIT_RPM` per client IP.
+
 ```bash
 curl -X POST http://localhost:8000/agent_performance/Agent-42 \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
   -d '{
     "agent_id": "Agent-42",
-    "segments_list": [[{"text": "Hej"}]],
+    "segments_list": [[
+      {"text": "Hej och välkommen.", "speaker": "agent", "start": 0, "end": 2},
+      {"text": "Fakturan är fel.", "speaker": "customer", "start": 2, "end": 5}
+    ]],
     "window": "7d",
+    "reanalyze": false,
     "deep_analysis": false
   }'
 ```
+
+**Response (200):**
+
+```json
+{
+  "agent_id": "Agent-42",
+  "metrics": {
+    "call_count": 1,
+    "averages": {
+      "empathy_score": 0.75,
+      "talk_ratio": 0.45,
+      "lexical_formality": 0.6,
+      "de_escalation_effectiveness": 0.7
+    },
+    "trend_empathy": "stable",
+    "computed_at": "2026-06-19T12:00:00"
+  },
+  "cached": false,
+  "timestamp": "2026-06-19T12:00:01.000000+00:00"
+}
+```
+
+`cached: true` on repeat requests with identical input (aggregate pre-computation).
+
+---
+
+### Semantic search
+
+Hybrid vector + keyword search over provided calls. Max 50 calls, query max 500 chars.
+
+```bash
+curl -X POST http://localhost:8000/search/semantic \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "query": "kunder klagade på faktura och låg empati",
+    "top_k": 5,
+    "segments_list": [[
+      {"text": "Jag är arg på fakturan!", "speaker": "customer"},
+      {"text": "Okej.", "speaker": "agent"}
+    ]],
+    "filters": {"agent": "Agent-42"}
+  }'
+```
+
+**Response (200):**
+
+```json
+{
+  "query": "kunder klagade på faktura och låg empati",
+  "hits": [
+    {
+      "id": "0",
+      "score": 0.42,
+      "highlights": ["Jag är arg på fakturan!"],
+      "metadata": {},
+      "evidence_spans": [{"text": "Jag är arg på fakturan!"}]
+    }
+  ],
+  "meta": {"num_docs": 1, "used_vector": false, "used_keyword": true},
+  "timestamp": "2026-06-19T12:00:01.000000+00:00"
+}
+```
+
+---
+
+### Hot topics
+
+Aggregated hot topics and trends over multiple calls (cached per window).
+
+```bash
+curl -X POST http://localhost:8000/insights/hot_topics \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "segments_list": [
+      [{"text": "Fakturan är fel", "speaker": "customer"}],
+      [{"text": "Faktura stämmer inte igen", "speaker": "customer"}]
+    ],
+    "window": "7d"
+  }'
+```
+
+**Response (200):**
+
+```json
+{
+  "hot_topics": [
+    {
+      "topic": "faktura",
+      "volume": 2,
+      "avg_sentiment": -0.6,
+      "trend": "rising",
+      "evidence_spans": [{"text": "Fakturan är fel"}]
+    }
+  ],
+  "meta": {"window": "7d", "n_calls": 2},
+  "timestamp": "2026-06-19T12:00:01.000000+00:00"
+}
+```
+
+---
+
+### QA score
+
+Run compliance QA scorecard on a single call's segments (max 200 segments).
+
+```bash
+curl -X POST http://localhost:8000/qa/score \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "segments": [
+      {"text": "Hej och välkommen till kundtjänst.", "speaker": "agent"},
+      {"text": "Min faktura är fel.", "speaker": "customer"},
+      {"text": "Jag förstår och beklagar besväret.", "speaker": "agent"}
+    ],
+    "profile": "callcenter",
+    "use_mistral_llm": false
+  }'
+```
+
+**Response (200):**
+
+```json
+{
+  "qa": {
+    "scorecard_name": "standard_support_v1",
+    "overall_qa_score": 82.5,
+    "passed": true,
+    "risk_level": "low",
+    "passed_criteria": ["greeting", "empathy"],
+    "failed_criteria": [],
+    "criteria_results": [],
+    "computed_at": "2026-06-19T12:00:00"
+  },
+  "timestamp": "2026-06-19T12:00:01.000000+00:00"
+}
+```
+
+---
+
+### Alerts
+
+Per-call alerts from pipeline results, or aggregate trend alerts.
+
+```bash
+# Per-call alerts
+curl -X POST http://localhost:8000/alerts \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret" \
+  -d '{
+    "segments_list": [[
+      {"text": "Jag är extremt arg!", "speaker": "customer"},
+      {"text": "Okej.", "speaker": "agent"}
+    ]]
+  }'
+
+# Aggregate trend alerts
+curl -X POST http://localhost:8000/alerts \
+  -H "Content-Type: application/json" \
+  -d '{"aggregate": {"team_avg_empathy": 0.3, "hot_topic": "faktura"}}'
+```
+
+**Response (200):**
+
+```json
+{
+  "alerts": [
+    {
+      "rule_id": "low_empathy",
+      "severity": "high",
+      "message": "Agent empathy below threshold",
+      "evidence_spans": [{"text": "Okej."}],
+      "recommended_actions": ["flag_supervisor", "create_coaching_task"]
+    }
+  ],
+  "timestamp": "2026-06-19T12:00:01.000000+00:00"
+}
+```
+
+---
+
+### Rate limiting
+
+When `API_RATE_LIMIT_RPM` > 0, excess requests return **429** with `error_code: rate_limit_exceeded`. Health checks are not rate-limited.
 
 ### Python client
 

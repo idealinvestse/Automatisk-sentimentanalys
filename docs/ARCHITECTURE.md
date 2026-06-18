@@ -142,9 +142,17 @@ src/api/
     ├── text.py          # POST /analyze
     ├── transcription.py # POST /transcribe, POST /batch_transcribe
     ├── conversation.py  # POST /analyze_conversation, POST /batch_analyze_conversation
-    ├── pipeline.py      # POST /analyze_pipeline
+    ├── pipeline.py      # POST /analyze_pipeline + Fas 4 endpoints
     └── scan.py          # POST /scan_process
 ```
+
+Fas 4 endpoints (same `pipeline.py` router):
+
+- `POST /agent_performance/{agent_id}` – cached agent aggregates
+- `POST /search/semantic` – hybrid search over calls
+- `POST /insights/hot_topics` – aggregated trends
+- `POST /qa/score` – compliance QA scorecard
+- `POST /alerts` – per-call or aggregate alerts
 
 Each router is self-contained, imports shared helpers, and uses `HTTPException` for proper HTTP status codes (400 for validation, 422 for config errors, 500 for processing errors).
 
@@ -199,8 +207,27 @@ audio files → resolve_audio_paths() → CallAnalysisPipeline.analyze_audio()
 | `POST /batch_transcribe` | paths/dirs/globs | per-file transcripts |
 | `POST /analyze_conversation` | audio file path | transcript + per-segment sentiment |
 | `POST /batch_analyze_conversation` | paths/dirs/globs | per-file transcripts + sentiments |
-| `POST /analyze_pipeline` | pre-transcribed segments | full analysis (sentiment, intent, summary, …) |
+| `POST /analyze_pipeline` | pre-transcribed segments | full analysis (sentiment, intent, summary, Fas 4 results, …) |
 | `POST /scan_process` | directory + pattern | incremental batch processing with state tracking |
+| `POST /agent_performance/{id}` | segments_list + agent_id | cached agent metrics (Fas 4.5) |
+| `POST /search/semantic` | query + segments_list | ranked search hits with evidence |
+| `POST /insights/hot_topics` | segments_list | hot topics / trends |
+| `POST /qa/score` | segments | QA scorecard result |
+| `POST /alerts` | segments_list or aggregate | triggered alerts + actions |
+
+### Fas 4 modules (Call Center Backend)
+
+```
+src/
+├── agent_performance.py   # Per-call agent/customer metrics, aggregation
+├── compliance_qa.py       # YAML scorecards, hybrid QA scoring
+├── insights_aggregator.py # Hot topics, root cause clusters
+├── semantic_search.py     # Hybrid vector + keyword search
+├── alerting.py            # Rule engine, evidence, recommended actions
+└── caching.py             # AggregateCache (file/Redis), pre-computation
+```
+
+`CallAnalysisPipeline` merges Fas 4 output into `report.results` and exposes `get_cached_*`, `semantic_search()`, `aggregate_insights()` for API and dashboard consumers.
 
 ## Error Handling Strategy
 

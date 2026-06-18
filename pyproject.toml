@@ -1,6 +1,6 @@
 [project]
 name = "automatisk-sentimentanalys"
-version = "0.4.0"
+version = "0.4.1"
 description = "Svenskt sentimentanalys- och Call Center Intelligence-system med ASR, diarization och LLM-stöd (Mistral/OpenRouter)"
 readme = "README.md"
 requires-python = ">=3.11"
