@@ -96,3 +96,50 @@ def test_ws_listener_url_builds() -> None:
 def test_get_hub_on_app() -> None:
     hub = get_hub(app)
     assert isinstance(hub, TranscriptionEventHub)
+
+
+def test_ws_subscription_filters_events() -> None:
+    hub = TranscriptionEventHub()
+    received_a: list[dict] = []
+    received_b: list[dict] = []
+
+    class FakeWS:
+        def __init__(self, bucket: list[dict]) -> None:
+            self.bucket = bucket
+
+        async def accept(self) -> None:
+            return None
+
+        async def send_json(self, data: dict) -> None:
+            self.bucket.append(data)
+
+    async def _run() -> None:
+        import asyncio
+
+        hub.bind_loop(asyncio.get_running_loop())
+        ws_a = FakeWS(received_a)
+        ws_b = FakeWS(received_b)
+        await hub.connect(ws_a)
+        await hub.connect(ws_b)
+        await hub.set_subscription(ws_a, "job-a")
+        await hub.set_subscription(ws_b, "job-b")
+        hub.log(job_id="job-a", level="INFO", msg="for A")
+        hub.log(job_id="job-b", level="INFO", msg="for B")
+        await asyncio.sleep(0.05)
+
+    import asyncio
+
+    asyncio.run(_run())
+    assert any(e.get("msg") == "for A" for e in received_a)
+    assert not any(e.get("msg") == "for B" for e in received_a)
+    assert any(e.get("msg") == "for B" for e in received_b)
+    assert not any(e.get("msg") == "for A" for e in received_b)
+
+
+def test_asr_payload_includes_beam_size() -> None:
+    from app.nicegui_dashboard.services.nicegui_api_client import _asr_payload
+
+    payload = _asr_payload({"beam_size": 7, "preprocess": True, "hotwords": "a, b"})
+    assert payload["beam_size"] == 7
+    assert payload["preprocess"] is True
+    assert payload["hotwords"] == ["a", "b"]

@@ -40,6 +40,7 @@ from .middleware_rate_limit import RateLimitMiddleware
 from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription
 from .settings import get_api_settings
 from .transcription_events import TranscriptionEventHub
+from .transcription_jobs import TranscriptionJobRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,8 @@ def _init_app_state(application: FastAPI) -> None:
     application.state.alert_engine = AlertEngine()
     if not hasattr(application.state, "transcription_events"):
         application.state.transcription_events = TranscriptionEventHub()
+    if not hasattr(application.state, "transcription_jobs"):
+        application.state.transcription_jobs = TranscriptionJobRegistry()
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -83,6 +86,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     hub = TranscriptionEventHub()
     hub.bind_loop(asyncio.get_running_loop())
     app.state.transcription_events = hub
+    app.state.transcription_jobs = TranscriptionJobRegistry()
     logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
     yield
     logger.info("Swedish Sentiment API shutting down")

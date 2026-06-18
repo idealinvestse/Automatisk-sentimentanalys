@@ -49,10 +49,12 @@ async def transcription_ws(
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
             elif msg_type == "subscribe":
+                sub_job = data.get("job_id")
+                await hub.set_subscription(websocket, sub_job)
                 await websocket.send_json(
                     {
                         "type": "subscribed",
-                        "job_id": data.get("job_id"),
+                        "job_id": sub_job,
                     }
                 )
     except WebSocketDisconnect:

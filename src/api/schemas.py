@@ -96,6 +96,26 @@ class TranscribeResponse(BaseModel):
     timestamp: str
 
 
+class TranscribeJobStatus(BaseModel):
+    job_id: str
+    kind: str
+    status: str
+    created_at: str
+    cancelled: bool = False
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class TranscribeJobListResponse(BaseModel):
+    jobs: list[dict[str, Any]]
+    timestamp: str
+
+
+class TranscribeJobCancelResponse(BaseModel):
+    job_id: str
+    cancelled: bool
+    timestamp: str
+
+
 # ---------------------------------------------------------------------------
 # /analyze_conversation
 # ---------------------------------------------------------------------------

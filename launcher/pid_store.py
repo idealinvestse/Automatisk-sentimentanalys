@@ -33,6 +33,13 @@ def service_log_paths(cfg: UserConfig, name: str) -> tuple[Path, Path]:
     return log_dir / f"{name}.log", log_dir / f"{name}.err.log"
 
 
+def launcher_activity_log_path(cfg: UserConfig) -> Path:
+    """Persistent launcher GUI activity log."""
+    log_dir = cfg.resolved_logs_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir / "launcher_activity.log"
+
+
 def save_pid(cfg: UserConfig, name: str, pid: int, command: list[str]) -> Path:
     path = pid_file_path(cfg, name)
     path.write_text(

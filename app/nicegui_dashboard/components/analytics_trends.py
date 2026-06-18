@@ -61,12 +61,12 @@ def render_analytics_tab(
 
         ui.label("📈 Analys & Trender").classes("text-h6 q-mb-sm")
         ui.label(
-            "Klicka på en punkt/stapel för att öppna relaterat samtal i Call Detail."
+            "Klicka på en punkt/stapel för att öppna relaterat samtal i Samtalsdetalj."
         ).classes("text-caption q-mb-md")
 
         with ui.row().classes("w-full gap-4 flex-wrap"):
             with ui.card().classes("flex-1 min-w-[320px]"):
-                ui.label("Customer sentiment trajectory").classes("text-subtitle2")
+                ui.label("Kundsentiment över tid").classes("text-subtitle2")
                 if options:
                     ui.select(
                         options={o["value"]: o["label"] for o in options},
@@ -81,17 +81,17 @@ def render_analytics_tab(
                 traj_plot.on("plotly_click", _handle_plotly_click)
 
             with ui.card().classes("flex-1 min-w-[320px]"):
-                ui.label("Agent performance trends").classes("text-subtitle2")
+                ui.label("Agentprestanda över tid").classes("text-subtitle2")
                 agent_plot = ui.plotly(build_agent_trends_figure(trend_rows)).classes("w-full")
                 agent_plot.on("plotly_click", _handle_plotly_click)
 
         with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
             with ui.card().classes("flex-1 min-w-[280px]"):
-                ui.label("Hot topics").classes("text-subtitle2")
+                ui.label("Heta ämnen").classes("text-subtitle2")
                 topics_plot = ui.plotly(build_hot_topics_figure(reports)).classes("w-full")
 
             with ui.card().classes("flex-1 min-w-[280px]"):
-                ui.label("Escalation trends").classes("text-subtitle2")
+                ui.label("Eskaleringstrender").classes("text-subtitle2")
                 esc_plot = ui.plotly(build_escalation_figure(trend_rows)).classes("w-full")
                 esc_plot.on("plotly_click", _handle_plotly_click)
 

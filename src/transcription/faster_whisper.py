@@ -10,7 +10,7 @@ from ..core.config import KB_REVISIONS
 from ..core.device import normalize_device_for_asr
 from ..core.errors import TranscriptionError
 from ..core.models import Segment, Transcript, Word
-from .base import add_diarization, resolve_model_name
+from .base import add_diarization, format_hotwords_for_asr, resolve_model_name, resolve_model_name_for_backend
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ class FasterWhisperTranscriber:
                 "faster-whisper is not installed. Install it with pip or choose another backend."
             )
         self.model_name = resolve_model_name(model_name)
+        self._load_model_name = resolve_model_name_for_backend(model_name, "faster")
         self.device = device
         self._model: WhisperModel | None = None
 
@@ -53,27 +54,29 @@ class FasterWhisperTranscriber:
         )
 
         logger.debug(
-            "Loading faster-whisper model '%s' | compute_type=%s | revision=%s",
+            "Loading faster-whisper model '%s' (load=%s) | compute_type=%s | revision=%s",
             self.model_name,
+            self._load_model_name,
             compute_type,
             revision or "default",
         )
 
         model_kwargs: dict[str, Any] = {
             "device": dev_kind,
-            "device_index": cuda_idx,
             "compute_type": compute_type,
         }
+        if cuda_idx is not None:
+            model_kwargs["device_index"] = cuda_idx
         if revision:
             model_kwargs["revision"] = revision
 
         try:
-            self._model = WhisperModel(self.model_name, **model_kwargs)
-            logger.debug("Model loaded successfully: %s", self.model_name)
+            self._model = WhisperModel(self._load_model_name, **model_kwargs)
+            logger.debug("Model loaded successfully: %s", self._load_model_name)
             return self._model
         except Exception as e:
             raise TranscriptionError(
-                f"Failed to load faster-whisper model '{self.model_name}': {e}"
+                f"Failed to load faster-whisper model '{self._load_model_name}': {e}"
             ) from e
 
     def transcribe(
@@ -156,6 +159,7 @@ class FasterWhisperTranscriber:
             # ------------------------------------------------------------------
             LOW_CONF_THRESHOLD = 0.60
             USE_CHUNKING = chunk_length_s and chunk_length_s > 0
+            hotwords_str = format_hotwords_for_asr(hotwords)
 
             # Fast path: no chunking requested or very short audio
             if not USE_CHUNKING:
@@ -166,7 +170,7 @@ class FasterWhisperTranscriber:
                     vad_filter=vad,
                     word_timestamps=word_timestamps,
                     initial_prompt=initial_prompt,
-                    hotwords=hotwords,
+                    hotwords=hotwords_str,
                 )
                 dur = getattr(info, "duration", None)
 
@@ -232,7 +236,7 @@ class FasterWhisperTranscriber:
                         vad_filter=vad,
                         word_timestamps=word_timestamps,
                         initial_prompt=initial_prompt,
-                        hotwords=hotwords,
+                        hotwords=hotwords_str,
                     )
                     dur = getattr(info, "duration", None)
                     # (the non-chunked building code is duplicated below for the fallback)
@@ -290,7 +294,7 @@ class FasterWhisperTranscriber:
                             vad_filter=vad,
                             word_timestamps=word_timestamps,
                             initial_prompt=initial_prompt,
-                            hotwords=hotwords,
+                            hotwords=hotwords_str,
                         )
                     except Exception as ce:
                         logger.warning("Chunk %d transcription failed: %s. Skipping chunk.", chunk_index, ce)

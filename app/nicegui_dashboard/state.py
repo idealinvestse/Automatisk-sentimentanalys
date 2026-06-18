@@ -26,3 +26,4 @@ class DashboardState:
     api_client: NiceGUIAPIClient | None = None
     api_connected: bool = False
     data_source: str = "fallback"  # fallback | api | local_pipeline
+    detail_source_tab: str = "overview"  # overview | analytics — for Tillbaka navigation

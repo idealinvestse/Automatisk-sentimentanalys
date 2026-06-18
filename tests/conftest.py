@@ -6,6 +6,8 @@ import pytest
 
 from src.transcription.factory import clear_transcriber_cache
 
+pytest_plugins = ["nicegui.testing.plugin"]
+
 
 @pytest.fixture(autouse=True)
 def _clear_asr_cache() -> None:

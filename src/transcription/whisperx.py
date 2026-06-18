@@ -40,7 +40,7 @@ from typing import Any
 from ..core.device import normalize_device_for_asr
 from ..core.errors import TranscriptionError
 from ..core.models import Segment, Transcript, Word
-from .base import add_diarization, resolve_model_name
+from .base import add_diarization, format_hotwords_for_asr, resolve_model_name_for_backend
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +74,8 @@ class WhisperXTranscriber:
         self._diarize_model: Any = None
 
     def _resolve_for_whisperx(self, name: str) -> str:
-        """Map common aliases to a WhisperX-friendly checkpoint name.
-
-        WhisperX alignment works best against the canonical OpenAI Whisper
-        models. We therefore map the project default KB-Whisper alias to
-        "large-v3". Users who want KB-Whisper transcription quality should
-        prefer the "faster" backend.
-        """
-        resolved = resolve_model_name(name)
+        """Map common aliases to a WhisperX-friendly checkpoint name."""
+        resolved = resolve_model_name_for_backend(name, "whisperx")
         lower = resolved.lower()
         if "kb-whisper" in lower or "kblab" in lower:
             logger.info(
@@ -91,13 +85,6 @@ class WhisperXTranscriber:
                 resolved,
             )
             return "large-v3"
-        if resolved.startswith("openai/"):
-            # whisperx expects bare "large-v3" (not "whisper-large-v3" or full org path)
-            candidate = resolved.split("/", 1)[1]
-            if candidate.startswith("whisper-"):
-                candidate = candidate[len("whisper-") :]
-            return candidate
-        # Accept bare "large-v3", "medium" etc. or any HF repo whisperx can load
         return resolved
 
     def _get_device_str(self) -> str:
@@ -284,8 +271,9 @@ class WhisperXTranscriber:
             # terms for call center (e.g. "fakturering", company names).
             if initial_prompt:
                 transcribe_kwargs["initial_prompt"] = initial_prompt
-            if hotwords:
-                transcribe_kwargs["hotwords"] = hotwords
+            hotwords_str = format_hotwords_for_asr(hotwords)
+            if hotwords_str:
+                transcribe_kwargs["hotwords"] = hotwords_str
 
             # Some versions expose vad_filter; we pass it defensively
             if not vad:

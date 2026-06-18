@@ -55,6 +55,38 @@ def resolve_audio_paths(inputs: list[str]) -> list[str]:
     return _core_resolve_audio(audio_paths=inputs)
 
 
+def _parse_asr_hotwords(
+    hotwords: str | None,
+    language: str,
+    *,
+    auto_load: bool = True,
+) -> list[str] | None:
+    """Parse CLI hotwords and optionally auto-load Swedish callcenter terms."""
+    parsed: list[str] | None = None
+    if hotwords:
+        parsed = [w.strip() for w in hotwords.replace(",", " ").split() if w.strip()]
+
+    if parsed or not auto_load:
+        return parsed
+
+    if not language.lower().startswith("sv"):
+        return None
+
+    default_hw_path = os.path.join("configs", "callcenter_hotwords.txt")
+    if not os.path.exists(default_hw_path):
+        return None
+
+    try:
+        with open(default_hw_path, encoding="utf-8") as f:
+            lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
+        if lines:
+            console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
+            return lines
+    except Exception:
+        pass
+    return None
+
+
 @app.command("sentiment")
 def sentiment_cmd(
     text: str | None = typer.Option(None, help="Analysera en enskild text"),
@@ -279,7 +311,12 @@ def transcribe_cmd(
     hotwords: str | None = typer.Option(
         None,
         "--hotwords",
-        help="Comma or space separated list of domain words to boost (e.g. 'fakturering,återbetalning,acme'). Loaded automatically for callcenter profile if configs/callcenter_hotwords.txt exists.",
+        help="Comma or space separated list of domain words to boost (e.g. 'fakturering,återbetalning,acme'). Auto-loaded from configs/callcenter_hotwords.txt for Swedish (sv) only.",
+    ),
+    no_hotwords: bool = typer.Option(
+        False,
+        "--no-hotwords",
+        help="Disable automatic Swedish callcenter hotword loading.",
     ),
     initial_prompt: str | None = typer.Option(
         None, "--initial-prompt", help="Text prompt to condition the ASR decoder (e.g. expected names or style at start of call)."
@@ -338,22 +375,11 @@ def transcribe_cmd(
             progress.update(task, description=f"[{idx}/{len(files)}] {os.path.basename(path)}")
             t0 = time.time()
             try:
-                # Parse hotwords if provided as comma/space separated string
-                parsed_hotwords: list[str] | None = None
-                if hotwords:
-                    parsed_hotwords = [w.strip() for w in hotwords.replace(",", " ").split() if w.strip()]
-                # Auto-load from configs/callcenter_hotwords.txt if no explicit list given (Task 1.3)
-                if not parsed_hotwords:
-                    default_hw_path = os.path.join("configs", "callcenter_hotwords.txt")
-                    if os.path.exists(default_hw_path):
-                        try:
-                            with open(default_hw_path, encoding="utf-8") as f:
-                                lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
-                            if lines:
-                                parsed_hotwords = lines
-                                console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
-                        except Exception:
-                            pass
+                parsed_hotwords = _parse_asr_hotwords(
+                    hotwords,
+                    language,
+                    auto_load=not no_hotwords,
+                )
 
                 tr_obj = transcriber.transcribe(
                     audio_path=path,
@@ -446,7 +472,12 @@ def analyze_call_cmd(
     hotwords: str | None = typer.Option(
         None,
         "--hotwords",
-        help="Comma/space separated domain words to boost in ASR (e.g. fakturering,återbetalning). Auto-loaded for callcenter if config exists.",
+        help="Comma/space separated domain words to boost in ASR (e.g. fakturering,återbetalning). Auto-loaded for Swedish (sv) only.",
+    ),
+    no_hotwords: bool = typer.Option(
+        False,
+        "--no-hotwords",
+        help="Disable automatic Swedish callcenter hotword loading.",
     ),
     initial_prompt: str | None = typer.Option(
         None, "--initial-prompt", help="Conditioning prompt for ASR decoder."
@@ -543,23 +574,11 @@ def analyze_call_cmd(
         for idx_file, path in enumerate(files, start=1):
             progress.update(task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}")
             try:
-                # Execute pipeline!
-                # Parse hotwords for analyze-call
-                parsed_hotwords: list[str] | None = None
-                if hotwords:
-                    parsed_hotwords = [w.strip() for w in hotwords.replace(",", " ").split() if w.strip()]
-                # Auto-load from configs/callcenter_hotwords.txt if no explicit list given (Task 1.3)
-                if not parsed_hotwords:
-                    default_hw_path = os.path.join("configs", "callcenter_hotwords.txt")
-                    if os.path.exists(default_hw_path):
-                        try:
-                            with open(default_hw_path, encoding="utf-8") as f:
-                                lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
-                            if lines:
-                                parsed_hotwords = lines
-                                console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
-                        except Exception:
-                            pass
+                parsed_hotwords = _parse_asr_hotwords(
+                    hotwords,
+                    language,
+                    auto_load=not no_hotwords,
+                )
 
                 report = pipeline.analyze_audio(
                     audio_path=path,

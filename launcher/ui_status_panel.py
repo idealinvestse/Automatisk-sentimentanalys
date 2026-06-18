@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tkinter as tk
 import webbrowser
+from pathlib import Path
 from tkinter import scrolledtext, ttk
 from typing import TYPE_CHECKING
 
@@ -148,15 +149,22 @@ class ActivityLogPanel(ttk.LabelFrame):
         self._log = event_log
         toolbar = ttk.Frame(self)
         toolbar.pack(fill=tk.X, pady=(0, 4))
-        ttk.Button(toolbar, text="Rensa logg", command=self._clear).pack(side=tk.RIGHT)
+        clear_btn = ttk.Button(toolbar, text="Rensa visning", command=self._clear)
+        clear_btn.pack(side=tk.RIGHT)
+        clear_btn.bind(
+            "<Enter>",
+            lambda _e: clear_btn.configure(
+                cursor="question_arrow",
+            ),
+        )
         self.text = scrolledtext.ScrolledText(
             self,
-            height=10,
+            height=8,
             font=("Consolas", 9),
             state=tk.DISABLED,
             wrap=tk.WORD,
         )
-        self.text.pack(fill=tk.BOTH, expand=True)
+        self.text.pack(fill=tk.X)
         self._on_clear = on_clear
 
     def _clear(self) -> None:
@@ -188,9 +196,16 @@ class ActivityLogPanel(ttk.LabelFrame):
 class StatusPanel(ttk.Frame):
     """Top section: service cards, system info, activity log, footer."""
 
-    def __init__(self, master: tk.Misc, event_log: EventLog) -> None:
+    def __init__(
+        self,
+        master: tk.Misc,
+        event_log: EventLog,
+        *,
+        activity_log_path: Path | None = None,
+    ) -> None:
         configure_status_styles(master)
         super().__init__(master)
+        self._activity_log_path = activity_log_path
 
         header = ttk.Frame(self)
         header.pack(fill=tk.X, padx=12, pady=(10, 4))
@@ -209,7 +224,7 @@ class StatusPanel(ttk.Frame):
         self.system_panel.pack(fill=tk.X, padx=12, pady=4)
 
         self.activity = ActivityLogPanel(self, event_log)
-        self.activity.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+        self.activity.pack(fill=tk.X, padx=12, pady=4)
 
         self.footer_var = tk.StringVar(value="")
         ttk.Label(self, textvariable=self.footer_var, style="Meta.TLabel").pack(
@@ -220,4 +235,9 @@ class StatusPanel(ttk.Frame):
         self.api_card.update_from(snap.api)
         self.dash_card.update_from(snap.dashboard)
         self.system_panel.update_from(snap.system)
-        self.footer_var.set(f"Senast uppdaterad: {snap.collected_at}  ·  auto-uppdatering var 2 s")
+        log_hint = ""
+        if self._activity_log_path is not None:
+            log_hint = f"  ·  logg: {self._activity_log_path.name}"
+        self.footer_var.set(
+            f"Senast uppdaterad: {snap.collected_at}  ·  auto-uppdatering var 2 s{log_hint}"
+        )

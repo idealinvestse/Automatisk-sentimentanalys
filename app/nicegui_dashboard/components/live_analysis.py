@@ -1,4 +1,4 @@
-"""Live analysis tab – pipeline via httpx backend.
+"""Live pipeline analysis section (used by Testlabb).
 
 Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
 """
@@ -15,9 +15,9 @@ from app.nicegui_dashboard.services.ui_helpers import notify_api_error, notify_s
 from app.nicegui_dashboard.state import DashboardState
 
 
-def render_live_analysis_tab(state: DashboardState) -> None:
-    """Render live pipeline analysis with real /analyze_pipeline calls."""
-    ui.label("🧪 Live-analys").classes("text-h6")
+def render_text_pipeline_section(state: DashboardState) -> None:
+    """Render JSON segments → /analyze_pipeline test UI."""
+    ui.label("Pipeline på JSON-segment").classes("text-subtitle1 q-mb-sm")
     client = state.api_client
 
     if client:
@@ -58,7 +58,7 @@ def render_live_analysis_tab(state: DashboardState) -> None:
 
         result_container.clear()
         with result_container:
-            spinner = ui.spinner(size="lg")
+            ui.spinner(size="lg")
             ui.label("Kör pipeline via backend...").classes("text-caption")
 
         try:
@@ -74,7 +74,7 @@ def render_live_analysis_tab(state: DashboardState) -> None:
 
             result_container.clear()
             with result_container:
-                ui.label("✅ Analys klar").classes("text-subtitle1 text-positive")
+                ui.label("Analys klar").classes("text-subtitle1 text-positive")
                 sent = report.get("sentiment_results") or []
                 if sent:
                     labels = [str(s.get("label", "?")) for s in sent[:5]]
@@ -98,7 +98,7 @@ def render_live_analysis_tab(state: DashboardState) -> None:
         except APIError as err:
             result_container.clear()
             with result_container:
-                ui.label("❌ API-fel").classes("text-negative")
+                ui.label("API-fel").classes("text-negative")
                 ui.label(str(err)).classes("text-caption")
                 if err.detail:
                     ui.code(str(err.detail)[:2000])
@@ -106,7 +106,13 @@ def render_live_analysis_tab(state: DashboardState) -> None:
         except Exception as err:
             result_container.clear()
             with result_container:
-                ui.label(f"❌ Fel: {err}").classes("text-negative")
+                ui.label(f"Fel: {err}").classes("text-negative")
             notify_api_error(err)
 
     ui.button("Analysera (pipeline)", color="primary", on_click=run_analysis).classes("q-mt-sm")
+
+
+def render_live_analysis_tab(state: DashboardState) -> None:
+    """Backward-compatible entry: full Live-analys tab (delegates to pipeline section)."""
+    ui.label("Live-analys").classes("text-h6")
+    render_text_pipeline_section(state)

@@ -25,6 +25,7 @@ def run_batch(
     worker_timeout: float | None = 300.0,
     *,
     on_file_complete: Callable[[str, T | None, Exception | None, int, int], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
 ) -> list[tuple[str, T | None, Exception | None]]:
     """Process *files* with *worker_fn*, optionally in parallel.
 
@@ -46,6 +47,8 @@ def run_batch(
 
     if workers <= 1:
         for i, p in enumerate(files):
+            if should_cancel and should_cancel():
+                break
             try:
                 result = worker_fn(p)
                 results.append((p, result, None))
@@ -59,9 +62,18 @@ def run_batch(
         return results
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures: dict[Any, str] = {executor.submit(worker_fn, p): p for p in files}
+        futures: dict[Any, str] = {}
+        for p in files:
+            if should_cancel and should_cancel():
+                break
+            futures[executor.submit(worker_fn, p)] = p
         completed = 0
         for fut in as_completed(futures):
+            if should_cancel and should_cancel():
+                for pending in futures:
+                    if not pending.done():
+                        pending.cancel()
+                break
             p = futures[fut]
             try:
                 if worker_timeout is not None:

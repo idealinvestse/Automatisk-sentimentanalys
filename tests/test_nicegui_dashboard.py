@@ -50,6 +50,7 @@ from app.nicegui_dashboard.services.transcription_ws_client import (
     WS_RECONNECTING,
     TranscriptionWSListener,
 )
+from app.nicegui_dashboard.settings import is_dev_mode, ws_status_label
 from app.nicegui_dashboard.state import DashboardState
 from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import (
@@ -151,6 +152,74 @@ class TestNiceGUIAPIClient:
             ok = await client.wait_for_health(attempts=3, interval=0.01)
         assert ok is True
         assert mock_health.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_analyze_text_success(self):
+        client = NiceGUIAPIClient("http://test")
+        payload = {"results": [[{"label": "positiv", "score": 0.9}]], "meta": {}}
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
+
+        with patch("httpx.AsyncClient", return_value=mock_http):
+            result = await client.analyze_text(["Bra service!"], profile="default")
+        assert result == payload
+        call_json = mock_http.post.call_args.kwargs["json"]
+        assert call_json["texts"] == ["Bra service!"]
+        assert call_json["profile"] == "default"
+
+    @pytest.mark.asyncio
+    async def test_analyze_conversation_success(self):
+        client = NiceGUIAPIClient("http://test")
+        payload = {"transcript": {"segments": []}, "segment_sentiments": []}
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+
+        mock_http = AsyncMock()
+        mock_http.post = AsyncMock(return_value=mock_response)
+        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+        mock_http.__aexit__ = AsyncMock(return_value=None)
+
+        with patch("httpx.AsyncClient", return_value=mock_http):
+            result = await client.analyze_conversation(
+                "samples/audio/test.wav",
+                use_full_pipeline=True,
+                language="en",
+            )
+        assert result == payload
+        call_json = mock_http.post.call_args.kwargs["json"]
+        assert call_json["audio_path"] == "samples/audio/test.wav"
+        assert call_json["use_full_pipeline"] is True
+
+
+class TestDashboardSettings:
+    def test_is_dev_mode_false_by_default(self, monkeypatch):
+        monkeypatch.delenv("SENTIMENT_DEV_MODE", raising=False)
+        assert is_dev_mode() is False
+
+    def test_is_dev_mode_true(self, monkeypatch):
+        monkeypatch.setenv("SENTIMENT_DEV_MODE", "1")
+        assert is_dev_mode() is True
+
+    def test_ws_status_label_swedish(self):
+        assert ws_status_label("connected") == "Ansluten"
+        assert ws_status_label("reconnecting") == "Återansluter"
+        assert ws_status_label("disconnected") == "Frånkopplad"
+        assert ws_status_label("unknown") == "Frånkopplad"
+
+
+class TestDetailNavigation:
+    def test_detail_source_tab_default(self):
+        state = DashboardState(reports=[])
+        assert state.detail_source_tab == "overview"
 
 
 class TestCallsTableFilter:
@@ -488,3 +557,37 @@ class TestTranscriptionState:
         assert state.ws_connected is False
         state._set_ws_status("connected")
         assert state.ws_connected is True
+
+    def test_save_load_v2_settings(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+            tmp_path,
+        )
+        monkeypatch.setattr(
+            "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+            tmp_path / "transcription_queue.json",
+        )
+        state = TranscriptionState()
+        state.settings["beam_size"] = 7
+        state.api_strategy = "scan_process"
+        state.pending_folder = "custom/pending"
+        state.active_preset = "scan_inkrementell"
+        state.scan_config["batch_size"] = 8
+        state.save()
+
+        state2 = TranscriptionState()
+        state2.load()
+        assert state2.settings["beam_size"] == 7
+        assert state2.api_strategy == "scan_process"
+        assert state2.pending_folder == "custom/pending"
+        assert state2.active_preset == "scan_inkrementell"
+        assert state2.scan_config["batch_size"] == 8
+
+    def test_filtered_logs(self):
+        state = TranscriptionState()
+        state.add_log("INFO", "alpha", notify=False)
+        state.add_log("ERROR", "beta fail", notify=False)
+        state.add_log("INFO", "gamma", source="ws", notify=False)
+        assert len(state.filtered_logs(level="ERROR")) == 1
+        assert len(state.filtered_logs(source="ws")) == 1
+        assert len(state.filtered_logs(search="alpha")) == 1

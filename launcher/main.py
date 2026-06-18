@@ -15,7 +15,9 @@ from src.install.user_config import load_user_config
 
 from .env_builder import build_child_env, resolve_python, working_directory
 from .event_log import EventLog
+from .pid_store import launcher_activity_log_path
 from .process_manager import start_api, start_dashboard, stop_service
+from .scroll_frame import ScrollableFrame
 from .status_snapshot import collect_snapshot
 from .ui_status_panel import StatusPanel
 
@@ -32,25 +34,33 @@ class LauncherApp(tk.Tk):
         super().__init__()
         self.title("Sentimentanalys — Kontrollpanel")
         self.geometry("540x720")
-        self.minsize(520, 640)
+        self.minsize(480, 400)
         self.cfg = load_user_config(_app_root())
-        self.event_log = EventLog()
+        log_path = launcher_activity_log_path(self.cfg)
+        self.event_log = EventLog(log_path=log_path)
         self._busy = False
         self._action_buttons: list[ttk.Button] = []
 
-        self.status_panel = StatusPanel(self, self.event_log)
-        self.status_panel.pack(fill=tk.BOTH, expand=True)
+        self._scroll = ScrollableFrame(self)
+        self._scroll.pack(fill=tk.BOTH, expand=True)
 
-        self._build_buttons()
+        self.status_panel = StatusPanel(
+            self._scroll.inner,
+            self.event_log,
+            activity_log_path=log_path,
+        )
+        self.status_panel.pack(fill=tk.X)
+
+        self._build_buttons(self._scroll.inner)
         self.event_log.phase("launcher", "Launcher started")
         self.status_panel.activity.load_all()
         self._refresh_status()
         self._schedule_poll_log()
         self._schedule_auto_refresh()
 
-    def _build_buttons(self) -> None:
+    def _build_buttons(self, parent: tk.Misc) -> None:
         pad = {"padx": 12, "pady": 4}
-        frame = ttk.Frame(self)
+        frame = ttk.Frame(parent)
         frame.pack(fill=tk.X, **pad)
 
         specs: list[tuple[str, object]] = [
@@ -124,20 +134,33 @@ class LauncherApp(tk.Tk):
         self._refresh_status()
 
     def _run_doctor(self) -> None:
-        report = run_preflight(self.cfg)
-        for c in report.checks:
-            msg = f"{c.name}: {c.message}"
-            if c.detail:
-                msg += f" ({c.detail})"
-            if c.ok:
-                self.event_log.info(msg, phase="doctor")
-            else:
-                self.event_log.error(msg, phase="doctor")
-        if not report.ok:
-            messagebox.showwarning(
-                "Doctor",
-                "Vissa kontroller misslyckades. Se aktivitetsloggen.",
-            )
+        if self._busy:
+            return
+        self._set_busy(True)
+        self.event_log.phase("doctor", "Running health checks")
+
+        def work() -> None:
+            report = run_preflight(self.cfg)
+            for c in report.checks:
+                msg = f"{c.name}: {c.message}"
+                if c.detail:
+                    msg += f" ({c.detail})"
+                if c.ok:
+                    self.event_log.info(msg, phase="doctor")
+                else:
+                    self.event_log.error(msg, phase="doctor")
+
+            def done() -> None:
+                self._set_busy(False)
+                if not report.ok:
+                    messagebox.showwarning(
+                        "Doctor",
+                        "Vissa kontroller misslyckades. Se aktivitetsloggen.",
+                    )
+
+            self.after(0, done)
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _open_setup_hub(self) -> None:
         self.cfg = load_user_config(_app_root())

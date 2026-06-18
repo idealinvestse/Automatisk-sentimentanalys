@@ -87,6 +87,12 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     return "\n\n".join(parts)
 
 
+_BACK_LABELS = {
+    "overview": "Tillbaka till Översikt",
+    "analytics": "Tillbaka till Analys & Trender",
+}
+
+
 def render_call_detail_tab(
     state: DashboardState,
     *,
@@ -101,7 +107,7 @@ def render_call_detail_tab(
     def _render_content() -> None:
         report = find_report(state.reports, state.selected_call_id)
         if not report:
-            ui.label("🔍 Call Detail View").classes("text-h6")
+            ui.label("🔍 Samtalsdetalj").classes("text-h6")
             ui.label("Välj ett samtal i Översikt-tabellen.").classes("text-body2")
             return
 
@@ -111,12 +117,12 @@ def render_call_detail_tab(
         qa = (report.get("results") or {}).get("qa") or {}
         qa_score = qa.get("overall_qa_score", "—")
 
-        ui.label(f"🔍 Call Detail – {call_id}").classes("text-h6")
+        ui.label(f"🔍 Samtalsdetalj – {call_id}").classes("text-h6")
         with ui.card().classes("w-full"):
             ui.label(report.get("title", call_id)).classes("text-subtitle1")
             with ui.row().classes("gap-2 flex-wrap"):
                 ui.chip(f"Agent: {meta.get('agent', 'Okänd')}", color="primary")
-                ui.chip(f"Duration: {_format_duration(meta.get('duration_s'))}")
+                ui.chip(f"Längd: {_format_duration(meta.get('duration_s'))}")
                 ui.chip(f"Sentiment: {sentiment.get('label', 'neutral')}", color="secondary")
                 ui.chip(f"QA: {qa_score}/100", color=qa_chip_color(qa_score))
 
@@ -180,15 +186,17 @@ def render_call_detail_tab(
         _update_search_hint()
         refresh_transcript()
 
-        ui.label("Structured Insights (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
-        with ui.expansion("Actionable Summary & Agent Assessment", icon="insights").classes("w-full"):
+        ui.label("Strukturerade insikter (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
+        with ui.expansion("Sammanfattning & agentbedömning", icon="insights").classes("w-full"):
             ui.markdown(_build_insights_markdown(report))
 
-        with ui.row().classes("gap-2 q-mt-md"):
-            ui.button("Lägg i coaching-kö", on_click=lambda: ui.notify("Coaching-kö (Fas 4)"))
-            ui.button("Flagga samtal", on_click=lambda: ui.notify(f"Flaggat {call_id}"))
-            if on_back:
-                ui.button("Tillbaka till Översikt", on_click=on_back)
+        if on_back:
+            back_label = _BACK_LABELS.get(
+                state.detail_source_tab,
+                _BACK_LABELS["overview"],
+            )
+            with ui.row().classes("gap-2 q-mt-md"):
+                ui.button(back_label, on_click=on_back)
 
     _render_content()
 

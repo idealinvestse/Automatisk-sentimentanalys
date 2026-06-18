@@ -89,6 +89,31 @@ make test-api             # API tests with coverage
 python -m src.evaluate llm-quality
 ```
 
+### Audio benchmarks (`samples/audio`)
+
+The repo ships RAVDESS English speech files under `samples/audio/Actor_*` (1440 `.wav` files).
+A manifest-driven catalog in `samples/audio/manifest.yaml` powers structured ASR and pipeline tests.
+
+```bash
+# Catalog overview and validation (fast, no ML)
+python -m src.evaluate audio list --pack ravdess_en --limit 10
+python -m src.evaluate audio validate
+
+# Quick smoke (3 curated files; use --dry-run to preview selection only)
+python -m src.evaluate audio smoke --device cpu
+python -m src.evaluate audio run --scenario pipeline --pack ravdess_en --limit 2 --device cpu
+```
+
+**Adding Swedish test files:** place audio under `samples/audio/sv/<category>/` and optional
+`filename.meta.yaml` sidecars. See `samples/audio/sv/README.md`, then enable the pack in
+`manifest.yaml` and run `python -m src.evaluate audio validate`.
+
+**Pytest:** fast catalog tests always run; slow ASR integration tests are marked `audio` + `slow`.
+Skip them with `SENTIMENT_SKIP_AUDIO=1` or `pytest -m "not slow"`.
+
+CPU smoke on 3 files typically takes several minutes on first run (model download + ASR).
+GPU significantly speeds up ASR and pipeline scenarios.
+
 ## Adding New Features
 
 Please follow the guidelines in:

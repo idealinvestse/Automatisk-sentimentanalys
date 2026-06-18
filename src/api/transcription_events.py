@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -18,11 +19,17 @@ logger = logging.getLogger(__name__)
 JOB_HEADER = "X-Transcription-Job-Id"
 
 
+@dataclass
+class _WsConnection:
+    websocket: WebSocket
+    job_id: str | None = None
+
+
 class TranscriptionEventHub:
     """Broadcast transcription log/progress events to WebSocket subscribers."""
 
     def __init__(self) -> None:
-        self._connections: set[WebSocket] = set()
+        self._connections: list[_WsConnection] = []
         self._lock = asyncio.Lock()
         self._loop: asyncio.AbstractEventLoop | None = None
 
@@ -32,11 +39,18 @@ class TranscriptionEventHub:
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
         async with self._lock:
-            self._connections.add(websocket)
+            self._connections.append(_WsConnection(websocket=websocket))
 
     async def disconnect(self, websocket: WebSocket) -> None:
         async with self._lock:
-            self._connections.discard(websocket)
+            self._connections = [c for c in self._connections if c.websocket is not websocket]
+
+    async def set_subscription(self, websocket: WebSocket, job_id: str | None) -> None:
+        async with self._lock:
+            for conn in self._connections:
+                if conn.websocket is websocket:
+                    conn.job_id = job_id
+                    return
 
     def emit(self, event: dict[str, Any]) -> None:
         """Schedule broadcast from sync or async context (e.g. thread pool workers)."""
@@ -51,20 +65,29 @@ class TranscriptionEventHub:
         if loop.is_running():
             asyncio.run_coroutine_threadsafe(self._broadcast(event), loop)
 
+    def _should_send(self, conn: _WsConnection, event: dict[str, Any]) -> bool:
+        event_job = event.get("job_id")
+        if not conn.job_id:
+            return True
+        if not event_job:
+            return event.get("type") in ("connected", "pong", "subscribed")
+        return event_job == conn.job_id
+
     async def _broadcast(self, event: dict[str, Any]) -> None:
         async with self._lock:
             targets = list(self._connections)
         dead: list[WebSocket] = []
-        for ws in targets:
+        for conn in targets:
+            if not self._should_send(conn, event):
+                continue
             try:
-                await ws.send_json(event)
+                await conn.websocket.send_json(event)
             except Exception as err:
                 logger.debug("WebSocket send failed: %s", err)
-                dead.append(ws)
+                dead.append(conn.websocket)
         if dead:
             async with self._lock:
-                for ws in dead:
-                    self._connections.discard(ws)
+                self._connections = [c for c in self._connections if c.websocket not in dead]
 
     def log(
         self,

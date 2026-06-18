@@ -48,10 +48,19 @@ jobs:
           pip install -r requirements-min.txt
           pip install -r requirements-cli.txt
           pip install -r requirements-install.txt
-          pip install pytest pytest-cov
+          pip install -e ".[dashboard-nicegui,dev]"
+          pip install pytest pytest-cov pytest-asyncio httpx
 
       - name: Run tests
         run: pytest tests/ -v --cov=src --cov-report=term --cov-fail-under=80
+
+      - name: Dashboard tests with coverage
+        run: |
+          pytest tests/test_nicegui_dashboard.py tests/test_nicegui_dashboard_ui.py \
+            tests/test_test_lab_service.py tests/test_transcription_websocket.py \
+            tests/test_dashboard.py -v \
+            --cov=app/nicegui_dashboard/services --cov=app/nicegui_dashboard/settings \
+            --cov=app/nicegui_dashboard/state --cov-report=term-missing --cov-fail-under=55
 
   api-test:
     needs: lint

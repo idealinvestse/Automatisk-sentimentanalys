@@ -24,6 +24,41 @@ def resolve_model_name(name: str) -> str:
     return _MODEL_ALIASES.get(key, key)
 
 
+def resolve_model_name_for_backend(name: str, backend: str = "faster") -> str:
+    """Resolve a model name for a specific ASR backend.
+
+    faster-whisper and whisperx require CTranslate2-compatible checkpoints
+    (e.g. bare ``large-v3``), while transformers expects HuggingFace repo ids.
+    """
+    canonical = resolve_model_name(name)
+    b = (backend or "faster").lower()
+    if b not in ("faster", "whisperx"):
+        return canonical
+
+    lower = canonical.lower()
+    if "kb-whisper" in lower or "kblab" in lower:
+        return canonical
+
+    if canonical.startswith("openai/"):
+        candidate = canonical.split("/", 1)[1]
+        if candidate.startswith("whisper-"):
+            candidate = candidate[len("whisper-") :]
+        return candidate
+
+    return canonical
+
+
+def format_hotwords_for_asr(hotwords: list[str] | str | None) -> str | None:
+    """Normalize hotwords to the space-separated string faster-whisper expects."""
+    if not hotwords:
+        return None
+    if isinstance(hotwords, str):
+        text = hotwords.strip()
+        return text or None
+    words = [str(w).strip() for w in hotwords if str(w).strip()]
+    return " ".join(words) if words else None
+
+
 def add_diarization(
     transcript: Transcript,
     audio_path: str,

@@ -237,7 +237,7 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
     dashboard_ui = getattr(cfg.services, "dashboard_ui", "nicegui") or "nicegui"
     if dashboard_ui == "streamlit":
         if log:
-            log.warning(
+            log.warn(
                 "DASHBOARD_UI=streamlit är avvecklad. Startar NiceGUI istället.",
                 phase="dashboard.start",
             )

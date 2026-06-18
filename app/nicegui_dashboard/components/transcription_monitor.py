@@ -5,20 +5,31 @@ Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect + polling fal
 
 from __future__ import annotations
 
+import json
+from datetime import datetime
+from typing import Any
+
 from nicegui import ui
 
 from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.metric_card import metric_card
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
+from app.nicegui_dashboard.services.transcription_presets import (
+    apply_preset,
+    preset_description,
+    preset_options,
+)
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
+from app.nicegui_dashboard.settings import ws_status_label
 
 
-def _ws_status_label(status: str) -> str:
-    return {
-        "connected": "Connected",
-        "reconnecting": "Reconnecting",
-        "disconnected": "Disconnected",
-    }.get(status, "Disconnected")
+def _fmt_elapsed(seconds: float | None) -> str:
+    if seconds is None:
+        return "—"
+    mins, secs = divmod(int(seconds), 60)
+    if mins:
+        return f"{mins}m {secs}s"
+    return f"{secs}s"
 
 
 def render_transcription_tab(
@@ -34,32 +45,51 @@ def render_transcription_tab(
         ui.label("Persistent kö | Lokal fallback").classes("text-caption")
 
     status = trans_state.status
-    pending = trans_state.scan_pending()
+    settings = trans_state.settings
+    scan_cfg = trans_state.scan_config
 
-    with ui.row().classes("w-full gap-4 q-mb-md"):
-        pending_metric = metric_card("Väntande (persistent)", len(pending))
-        status_metric = metric_card("Status", "Pågår" if status.get("is_running") else "Idle")
+    with ui.row().classes("w-full gap-4 q-mb-md flex-wrap"):
+        pending_metric = metric_card("Väntande", len(trans_state.queue))
+        status_metric = metric_card("Status", "Pågår" if status.get("is_running") else "Vilande")
         progress_metric = metric_card("Progress", f"{status.get('processed', 0)}/{status.get('total', 0)}")
-        api_metric = metric_card("API Mode", "På" if status.get("use_api") else "Av")
-        ws_metric = metric_card("WebSocket", _ws_status_label(trans_state.ws_status))
+        api_metric = metric_card("API", "På" if status.get("use_api") else "Av")
+        ws_metric = metric_card("WebSocket", ws_status_label(trans_state.ws_status))
+        preset_metric = metric_card("Preset", trans_state.active_preset)
+        strategy_metric = metric_card("Strategi", trans_state.api_strategy)
 
-    progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes("w-full q-mb-md")
+    with ui.row().classes("w-full gap-4 q-mb-sm flex-wrap"):
+        job_metric = metric_card("Job-ID", (status.get("active_job_id") or "—")[:8])
+        elapsed_metric = metric_card("Tid", _fmt_elapsed(trans_state.elapsed_seconds()))
+
+    progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes("w-full q-mb-sm")
     current_label = ui.label(f"Aktuell fil: {status.get('current_file') or '—'}").classes("text-caption")
     poll_hint = ui.label("").classes("text-caption text-warning")
+    api_limit_hint = ui.label("").classes("text-caption text-grey")
 
     def _refresh_metrics() -> None:
         s = trans_state.status
         pending_metric.set_text(str(len(trans_state.queue)))
-        status_metric.set_text("Pågår" if s.get("is_running") else "Idle")
+        status_metric.set_text("Pågår" if s.get("is_running") else "Vilande")
         progress_metric.set_text(f"{s.get('processed', 0)}/{s.get('total', 0)}")
         api_metric.set_text("På" if s.get("use_api") else "Av")
-        ws_metric.set_text(_ws_status_label(trans_state.ws_status))
+        ws_metric.set_text(ws_status_label(trans_state.ws_status))
+        preset_metric.set_text(trans_state.active_preset)
+        strategy_metric.set_text(trans_state.api_strategy)
+        job_id = s.get("active_job_id") or ""
+        job_metric.set_text(job_id[:8] if job_id else "—")
+        elapsed_metric.set_text(_fmt_elapsed(trans_state.elapsed_seconds()))
         progress_bar.set_value(float(s.get("progress", 0)))
         current_label.set_text(f"Aktuell fil: {s.get('current_file') or '—'}")
         if trans_state.needs_polling_fallback():
             poll_hint.set_text("⚠ WebSocket nere – polling-fallback aktiv (2s)")
         else:
             poll_hint.set_text("")
+        if s.get("use_api") and trans_state.api_strategy in ("batch_transcribe", "scan_process"):
+            api_limit_hint.set_text(
+                "ℹ️ Paus under pågående API-batch är begränsad – använd Avbryt för att stoppa backend-jobb."
+            )
+        else:
+            api_limit_hint.set_text("")
 
     def _update_poll_timer() -> None:
         poll_timer.active = trans_state.needs_polling_fallback()
@@ -84,122 +114,342 @@ def render_transcription_tab(
         trans_state.request_stop()
         ui.notify("Stopp begärd")
 
+    async def cancel_batch() -> None:
+        await trans_state.request_cancel()
+        _refresh_metrics()
+        ui.notify("Avbryt skickad")
+
     async def reconnect_ws() -> None:
         await trans_state.request_ws_reconnect()
         _refresh_metrics()
         _update_poll_timer()
         ui.notify("WebSocket reconnect initierad")
 
+    def scan_folder() -> None:
+        n = len(trans_state.scan_pending())
+        refresh_queue()
+        _refresh_metrics()
+        ui.notify(f"Skannade mapp – {n} filer i kön")
+
     with ui.row().classes("gap-2 q-mb-md flex-wrap"):
-        ui.button("▶️ Start batch", color="primary", on_click=start_batch)
+        ui.button("▶️ Start", color="primary", on_click=start_batch)
         ui.button("⏸️ Paus", on_click=pause_batch)
         ui.button("▶️ Återuppta", on_click=resume_batch)
         ui.button("⏹️ Stopp", color="negative", on_click=stop_batch)
+        ui.button("🛑 Avbryt jobb", color="negative", on_click=cancel_batch).props("outline")
         ui.button("🔌 Reconnect WS", on_click=reconnect_ws).props("outline")
+        ui.button("📂 Skanna mapp", on_click=scan_folder).props("outline")
 
-    with ui.expansion("⚙️ Inställningar"):
-        settings = trans_state.settings
+    # --- Presets ---
+    with ui.expansion("📋 Presets", value=False).classes("w-full"):
+        preset_desc = ui.label("").classes("text-caption")
 
-        def _set_backend(e) -> None:
-            settings["backend"] = e.value
+        def _on_preset_change(e) -> None:
+            preset_desc.set_text(preset_description(e.value or ""))
 
-        def _set_preprocess(e) -> None:
-            settings["preprocess"] = e.value
+        preset_select = ui.select(
+            options=preset_options(),
+            label="Välj preset",
+            value=trans_state.active_preset if trans_state.active_preset != "anpassad" else "api_standard",
+            on_change=_on_preset_change,
+        ).classes("w-full")
+        preset_desc.set_text(preset_description(str(preset_select.value)))
 
-        def _set_diarize(e) -> None:
-            settings["diarize"] = e.value
+        def apply_selected_preset() -> None:
+            pid = preset_select.value
+            if not pid or pid == "anpassad":
+                ui.notify("Välj en preset att tillämpa", type="warning")
+                return
+            if apply_preset(trans_state, pid):
+                _sync_ui_from_state()
+                refresh_all()
+                ui.notify(f"Preset «{pid}» tillämpad")
+            else:
+                ui.notify("Okänd preset", type="negative")
 
-        def _set_hotwords(e) -> None:
-            settings["hotwords"] = e.value or ""
+        ui.button("Tillämpa preset", on_click=apply_selected_preset).props("outline")
 
-        def _set_api(e) -> None:
-            trans_state.status["use_api"] = bool(e.value)
-            trans_state.save()
-
+    # --- ASR grund ---
+    with ui.expansion("⚙️ ASR-grund", value=False).classes("w-full"):
         ui.select(
             options=["faster", "transformers", "whisperx"],
             label="Backend",
             value=settings.get("backend", "faster"),
-            on_change=_set_backend,
+            on_change=lambda e: trans_state.update_setting("backend", e.value),
         )
-        ui.checkbox("Preprocess", value=settings.get("preprocess", True), on_change=_set_preprocess)
-        ui.checkbox("Diarize", value=settings.get("diarize", False), on_change=_set_diarize)
-        ui.textarea(
-            "Hotwords",
-            value=settings.get("hotwords", ""),
-            on_change=_set_hotwords,
+        ui.input(
+            "Modell",
+            value=settings.get("model", "kb-whisper-large"),
+            on_change=lambda e: trans_state.update_setting("model", e.value or "kb-whisper-large"),
         )
+        ui.select(
+            options=["auto", "cpu", "cuda", "cuda:0", "mps"],
+            label="Device",
+            value=settings.get("device", "auto"),
+            on_change=lambda e: trans_state.update_setting("device", e.value),
+        )
+        ui.input(
+            "Språk",
+            value=settings.get("language", "sv"),
+            on_change=lambda e: trans_state.update_setting("language", e.value or "sv"),
+        )
+        ui.checkbox(
+            "Preprocess",
+            value=settings.get("preprocess", True),
+            on_change=lambda e: trans_state.update_setting("preprocess", e.value),
+        )
+        ui.select(
+            options=["standard", "strict", "subtitle"],
+            label="Revision (valfri)",
+            value=settings.get("revision") or "standard",
+            on_change=lambda e: trans_state.update_setting(
+                "revision", None if e.value == "standard" else e.value
+            ),
+        )
+        def _set_use_api(e) -> None:
+            trans_state.status["use_api"] = bool(e.value)
+            trans_state.save()
+
         ui.checkbox(
             "Använd Backend API",
             value=status.get("use_api", False),
-            on_change=_set_api,
+            on_change=_set_use_api,
         )
 
-        def _set_strategy(e) -> None:
-            trans_state.api_strategy = e.value or "transcribe"
+    # --- ASR avancerat ---
+    with ui.expansion("🔧 ASR avancerat", value=False).classes("w-full"):
+        ui.number(
+            "Beam size",
+            value=settings.get("beam_size", 5),
+            min=1,
+            max=10,
+            on_change=lambda e: trans_state.update_setting("beam_size", int(e.value or 5)),
+        )
+        ui.checkbox(
+            "VAD",
+            value=settings.get("vad", True),
+            on_change=lambda e: trans_state.update_setting("vad", e.value),
+        )
+        ui.number(
+            "Chunk length (s)",
+            value=settings.get("chunk_length_s", 30),
+            min=5,
+            max=60,
+            on_change=lambda e: trans_state.update_setting("chunk_length_s", int(e.value or 30)),
+        )
+        ui.checkbox(
+            "Diarize",
+            value=settings.get("diarize", False),
+            on_change=lambda e: trans_state.update_setting("diarize", e.value),
+        )
+        ui.number(
+            "Antal talare",
+            value=settings.get("num_speakers"),
+            min=1,
+            max=10,
+            on_change=lambda e: trans_state.update_setting(
+                "num_speakers", int(e.value) if e.value else None
+            ),
+        )
+        ui.textarea(
+            "Hotwords (kommaseparerade)",
+            value=settings.get("hotwords", ""),
+            on_change=lambda e: trans_state.update_setting("hotwords", e.value or ""),
+        )
+        ui.textarea(
+            "Initial prompt",
+            value=settings.get("initial_prompt") or "",
+            on_change=lambda e: trans_state.update_setting("initial_prompt", e.value or None),
+        )
 
+    # --- Batch & scan ---
+    with ui.expansion("📦 Batch & scan", value=True).classes("w-full"):
         ui.select(
             options=["transcribe", "batch_transcribe", "scan_process"],
             label="API-strategi",
             value=trans_state.api_strategy,
-            on_change=_set_strategy,
+            on_change=lambda e: (
+                setattr(trans_state, "api_strategy", e.value or "transcribe"),
+                trans_state.save(),
+            ),
+        ).classes("w-full")
+        ui.number(
+            "Workers",
+            value=settings.get("workers", 1),
+            min=1,
+            max=8,
+            on_change=lambda e: trans_state.update_setting("workers", int(e.value or 1)),
+        )
+        ui.number(
+            "Worker timeout (s)",
+            value=settings.get("worker_timeout", 300),
+            min=30,
+            max=3600,
+            on_change=lambda e: trans_state.update_setting("worker_timeout", float(e.value or 300)),
+        )
+        ui.number(
+            "Batch size (scan)",
+            value=scan_cfg.get("batch_size", 4),
+            min=1,
+            max=64,
+            on_change=lambda e: trans_state.update_setting("batch_size", int(e.value or 4), section="scan"),
+        )
+        ui.input(
+            "Mönster (glob)",
+            value=scan_cfg.get("pattern") or "",
+            on_change=lambda e: trans_state.update_setting("pattern", e.value or None, section="scan"),
+        )
+        ui.number(
+            "Max filer (scan)",
+            value=scan_cfg.get("max_files"),
+            min=1,
+            on_change=lambda e: trans_state.update_setting(
+                "max_files", int(e.value) if e.value else None, section="scan"
+            ),
+        )
+        ui.checkbox(
+            "Rekursiv scan",
+            value=scan_cfg.get("recursive", True),
+            on_change=lambda e: trans_state.update_setting("recursive", e.value, section="scan"),
+        )
+        ui.select(
+            options=["transcribe", "analyze_conversation"],
+            label="Operation (scan)",
+            value=scan_cfg.get("operation", "transcribe"),
+            on_change=lambda e: trans_state.update_setting("operation", e.value, section="scan"),
+        )
+
+    # --- Sökvägar ---
+    with ui.expansion("📁 Sökvägar", value=False).classes("w-full"):
+        ui.input(
+            "Väntemapp",
+            value=trans_state.pending_folder,
+            on_change=lambda e: (
+                setattr(trans_state, "pending_folder", e.value or "inputs/pending"),
+                trans_state.save(),
+            ),
+        ).classes("w-full")
+        ui.input(
+            "Output-mapp",
+            value=trans_state.output_dir,
+            on_change=lambda e: (
+                setattr(trans_state, "output_dir", e.value or "outputs/transcripts"),
+                trans_state.save(),
+            ),
         ).classes("w-full")
 
-    ui.input(
-        "Väntemapp",
-        value=trans_state.pending_folder,
-        on_change=lambda e: setattr(trans_state, "pending_folder", e.value or "inputs/pending"),
+    ui.label("Väntande filer (persistent kö)").classes("text-subtitle2 q-mt-md")
+    queue_table = ui.table(
+        columns=[
+            {"name": "name", "label": "Fil", "field": "name", "align": "left"},
+            {"name": "path", "label": "Sökväg", "field": "path", "align": "left"},
+            {"name": "size_kb", "label": "KB", "field": "size_kb", "align": "right"},
+            {"name": "modified", "label": "Ändrad", "field": "modified", "align": "left"},
+        ],
+        rows=[],
+        row_key="path",
+        selection="single",
+        pagination={"rowsPerPage": 10},
     ).classes("w-full q-mb-sm")
 
-    ui.label("Väntande filer (persistent kö)").classes("text-subtitle2")
-    queue_container = ui.column().classes("q-mb-md")
-
     def refresh_queue() -> None:
-        queue_container.clear()
-        with queue_container:
-            files = trans_state.queue
-            if not files:
-                render_empty_state(
-                    icon="queue",
-                    title="Inga filer i kön",
-                    hint=f"Lägg ljudfiler i {trans_state.pending_folder} och skanna igen.",
-                )
-            else:
-                for f in files[:8]:
-                    ui.label(f"• {f.name}")
-                if len(files) > 8:
-                    ui.label(f"... + {len(files) - 8} till").classes("text-caption")
+        rows = trans_state.queue_rows()
+        queue_table.rows = rows
+        queue_table.update()
 
-    refresh_queue()
+    def remove_selected_queue() -> None:
+        selected = queue_table.selected
+        if not selected:
+            ui.notify("Välj en rad i kön", type="warning")
+            return
+        for row in selected:
+            trans_state.remove_from_queue(row.get("path", ""))
+        refresh_queue()
+        ui.notify("Borttagen från kön")
+
+    def export_queue() -> None:
+        data = json.dumps(trans_state.queue_rows(), indent=2, ensure_ascii=False)
+        ui.download(data.encode("utf-8"), "transcription_queue.json")
+
+    with ui.row().classes("gap-2 q-mb-md"):
+        ui.button("Ta bort vald", on_click=remove_selected_queue).props("outline")
+        ui.button("Rensa kö", on_click=lambda: (trans_state.clear_queue(), refresh_queue())).props("outline")
+        ui.button("Exportera kö", on_click=export_queue).props("outline")
 
     ui.label("📜 Händelselogg (live)").classes("text-subtitle2 q-mt-md")
-    log_container = ui.column().classes("max-h-48 overflow-auto border q-pa-sm w-full")
+
+    log_table = ui.table(
+        columns=[
+            {"name": "ts", "label": "Tid", "field": "ts", "align": "left"},
+            {"name": "level", "label": "Nivå", "field": "level", "align": "left"},
+            {"name": "source", "label": "Källa", "field": "source", "align": "left"},
+            {"name": "file", "label": "Fil", "field": "file", "align": "left"},
+            {"name": "msg", "label": "Meddelande", "field": "msg", "align": "left"},
+        ],
+        rows=[],
+        row_key="ts",
+        pagination={"rowsPerPage": 0},
+    ).classes("w-full max-h-64")
+
+    log_filters: dict[str, Any] = {"level": "", "source": "", "search": "", "limit": 100}
 
     def refresh_log() -> None:
-        log_container.clear()
-        with log_container:
-            if not trans_state.logs:
-                render_empty_state(
-                    icon="history",
-                    title="Inga händelser ännu",
-                    hint="Starta batch eller vänta på WebSocket-loggar från backend.",
-                )
-                return
-            for entry in trans_state.logs[-30:]:
-                level = entry.get("level", "INFO")
-                css = {
-                    "INFO": "log-info",
-                    "WARNING": "log-warning",
-                    "ERROR": "log-error",
-                }.get(level, "text-grey")
-                file_part = f"{entry.get('file', '')}: " if entry.get("file") else ""
-                src = entry.get("source", "")
-                src_tag = " [ws]" if src == "ws" else ""
-                ui.label(
-                    f"{entry['ts']} [{level}]{src_tag} {file_part}{entry['msg']}"
-                ).classes(css)
+        entries = trans_state.filtered_logs(
+            level=log_filters["level"] or None,
+            source=log_filters["source"] or None,
+            search=log_filters["search"] or "",
+            limit=int(log_filters["limit"] or 100),
+        )
+        log_table.rows = [
+            {
+                "ts": e.get("ts", ""),
+                "level": e.get("level", "INFO"),
+                "source": e.get("source", "local"),
+                "file": e.get("file") or "",
+                "msg": e.get("msg", ""),
+            }
+            for e in entries
+        ]
+        log_table.update()
 
-    refresh_log()
+    with ui.row().classes("w-full gap-2 flex-wrap q-mb-sm"):
+        ui.select(
+            options={"": "Alla", "INFO": "INFO", "WARNING": "WARNING", "ERROR": "ERROR"},
+            label="Nivå",
+            value="",
+            on_change=lambda e: (log_filters.update({"level": e.value or ""}), refresh_log()),
+        ).classes("w-32")
+        ui.select(
+            options={"": "Alla", "local": "Lokal", "ws": "WebSocket"},
+            label="Källa",
+            value="",
+            on_change=lambda e: (log_filters.update({"source": e.value or ""}), refresh_log()),
+        ).classes("w-32")
+        ui.input(
+            "Sök",
+            value="",
+            on_change=lambda e: (log_filters.update({"search": e.value or ""}), refresh_log()),
+        ).classes("flex-grow")
+        ui.select(
+            options={50: "50", 100: "100", 200: "200"},
+            label="Visa",
+            value=100,
+            on_change=lambda e: (log_filters.update({"limit": e.value or 100}), refresh_log()),
+        ).classes("w-24")
+
+    def export_log() -> None:
+        data = json.dumps(trans_state.logs, indent=2, ensure_ascii=False)
+        ui.download(data.encode("utf-8"), f"transcription_log_{datetime.now():%Y%m%d_%H%M%S}.json")
+
+    with ui.row().classes("gap-2 q-mt-sm q-mb-md"):
+        ui.button("Rensa logg", on_click=lambda: (trans_state.clear_logs(), refresh_log())).props("outline")
+        ui.button("Exportera logg", on_click=export_log).props("outline")
+
+    def _sync_ui_from_state() -> None:
+        nonlocal settings, scan_cfg, status
+        settings = trans_state.settings
+        scan_cfg = trans_state.scan_config
+        status = trans_state.status
 
     def refresh_all() -> None:
         _refresh_metrics()
@@ -208,20 +458,23 @@ def render_transcription_tab(
         _update_poll_timer()
 
     def on_push_event(event_type: str, _payload: dict) -> None:
-        if event_type in {"log", "progress", "status", "done", "ws"}:
+        if event_type in {"log", "progress", "status", "done", "ws", "log_clear", "queue"}:
             refresh_all()
 
     trans_state.add_listener(on_push_event)
 
-    # Push via WebSocket listeners; 2s polling fallback when WS is down during batch
-    poll_timer = ui.timer(2.0, refresh_all, active=False)
-    # Slow poll for queue file-system drift when WS is healthy
-    ui.timer(5.0, refresh_queue)
+    refresh_queue()
+    refresh_log()
+    _refresh_metrics()
 
-    def clear_all() -> None:
+    poll_timer = ui.timer(2.0, refresh_all, active=False)
+    ui.timer(5.0, refresh_queue)
+    ui.timer(1.0, lambda: elapsed_metric.set_text(_fmt_elapsed(trans_state.elapsed_seconds())))
+
+    def clear_everything() -> None:
         trans_state.clear_all()
         trans_state.scan_pending()
         refresh_all()
         ui.notify("Rensat kö och logg")
 
-    ui.button("Rensa logg & kö", on_click=clear_all).classes("q-mt-md")
+    ui.button("Rensa allt (kö + logg + status)", on_click=clear_everything).classes("q-mt-md").props("outline")

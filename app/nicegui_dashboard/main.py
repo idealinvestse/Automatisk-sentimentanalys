@@ -19,13 +19,15 @@ from nicegui import ui
 from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
 from app.nicegui_dashboard.components.layout import apply_dark_theme, render_header
-from app.nicegui_dashboard.components.live_analysis import render_live_analysis_tab
+from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.overview import render_overview_tab
+from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, load_reports_from_api
 from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import create_transcription_state
 from app.nicegui_dashboard.services.ui_helpers import notify_error, notify_success, notify_warning
+from app.nicegui_dashboard.settings import is_dev_mode
 from app.nicegui_dashboard.state import DashboardState
 
 
@@ -58,6 +60,7 @@ def dashboard_page() -> None:
     )
 
     with ui.column().classes("w-full nicegui-dashboard"):
+        render_onboarding_banner()
         _render_tabs(state, refresh_header, reload_ref)
 
 
@@ -65,17 +68,22 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
     with ui.tabs().classes("w-full") as tabs:
         overview_tab = ui.tab("Översikt")
         analytics_tab = ui.tab("Analys & Trender")
-        detail_tab = ui.tab("Call Detail")
+        detail_tab = ui.tab("Samtalsdetalj")
         trans_tab = ui.tab("Transkribering")
-        live_tab = ui.tab("Live-analys")
+        test_tab = ui.tab("Testlabb") if is_dev_mode() else None
 
     refresh_call_detail: list = []
     refresh_overview: list = []
     refresh_analytics: list = []
 
-    def go_to_detail(call_id: str | None = None) -> None:
+    def go_to_detail(
+        call_id: str | None = None,
+        *,
+        source: str = "overview",
+    ) -> None:
         if call_id:
             state.selected_call_id = call_id
+        state.detail_source_tab = source
         tabs.set_value(detail_tab)
         if refresh_call_detail:
             refresh_call_detail[0]()
@@ -83,7 +91,11 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
     def show_example_detail() -> None:
         if state.reports:
             state.selected_call_id = state.reports[0].get("call_id")
-        go_to_detail()
+        go_to_detail(source="overview")
+
+    def go_back_from_detail() -> None:
+        target = analytics_tab if state.detail_source_tab == "analytics" else overview_tab
+        tabs.set_value(target)
 
     async def reload_from_api() -> None:
         await load_from_api(notify=True)
@@ -131,29 +143,30 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
         with ui.tab_panel(overview_tab):
             refresh_fn = render_overview_tab(
                 state,
-                on_call_select=go_to_detail,
+                on_call_select=lambda cid: go_to_detail(cid, source="overview"),
                 on_show_example_detail=show_example_detail,
                 on_reload_api=reload_from_api if state.api_client else None,
             )
             refresh_overview.append(refresh_fn)
 
         with ui.tab_panel(analytics_tab):
-            refresh_fn = render_analytics_tab(state, on_call_select=go_to_detail)
+            refresh_fn = render_analytics_tab(
+                state,
+                on_call_select=lambda cid: go_to_detail(cid, source="analytics"),
+            )
             refresh_analytics.append(refresh_fn)
 
         with ui.tab_panel(detail_tab):
-            refresh_fn = render_call_detail_tab(
-                state,
-                on_back=lambda: tabs.set_value(overview_tab),
-            )
+            refresh_fn = render_call_detail_tab(state, on_back=go_back_from_detail)
             refresh_call_detail.append(refresh_fn)
 
         with ui.tab_panel(trans_tab):
             if state.transcription:
                 render_transcription_tab(state.transcription, api_client=state.api_client)
 
-        with ui.tab_panel(live_tab):
-            render_live_analysis_tab(state)
+        if test_tab is not None:
+            with ui.tab_panel(test_tab):
+                render_test_lab_tab(state)
 
     async def initial_api_load() -> None:
         await load_from_api(notify=False)
@@ -168,4 +181,8 @@ if __name__ in {"__main__", "__mp_main__"}:
         title="Call Center NiceGUI Dashboard",
         reload=False,
         favicon="📞",
+        storage_secret=__import__("os").environ.get(
+            "NICEGUI_STORAGE_SECRET",
+            "sentiment-dashboard-storage",
+        ),
     )

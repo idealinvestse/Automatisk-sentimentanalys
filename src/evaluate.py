@@ -21,6 +21,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from .benchmarks.audio_cli import audio_app
 from .lexicon import load_lexicon, scalar_to_dist, score_text
 from .profiles import AVAILABLE_PROFILES
 from .sentiment import analyze_smart
@@ -49,6 +50,8 @@ ASR_BASELINES = [
 
 app = typer.Typer(help="Utvärderingsramverk: kör sentimentanalys mot testset och beräkna metrics")
 console = Console()
+
+app.add_typer(audio_app, name="audio")
 
 LABELS = ["negativ", "neutral", "positiv"]
 

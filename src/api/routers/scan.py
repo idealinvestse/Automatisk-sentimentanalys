@@ -21,6 +21,7 @@ from ..router_errors import run_route
 from ..schemas import ScanItem, ScanProcessRequest, ScanProcessResponse
 from ..services.conversation import run_batch_analyze_file
 from ..transcription_events import JOB_HEADER, get_hub
+from ..transcription_jobs import TranscriptionJobRegistry, get_job_registry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Scan"])
@@ -64,6 +65,7 @@ def _run_scan_process(
     job_id: str | None,
     hub: Any,
     cache: AggregateCache | None,
+    registry: TranscriptionJobRegistry | None = None,
 ) -> ScanProcessResponse:
     """Synchronous scan body — executed in a worker thread from the async handler."""
     files = resolve_audio_paths(
@@ -120,7 +122,12 @@ def _run_scan_process(
     hub.log(job_id=job_id, level="INFO", msg=f"scan_process startar – {total} nya filer")
     hub.status(job_id=job_id, is_running=True, total=total, processed=0)
 
+    cancelled = False
     for bidx, batch in enumerate(batches):
+        if registry and registry.is_cancelled(job_id):
+            cancelled = True
+            hub.log(job_id=job_id, level="WARNING", msg="scan_process avbruten mellan batchar")
+            break
         def _on_complete(
             path: str,
             result: dict[str, Any] | None,
@@ -150,6 +157,7 @@ def _run_scan_process(
             workers=req.workers,
             worker_timeout=req.worker_timeout,
             on_file_complete=_on_complete,
+            should_cancel=lambda: bool(registry and registry.is_cancelled(job_id)),
         )
 
         for path, result, error in raw:
@@ -174,9 +182,16 @@ def _run_scan_process(
 
     if skipped:
         hub.log(job_id=job_id, level="INFO", msg=f"Hoppade över {skipped} redan bearbetade filer")
-    hub.log(job_id=job_id, level="INFO", msg=f"scan_process slutförd – {ok} ok, {failed} fel")
+    end_msg = (
+        f"scan_process avbruten – {ok} ok, {failed} fel"
+        if cancelled
+        else f"scan_process slutförd – {ok} ok, {failed} fel"
+    )
+    hub.log(job_id=job_id, level="INFO", msg=end_msg)
     hub.done(job_id=job_id, ok=ok, failed=failed)
     hub.status(job_id=job_id, is_running=False)
+    if registry and job_id:
+        registry.complete(job_id, status="cancelled" if cancelled else "completed")
 
     return ScanProcessResponse(
         items=items,
@@ -218,8 +233,11 @@ async def scan_process(
     logger.info("scan_process: directory=%s pattern=%s operation=%s", req.directory, req.pattern, req.operation)
     job_id = request.headers.get(JOB_HEADER)
     hub = get_hub(request.app)
+    registry = get_job_registry(request.app)
+    if job_id:
+        registry.register(job_id, "scan_process", directory=req.directory, operation=req.operation)
 
     async def _do() -> ScanProcessResponse:
-        return await asyncio.to_thread(_run_scan_process, req, job_id, hub, cache)
+        return await asyncio.to_thread(_run_scan_process, req, job_id, hub, cache, registry)
 
     return await run_route("scan_process", _do)

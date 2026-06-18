@@ -104,8 +104,12 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
-    "nicegui_main_file(path): NiceGUI User test entry script (see nicegui.testing)",
+    "module_under_test(module): NiceGUI test entry module (see nicegui.testing.plugin)",
+    "slow: tests that load ML models or run ASR",
+    "audio: tests that require samples/audio files",
 ]
 
 [tool.coverage.run]

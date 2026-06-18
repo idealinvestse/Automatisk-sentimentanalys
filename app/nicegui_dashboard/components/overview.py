@@ -148,7 +148,7 @@ def render_overview_tab(
     )
 
     if on_show_example_detail:
-        ui.button("Visa exempel Call Detail", on_click=on_show_example_detail).classes("q-mt-md")
+        ui.button("Visa exempel Samtalsdetalj", on_click=on_show_example_detail).classes("q-mt-md")
 
     def refresh_all() -> None:
         source_label.set_text(f"Data: {state.data_source}")

@@ -19,6 +19,40 @@ DEFAULT_BASE_URL = "http://localhost:8000"
 DEFAULT_TIMEOUT = 300.0
 JOB_HEADER = "X-Transcription-Job-Id"
 
+_ASR_KEYS = (
+    "model",
+    "backend",
+    "device",
+    "language",
+    "beam_size",
+    "vad",
+    "chunk_length_s",
+    "revision",
+    "diarize",
+    "num_speakers",
+    "initial_prompt",
+    "word_timestamps",
+    "preprocess",
+    "workers",
+    "worker_timeout",
+    "sentiment_profile",
+)
+
+
+def _asr_payload(settings: dict[str, Any]) -> dict[str, Any]:
+    """Map dashboard settings to API AsrParamsMixin + batch fields."""
+    payload: dict[str, Any] = {}
+    for key in _ASR_KEYS:
+        if key in settings and settings[key] is not None:
+            payload[key] = settings[key]
+    hotwords = settings.get("hotwords")
+    if hotwords:
+        if isinstance(hotwords, str):
+            payload["hotwords"] = [w.strip() for w in hotwords.split(",") if w.strip()]
+        else:
+            payload["hotwords"] = hotwords
+    return payload
+
 
 class APIError(Exception):
     """Raised when the backend returns a non-success status."""
@@ -93,6 +127,29 @@ class NiceGUIAPIClient:
             )
         return response.json()
 
+    async def _get(self, path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=self._headers(), params=params)
+        except httpx.ConnectError as err:
+            raise APIError(f"Kan inte ansluta till backend ({self.base_url}): {err}") from err
+        except httpx.TimeoutException as err:
+            raise APIError(f"Timeout mot {path} ({self.timeout}s)") from err
+
+        if response.status_code >= 400:
+            detail: Any
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            raise APIError(
+                f"API-fel {response.status_code} på {path}",
+                status_code=response.status_code,
+                detail=detail,
+            )
+        return response.json()
+
     async def health(self) -> bool:
         """Return True if backend responds OK on /health."""
         try:
@@ -133,44 +190,62 @@ class NiceGUIAPIClient:
             payload["llm_model"] = llm_model
         return await self._post("/analyze_pipeline", payload)
 
-    async def transcribe(self, audio_path: str, **settings: Any) -> dict[str, Any]:
-        """POST /transcribe – single-file ASR."""
+    async def analyze_text(
+        self,
+        texts: list[str],
+        *,
+        profile: str | None = None,
+        device: str = "auto",
+        return_all_scores: bool = True,
+    ) -> dict[str, Any]:
+        """POST /analyze – text sentiment on one or more strings."""
+        payload: dict[str, Any] = {
+            "texts": texts,
+            "device": device,
+            "return_all_scores": return_all_scores,
+        }
+        if profile:
+            payload["profile"] = profile
+        return await self._post("/analyze", payload)
+
+    async def analyze_conversation(
+        self,
+        audio_path: str,
+        *,
+        use_full_pipeline: bool = False,
+        model: str = "kb-whisper-large",
+        backend: str = "faster",
+        device: str = "auto",
+        language: str = "sv",
+        diarize: bool = False,
+        sentiment_profile: str = "callcenter",
+    ) -> dict[str, Any]:
+        """POST /analyze_conversation – transcribe (+ optional full pipeline) on audio."""
         payload: dict[str, Any] = {
             "audio_path": audio_path,
-            "model": settings.get("model", "kb-whisper-large"),
-            "backend": settings.get("backend", "faster"),
-            "device": settings.get("device", "auto"),
-            "language": settings.get("language", "sv"),
-            "diarize": settings.get("diarize", False),
-            "preprocess": settings.get("preprocess", False),
+            "model": model,
+            "backend": backend,
+            "device": device,
+            "language": language,
+            "diarize": diarize,
+            "use_full_pipeline": use_full_pipeline,
+            "sentiment_profile": sentiment_profile,
+            "return_all_scores": True,
         }
-        if settings.get("num_speakers") is not None:
-            payload["num_speakers"] = settings["num_speakers"]
-        hotwords = settings.get("hotwords")
-        if hotwords:
-            if isinstance(hotwords, str):
-                payload["hotwords"] = [w.strip() for w in hotwords.split(",") if w.strip()]
-            else:
-                payload["hotwords"] = hotwords
+        return await self._post("/analyze_conversation", payload)
+
+    async def transcribe(self, audio_path: str, **settings: Any) -> dict[str, Any]:
+        """POST /transcribe – single-file ASR."""
+        payload = {"audio_path": audio_path, **_asr_payload(settings)}
+        if "preprocess" not in payload:
+            payload["preprocess"] = settings.get("preprocess", True)
         return await self._post("/transcribe", payload)
 
     async def batch_transcribe(self, audio_paths: list[str], **settings: Any) -> dict[str, Any]:
         """POST /batch_transcribe – parallel ASR for explicit file list."""
-        payload: dict[str, Any] = {
-            "audio_paths": audio_paths,
-            "model": settings.get("model", "kb-whisper-large"),
-            "backend": settings.get("backend", "faster"),
-            "device": settings.get("device", "auto"),
-            "language": settings.get("language", "sv"),
-            "diarize": settings.get("diarize", False),
-            "workers": settings.get("workers", 1),
-        }
-        hotwords = settings.get("hotwords")
-        if hotwords:
-            if isinstance(hotwords, str):
-                payload["hotwords"] = [w.strip() for w in hotwords.split(",") if w.strip()]
-            else:
-                payload["hotwords"] = hotwords
+        payload = {"audio_paths": audio_paths, **_asr_payload(settings)}
+        if "workers" not in payload:
+            payload["workers"] = settings.get("workers", 1)
         return await self._post("/batch_transcribe", payload)
 
     async def scan_process(
@@ -181,6 +256,8 @@ class NiceGUIAPIClient:
         operation: str = "transcribe",
         batch_size: int = 4,
         max_files: int | None = None,
+        pattern: str | None = None,
+        recursive: bool = True,
         **settings: Any,
     ) -> dict[str, Any]:
         """POST /scan_process – incremental directory scan with optional state file."""
@@ -188,21 +265,27 @@ class NiceGUIAPIClient:
             "directory": directory,
             "operation": operation,
             "batch_size": batch_size,
-            "model": settings.get("model", "kb-whisper-large"),
-            "backend": settings.get("backend", "faster"),
-            "device": settings.get("device", "auto"),
-            "language": settings.get("language", "sv"),
-            "diarize": settings.get("diarize", False),
-            "workers": settings.get("workers", 1),
+            "recursive": recursive,
+            **_asr_payload(settings),
         }
         if state_file:
             payload["state_file"] = state_file
         if max_files is not None:
             payload["max_files"] = max_files
-        hotwords = settings.get("hotwords")
-        if hotwords:
-            if isinstance(hotwords, str):
-                payload["hotwords"] = [w.strip() for w in hotwords.split(",") if w.strip()]
-            else:
-                payload["hotwords"] = hotwords
+        if pattern:
+            payload["pattern"] = pattern
+        if "workers" not in payload:
+            payload["workers"] = settings.get("workers", 1)
         return await self._post("/scan_process", payload)
+
+    async def get_transcription_job(self, job_id: str) -> dict[str, Any]:
+        """GET /transcription/jobs/{job_id} – job status snapshot."""
+        return await self._get(f"/transcription/jobs/{job_id}")
+
+    async def list_transcription_jobs(self, *, limit: int = 20) -> dict[str, Any]:
+        """GET /transcription/jobs – recent transcription jobs."""
+        return await self._get("/transcription/jobs", params={"limit": limit})
+
+    async def cancel_job(self, job_id: str) -> dict[str, Any]:
+        """POST /transcription/jobs/{job_id}/cancel – request job cancellation."""
+        return await self._post(f"/transcription/jobs/{job_id}/cancel", {})

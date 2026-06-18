@@ -1,7 +1,7 @@
 """Isolated NiceGUI pages for dashboard component rendering tests.
 
 Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (utökade tester)
-Executed via pytest User fixture + @pytest.mark.nicegui_main_file
+Executed via pytest `user` fixture + @pytest.mark.module_under_test
 """
 
 from __future__ import annotations
@@ -9,8 +9,10 @@ from __future__ import annotations
 from nicegui import ui
 
 from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
+from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
 from app.nicegui_dashboard.components.overview import render_overview_tab
+from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports
 from app.nicegui_dashboard.services.transcript_virtualizer import make_synthetic_segments
@@ -23,6 +25,12 @@ _REPORTS = list(load_demo_reports())
 @ui.page("/overview")
 def _overview_page() -> None:
     state = DashboardState(reports=_REPORTS)
+    render_overview_tab(state, on_call_select=lambda _cid: None)
+
+
+@ui.page("/overview-search")
+def _overview_search_page() -> None:
+    state = DashboardState(reports=_REPORTS, table_search="__no_match_xyz__")
     render_overview_tab(state, on_call_select=lambda _cid: None)
 
 
@@ -67,6 +75,17 @@ def _transcription_page() -> None:
 def _analytics_page() -> None:
     state = DashboardState(reports=_REPORTS)
     render_analytics_tab(state, on_call_select=lambda _cid: None)
+
+
+@ui.page("/test-lab")
+def _test_lab_page() -> None:
+    state = DashboardState(reports=_REPORTS, api_client=None)
+    render_test_lab_tab(state)
+
+
+@ui.page("/onboarding")
+def _onboarding_page() -> None:
+    render_onboarding_banner()
 
 
 @ui.page("/")

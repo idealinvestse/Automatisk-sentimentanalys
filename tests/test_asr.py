@@ -8,7 +8,7 @@ import pytest
 
 from src.core.config import KB_REVISIONS
 from src.core.device import normalize_device_for_asr
-from src.transcription.base import resolve_model_name
+from src.transcription.base import format_hotwords_for_asr, resolve_model_name, resolve_model_name_for_backend
 from src.transcription.factory import get_transcriber
 from src.transcription.faster_whisper import FasterWhisperTranscriber
 
@@ -28,6 +28,15 @@ class TestModelResolution:
 
     def test_whitespace(self):
         assert resolve_model_name("  kb-whisper-large  ") == "KBLab/kb-whisper-large"
+
+    def test_large_v3_maps_to_ct2_for_faster(self):
+        assert resolve_model_name_for_backend("large-v3", "faster") == "large-v3"
+
+    def test_large_v3_maps_to_hf_for_transformers(self):
+        assert resolve_model_name_for_backend("large-v3", "transformers") == "openai/whisper-large-v3"
+
+    def test_format_hotwords_joins_list(self):
+        assert format_hotwords_for_asr(["fakturering", "återbetalning"]) == "fakturering återbetalning"
 
 
 class TestDeviceNormalization:
@@ -107,6 +116,7 @@ class TestTranscribeMocked:
                 vad=False,
                 word_timestamps=False,
                 revision="strict",
+                chunk_length_s=0,
             )
 
         assert result.model == "KBLab/kb-whisper-large"
@@ -345,12 +355,13 @@ class TestHotwordsAndInitialPrompt:
                 language="sv",
                 hotwords=["fakturering", "återbetalning"],
                 initial_prompt="Detta är ett kundsamtal om fakturor.",
+                chunk_length_s=0,
             )
 
         assert result.backend == "faster"
         # Verify that the underlying was called with the params
         call_kwargs = mock_model.transcribe.call_args[1]
-        assert call_kwargs.get("hotwords") == ["fakturering", "återbetalning"]
+        assert call_kwargs.get("hotwords") == "fakturering återbetalning"
         assert "fakturor" in call_kwargs.get("initial_prompt", "")
 
     def test_params_pass_through_unknown_backend_error_still_works(self):
@@ -377,7 +388,7 @@ class TestPreprocessParam:
             patch("src.transcription.faster_whisper._HAS_FASTER", True),
         ):
             t = get_transcriber(backend="faster", device="cpu")
-            _ = t.transcribe("test.wav", preprocess=True)
+            _ = t.transcribe("test.wav", preprocess=True, chunk_length_s=0)
 
         # Should not crash, and we can check the call happened
         assert mock_model.transcribe.called
