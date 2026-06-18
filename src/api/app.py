@@ -37,7 +37,7 @@ from .error_responses import (
     error_response,
 )
 from .middleware_rate_limit import RateLimitMiddleware
-from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription
+from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription, ingest
 from .settings import get_api_settings
 from .transcription_events import TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
@@ -155,12 +155,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(LLMError)
     async def handle_llm_error(request: Request, exc: LLMError) -> JSONResponse:
         logger.error("LLM error: %s", exc)
-        return error_response(
-            request,
-            502,
-            f"LLM request failed: {exc}",
-            error_code=error_code_for(exc),
-        )
+        return error_response(request, 502, f"LLM request failed: {exc}", error_code=error_code_for(exc))
 
     @app.exception_handler(ConfigurationError)
     async def handle_config_error(request: Request, exc: ConfigurationError) -> JSONResponse:
@@ -170,22 +165,12 @@ def create_app() -> FastAPI:
     @app.exception_handler(TranscriptionError)
     async def handle_transcription_error(request: Request, exc: TranscriptionError) -> JSONResponse:
         logger.error("Transcription error: %s", exc)
-        return error_response(
-            request,
-            500,
-            f"Transcription failed: {exc}",
-            error_code=error_code_for(exc),
-        )
+        return error_response(request, 500, f"Transcription failed: {exc}", error_code=error_code_for(exc))
 
     @app.exception_handler(AnalysisError)
     async def handle_analysis_error(request: Request, exc: AnalysisError) -> JSONResponse:
         logger.error("Analysis error: %s", exc)
-        return error_response(
-            request,
-            500,
-            f"Analysis failed: {exc}",
-            error_code=error_code_for(exc),
-        )
+        return error_response(request, 500, f"Analysis failed: {exc}", error_code=error_code_for(exc))
 
     @app.exception_handler(BaseAnalysisError)
     async def handle_base_error(request: Request, exc: BaseAnalysisError) -> JSONResponse:
@@ -203,6 +188,7 @@ def create_app() -> FastAPI:
     app.include_router(pipeline.router, dependencies=_auth)
     app.include_router(scan.router, dependencies=_auth)
     app.include_router(ws_transcription.router)
+    app.include_router(ingest.router, dependencies=_auth)  # New YouTube ingest router
 
     _init_app_state(app)
     return app
