@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NiceGUIAPIClient` utökad med `get_agent_performance`, `semantic_search`, `get_hot_topics`, `score_qa`, `get_alerts`
   - Alerts-badge i header, drill-down till Samtalsdetalj, markera alert som hanterad (stub)
   - Tester: `tests/test_fas4_dashboard_data.py`
+- **Review-fixar (Fas 3)**:
+  - Async API-laddning utanför `@ui.refreshable` (undviker stale timers)
+  - Korrigerad empati-aggregering i `local_agent_metrics`
+  - Alerts-badge uppdaterar färg vid refresh
 
 ## [0.4.1] - 2026-06-19 (v0.5-prep)
 

@@ -32,9 +32,42 @@ def render_insights_section(
 
     topics_source = {"value": "local"}
     search_source = {"value": "local"}
-
+    topics_cache: dict[str, Any] = {"rows": [], "loaded": False}
     def _reports() -> list[dict[str, Any]]:
         return filter_reports(state.reports, state.filters)
+
+    async def _load_topics() -> None:
+        reports = _reports()
+        if not reports:
+            return
+        try:
+            if state.api_client and state.api_connected:
+                topics, src = await fetch_hot_topics(state.api_client, reports)
+                topics_source["value"] = src
+            else:
+                topics = local_hot_topics_detailed(reports)
+                topics_source["value"] = "local"
+        except Exception as err:
+            notify_api_error(err)
+            topics = local_hot_topics_detailed(reports)
+            topics_source["value"] = "local"
+
+        topics_cache["rows"] = [
+            {
+                "topic": t.get("topic", "—"),
+                "volume": t.get("volume", 0),
+                "sentiment": (
+                    f"{t['avg_sentiment']:.2f}"
+                    if t.get("avg_sentiment") is not None
+                    else "—"
+                ),
+                "trend": t.get("trend", "—"),
+                "evidence": format_evidence_spans(t.get("evidence_spans") or []),
+            }
+            for t in topics
+        ]
+        topics_cache["loaded"] = True
+        insights_section.refresh()
 
     @ui.refreshable
     def insights_section() -> None:
@@ -45,56 +78,24 @@ def render_insights_section(
             ui.label("Ingen data för insikter.").classes("text-caption")
             return
 
-        topics_lbl = ui.label("").classes("text-caption q-mb-xs")
-        topics_container = ui.column().classes("w-full")
-
-        async def _load_topics() -> None:
-            topics_lbl.set_text("Laddar hot topics...")
-            try:
-                if state.api_client and state.api_connected:
-                    topics, src = await fetch_hot_topics(state.api_client, reports)
-                    topics_source["value"] = src
-                else:
-                    topics = local_hot_topics_detailed(reports)
-                    topics_source["value"] = "local"
-            except Exception as err:
-                notify_api_error(err)
-                topics = local_hot_topics_detailed(reports)
-                topics_source["value"] = "local"
-
-            topics_container.clear()
-            with topics_container:
-                rows = [
-                    {
-                        "topic": t.get("topic", "—"),
-                        "volume": t.get("volume", 0),
-                        "sentiment": (
-                            f"{t['avg_sentiment']:.2f}"
-                            if t.get("avg_sentiment") is not None
-                            else "—"
-                        ),
-                        "trend": t.get("trend", "—"),
-                        "evidence": format_evidence_spans(t.get("evidence_spans") or []),
-                    }
-                    for t in topics
-                ]
-                if rows:
-                    ui.table(
-                        columns=[
-                            {"name": "topic", "label": "Ämne", "field": "topic"},
-                            {"name": "volume", "label": "Volym", "field": "volume"},
-                            {"name": "sentiment", "label": "Sentiment", "field": "sentiment"},
-                            {"name": "trend", "label": "Trend", "field": "trend"},
-                            {"name": "evidence", "label": "Evidence", "field": "evidence"},
-                        ],
-                        rows=rows,
-                        row_key="topic",
-                    ).classes("w-full")
-                else:
-                    ui.label("Inga hot topics hittades.").classes("text-caption")
-            topics_lbl.set_text(f"Hot topics: {topics_source['value']}")
-
-        ui.timer(0.05, _load_topics, once=True)
+        ui.label(f"Hot topics: {topics_source['value']}").classes("text-caption q-mb-xs")
+        rows = topics_cache["rows"]
+        if rows:
+            ui.table(
+                columns=[
+                    {"name": "topic", "label": "Ämne", "field": "topic"},
+                    {"name": "volume", "label": "Volym", "field": "volume"},
+                    {"name": "sentiment", "label": "Sentiment", "field": "sentiment"},
+                    {"name": "trend", "label": "Trend", "field": "trend"},
+                    {"name": "evidence", "label": "Evidence", "field": "evidence"},
+                ],
+                rows=rows,
+                row_key="topic",
+            ).classes("w-full")
+        elif topics_cache["loaded"]:
+            ui.label("Inga hot topics hittades.").classes("text-caption")
+        else:
+            ui.label("Laddar hot topics...").classes("text-caption")
 
         ui.separator().classes("q-my-md")
         ui.label("🔍 Semantisk sökning").classes("text-subtitle1 q-mb-sm")
@@ -183,5 +184,10 @@ def render_insights_section(
 
         ui.button("Sök", on_click=_run_search).props("color=primary")
 
+    def refresh_all() -> None:
+        insights_section.refresh()
+        ui.timer(0.05, _load_topics, once=True)
+
     insights_section()
-    return insights_section.refresh
+    ui.timer(0.1, _load_topics, once=True)
+    return refresh_all

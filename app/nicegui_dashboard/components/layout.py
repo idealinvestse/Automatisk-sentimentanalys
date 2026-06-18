@@ -68,6 +68,9 @@ def render_header(
             status_label.set_text(f"{txt} {state.api_client.base_url}")
         if alerts_badge and state:
             n_alerts = count_active_alerts(state)
-            alerts_badge.set_text(str(n_alerts) if n_alerts > 0 else "")
+            alerts_badge.set_text(str(n_alerts))
+            alerts_badge.props(
+                f"color={'negative' if n_alerts > 0 else 'grey'}"
+            )
 
     return refresh_status if (status_label or alerts_badge) else None

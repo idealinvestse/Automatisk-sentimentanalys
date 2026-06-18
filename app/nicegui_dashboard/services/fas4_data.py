@@ -61,8 +61,15 @@ def local_agent_metrics(agent_id: str, reports: list[dict[str, Any]]) -> dict[st
         agent_block = ap.get("agent") if isinstance(ap.get("agent"), dict) else ap
         if not isinstance(agent_block, dict):
             continue
-        if agent_block.get("empathy_score") is not None:
-            empathy_vals.append(float(agent_block["empathy_score"]))
+        empathy = agent_block.get("empathy_score")
+        if empathy is not None:
+            empathy_vals.append(float(empathy))
+        else:
+            assess = (r.get("results") or {}).get("agent_assessment") or (
+                (r.get("llm") or {}).get("agent_assessment")
+            ) or {}
+            if isinstance(assess, dict) and assess.get("empathy_score") is not None:
+                empathy_vals.append(float(assess["empathy_score"]))
         if agent_block.get("talk_ratio") is not None:
             talk_vals.append(float(agent_block["talk_ratio"]))
         if agent_block.get("de_escalation_effectiveness") is not None:
@@ -70,12 +77,6 @@ def local_agent_metrics(agent_id: str, reports: list[dict[str, Any]]) -> dict[st
         for flag in agent_block.get("compliance_flags") or []:
             if flag and flag not in flags:
                 flags.append(str(flag))
-
-        assess = (r.get("results") or {}).get("agent_assessment") or (r.get("llm") or {}).get(
-            "agent_assessment"
-        ) or {}
-        if isinstance(assess, dict) and assess.get("empathy_score") is not None:
-            empathy_vals.append(float(assess["empathy_score"]))
 
     def _avg(vals: list[float]) -> float | None:
         return round(sum(vals) / len(vals), 3) if vals else None
@@ -283,7 +284,9 @@ async def fetch_agent_performance(
         return local_agent_metrics(agent_id, reports), "local"
     try:
         resp = await client.get_agent_performance(agent_id, segments_list, window=window)
-        metrics = resp.get("metrics") or local_agent_metrics(agent_id, reports)
+        metrics = resp.get("metrics")
+        if not metrics:
+            return local_agent_metrics(agent_id, reports), "local"
         return metrics, "api"
     except Exception as err:
         logger.debug("agent_performance API fallback: %s", err)
