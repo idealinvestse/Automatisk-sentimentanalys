@@ -27,8 +27,9 @@ def mock_yt_dlp(monkeypatch):
         "ext": "m4a",
     }
     mock_ydl.extract_info.return_value = mock_info
+    mock_ydl.__enter__.return_value = mock_ydl
+    mock_ydl.__exit__.return_value = False
 
-    # Patch the class
     with patch("src.data_ingestion.youtube_downloader.yt_dlp.YoutubeDL", return_value=mock_ydl):
         yield mock_ydl
 
@@ -98,9 +99,13 @@ def test_error_handling(monkeypatch, tmp_path):
         from yt_dlp.utils import DownloadError
         raise DownloadError("Simulated download failure")
 
+    mock_ydl = MagicMock(extract_info=raise_download_error)
+    mock_ydl.__enter__.return_value = mock_ydl
+    mock_ydl.__exit__.return_value = False
+
     monkeypatch.setattr(
         "src.data_ingestion.youtube_downloader.yt_dlp.YoutubeDL",
-        lambda *a, **k: MagicMock(extract_info=raise_download_error),
+        lambda *a, **k: mock_ydl,
     )
 
     downloader = YouTubeAudioDownloader(output_base=tmp_path)
