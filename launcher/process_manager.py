@@ -14,6 +14,7 @@ from pathlib import Path
 from src.install.config_schema import UserConfig
 
 from .api_deps import check_api_dependencies
+from .dashboard_deps import check_dashboard_dependencies
 from .env_builder import build_child_env, resolve_python, working_directory
 from .event_log import EventLog
 from .pid_store import clear_pid_file, get_pid_info, save_pid, service_log_paths
@@ -234,6 +235,13 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
         log.phase("dashboard.start", "Starting Dashboard")
     stop_service(cfg, "dashboard", log=log)
     py = resolve_python(cfg)
+    child_env = build_child_env(cfg)
+    root = working_directory(cfg)
+    dep_error = check_dashboard_dependencies(python=py, env=child_env, cwd=root)
+    if dep_error:
+        if log:
+            log.error(dep_error, phase="dashboard.start")
+        raise RuntimeError(dep_error)
     dashboard_ui = getattr(cfg.services, "dashboard_ui", "nicegui") or "nicegui"
     if dashboard_ui == "streamlit":
         if log:

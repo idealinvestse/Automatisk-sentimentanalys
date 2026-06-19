@@ -12,8 +12,10 @@ from src.install.config_schema import InstallProfile, UserConfig
 from src.install.provision import (
     _extract_ffmpeg_binaries,
     ensure_ffmpeg,
+    install_requirements,
     requirements_for_profile,
     run_provision,
+    venv_python_path,
 )
 
 
@@ -47,6 +49,16 @@ def test_ensure_ffmpeg_skips_when_already_available(tmp_path: Path, monkeypatch)
 
     assert resolved == str(fake.resolve())
     mock_download.assert_not_called()
+
+
+def test_install_requirements_fails_on_missing_files(tmp_path: Path) -> None:
+    for req_file in requirements_for_profile(InstallProfile.cli):
+        if req_file != "requirements-dashboard-nicegui.txt":
+            (tmp_path / req_file).write_text("# empty\n", encoding="utf-8")
+
+    with patch("src.install.provision._run_pip"):
+        with pytest.raises(FileNotFoundError, match="requirements-dashboard-nicegui.txt"):
+            install_requirements(tmp_path, venv_python_path(tmp_path), InstallProfile.cli)
 
 
 def test_run_provision_reports_pip_failure(tmp_path: Path) -> None:

@@ -132,12 +132,18 @@ def install_requirements(root: Path, python: Path, profile: InstallProfile) -> l
     """Install pip requirement bundles for profile. Returns installed file names."""
     _run_pip(python, root, ["install", "-U", "pip", "wheel"])
     installed: list[str] = []
+    missing: list[str] = []
     for req_file in requirements_for_profile(profile):
         path = root / req_file
         if not path.is_file():
+            missing.append(req_file)
             continue
         _run_pip(python, root, ["install", "-r", str(path)])
         installed.append(req_file)
+    if missing:
+        raise FileNotFoundError(
+            f"Missing requirement files for profile '{profile.value}': {', '.join(missing)}"
+        )
     return installed
 
 

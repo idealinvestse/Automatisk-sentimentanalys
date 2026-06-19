@@ -18,6 +18,7 @@ New-Item -ItemType Directory -Path $StageApp -Force | Out-Null
 Write-Host "==> Stage application files"
 $copyItems = @("src", "app", "configs", "data", "samples", "docs", "launcher", "launcher.ps1",
     "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
+    "requirements-dashboard-nicegui.txt",
     "requirements.txt", "requirements-desktop.txt", "requirements-install.txt",
     "pyproject.toml", "README.md")
 foreach ($item in $copyItems) {
@@ -69,10 +70,14 @@ $venvPy = Join-Path $venv "Scripts\python.exe"
 
 $reqMap = @{
     minimal = @("requirements-min.txt", "requirements-install.txt")
-    cli     = @("requirements-min.txt", "requirements-cli.txt", "requirements-install.txt")
+    cli     = @(
+        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
+        "requirements-dashboard-nicegui.txt", "requirements-install.txt"
+    )
     api     = @("requirements-min.txt", "requirements-api.txt", "requirements-install.txt")
     full    = @(
         "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
+        "requirements-dashboard-nicegui.txt",
         "requirements.txt", "requirements-desktop.txt", "requirements-install.txt"
     )
 }
