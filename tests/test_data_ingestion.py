@@ -11,7 +11,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.data_ingestion.youtube_downloader import YouTubeAudioDownloader, DownloadResult
+from src.data_ingestion.youtube_downloader import (
+    YouTubeAudioDownloader,
+    DownloadResult,
+    resolve_ffmpeg_executable,
+)
 
 
 @pytest.fixture
@@ -91,6 +95,13 @@ def test_metadata_saved(mock_yt_dlp, mock_ffmpeg, tmp_path):
 
     assert meta["source_url"].startswith("https://youtube.com")
     assert meta["project"] == "Automatisk-sentimentanalys"
+
+
+def test_resolve_ffmpeg_executable_env_override(tmp_path, monkeypatch):
+    fake_ffmpeg = tmp_path / "ffmpeg.exe"
+    fake_ffmpeg.write_bytes(b"")
+    monkeypatch.setenv("FFMPEG_PATH", str(fake_ffmpeg))
+    assert resolve_ffmpeg_executable() == str(fake_ffmpeg)
 
 
 def test_error_handling(monkeypatch, tmp_path):

@@ -1,6 +1,8 @@
 from pathlib import Path
 import json
+import os
 import re
+import shutil
 import subprocess
 from datetime import datetime
 from typing import Optional, List, Tuple, Any
@@ -15,6 +17,31 @@ except ImportError:
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+_FFMPEG_MISSING_MSG = (
+    "ffmpeg not found. Install ffmpeg and add it to PATH, set FFMPEG_PATH, "
+    "or place it in tools/ffmpeg/bin/ under the project root."
+)
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def resolve_ffmpeg_executable() -> str | None:
+    """Locate ffmpeg for WAV conversion (env override, bundle, then PATH)."""
+    override = os.environ.get("FFMPEG_PATH", "").strip()
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_file():
+            return str(candidate)
+
+    bundled_name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    bundled = _project_root() / "tools" / "ffmpeg" / "bin" / bundled_name
+    if bundled.is_file():
+        return str(bundled)
+
+    return shutil.which("ffmpeg")
 
 
 class DownloadResult(BaseModel):
@@ -110,11 +137,15 @@ class YouTubeAudioDownloader:
                 base_name = f"{safe_title} [{video_id}]"
 
                 if convert_to_wav:
+                    ffmpeg_bin = resolve_ffmpeg_executable()
+                    if not ffmpeg_bin:
+                        raise FileNotFoundError(_FFMPEG_MISSING_MSG)
+
                     wav_path = output_dir / f"{base_name}.wav"
                     logger.info("🔄 Converting to 16 kHz mono WAV with ffmpeg...")
 
                     ffmpeg_cmd = [
-                        "ffmpeg", "-y", "-i", str(source_audio),
+                        ffmpeg_bin, "-y", "-i", str(source_audio),
                         "-ar", str(sample_rate), "-ac", str(channels),
                         "-c:a", "pcm_s16le", "-loglevel", "error",
                         str(wav_path),

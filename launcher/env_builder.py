@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from src.install.config_schema import UserConfig
-from src.install.paths_util import augment_path
+from src.install.paths_util import augment_path, resolve_ffmpeg
 from src.install.secrets_win import apply_secrets_to_env
 from src.install.user_config import config_to_env
 
@@ -31,6 +31,8 @@ def build_child_env(cfg: UserConfig) -> dict[str, str]:
 
     env["PATH"] = augment_path(cfg, env.get("PATH", ""))
     env["PYTHONPATH"] = str(cfg.resolved_app_root())
+    if ffmpeg := resolve_ffmpeg(cfg):
+        env.setdefault("FFMPEG_PATH", ffmpeg)
 
     return env
 

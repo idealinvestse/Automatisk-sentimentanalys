@@ -114,9 +114,11 @@ async def download_youtube(
             message="Download successful" + (" + pipeline queued" if (request.auto_transcribe or request.auto_analyze) else ""),
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("YouTube download failed")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/list", response_model=List[IngestedFile], summary="List previously ingested YouTube files")
