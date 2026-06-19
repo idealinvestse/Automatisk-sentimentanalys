@@ -143,12 +143,19 @@ htmlcov/
 *.orig
 *.rej
 
-# LLM smoke / generated eval reports (Fas 3 follow-up clean)
+# Agent / tool output (local only)
+agent-tools/
+
+# Generated eval reports
 reports/llm_quality_smoke.json
 reports/llm_human_study_template.md
-# LLM smoke / generated eval reports (Fas 3 follow-up clean)
-reports/llm_quality_smoke.json
-reports/llm_human_study_template.md
+reports/audio_*.json
+
+# Large local audio datasets (manifest + docs committed; download RAVDESS locally)
+samples/audio/Actor_*/
+samples/audio/**/*.wav
+samples/audio/**/*.mp3
+samples/audio/**/*.flac
 
 
 # =============================================================================

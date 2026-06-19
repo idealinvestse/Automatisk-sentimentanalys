@@ -1,0 +1,33 @@
+version: 1
+packs:
+  ravdess_en:
+    label: "RAVDESS Speech (English)"
+    language: en
+    root: "."
+    glob: "Actor_*/*.wav"
+    parser: ravdess_speech
+    default_asr_language: en
+    tags: [emotion, english, smoke]
+    enabled: true
+    emotion_to_sentiment:
+      neutral: neutral
+      calm: neutral
+      happy: positiv
+      sad: negativ
+      angry: negativ
+      fearful: negativ
+      disgust: negativ
+      surprised: neutral
+    statements:
+      "01": "Kids are talking by the door"
+      "02": "Dogs are sitting by the door"
+
+  sv_callcenter:
+    label: "Svenska callcenter-samtal"
+    language: sv
+    root: "sv/callcenter"
+    glob: "**/*.{wav,mp3,flac}"
+    parser: sidecar
+    default_asr_language: sv
+    tags: [swedish, callcenter, priority]
+    enabled: false
