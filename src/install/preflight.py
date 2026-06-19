@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .config_schema import UserConfig
+from .config_schema import InstallProfile, UserConfig
 from .paths_util import resolve_ffmpeg
 from .secrets_win import secret_status
 
@@ -156,6 +156,9 @@ def run_preflight(
         _check_import(report, "transformers")
     _check_import(report, "typer")
     _check_import(report, "yaml")
+    if cfg.install_profile != InstallProfile.minimal:
+        _check_import(report, "faster_whisper")
+        _check_import(report, "whisperx")
     _check_ffmpeg(report, cfg)
     if require_torch:
         _check_torch_cuda(report)

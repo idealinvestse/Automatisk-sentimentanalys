@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from ..core.config import KB_REVISIONS
@@ -93,6 +94,7 @@ class FasterWhisperTranscriber:
         hotwords: list[str] | None = None,
         initial_prompt: str | None = None,
         preprocess: bool = False,
+        on_chunk_progress: Callable[[int, int], None] | None = None,
     ) -> Transcript:
         """Transcribe audio file using faster-whisper."""
         t0 = time.time()
@@ -121,17 +123,18 @@ class FasterWhisperTranscriber:
         # Optional preprocessing (high-pass + noise reduction) – Task 1.4
         # Applied to the audio fed to the ASR model. Diarization (if requested)
         # still runs on the original file.
-        asr_audio_path = audio_path
+        from .preprocess import maybe_preprocess
+
+        prep = maybe_preprocess(audio_path, preprocess=False)
         if preprocess:
             try:
-                from .preprocess import maybe_preprocess
-
-                asr_audio_path = maybe_preprocess(audio_path, preprocess=True)
+                prep = maybe_preprocess(audio_path, preprocess=True)
                 logger.info("Preprocessing enabled – using cleaned audio for ASR")
             except Exception as e:
                 logger.warning("Preprocessing failed, falling back to original audio: %s", e)
-                asr_audio_path = audio_path
+                prep = maybe_preprocess(audio_path, preprocess=False)
 
+        asr_audio_path = prep.path
         try:
             wmodel = self._get_model(revision=revision)
             dur = None
@@ -277,6 +280,16 @@ class FasterWhisperTranscriber:
                 raw_segments: list[Segment] = []
                 pos = 0
                 chunk_index = 0
+                total_chunks = 0
+                scan_pos = 0
+                while scan_pos < len(audio):
+                    scan_chunk = audio[scan_pos : scan_pos + chunk_samples]
+                    if len(scan_chunk) < sr * 2:
+                        break
+                    total_chunks += 1
+                    scan_pos += step
+                total_chunks = max(1, total_chunks)
+
                 while pos < len(audio):
                     chunk = audio[pos : pos + chunk_samples]
                     if len(chunk) < sr * 2:  # ignore tiny trailing chunk
@@ -337,6 +350,11 @@ class FasterWhisperTranscriber:
                         raw_segments.append(seg)
 
                     pos += step
+                    if on_chunk_progress is not None:
+                        try:
+                            on_chunk_progress(chunk_index, total_chunks)
+                        except Exception as cb_err:
+                            logger.debug("on_chunk_progress callback failed: %s", cb_err)
 
                 # Smart merge of overlapping segments
                 segs = self._merge_overlapping_segments(raw_segments, overlap_seconds=4.0)
@@ -391,6 +409,8 @@ class FasterWhisperTranscriber:
             if not isinstance(e, TranscriptionError):
                 raise TranscriptionError(f"Transcription failed under faster-whisper: {e}") from e
             raise
+        finally:
+            prep.cleanup()
 
     # ------------------------------------------------------------------
     # Helper for Task 1.2

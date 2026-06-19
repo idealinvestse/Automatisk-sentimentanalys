@@ -109,6 +109,7 @@ class SystemPanel(ttk.LabelFrame):
             ("Profil", "profile"),
             ("Enhet", "device"),
             ("LLM", "llm"),
+            ("ASR", "asr"),
             ("Nycklar", "secrets"),
         ]
         for i, (title, key) in enumerate(rows):
@@ -132,6 +133,8 @@ class SystemPanel(ttk.LabelFrame):
         self._labels["llm"].configure(
             text=f"{'på' if sys.llm_enabled else 'av'} (API v{sys.api_version})"
         )
+        asr_style = "Meta.TLabel" if sys.asr_ready else "Status.Warning.TLabel"
+        self._labels["asr"].configure(text=sys.asr_summary, style=asr_style)
         or_s = "OR ✓" if sys.openrouter_configured else "OR ✗"
         hf_s = "HF ✓" if sys.huggingface_configured else "HF ✗"
         self._labels["secrets"].configure(text=f"{or_s}  {hf_s}")

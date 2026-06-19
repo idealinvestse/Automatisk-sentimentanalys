@@ -9,19 +9,23 @@ Stödjer:
 - Noise reduction via noisereduce (valfritt paket) – stationär brusreducering.
 
 Användning:
-    from .preprocess import preprocess_audio
-    clean_path = preprocess_audio("noisy_call.wav", highpass=True, noise_reduction=True)
+    from .preprocess import maybe_preprocess
 
-Integreras i alla backends via `preprocess=True` i transcribe().
+    prep = maybe_preprocess("noisy_call.wav", preprocess=True)
+    try:
+        transcriber.transcribe(prep.path, ...)
+    finally:
+        prep.cleanup()
+
+Integreras i alla backends via ``preprocess=True`` i transcribe().
 
 Designval:
 - Använder ffmpeg för highpass eftersom det är systemberoende som redan finns
   och är mycket pålitligt för audio pipelines.
-- noisereduce är extra (kräver `pip install noisereduce`).
-- Returnerar alltid en (temp) wav-fil som kan matas direkt till
-  faster-whisper / whisperx / transformers.
-- Temporära filer lämnas (OS städar så småningom); för produktion kan man
-  använda NamedTemporaryFile med delete=False + explicit cleanup.
+- noisereduce är extra (kräver ``pip install noisereduce``).
+- Returnerar en :class:`PreprocessHandle` med sökväg till (temp) wav-fil.
+- Temporära filer städas via ``handle.cleanup()`` eller context manager –
+  anroparen (ASR-backend) ansvarar för cleanup i ``finally`` efter transkribering.
 """
 
 from __future__ import annotations
@@ -30,11 +34,41 @@ import logging
 import os
 import subprocess
 import tempfile
-from typing import Any
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from typing import Iterator
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PreprocessHandle:
+    """Handle to preprocessed audio; call ``cleanup()`` when ASR is done."""
+
+    path: str
+    _temp_paths: list[str] = field(default_factory=list)
+    _original_path: str = ""
+
+    def cleanup(self) -> None:
+        """Remove temporary WAV files created during preprocessing."""
+        for p in self._temp_paths:
+            if not p or p == self._original_path:
+                continue
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                    logger.debug("Removed preprocessed temp file: %s", p)
+                except OSError as err:
+                    logger.warning("Could not remove temp file %s: %s", p, err)
+        self._temp_paths.clear()
+
+    def __enter__(self) -> str:
+        return self.path
+
+    def __exit__(self, *_exc: object) -> None:
+        self.cleanup()
 
 
 def _numpy_to_wav(audio: np.ndarray, output_path: str, sr: int = 16000) -> None:
@@ -42,11 +76,16 @@ def _numpy_to_wav(audio: np.ndarray, output_path: str, sr: int = 16000) -> None:
     cmd = [
         "ffmpeg",
         "-y",
-        "-f", "f32le",
-        "-ar", str(sr),
-        "-ac", "1",
-        "-i", "pipe:0",
-        "-loglevel", "error",
+        "-f",
+        "f32le",
+        "-ar",
+        str(sr),
+        "-ac",
+        "1",
+        "-i",
+        "pipe:0",
+        "-loglevel",
+        "error",
         output_path,
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -55,13 +94,22 @@ def _numpy_to_wav(audio: np.ndarray, output_path: str, sr: int = 16000) -> None:
         raise RuntimeError(f"Failed to encode WAV with ffmpeg: {proc.stderr.read().decode()}")
 
 
+def _cleanup_paths(paths: list[str], *, exclude: str) -> None:
+    for p in paths:
+        if p and p != exclude and os.path.exists(p):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
 def preprocess_audio(
     audio_path: str,
     highpass: bool = True,
     noise_reduction: bool = True,
     highpass_freq: int = 100,
-) -> str:
-    """Apply optional preprocessing and return path to cleaned audio (WAV @16k mono).
+) -> PreprocessHandle:
+    """Apply optional preprocessing and return a handle to cleaned audio (WAV @16k mono).
 
     Args:
         audio_path: Input audio file.
@@ -70,42 +118,45 @@ def preprocess_audio(
         highpass_freq: Cutoff frequency for high-pass (Hz).
 
     Returns:
-        Path to a (temporary) WAV file with preprocessing applied.
-        Caller is responsible for cleanup if desired.
+        PreprocessHandle whose ``path`` is the audio to feed to ASR.
+        Caller must call ``handle.cleanup()`` (or use ``finally``) after transcription.
     """
     current_path = audio_path
     tmp_files: list[str] = []
 
     try:
-        # 1. High-pass filter (always via ffmpeg for robustness)
         if highpass:
             fd, highpass_path = tempfile.mkstemp(suffix=".wav")
             os.close(fd)
             tmp_files.append(highpass_path)
 
             cmd = [
-                "ffmpeg", "-y",
-                "-i", current_path,
-                "-af", f"highpass=f={highpass_freq}",
-                "-ar", "16000",
-                "-ac", "1",
-                "-loglevel", "error",
+                "ffmpeg",
+                "-y",
+                "-i",
+                current_path,
+                "-af",
+                f"highpass=f={highpass_freq}",
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-loglevel",
+                "error",
                 highpass_path,
             ]
             logger.debug("Applying high-pass filter: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 logger.warning("High-pass ffmpeg failed: %s", result.stderr)
-                # fall back to original
                 highpass_path = current_path
-            current_path = highpass_path
+            else:
+                current_path = highpass_path
 
-        # 2. Noise reduction (optional, requires noisereduce)
         if noise_reduction:
             try:
                 import noisereduce as nr  # type: ignore
 
-                # Decode current (possibly highpassed) audio
                 from faster_whisper.audio import decode_audio  # type: ignore
 
                 audio = decode_audio(current_path)
@@ -113,7 +164,6 @@ def preprocess_audio(
 
                 reduced = nr.reduce_noise(y=audio, sr=16000, stationary=True, prop_decrease=0.8)
 
-                # Encode back to temp wav
                 fd, nr_path = tempfile.mkstemp(suffix=".wav")
                 os.close(fd)
                 tmp_files.append(nr_path)
@@ -131,21 +181,43 @@ def preprocess_audio(
             except Exception as e:
                 logger.warning("Noise reduction failed, continuing without: %s", e)
 
-        return current_path
+        temps_to_clean = [p for p in tmp_files if p != audio_path and os.path.exists(p)]
+        return PreprocessHandle(
+            path=current_path,
+            _temp_paths=temps_to_clean,
+            _original_path=audio_path,
+        )
 
     except Exception as e:
-        # Cleanup any temps we created on error
-        for p in tmp_files:
-            if p != audio_path and os.path.exists(p):
-                try:
-                    os.unlink(p)
-                except Exception:
-                    pass
+        _cleanup_paths(tmp_files, exclude=audio_path)
         raise RuntimeError(f"Preprocessing failed: {e}") from e
 
 
-def maybe_preprocess(audio_path: str, preprocess: bool = False) -> str:
-    """Convenience wrapper: if preprocess=True then run default preprocessing."""
+def maybe_preprocess(audio_path: str, preprocess: bool = False) -> PreprocessHandle:
+    """Return a handle to preprocessed audio, or the original path if disabled."""
     if not preprocess:
-        return audio_path
+        return PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path)
     return preprocess_audio(audio_path, highpass=True, noise_reduction=True)
+
+
+@contextmanager
+def managed_preprocess(
+    audio_path: str,
+    *,
+    preprocess: bool = False,
+    highpass: bool = True,
+    noise_reduction: bool = True,
+) -> Iterator[str]:
+    """Context manager that yields ASR audio path and cleans up temps on exit."""
+    if preprocess:
+        handle = preprocess_audio(
+            audio_path,
+            highpass=highpass,
+            noise_reduction=noise_reduction,
+        )
+    else:
+        handle = PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path)
+    try:
+        yield handle.path
+    finally:
+        handle.cleanup()

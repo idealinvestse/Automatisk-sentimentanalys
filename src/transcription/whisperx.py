@@ -242,16 +242,17 @@ class WhisperXTranscriber:
         )
 
         # Preprocessing (Task 1.4) – applied to the audio loaded for WhisperX
-        asr_audio_path = audio_path
+        from .preprocess import maybe_preprocess
+
+        prep = maybe_preprocess(audio_path, preprocess=False)
         if preprocess:
             try:
-                from .preprocess import maybe_preprocess
-
-                asr_audio_path = maybe_preprocess(audio_path, preprocess=True)
+                prep = maybe_preprocess(audio_path, preprocess=True)
             except Exception as e:
                 logger.warning("Preprocessing failed for whisperx: %s", e)
-                asr_audio_path = audio_path
+                prep = maybe_preprocess(audio_path, preprocess=False)
 
+        asr_audio_path = prep.path
         try:
             wmodel = self._get_model(revision=revision)
             audio = whisperx.load_audio(asr_audio_path)
@@ -438,3 +439,5 @@ class WhisperXTranscriber:
             if not isinstance(e, TranscriptionError):
                 raise TranscriptionError(f"Transcription failed under whisperx: {e}") from e
             raise
+        finally:
+            prep.cleanup()

@@ -47,16 +47,15 @@ def resolve_audio_paths(
 
     # --- Process explicit paths / globs ---
     for p in audio_paths or []:
-        if any(ch in p for ch in ("*", "?", "[")):
-            # Treat as glob pattern
-            for m in _glob.glob(p, recursive=recursive):
-                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
-                    files.append(os.path.abspath(m))
-        elif os.path.isfile(p):
+        if os.path.isfile(p):
             if os.path.splitext(p)[1].lower() in AUDIO_EXTS:
                 files.append(os.path.abspath(p))
             else:
                 logger.warning("Skipping file with unsupported extension: %s", p)
+        elif any(ch in p for ch in ("*", "?", "[")):
+            for m in _glob.glob(p, recursive=recursive):
+                if os.path.isfile(m) and os.path.splitext(m)[1].lower() in AUDIO_EXTS:
+                    files.append(os.path.abspath(m))
         elif os.path.isdir(p):
             for root, _dirs, fnames in os.walk(p):
                 for fn in fnames:

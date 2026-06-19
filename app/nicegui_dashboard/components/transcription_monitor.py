@@ -13,11 +13,19 @@ from nicegui import ui
 
 from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.metric_card import metric_card
+from app.nicegui_dashboard.components.transcription_adhoc import render_adhoc_section
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_presets import (
+    DEFAULT_PRESET_ID,
+    apply_default_preset,
     apply_preset,
+    is_recommended_preset,
     preset_description,
     preset_options,
+)
+from app.nicegui_dashboard.services.transcription_runtime import (
+    DEFAULT_API_RETRIES,
+    DEFAULT_LOCAL_TIMEOUT_S,
 )
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
 from app.nicegui_dashboard.settings import ws_status_label
@@ -38,6 +46,8 @@ def render_transcription_tab(
     api_client: NiceGUIAPIClient | None = None,
 ) -> None:
     """Render full transcription monitor view."""
+    render_adhoc_section(trans_state, api_client=api_client)
+
     ui.label("🎙️ Transkriberingskö & Monitor").classes("text-h6")
     if api_client:
         ui.label(f"Backend: {api_client.base_url} | WebSocket live-loggar").classes("text-caption")
@@ -150,10 +160,16 @@ def render_transcription_tab(
         preset_select = ui.select(
             options=preset_options(),
             label="Välj preset",
-            value=trans_state.active_preset if trans_state.active_preset != "anpassad" else "api_standard",
+            value=(
+                trans_state.active_preset
+                if trans_state.active_preset != "anpassad"
+                else DEFAULT_PRESET_ID
+            ),
             on_change=_on_preset_change,
         ).classes("w-full")
         preset_desc.set_text(preset_description(str(preset_select.value)))
+        if is_recommended_preset(trans_state.active_preset):
+            ui.label("★ Rekommenderad preset aktiv").classes("text-caption text-positive")
 
         def apply_selected_preset() -> None:
             pid = preset_select.value
@@ -167,7 +183,17 @@ def render_transcription_tab(
             else:
                 ui.notify("Okänd preset", type="negative")
 
-        ui.button("Tillämpa preset", on_click=apply_selected_preset).props("outline")
+        def reset_to_default_preset() -> None:
+            if apply_default_preset(trans_state):
+                preset_select.set_value(DEFAULT_PRESET_ID)
+                preset_desc.set_text(preset_description(DEFAULT_PRESET_ID))
+                _sync_ui_from_state()
+                refresh_all()
+                ui.notify("Återställt till callcenter standard")
+
+        with ui.row().classes("gap-2 flex-wrap"):
+            ui.button("Tillämpa preset", on_click=apply_selected_preset).props("outline")
+            ui.button("Återställ till standard", on_click=reset_to_default_preset).props("outline")
 
     # --- ASR grund ---
     with ui.expansion("⚙️ ASR-grund", value=False).classes("w-full"):
@@ -260,6 +286,33 @@ def render_transcription_tab(
             "Initial prompt",
             value=settings.get("initial_prompt") or "",
             on_change=lambda e: trans_state.update_setting("initial_prompt", e.value or None),
+        )
+        ui.checkbox(
+            "Hotwords från fil",
+            value=settings.get("use_hotwords_file", True),
+            on_change=lambda e: trans_state.update_setting("use_hotwords_file", e.value),
+        )
+        ui.number(
+            "Lokal timeout (s)",
+            value=float(settings.get("local_timeout_s", DEFAULT_LOCAL_TIMEOUT_S)),
+            min=60,
+            max=7200,
+            step=60,
+            on_change=lambda e: trans_state.update_setting(
+                "local_timeout_s", float(e.value or DEFAULT_LOCAL_TIMEOUT_S)
+            ),
+        )
+        ui.number(
+            "API-försök",
+            value=int(settings.get("api_retries", DEFAULT_API_RETRIES)),
+            min=1,
+            max=5,
+            on_change=lambda e: trans_state.update_setting("api_retries", int(e.value or DEFAULT_API_RETRIES)),
+        )
+        ui.checkbox(
+            "API → lokal fallback",
+            value=settings.get("api_fallback_local", True),
+            on_change=lambda e: trans_state.update_setting("api_fallback_local", e.value),
         )
 
     # --- Batch & scan ---

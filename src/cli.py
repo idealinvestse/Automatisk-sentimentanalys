@@ -281,6 +281,56 @@ def sentiment_cmd(
             console.print(f"[red]Kunde inte spara till CSV: {e}[/red]")
 
 
+@app.command("download-asr")
+def download_asr_cmd(
+    backend: list[str] = typer.Option(
+        ["faster", "whisperx", "transformers"],
+        "--backend",
+        "-b",
+        help="ASR backends whose models should be pre-downloaded",
+    ),
+    model: str = typer.Option(DEFAULT_ASR_MODEL, "--model", "-m", help="ASR model name or alias"),
+    device: str = typer.Option("cpu", "--device", help="Device used for prefetch (cpu recommended)"),
+    language: str = typer.Option("sv", "--language", "-l", help="Language for WhisperX align model"),
+    revision: str | None = typer.Option(
+        "strict",
+        "--revision",
+        help="KB-Whisper revision for faster/transformers prefetch",
+    ),
+    skip_packages: bool = typer.Option(
+        False, "--skip-packages", help="Skip pip install of faster-whisper/whisperx"
+    ),
+    skip_models: bool = typer.Option(False, "--skip-models", help="Only install packages, skip model download"),
+) -> None:
+    """Install faster-whisper & whisperx and pre-download transcription models."""
+    from src.install.asr_assets import ensure_asr_assets
+    from src.install.config_schema import UserConfig
+
+    cfg = UserConfig()
+    console.print("[cyan]Hämtar ASR-paket och transkriberingsmodeller…[/cyan]")
+    report = ensure_asr_assets(
+        cfg.resolved_app_root(),
+        backends=backend,
+        model=model,
+        device=device,
+        language=language,
+        revision=revision,
+        hf_home=cfg.resolved_hf_home(),
+        install_packages=not skip_packages,
+        download_models=not skip_models,
+        progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
+    )
+    for step in report.steps:
+        status = "[green]OK[/green]" if step.ok else "[red]FAIL[/red]"
+        detail = f" ({step.detail})" if step.detail else ""
+        console.print(f"{status} {step.name}: {step.message}{detail}")
+    if report.ok:
+        console.print("[green]ASR-uppsättning klar[/green]")
+        raise typer.Exit(0)
+    console.print("[red]ASR-uppsättning misslyckades delvis – se steg ovan[/red]")
+    raise typer.Exit(1)
+
+
 @app.command("transcribe")
 def transcribe_cmd(
     inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),

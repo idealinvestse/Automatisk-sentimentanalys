@@ -18,12 +18,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from app.nicegui_dashboard.services.transcription_runtime import (
+    api_retry_count,
+    build_local_transcribe_kwargs,
+    local_timeout_seconds,
+    resolve_hotwords,
+    validate_audio_file,
+    validate_upload_bytes,
+)
+
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path(".cache")
 QUEUE_STATE_FILE = CACHE_DIR / "transcription_queue.json"
 SCAN_STATE_FILE = CACHE_DIR / "transcription_scan_state.json"
-_STATE_VERSION = 2
+ADHOC_UPLOAD_DIR = CACHE_DIR / "adhoc_uploads"
+_STATE_VERSION = 3
 _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
 
 
@@ -60,6 +70,11 @@ def _default_settings() -> dict[str, Any]:
         "workers": 1,
         "worker_timeout": 300.0,
         "sentiment_profile": "callcenter",
+        "use_hotwords_file": True,
+        "hotwords_file": "configs/callcenter_hotwords.txt",
+        "local_timeout_s": 900.0,
+        "api_retries": 2,
+        "api_fallback_local": True,
     }
 
 
@@ -83,7 +98,7 @@ class TranscriptionState:
     logs: list[dict[str, Any]] = field(default_factory=list)
     settings: dict[str, Any] = field(default_factory=_default_settings)
     scan_config: dict[str, Any] = field(default_factory=_default_scan_config)
-    active_preset: str = "anpassad"
+    active_preset: str = "callcenter_standard"
     pause: bool = False
     stop: bool = False
     queue: list[Path] = field(default_factory=list)
@@ -95,6 +110,17 @@ class TranscriptionState:
     _worker_task: asyncio.Task | None = field(default=None, repr=False)
     _ws_listener: Any = field(default=None, repr=False)
     _listeners: list[Callable[[str, dict[str, Any]], None]] = field(default_factory=list, repr=False)
+    # Ad-hoc single-file transcription (separate from batch queue)
+    adhoc_upload_path: Path | None = None
+    adhoc_filename: str | None = None
+    adhoc_running: bool = False
+    adhoc_progress: float = 0.0
+    adhoc_status_text: str = ""
+    adhoc_result: dict[str, Any] | None = None
+    adhoc_meta: dict[str, Any] | None = None
+    adhoc_error: str | None = None
+    adhoc_cancel: bool = False
+    _adhoc_task: asyncio.Task | None = field(default=None, repr=False)
 
     def ensure_cache_dir(self) -> None:
         CACHE_DIR.mkdir(exist_ok=True)
@@ -150,6 +176,10 @@ class TranscriptionState:
                 loaded["is_running"] = False
                 loaded["active_job_id"] = None
                 self.status.update(loaded)
+            if version < 3:
+                from app.nicegui_dashboard.services.transcription_presets import apply_default_preset
+
+                apply_default_preset(self)
         except (OSError, json.JSONDecodeError) as err:
             logger.warning("Could not load transcription queue: %s", err)
 
@@ -234,11 +264,18 @@ class TranscriptionState:
     def scan_pending(self) -> list[Path]:
         folder = Path(self.pending_folder)
         folder.mkdir(parents=True, exist_ok=True)
-        files = sorted(
+        candidates = sorted(
             [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _AUDIO_EXTS],
             key=lambda x: x.stat().st_mtime,
             reverse=True,
         )
+        files: list[Path] = []
+        for f in candidates:
+            try:
+                validate_audio_file(f)
+                files.append(f)
+            except ValueError as err:
+                self.add_log("WARNING", str(err), file=f.name, notify=False)
         existing = {str(f) for f in self.queue}
         for f in files:
             if str(f) not in existing:
@@ -322,7 +359,58 @@ class TranscriptionState:
     def _api_settings(self) -> dict[str, Any]:
         merged = dict(self.settings)
         merged.update(self.scan_config)
+        hotwords = resolve_hotwords(self.settings)
+        if hotwords:
+            merged["hotwords"] = hotwords
         return merged
+
+    async def _with_retries(
+        self,
+        operation: str,
+        coro_factory: Callable[[], Any],
+        *,
+        file_name: str | None = None,
+    ) -> Any:
+        """Run an async API call with configurable retries and backoff."""
+        retries = api_retry_count(self.settings)
+        last_err: Exception | None = None
+        for attempt in range(1, retries + 1):
+            try:
+                return await coro_factory()
+            except Exception as err:
+                last_err = err
+                if attempt >= retries:
+                    break
+                self.add_log(
+                    "WARNING",
+                    f"{operation} försök {attempt}/{retries} misslyckades: {err}",
+                    file=file_name,
+                )
+                await asyncio.sleep(min(2.0 * attempt, 6.0))
+        assert last_err is not None
+        raise last_err
+
+    def _transcribe_file_sync(
+        self,
+        fpath: Path,
+        *,
+        on_chunk_progress: Callable[[int, int], None] | None = None,
+    ) -> dict[str, Any]:
+        """Blocking local ASR – run via asyncio.to_thread from async code."""
+        from src.transcription.factory import get_transcriber
+
+        backend, kwargs = build_local_transcribe_kwargs(
+            self.settings,
+            fpath,
+            on_chunk_progress=on_chunk_progress,
+        )
+        transcriber = get_transcriber(
+            backend=backend,
+            model_name=self.settings.get("model", "kb-whisper-large"),
+            device=self.settings.get("device", "auto"),
+        )
+        tr_obj = transcriber.transcribe(**kwargs)
+        return tr_obj.to_dict() if hasattr(tr_obj, "to_dict") else dict(tr_obj or {})
 
     def _api_logs_via_ws(self) -> bool:
         """True when API batch is tagged with a job id (server streams logs via WS)."""
@@ -409,20 +497,39 @@ class TranscriptionState:
             await asyncio.sleep(0.3)
         return not self.stop
 
-    async def _process_file_api(self, fpath: Path) -> None:
-        """POST /transcribe for a single queued file."""
+    async def _process_file_api(self, fpath: Path) -> bool:
+        """POST /transcribe for a single queued file. Returns True on success."""
         from app.nicegui_dashboard.services.nicegui_api_client import APIError
 
         if not self.api_client:
             raise APIError("API-klient saknas")
 
+        validate_audio_file(fpath)
+
         if not self._api_logs_via_ws():
             self.add_log("INFO", f"[API] Transkriberar {fpath.name}...", file=fpath.name)
-        result = await self.api_client.transcribe(str(fpath), **self._api_settings())
+
+        async def _call() -> dict[str, Any]:
+            return await self.api_client.transcribe(str(fpath), **self._api_settings())
+
+        try:
+            result = await self._with_retries("[API]", _call, file_name=fpath.name)
+        except Exception as err:
+            if self.settings.get("api_fallback_local", True):
+                self.add_log(
+                    "WARNING",
+                    f"[API] Fel – försöker lokal fallback: {err}",
+                    file=fpath.name,
+                )
+                return await self._process_file_local(fpath)
+            self.add_log("ERROR", f"[API] {err}", file=fpath.name)
+            return False
+
         if not self._api_logs_via_ws():
             transcript = result.get("transcript") or {}
             n_seg = len(transcript.get("segments") or [])
             self.add_log("INFO", f"[API] Klart: {fpath.name} – {n_seg} segment", file=fpath.name)
+        return True
 
     async def _run_batch_scan_process(self) -> list[str]:
         """POST /scan_process on pending folder with persistent state_file."""
@@ -437,16 +544,19 @@ class TranscriptionState:
         if not self._api_logs_via_ws():
             label = "analys" if operation == "analyze_conversation" else "transkribering"
             self.add_log("INFO", f"[API] scan_process ({label}) på {self.pending_folder}")
-        result = await self.api_client.scan_process(
-            self.pending_folder,
-            state_file=str(SCAN_STATE_FILE),
-            operation=operation,
-            batch_size=int(sc.get("batch_size", 4)),
-            max_files=sc.get("max_files"),
-            pattern=sc.get("pattern"),
-            recursive=bool(sc.get("recursive", True)),
-            **self._api_settings(),
-        )
+        async def _call() -> dict[str, Any]:
+            return await self.api_client.scan_process(
+                self.pending_folder,
+                state_file=str(SCAN_STATE_FILE),
+                operation=operation,
+                batch_size=int(sc.get("batch_size", 4)),
+                max_files=sc.get("max_files"),
+                pattern=sc.get("pattern"),
+                recursive=bool(sc.get("recursive", True)),
+                **self._api_settings(),
+            )
+
+        result = await self._with_retries("[scan_process]", _call)
         processed: list[str] = []
         if not self._api_logs_via_ws():
             for item in result.get("items") or []:
@@ -481,7 +591,10 @@ class TranscriptionState:
         paths = [str(f) for f in files]
         if not self._api_logs_via_ws():
             self.add_log("INFO", f"[API] batch_transcribe på {len(paths)} filer")
-        result = await self.api_client.batch_transcribe(paths, **self._api_settings())
+        async def _call() -> dict[str, Any]:
+            return await self.api_client.batch_transcribe(paths, **self._api_settings())
+
+        result = await self._with_retries("[batch_transcribe]", _call)
         processed: list[str] = []
         for item in result.get("items") or []:
             fname = item.get("file", "?")
@@ -501,31 +614,31 @@ class TranscriptionState:
                 await self.api_client.cancel_job(self.job_id)
         return processed
 
-    async def _process_file_local(self, fpath: Path) -> None:
+    async def _process_file_local(self, fpath: Path) -> bool:
+        """Run local ASR with validation and timeout. Returns True on success."""
+        timeout = local_timeout_seconds(self.settings)
         try:
-            from src.transcription.factory import get_transcriber
-
-            transcriber = get_transcriber(
-                backend=self.settings.get("backend", "faster"),
-                model_name=self.settings.get("model", "kb-whisper-large"),
-                device=self.settings.get("device", "auto"),
+            validate_audio_file(fpath)
+            tr = await asyncio.wait_for(
+                asyncio.to_thread(self._transcribe_file_sync, fpath),
+                timeout=timeout,
             )
-            tr_obj = transcriber.transcribe(
-                audio_path=str(fpath),
-                language=self.settings.get("language", "sv"),
-                preprocess=self.settings.get("preprocess", True),
-                diarize=self.settings.get("diarize", False),
-            )
-            tr = tr_obj.to_dict() if hasattr(tr_obj, "to_dict") else {}
             self.add_log(
                 "INFO",
                 f"Klart: {fpath.name} – {len(tr.get('segments', []))} segment",
                 file=fpath.name,
             )
+            return True
+        except TimeoutError:
+            self.add_log(
+                "ERROR",
+                f"Timeout efter {int(timeout)}s: {fpath.name}",
+                file=fpath.name,
+            )
+            return False
         except Exception as err:
-            self.add_log("ERROR", f"Kunde inte transkribera: {err}. Simulerar.", file=fpath.name)
-            await asyncio.sleep(1.2)
-            self.add_log("INFO", f"[SIM] Klart: {fpath.name}", file=fpath.name)
+            self.add_log("ERROR", f"Kunde inte transkribera: {err}", file=fpath.name)
+            return False
 
     async def run_batch(self, files: list[Path]) -> None:
         """Async batch worker – non-blocking for NiceGUI event loop."""
@@ -572,17 +685,19 @@ class TranscriptionState:
                     self.status["progress"] = round(i / max(1, len(files)), 2)
                     self.add_log("INFO", f"Bearbetar {fpath.name}...", file=fpath.name)
 
+                    ok = False
                     try:
                         if use_api:
-                            await self._process_file_api(fpath)
+                            ok = await self._process_file_api(fpath)
                         else:
-                            await self._process_file_local(fpath)
+                            ok = await self._process_file_local(fpath)
                     except Exception as err:
                         self.add_log("ERROR", f"Fel på {fpath.name}: {err}", file=fpath.name)
 
                     self.status["processed"] = i + 1
                     self.status["progress"] = round((i + 1) / max(1, len(files)), 2)
-                    processed_paths.append(str(fpath))
+                    if ok:
+                        processed_paths.append(str(fpath))
                     self.save()
         finally:
             await self._stop_ws_listener()
@@ -635,10 +750,193 @@ class TranscriptionState:
             except Exception as err:
                 self.add_log("WARNING", f"Cancel misslyckades: {err}")
 
+    def _notify_adhoc(self) -> None:
+        self._notify(
+            "adhoc",
+            {
+                "running": self.adhoc_running,
+                "progress": self.adhoc_progress,
+                "status_text": self.adhoc_status_text,
+                "filename": self.adhoc_filename,
+                "result": self.adhoc_result,
+                "meta": self.adhoc_meta,
+                "error": self.adhoc_error,
+            },
+        )
+
+    def save_adhoc_upload(self, content: bytes, filename: str) -> Path:
+        """Persist uploaded audio for ad-hoc transcription."""
+        suffix = Path(filename).suffix.lower()
+        if suffix not in _AUDIO_EXTS:
+            raise ValueError(f"Filtyp {suffix or '(saknas)'} stöds inte. Tillåtna: {', '.join(sorted(_AUDIO_EXTS))}")
+        validate_upload_bytes(content, filename)
+
+        self.ensure_cache_dir()
+        ADHOC_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        safe_name = Path(filename).name.replace(" ", "_")
+        dest = ADHOC_UPLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{safe_name}"
+        dest.write_bytes(content)
+
+        if self.adhoc_upload_path and self.adhoc_upload_path.exists():
+            with contextlib.suppress(OSError):
+                self.adhoc_upload_path.unlink()
+
+        self.adhoc_upload_path = dest
+        self.adhoc_filename = safe_name
+        self.adhoc_result = None
+        self.adhoc_meta = None
+        self.adhoc_error = None
+        self._notify_adhoc()
+        return dest
+
+    def clear_adhoc_preview(self) -> None:
+        """Reset ad-hoc upload and result preview."""
+        if self.adhoc_upload_path and self.adhoc_upload_path.exists():
+            with contextlib.suppress(OSError):
+                self.adhoc_upload_path.unlink()
+        self.adhoc_upload_path = None
+        self.adhoc_filename = None
+        self.adhoc_result = None
+        self.adhoc_meta = None
+        self.adhoc_error = None
+        self.adhoc_status_text = ""
+        self.adhoc_progress = 0.0
+        self._notify_adhoc()
+
+    def cancel_adhoc(self) -> None:
+        """Request cancellation of running ad-hoc transcription."""
+        self.adhoc_cancel = True
+        if self._adhoc_task and not self._adhoc_task.done():
+            self._adhoc_task.cancel()
+        self.adhoc_status_text = "Avbryter…"
+        self._notify_adhoc()
+
+    def start_adhoc_transcription(self) -> bool:
+        """Start async ad-hoc transcription if upload exists and not already running."""
+        if self.adhoc_running:
+            return False
+        if not self.adhoc_upload_path or not self.adhoc_upload_path.exists():
+            return False
+        self.adhoc_cancel = False
+        self.adhoc_error = None
+        self.adhoc_result = None
+        self.adhoc_meta = None
+        self._adhoc_task = asyncio.create_task(self.run_adhoc_transcription())
+        return True
+
+    async def run_adhoc_transcription(self) -> None:
+        """Transcribe the uploaded ad-hoc file (API or local)."""
+        fpath = self.adhoc_upload_path
+        if not fpath or not fpath.exists():
+            self.adhoc_error = "Ingen uppladdad fil"
+            self._notify_adhoc()
+            return
+
+        self.adhoc_running = True
+        self.adhoc_progress = 0.05
+        self.adhoc_status_text = "Förbereder transkribering…"
+        self._notify_adhoc()
+
+        validate_audio_file(fpath)
+        want_api = bool(self.status.get("use_api") and self.api_client)
+        timeout = local_timeout_seconds(self.settings)
+        used_api = False
+
+        try:
+            if want_api:
+                if not await self._ensure_api_ready():
+                    if not self.settings.get("api_fallback_local", True):
+                        raise RuntimeError("Backend ej tillgänglig")
+                    self.add_log(
+                        "WARNING",
+                        "Backend ej tillgänglig – lokal fallback",
+                        file=fpath.name,
+                    )
+                else:
+                    self.adhoc_status_text = "Transkriberar via API…"
+                    self.adhoc_progress = 0.2
+                    self._notify_adhoc()
+
+                    from app.nicegui_dashboard.services.test_lab_service import resolve_api_audio_path
+
+                    api_path, warning = resolve_api_audio_path(str(fpath.resolve()))
+                    if warning:
+                        self.add_log("WARNING", warning, file=fpath.name)
+
+                    async def _call() -> dict[str, Any]:
+                        return await self.api_client.transcribe(str(api_path), **self._api_settings())
+
+                    try:
+                        result = await self._with_retries("[Ad-hoc API]", _call, file_name=fpath.name)
+                    except Exception as err:
+                        if not self.settings.get("api_fallback_local", True):
+                            raise
+                        self.add_log(
+                            "WARNING",
+                            f"[Ad-hoc] API fel – lokal fallback: {err}",
+                            file=fpath.name,
+                        )
+                    else:
+                        if self.adhoc_cancel:
+                            return
+                        transcript = result.get("transcript") or {}
+                        self.adhoc_result = transcript
+                        self.adhoc_meta = {"source": "api", "api_path": api_path}
+                        used_api = True
+
+            if not used_api:
+                self.adhoc_status_text = "Transkriberar lokalt…"
+                self.adhoc_progress = 0.15
+                self._notify_adhoc()
+
+                def on_chunk(done: int, total: int) -> None:
+                    pct = done / max(1, total)
+                    self.adhoc_progress = 0.15 + 0.8 * pct
+                    self.adhoc_status_text = f"Chunk {done}/{total} – {int(pct * 100)} %"
+                    self._notify_adhoc()
+
+                transcript = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._transcribe_file_sync,
+                        fpath,
+                        on_chunk_progress=on_chunk,
+                    ),
+                    timeout=timeout,
+                )
+                if self.adhoc_cancel:
+                    return
+                self.adhoc_result = transcript
+                self.adhoc_meta = {"source": "local"}
+
+            self.adhoc_progress = 1.0
+            n_seg = len((self.adhoc_result or {}).get("segments") or [])
+            self.adhoc_status_text = f"Klart – {n_seg} segment"
+            self.add_log("INFO", f"[Ad-hoc] Klart: {fpath.name} – {n_seg} segment", file=fpath.name)
+        except asyncio.CancelledError:
+            self.adhoc_status_text = "Avbruten"
+            self.add_log("WARNING", f"[Ad-hoc] Avbruten: {fpath.name}", file=fpath.name)
+        except TimeoutError:
+            self.adhoc_error = f"Timeout efter {int(timeout)}s"
+            self.adhoc_status_text = "Fel vid transkribering"
+            self.add_log("ERROR", f"[Ad-hoc] {self.adhoc_error}", file=fpath.name)
+        except Exception as err:
+            self.adhoc_error = str(err)
+            self.adhoc_status_text = "Fel vid transkribering"
+            self.add_log("ERROR", f"[Ad-hoc] {err}", file=fpath.name)
+        finally:
+            self.adhoc_running = False
+            self.adhoc_cancel = False
+            self._notify_adhoc()
+
 
 def create_transcription_state(api_client: Any = None) -> TranscriptionState:
-    """Factory: load persistent state from disk."""
+    """Factory: load persistent state from disk; apply default preset on first run."""
+    from app.nicegui_dashboard.services.transcription_presets import apply_default_preset
+
     state = TranscriptionState(api_client=api_client)
+    fresh = not QUEUE_STATE_FILE.exists()
     state.load()
+    if fresh:
+        apply_default_preset(state)
     state.scan_pending()
     return state

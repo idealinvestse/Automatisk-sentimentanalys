@@ -113,15 +113,17 @@ class TransformersTranscriber:
         )
 
         # Preprocessing (Task 1.4)
-        asr_audio_path = audio_path
+        from .preprocess import maybe_preprocess
+
+        prep = maybe_preprocess(audio_path, preprocess=False)
         if preprocess:
             try:
-                from .preprocess import maybe_preprocess
-
-                asr_audio_path = maybe_preprocess(audio_path, preprocess=True)
+                prep = maybe_preprocess(audio_path, preprocess=True)
             except Exception as e:
                 logger.warning("Preprocessing failed for transformers backend: %s", e)
+                prep = maybe_preprocess(audio_path, preprocess=False)
 
+        asr_audio_path = prep.path
         try:
             asr_pipeline = self._get_pipeline(revision=revision)
 
@@ -220,3 +222,5 @@ class TransformersTranscriber:
             if not isinstance(e, TranscriptionError):
                 raise TranscriptionError(f"Transcription failed under transformers: {e}") from e
             raise
+        finally:
+            prep.cleanup()

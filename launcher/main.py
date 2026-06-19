@@ -19,6 +19,7 @@ from .pid_store import launcher_activity_log_path
 from .process_manager import start_api, start_dashboard, stop_service
 from .scroll_frame import ScrollableFrame
 from .status_snapshot import collect_snapshot
+from .ui_asr_dialog import open_asr_manager_dialog
 from .ui_status_panel import StatusPanel
 
 _AUTO_REFRESH_MS = 2000
@@ -70,6 +71,7 @@ class LauncherApp(tk.Tk):
             ("Stop Dashboard", lambda: self._run_service_action("dashboard", "stop")),
             ("Configure (Setup Hub)", self._open_setup_hub),
             ("Doctor / Health check", self._run_doctor),
+            ("Hantera ASR / Transkribering", self._open_asr_manager),
             ("Open CLI (PowerShell)", self._open_cli),
             ("Open outputs folder", self._open_outputs),
             ("Open logs folder", self._open_logs),
@@ -173,6 +175,18 @@ class LauncherApp(tk.Tk):
         )
         self.event_log.info("Opened Setup Hub (Streamlit)", phase="launcher")
 
+    def _open_asr_manager(self) -> None:
+        if self._busy:
+            return
+        self.cfg = load_user_config(_app_root())
+        open_asr_manager_dialog(
+            self,
+            self.cfg,
+            self.event_log,
+            on_complete=self._refresh_status,
+        )
+        self.event_log.info("Opened ASR manager", phase="launcher")
+
     def _open_cli(self) -> None:
         from .cli import open_cli_cmd
 
@@ -203,6 +217,7 @@ class LauncherApp(tk.Tk):
                 f"Detta laddar ner och installerar allt som behövs för profil '{profile}':\n\n"
                 "• Python virtual environment (.venv)\n"
                 "• Pip-paket (API, dashboard m.m.)\n"
+                "• faster-whisper, whisperx och transkriberingsmodeller\n"
                 "• ffmpeg (om det saknas)\n"
                 "• user_config.yaml (om den saknas)\n\n"
                 "Kräver internetanslutning. Fortsätt?"

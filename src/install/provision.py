@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+from .asr_assets import ensure_asr_assets
 from .config_schema import InstallProfile, UserConfig
 from .paths_util import resolve_ffmpeg
 from .user_config import load_user_config, save_user_config
@@ -54,6 +55,7 @@ def requirements_for_profile(profile: InstallProfile) -> list[str]:
         InstallProfile.cli: [
             "requirements-min.txt",
             "requirements-cli.txt",
+            "requirements-asr.txt",
             "requirements-api.txt",
             "requirements-dashboard-nicegui.txt",
             install,
@@ -61,11 +63,13 @@ def requirements_for_profile(profile: InstallProfile) -> list[str]:
         InstallProfile.api: [
             "requirements-min.txt",
             "requirements-api.txt",
+            "requirements-asr.txt",
             install,
         ],
         InstallProfile.full: [
             "requirements-min.txt",
             "requirements-cli.txt",
+            "requirements-asr.txt",
             "requirements-api.txt",
             "requirements-dashboard-nicegui.txt",
             "requirements.txt",
@@ -75,6 +79,7 @@ def requirements_for_profile(profile: InstallProfile) -> list[str]:
         InstallProfile.dev: [
             "requirements-min.txt",
             "requirements-cli.txt",
+            "requirements-asr.txt",
             "requirements-api.txt",
             "requirements-dashboard-nicegui.txt",
             "requirements.txt",
@@ -219,10 +224,11 @@ def run_provision(
     ensure_virtualenv: bool = True,
     install_packages: bool = True,
     download_ffmpeg: bool = True,
+    download_asr: bool = True,
     init_config: bool = True,
     progress: ProgressCallback = None,
 ) -> ProvisionReport:
-    """Install venv, pip packages, ffmpeg, and optional user config."""
+    """Install venv, pip packages, ffmpeg, ASR assets, and optional user config."""
     report = ProvisionReport()
     root = cfg.resolved_app_root()
 
@@ -274,5 +280,26 @@ def run_provision(
                 report.add("ffmpeg", False, "ffmpeg not found after install")
         except Exception as exc:
             report.add("ffmpeg", False, "ffmpeg install failed", str(exc))
+
+    if download_asr and install_packages:
+        log("Installing ASR packages and downloading transcription models")
+        try:
+            asr_report = ensure_asr_assets(
+                root,
+                python=python,
+                backends=["faster", "whisperx", "transformers"],
+                model=cfg.asr.model,
+                device=cfg.device if cfg.device != "auto" else "cpu",
+                language=cfg.asr.language,
+                revision=cfg.asr.revision,
+                hf_home=cfg.resolved_hf_home(),
+                install_packages=True,
+                download_models=True,
+                progress=log,
+            )
+            for step in asr_report.steps:
+                report.add(f"asr_{step.name}", step.ok, step.message, step.detail)
+        except Exception as exc:
+            report.add("asr_assets", False, "ASR setup failed", str(exc))
 
     return report

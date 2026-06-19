@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 
+from src.install.asr_assets import collect_asr_status
 from src.install.config_schema import UserConfig
 from src.install.secrets_win import secret_status
 from src.install.user_config import default_user_config_path
@@ -88,6 +89,8 @@ class SystemSnapshot:
     openrouter_configured: bool
     huggingface_configured: bool
     api_version: str
+    asr_summary: str
+    asr_ready: bool
 
 
 @dataclass(frozen=True)
@@ -177,6 +180,7 @@ def collect_snapshot(
     app_root = cfg.resolved_app_root()
     py = resolve_python(cfg)
     secrets = secret_status(app_root)
+    asr = collect_asr_status(model=cfg.asr.model, hf_home=cfg.resolved_hf_home())
     collected = datetime.now(UTC).astimezone().isoformat(timespec="milliseconds")
 
     system = SystemSnapshot(
@@ -193,6 +197,8 @@ def collect_snapshot(
         openrouter_configured=bool(secrets.get("openrouter", {}).get("configured")),
         huggingface_configured=bool(secrets.get("huggingface", {}).get("configured")),
         api_version=API_VERSION,
+        asr_summary=asr.summary(),
+        asr_ready=asr.ready,
     )
 
     return LauncherSnapshot(

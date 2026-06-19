@@ -14,7 +14,10 @@ from rich.table import Table
 
 from src.install.config_schema import InstallProfile, UserConfig
 from src.install.preflight import run_preflight
+from src.install.asr_assets import DEFAULT_PREFETCH_BACKENDS
 from src.install.provision import run_provision
+
+from .asr_manager import asr_status_for_config, format_asr_report_lines, run_asr_setup
 from src.install.secrets_win import delete_secret, set_secret
 from src.install.user_config import load_user_config, save_user_config
 
@@ -186,7 +189,81 @@ def status_cmd(app_root: Path | None = None) -> None:
     table.add_row("profile", f"{snap.system.install_profile} / {snap.system.sentiment_profile}")
     table.add_row("device", snap.system.device)
     table.add_row("llm", "on" if snap.system.llm_enabled else "off")
+    table.add_row("asr", snap.system.asr_summary)
     table.add_row("collected_at", snap.collected_at)
+    console.print(table)
+
+
+@app.command("asr-status")
+def asr_status_cmd(
+    app_root: Path | None = None,
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output"),
+) -> None:
+    """Show ASR package and model cache status."""
+    cfg = load_user_config(app_root or _app_root_option())
+    status = asr_status_for_config(cfg)
+    if json_out:
+        console.print_json(json.dumps(status.to_dict()))
+        raise typer.Exit(0)
+
+    table = Table(title="ASR status")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key, value in status.to_dict().items():
+        table.add_row(key, str(value))
+    console.print(table)
+    raise typer.Exit(0 if status.packages_ready else 1)
+
+
+@app.command("asr-install")
+def asr_install_cmd(app_root: Path | None = None) -> None:
+    """Install faster-whisper and whisperx pip packages."""
+    cfg = load_user_config(app_root or _app_root_option())
+    report = run_asr_setup(
+        cfg,
+        install_packages=True,
+        download_models=False,
+        progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
+    )
+    _print_asr_report(report)
+    raise typer.Exit(0 if report.ok else 1)
+
+
+@app.command("asr-download")
+def asr_download_cmd(
+    app_root: Path | None = None,
+    backend: list[str] = typer.Option(
+        list(DEFAULT_PREFETCH_BACKENDS),
+        "--backend",
+        "-b",
+        help="Backends to prefetch",
+    ),
+    skip_packages: bool = typer.Option(
+        False, "--skip-packages", help="Do not install missing pip packages first"
+    ),
+) -> None:
+    """Pre-download transcription models for selected backends."""
+    cfg = load_user_config(app_root or _app_root_option())
+    report = run_asr_setup(
+        cfg,
+        backends=backend,
+        install_packages=not skip_packages,
+        download_models=True,
+        progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
+    )
+    _print_asr_report(report)
+    raise typer.Exit(0 if report.ok else 1)
+
+
+def _print_asr_report(report) -> None:
+    table = Table(title="ASR setup")
+    table.add_column("Step")
+    table.add_column("Status")
+    table.add_column("Message")
+    for step in report.steps:
+        status = "[green]OK[/green]" if step.ok else "[red]FAIL[/red]"
+        message = step.message + (f" ({step.detail})" if step.detail else "")
+        table.add_row(step.name, status, message)
     console.print(table)
 
 
@@ -225,6 +302,9 @@ def provision_cmd(
     app_root: Path | None = None,
     skip_venv: bool = typer.Option(False, "--skip-venv", help="Do not create .venv"),
     skip_ffmpeg: bool = typer.Option(False, "--skip-ffmpeg", help="Do not download ffmpeg"),
+    skip_asr: bool = typer.Option(
+        False, "--skip-asr", help="Do not install/download ASR packages and models"
+    ),
     skip_config: bool = typer.Option(False, "--skip-config", help="Do not create user_config.yaml"),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output"),
 ) -> None:
@@ -236,6 +316,7 @@ def provision_cmd(
         profile,
         ensure_virtualenv=not skip_venv,
         download_ffmpeg=not skip_ffmpeg,
+        download_asr=not skip_asr,
         init_config=not skip_config,
         progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
     )
@@ -262,9 +343,10 @@ def provision_cmd(
 def repair_cmd(
     profile: InstallProfile = typer.Option(InstallProfile.cli, "--profile"),
     app_root: Path | None = None,
+    skip_asr: bool = typer.Option(False, "--skip-asr", help="Skip ASR packages/models"),
 ) -> None:
-    """Alias for full provision (venv, pip, ffmpeg)."""
-    provision_cmd(profile=profile, app_root=app_root)
+    """Alias for full provision (venv, pip, ffmpeg, ASR)."""
+    provision_cmd(profile=profile, app_root=app_root, skip_asr=skip_asr)
 
 
 def main() -> None:
