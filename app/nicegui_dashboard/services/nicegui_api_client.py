@@ -150,6 +150,29 @@ class NiceGUIAPIClient:
             )
         return response.json()
 
+    async def _delete(self, path: str) -> dict[str, Any]:
+        url = f"{self.base_url}{path}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.delete(url, headers=self._headers())
+        except httpx.ConnectError as err:
+            raise APIError(f"Kan inte ansluta till backend ({self.base_url}): {err}") from err
+        except httpx.TimeoutException as err:
+            raise APIError(f"Timeout mot {path} ({self.timeout}s)") from err
+
+        if response.status_code >= 400:
+            detail: Any
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            raise APIError(
+                f"API-fel {response.status_code} på {path}",
+                status_code=response.status_code,
+                detail=detail,
+            )
+        return response.json()
+
     async def health(self) -> bool:
         """Return True if backend responds OK on /health."""
         try:
@@ -395,3 +418,41 @@ class NiceGUIAPIClient:
         if aggregate is not None:
             payload["aggregate"] = aggregate
         return await self._post("/alerts", payload)
+
+    # ------------------------------------------------------------------
+    # YouTube data ingestion (Fas 4)
+    # ------------------------------------------------------------------
+
+    async def download_youtube(
+        self,
+        url: str,
+        *,
+        playlist: bool = False,
+        convert_to_wav: bool = True,
+        auto_transcribe: bool = False,
+        auto_analyze: bool = False,
+        sample_rate: int = 16000,
+        channels: int = 1,
+    ) -> dict[str, Any]:
+        """POST /ingest/youtube/download – download audio from YouTube."""
+        return await self._post(
+            "/ingest/youtube/download",
+            {
+                "url": url,
+                "playlist": playlist,
+                "convert_to_wav": convert_to_wav,
+                "auto_transcribe": auto_transcribe,
+                "auto_analyze": auto_analyze,
+                "sample_rate": sample_rate,
+                "channels": channels,
+            },
+        )
+
+    async def list_youtube_ingested(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """GET /ingest/youtube/list – previously downloaded YouTube files."""
+        result = await self._get("/ingest/youtube/list", params={"limit": limit})
+        return result if isinstance(result, list) else []
+
+    async def delete_youtube_ingested(self, youtube_id: str) -> dict[str, Any]:
+        """DELETE /ingest/youtube/{youtube_id} – remove ingested file and metadata."""
+        return await self._delete(f"/ingest/youtube/{youtube_id}")

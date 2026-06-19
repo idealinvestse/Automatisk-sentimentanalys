@@ -73,7 +73,13 @@ def render_youtube_ingest_tab(state: DashboardState) -> None:
                     await asyncio.sleep(0.3)
                     progress_bar.value = i / 5
 
-                resp = await client.post("/ingest/youtube/download", json=payload)
+                resp = await client.download_youtube(
+                    url,
+                    playlist=payload["playlist"],
+                    convert_to_wav=payload["convert_to_wav"],
+                    auto_transcribe=payload["auto_transcribe"],
+                    auto_analyze=payload["auto_analyze"],
+                )
 
                 progress_bar.value = 1.0
 
@@ -123,7 +129,7 @@ def render_youtube_ingest_tab(state: DashboardState) -> None:
             return
 
         try:
-            files = await client.get("/ingest/youtube/list?limit=50")
+            files = await client.list_youtube_ingested(limit=50)
             if not files:
                 with list_container:
                     ui.label("Inga filer ännu. Ladda ner något ovanför!").classes("text-caption")
@@ -199,7 +205,7 @@ def render_youtube_ingest_tab(state: DashboardState) -> None:
             return
 
         try:
-            await client.delete(f"/ingest/youtube/{youtube_id}")
+            await client.delete_youtube_ingested(youtube_id)
             notify_success("Fil borttagen")
             await refresh_list()
         except Exception as exc:
