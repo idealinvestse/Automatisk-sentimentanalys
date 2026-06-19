@@ -37,7 +37,7 @@ from .error_responses import (
     error_response,
 )
 from .middleware_rate_limit import RateLimitMiddleware
-from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription, ingest
+from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription
 from .settings import get_api_settings
 from .transcription_events import TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
@@ -188,7 +188,6 @@ def create_app() -> FastAPI:
     app.include_router(pipeline.router, dependencies=_auth)
     app.include_router(scan.router, dependencies=_auth)
     app.include_router(ws_transcription.router)
-    app.include_router(ingest.router, dependencies=_auth)  # New YouTube ingest router
 
     _init_app_state(app)
     return app

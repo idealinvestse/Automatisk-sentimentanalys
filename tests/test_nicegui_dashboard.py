@@ -199,50 +199,6 @@ class TestNiceGUIAPIClient:
         assert call_json["audio_path"] == "samples/audio/test.wav"
         assert call_json["use_full_pipeline"] is True
 
-    @pytest.mark.asyncio
-    async def test_download_youtube_success(self):
-        client = NiceGUIAPIClient("http://test")
-        payload = {"success": True, "file_path": "data/ingested/youtube/test.wav", "message": "ok"}
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = payload
-
-        mock_http = AsyncMock()
-        mock_http.post = AsyncMock(return_value=mock_response)
-        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
-        mock_http.__aexit__ = AsyncMock(return_value=None)
-
-        with patch("httpx.AsyncClient", return_value=mock_http):
-            result = await client.download_youtube(
-                "https://www.youtube.com/watch?v=test",
-                auto_transcribe=True,
-            )
-        assert result == payload
-        call_json = mock_http.post.call_args.kwargs["json"]
-        assert call_json["url"] == "https://www.youtube.com/watch?v=test"
-        assert call_json["auto_transcribe"] is True
-
-    @pytest.mark.asyncio
-    async def test_list_youtube_ingested_success(self):
-        client = NiceGUIAPIClient("http://test")
-        payload = [{"title": "Test", "file_path": "test.wav", "metadata": {}}]
-
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = payload
-
-        mock_http = AsyncMock()
-        mock_http.get = AsyncMock(return_value=mock_response)
-        mock_http.__aenter__ = AsyncMock(return_value=mock_http)
-        mock_http.__aexit__ = AsyncMock(return_value=None)
-
-        with patch("httpx.AsyncClient", return_value=mock_http):
-            result = await client.list_youtube_ingested(limit=10)
-        assert result == payload
-        assert mock_http.get.call_args.kwargs["params"] == {"limit": 10}
-
-
 class TestDashboardSettings:
     def test_is_dev_mode_false_by_default(self, monkeypatch):
         monkeypatch.delenv("SENTIMENT_DEV_MODE", raising=False)

@@ -83,8 +83,30 @@ foreach ($rf in $reqMap[$Profile]) {
 # Launcher entry script
 @'
 @echo off
-set SENTIMENT_APP_ROOT=%~dp0
-cd /d %SENTIMENT_APP_ROOT%
+setlocal EnableExtensions EnableDelayedExpansion
+set "APP_ROOT=%~dp0"
+cd /d "%APP_ROOT%"
+set "SENTIMENT_APP_ROOT=%APP_ROOT%"
+set "PYTHONPATH=%APP_ROOT%"
+set "FFMPEG_BIN=%APP_ROOT%tools\ffmpeg\bin"
+if exist "%FFMPEG_BIN%\ffmpeg.exe" (
+    set "FFMPEG_PATH=%FFMPEG_BIN%\ffmpeg.exe"
+) else if not defined FFMPEG_PATH (
+    where ffmpeg >nul 2>&1
+    if !ERRORLEVEL! equ 0 (
+        for /f "delims=" %%F in ('where ffmpeg 2^>nul') do (
+            set "FFMPEG_PATH=%%F"
+            goto :ffmpeg_found
+        )
+    )
+)
+:ffmpeg_found
+if defined FFMPEG_PATH (
+    for %%D in ("!FFMPEG_PATH!") do set "FFMPEG_DIR=%%~dpD"
+    set "PATH=!FFMPEG_DIR!;%FFMPEG_BIN%;%APP_ROOT%.venv\Scripts;%PATH%"
+) else (
+    set "PATH=%FFMPEG_BIN%;%APP_ROOT%.venv\Scripts;%PATH%"
+)
 .venv\Scripts\pythonw.exe -m launcher.main
 '@ | Set-Content (Join-Path $StageApp "Sentimentanalys.bat") -Encoding ASCII
 

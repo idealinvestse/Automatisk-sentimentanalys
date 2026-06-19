@@ -13,7 +13,7 @@ from tkinter import messagebox, ttk
 from src.install.preflight import run_preflight
 from src.install.user_config import load_user_config
 
-from .env_builder import build_child_env, resolve_python, working_directory
+from .env_builder import bootstrap_launcher_env, build_child_env, detect_app_root, resolve_python, working_directory
 from .event_log import EventLog
 from .pid_store import launcher_activity_log_path
 from .process_manager import start_api, start_dashboard, stop_service
@@ -26,7 +26,7 @@ _POLL_LOG_MS = 100
 
 
 def _app_root() -> Path:
-    return Path(os.environ.get("SENTIMENT_APP_ROOT", Path.cwd())).resolve()
+    return detect_app_root()
 
 
 class LauncherApp(tk.Tk):
@@ -73,7 +73,7 @@ class LauncherApp(tk.Tk):
             ("Open CLI (PowerShell)", self._open_cli),
             ("Open outputs folder", self._open_outputs),
             ("Open logs folder", self._open_logs),
-            ("Repair dependencies", self._repair),
+            ("Installera / Reparera allt", self._provision),
         ]
         for label, cmd in specs:
             btn = ttk.Button(frame, text=label, command=cmd)
@@ -192,31 +192,75 @@ class LauncherApp(tk.Tk):
     def _open_logs(self) -> None:
         self._open_folder(self.cfg.resolved_logs_dir())
 
-    def _repair(self) -> None:
+    def _provision(self) -> None:
+        if self._busy:
+            return
+
         profile = self.cfg.install_profile.value
-        hint = ""
-        if self.cfg.services.api_enabled and profile == "cli":
-            hint = "\n\nAPI är aktiverat — cli-profilen inkluderar nu API-beroenden."
         if not messagebox.askyesno(
-            "Repair",
-            f"Re-install pip packages for profile '{profile}'?{hint}",
+            "Installera / Reparera",
+            (
+                f"Detta laddar ner och installerar allt som behövs för profil '{profile}':\n\n"
+                "• Python virtual environment (.venv)\n"
+                "• Pip-paket (API, dashboard m.m.)\n"
+                "• ffmpeg (om det saknas)\n"
+                "• user_config.yaml (om den saknas)\n\n"
+                "Kräver internetanslutning. Fortsätt?"
+            ),
         ):
             return
+
         from src.install.config_schema import InstallProfile
+        from src.install.provision import run_provision
 
-        from .cli import repair_cmd
+        def work() -> None:
+            try:
+                report = run_provision(
+                    self.cfg,
+                    InstallProfile(profile),
+                    progress=lambda msg: self.event_log.info(msg, phase="provision"),
+                )
+                for step in report.steps:
+                    msg = f"{step.name}: {step.message}"
+                    if step.detail:
+                        msg += f" ({step.detail})"
+                    if step.ok:
+                        self.event_log.info(msg, phase="provision")
+                    else:
+                        self.event_log.error(msg, phase="provision")
 
-        try:
-            repair_cmd(profile=InstallProfile(profile))
-            self.event_log.info("Repair complete", phase="launcher")
-        except Exception as e:
-            self.event_log.error(str(e), phase="launcher")
-            messagebox.showerror("Repair", str(e))
+                def done() -> None:
+                    self._set_busy(False)
+                    self._refresh_status()
+                    if report.ok:
+                        messagebox.showinfo(
+                            "Installera / Reparera",
+                            "Alla komponenter installerades.",
+                        )
+                    else:
+                        messagebox.showwarning(
+                            "Installera / Reparera",
+                            "Vissa steg misslyckades. Se aktivitetsloggen.",
+                        )
+
+                self.after(0, done)
+            except Exception as exc:
+                msg = str(exc)
+                self.event_log.error(msg, phase="provision")
+
+                def failed() -> None:
+                    self._set_busy(False)
+                    messagebox.showerror("Installera / Reparera", msg)
+
+                self.after(0, failed)
+
+        self._set_busy(True)
+        self.event_log.phase("provision", f"Installing profile '{profile}'")
+        threading.Thread(target=work, daemon=True).start()
 
 
 def main() -> None:
-    root = Path.cwd().resolve()
-    os.environ.setdefault("SENTIMENT_APP_ROOT", str(root))
+    root = bootstrap_launcher_env()
     try:
         app = LauncherApp()
         app.mainloop()

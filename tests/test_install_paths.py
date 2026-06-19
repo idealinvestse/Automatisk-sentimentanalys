@@ -6,7 +6,8 @@ from pathlib import Path
 
 import yaml
 
-from src.install.paths_util import portable_user_config_path, resolve_user_config_path
+from src.install.config_schema import UserConfig
+from src.install.paths_util import portable_user_config_path, resolve_ffmpeg, resolve_user_config_path
 from src.install.user_config import load_user_config, save_user_config
 
 
@@ -33,9 +34,25 @@ def test_save_uses_portable_path_when_configured(tmp_path: Path) -> None:
     (tmp_path / "configs").mkdir(exist_ok=True)
     (tmp_path / "configs" / "install_defaults.yaml").write_text("version: 1\n", encoding="utf-8")
 
-    from src.install.config_schema import UserConfig
-
     cfg = UserConfig(portable_mode=True, paths={"app_root": str(tmp_path)})
     saved = save_user_config(cfg)
     assert saved == cfg_path
     assert yaml.safe_load(saved.read_text(encoding="utf-8"))["portable_mode"] is True
+
+
+def test_resolve_ffmpeg_env_override(tmp_path: Path, monkeypatch) -> None:
+    fake_ffmpeg = tmp_path / "custom" / "ffmpeg.exe"
+    fake_ffmpeg.parent.mkdir(parents=True)
+    fake_ffmpeg.write_bytes(b"")
+    monkeypatch.setenv("FFMPEG_PATH", str(fake_ffmpeg))
+    cfg = UserConfig(paths={"app_root": str(tmp_path)})
+    assert resolve_ffmpeg(cfg) == str(fake_ffmpeg.resolve())
+
+
+def test_resolve_ffmpeg_bundled(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("FFMPEG_PATH", raising=False)
+    bundled = tmp_path / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe"
+    bundled.parent.mkdir(parents=True)
+    bundled.write_bytes(b"")
+    cfg = UserConfig(paths={"app_root": str(tmp_path)})
+    assert resolve_ffmpeg(cfg) == str(bundled)

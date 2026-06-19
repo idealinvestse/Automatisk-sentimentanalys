@@ -48,9 +48,6 @@ dashboard-nicegui = [
     "pandas>=2.2.0",
     "plotly>=5.22.0",
 ]
-data = [
-    "yt-dlp>=2025.6.1",
-]
 # whisperx and noisereduce är valfria för avancerade ASR-backends (se kommentarer i requirements-cli.txt)
 
 [tool.ruff]

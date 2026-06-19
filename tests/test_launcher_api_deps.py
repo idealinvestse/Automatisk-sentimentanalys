@@ -32,7 +32,7 @@ def test_check_api_dependencies_reports_missing_modules() -> None:
         err = check_api_dependencies()
     assert err is not None
     assert "uvicorn" in err
-    assert "dev-setup.ps1" in err
+    assert "provision" in err
 
 
 def test_server_entrypoint_import() -> None:

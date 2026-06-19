@@ -45,10 +45,18 @@ def resolve_user_config_path(
     return roaming_user_config_path()
 
 
+def _ffmpeg_exe_name() -> str:
+    return "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+
+
 def augment_path(cfg: UserConfig, base_path: str | None = None) -> str:
     """PATH with bundled ffmpeg and venv Scripts (matches build_child_env)."""
     root = cfg.resolved_app_root()
     parts: list[str] = []
+    ffmpeg_override = os.environ.get("FFMPEG_PATH", "").strip()
+    if ffmpeg_override:
+        ff_dir = str(Path(ffmpeg_override).expanduser().resolve().parent)
+        parts.append(ff_dir)
     ffmpeg_bin = root / "tools" / "ffmpeg" / "bin"
     if ffmpeg_bin.is_dir():
         parts.append(str(ffmpeg_bin))
@@ -63,10 +71,16 @@ def augment_path(cfg: UserConfig, base_path: str | None = None) -> str:
 
 
 def resolve_ffmpeg(cfg: UserConfig) -> str | None:
-    """Return path to ffmpeg executable if bundled or on augmented PATH."""
+    """Return path to ffmpeg executable (env override, bundle, then PATH)."""
+    override = os.environ.get("FFMPEG_PATH", "").strip()
+    if override:
+        candidate = Path(override).expanduser()
+        if candidate.is_file():
+            return str(candidate.resolve())
+
     root = cfg.resolved_app_root()
-    bundled = root / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe"
+    bundled = root / "tools" / "ffmpeg" / "bin" / _ffmpeg_exe_name()
     if bundled.is_file():
         return str(bundled)
     path = augment_path(cfg)
-    return shutil.which("ffmpeg", path=path)
+    return shutil.which(_ffmpeg_exe_name().removesuffix(".exe"), path=path)

@@ -25,7 +25,6 @@ from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.overview import render_overview_tab
 from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
-from app.nicegui_dashboard.components.youtube_ingest import render_youtube_ingest_tab  # NEW Fas 4
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, load_reports_from_api
 from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import create_transcription_state
@@ -75,7 +74,6 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
         fas4_tab = ui.tab("Fas 4 Insikter")
         detail_tab = ui.tab("Samtalsdetalj")
         trans_tab = ui.tab("Transkribering")
-        ingest_tab = ui.tab("Datainsamling")  # NEW Fas 4 YouTube Ingest
         test_tab = ui.tab("Testlabb") if is_dev_mode() else None
 
     refresh_call_detail: list = []
@@ -198,10 +196,6 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
         with ui.tab_panel(trans_tab):
             if state.transcription:
                 render_transcription_tab(state.transcription, api_client=state.api_client)
-
-        # NEW Fas 4 YouTube Ingest tab
-        with ui.tab_panel(ingest_tab):
-            render_youtube_ingest_tab(state)
 
         if test_tab is not None:
             with ui.tab_panel(test_tab):

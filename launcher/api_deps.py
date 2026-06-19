@@ -58,14 +58,14 @@ def check_api_dependencies(
             mods = ", ".join(missing)
             return (
                 f"API-beroenden saknas ({mods}). "
-                "Kör 'Repair dependencies' i launchern eller: "
-                r".\scripts\dev-setup.ps1 -Profile api"
+                "Kör 'Installera / Reparera allt' i launchern eller: "
+                r".\launcher.ps1 provision"
             )
     import_err = check_api_import(py, env=env, cwd=cwd)
     if import_err:
         return (
             f"API kunde inte laddas: {import_err}. "
-            "Kör 'Repair dependencies' i launchern eller: "
-            r".\scripts\dev-setup.ps1 -Profile api"
+            "Kör 'Installera / Reparera allt' i launchern eller: "
+            r".\launcher.ps1 provision"
         )
     return None

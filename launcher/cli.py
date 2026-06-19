@@ -14,10 +14,11 @@ from rich.table import Table
 
 from src.install.config_schema import InstallProfile, UserConfig
 from src.install.preflight import run_preflight
+from src.install.provision import run_provision
 from src.install.secrets_win import delete_secret, set_secret
 from src.install.user_config import load_user_config, save_user_config
 
-from .env_builder import resolve_python, working_directory
+from .env_builder import bootstrap_launcher_env, resolve_python, working_directory
 from .process_manager import start_api, start_dashboard, stop_service
 from .status_snapshot import collect_snapshot
 
@@ -206,55 +207,68 @@ def open_cli_cmd(app_root: Path | None = None) -> None:
         console.print(f"Run: cd {root} && {py} -m src.cli --help")
 
 
+def _print_provision_report(report) -> None:
+    table = Table(title="Provision")
+    table.add_column("Step")
+    table.add_column("Status")
+    table.add_column("Message")
+    for step in report.steps:
+        status = "[green]OK[/green]" if step.ok else "[red]FAIL[/red]"
+        message = step.message + (f" ({step.detail})" if step.detail else "")
+        table.add_row(step.name, status, message)
+    console.print(table)
+
+
+@app.command("provision")
+def provision_cmd(
+    profile: InstallProfile = typer.Option(InstallProfile.cli, "--profile"),
+    app_root: Path | None = None,
+    skip_venv: bool = typer.Option(False, "--skip-venv", help="Do not create .venv"),
+    skip_ffmpeg: bool = typer.Option(False, "--skip-ffmpeg", help="Do not download ffmpeg"),
+    skip_config: bool = typer.Option(False, "--skip-config", help="Do not create user_config.yaml"),
+    json_out: bool = typer.Option(False, "--json", help="Machine-readable output"),
+) -> None:
+    """Download and install venv, pip packages, ffmpeg, and config."""
+    root = app_root or _app_root_option()
+    cfg = load_user_config(root)
+    report = run_provision(
+        cfg,
+        profile,
+        ensure_virtualenv=not skip_venv,
+        download_ffmpeg=not skip_ffmpeg,
+        init_config=not skip_config,
+        progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
+    )
+    if json_out:
+        payload = {
+            "ok": report.ok,
+            "steps": [
+                {"name": s.name, "ok": s.ok, "message": s.message, "detail": s.detail}
+                for s in report.steps
+            ],
+        }
+        console.print_json(json.dumps(payload))
+        raise typer.Exit(code=0 if report.ok else 1)
+
+    _print_provision_report(report)
+    if report.ok:
+        console.print("[green]Provision complete[/green]")
+    else:
+        console.print("[red]Provision finished with errors[/red]")
+    raise typer.Exit(code=0 if report.ok else 1)
+
+
 @app.command("repair")
 def repair_cmd(
     profile: InstallProfile = typer.Option(InstallProfile.cli, "--profile"),
     app_root: Path | None = None,
 ) -> None:
-    """Re-install pip dependencies for the selected profile."""
-    root = app_root or _app_root_option()
-    py = resolve_python(cfg := load_user_config(root))
-    _install = "requirements-install.txt"
-    req_files = {
-        InstallProfile.minimal: ["requirements-min.txt", _install],
-        InstallProfile.cli: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-api.txt",
-            _install,
-        ],
-        InstallProfile.api: ["requirements-min.txt", "requirements-api.txt", _install],
-        InstallProfile.full: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-api.txt",
-            "requirements.txt",
-            "requirements-desktop.txt",
-            _install,
-        ],
-        InstallProfile.dev: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-api.txt",
-            "requirements.txt",
-            "requirements-desktop.txt",
-            _install,
-            "requirements-dev.txt",
-        ],
-    }
-    files = req_files[profile]
-    for rf in files:
-        path = root / rf
-        if not path.is_file():
-            console.print(f"[yellow]Skip missing {rf}[/yellow]")
-            continue
-        subprocess.run([str(py), "-m", "pip", "install", "-r", str(path)], check=True, cwd=str(root))
-    cfg.install_profile = profile
-    save_user_config(cfg)
-    console.print("[green]Repair complete[/green]")
+    """Alias for full provision (venv, pip, ffmpeg)."""
+    provision_cmd(profile=profile, app_root=app_root)
 
 
 def main() -> None:
+    bootstrap_launcher_env()
     app()
 
 
