@@ -49,7 +49,7 @@ CallAnalysisReport (returned to CLI / API / Dashboard)
 | `src/pipeline.py`           | Core orchestration (`CallAnalysisPipeline`)                             | Most important file |
 | `src/analysis/`             | All analyzers (aspect, emotion, role, trajectory, intent, etc.) + registry | `registry.py`, `base.py` |
 | `src/transcription/`        | ASR backends (faster_whisper, transformers, whisperx) + preprocess     | `factory.py`, `base.py` |
-| `src/llm/`                  | Mistral/OpenRouter client, prompts, schemas, analyzer                   | `mistral_analyzer.py`, `prompts.py`, `schemas.py` |
+| `src/llm/`                  | Mistral/OpenRouter + Groq Cloud client, prompts, schemas, analyzers  | `mistral_analyzer.py`, `groq_analyzer.py`, `groq_client.py`, `prompts.py`, `schemas.py` |
 | `src/api/`                  | FastAPI application (`app.py` exposes `app`)                            | `app.py`, `routers/`, `schemas.py` |
 | `src/cli.py`                | Typer-based CLI (`sentiment`, `transcribe`, `analyze-call`)             | - |
 | `src/diarization.py`        | Speaker diarization with pyannote + heuristic fallback                  | - |
@@ -127,11 +127,15 @@ When modifying pipeline logic, keep error isolation (`try/except` + logging + co
 
 ### 5.3 LLM Integration (`src/llm/`)
 
+- Two providers: **Mistral/OpenRouter** (default, EU/GDPR) and **Groq Cloud** (fast/cheap, US/Saudi-hosted).
+- Use `provider=` flag (`"openrouter"` | `"groq"`) to select.
 - Use strict structured output with Pydantic + `response_format`.
-- Always log `"EXTERNAL LLM CALL"` when calling OpenRouter.
+- Always log `"EXTERNAL LLM CALL (Groq/Mistral)"` when calling external APIs.
 - Cache results in `.cache/llm/`.
 - Fallback to local analysis on any LLM failure.
+- GDPR gate: Groq requires `groq_eu_residency=True` or `anonymize_before_llm=True`.
 - Prompts live in `prompts.py`. Schemas in `schemas.py`.
+- See `docs/LLM_PROVIDERS.md` for full comparison matrix.
 
 ### 5.4 Graceful Degradation
 

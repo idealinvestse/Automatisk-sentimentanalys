@@ -213,6 +213,228 @@ LLM_OUTPUT_JSON_SCHEMA = CallLLMOutput.model_json_schema()
 
 
 # =============================================================================
+# Groq Cloud model registry (June 2026, verified via live API probe)
+# =============================================================================
+
+GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
+# fmt: off
+GROQ_MODELS: dict[str, dict[str, object]] = {
+    # --- Llama family ---
+    "llama-3.1-8b-instant": {
+        "context_window": 131072,
+        "owner": "Meta",
+        "pricing_in": 0.05,
+        "pricing_out": 0.08,
+        "pricing_cached": 0.025,
+        "capabilities": ["json_mode", "tools"],
+        "tps_approx": 840,
+        "tier": "free",
+        "description": "Fastest/cheapest Llama. Best for bulk/streaming dev use. ~840 tps.",
+    },
+    "llama-3.3-70b-versatile": {
+        "context_window": 131072,
+        "owner": "Meta",
+        "pricing_in": 0.59,
+        "pricing_out": 0.79,
+        "pricing_cached": 0.295,
+        "capabilities": ["json_mode", "tools"],
+        "tps_approx": 275,
+        "tier": "dev",
+        "description": "Flagship Llama 3.3. Best quality-for-price on Groq.",
+    },
+    "meta-llama/llama-4-scout-17b-16e-instruct": {
+        "context_window": 131072,
+        "owner": "Meta",
+        "pricing_in": 0.11,
+        "pricing_out": 0.34,
+        "pricing_cached": 0.055,
+        "capabilities": ["json_mode", "tools", "vision"],
+        "tps_approx": 300,
+        "tier": "dev",
+        "description": "Llama 4 Scout. MoE (17B active/109B total). Vision + tools.",
+    },
+    # --- GPT-OSS family (OpenAI open-source models) ---
+    "openai/gpt-oss-20b": {
+        "context_window": 131072,
+        "owner": "OpenAI",
+        "pricing_in": 0.075,
+        "pricing_out": 0.30,
+        "pricing_cached": 0.0375,
+        "capabilities": ["json_schema_strict", "json_mode", "tools", "reasoning"],
+        "tps_approx": 1000,
+        "tier": "dev",
+        "description": "OpenAI OSS 20B. Strict json_schema + reasoning. Great for structured analysis. ~1000 tps.",
+    },
+    "openai/gpt-oss-120b": {
+        "context_window": 131072,
+        "owner": "OpenAI",
+        "pricing_in": 0.15,
+        "pricing_out": 0.60,
+        "pricing_cached": 0.075,
+        "capabilities": ["json_schema_strict", "json_mode", "tools", "reasoning"],
+        "tps_approx": 500,
+        "tier": "dev",
+        "description": "OpenAI OSS 120B. Large model with strict schema. ~500 tps.",
+    },
+    "openai/gpt-oss-safeguard-20b": {
+        "context_window": 131072,
+        "owner": "OpenAI",
+        "pricing_in": 0.075,
+        "pricing_out": 0.30,
+        "pricing_cached": 0.0375,
+        "capabilities": ["json_mode", "safety"],
+        "tps_approx": 1000,
+        "tier": "dev",
+        "description": "GPT-OSS 20B safety variant. Content moderation + analysis.",
+    },
+    # --- Qwen family ---
+    "qwen/qwen3-32b": {
+        "context_window": 131072,
+        "owner": "Alibaba",
+        "pricing_in": 0.29,
+        "pricing_out": 0.59,
+        "pricing_cached": 0.145,
+        "capabilities": ["json_mode", "tools", "reasoning"],
+        "tps_approx": 200,
+        "tier": "dev",
+        "description": "Qwen3 32B. Strong reasoning + tools. Good balance.",
+    },
+    "qwen/qwen3.6-27b": {
+        "context_window": 131072,
+        "owner": "Alibaba",
+        "pricing_in": 0.60,
+        "pricing_out": 3.00,
+        "pricing_cached": 0.30,
+        "capabilities": ["json_mode", "tools", "vision"],
+        "tps_approx": 150,
+        "tier": "dev",
+        "description": "Qwen3.6 27B. Vision + text. Higher output pricing.",
+    },
+    # --- Groq compound (agentic, free/preview) ---
+    "groq/compound": {
+        "context_window": 131072,
+        "owner": "Groq",
+        "pricing_in": 0.0,
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["json_mode", "tools", "agentic"],
+        "tps_approx": 200,
+        "tier": "free",
+        "description": "Groq Compound. Agentic routing model. Free/preview.",
+    },
+    "groq/compound-mini": {
+        "context_window": 131072,
+        "owner": "Groq",
+        "pricing_in": 0.0,
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["json_mode", "tools", "agentic"],
+        "tps_approx": 400,
+        "tier": "free",
+        "description": "Groq Compound Mini. Smaller/faster agentic routing.",
+    },
+    # --- Whisper (ASR) ---
+    "whisper-large-v3": {
+        "context_window": 0,  # audio model
+        "owner": "OpenAI",
+        "pricing_in": 0.111,  # per audio-hour
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["asr"],
+        "tps_approx": 217,  # 217x realtime
+        "tier": "dev",
+        "description": "Whisper Large v3 via Groq. 217× realtime. $0.111 per audio-hour.",
+    },
+    "whisper-large-v3-turbo": {
+        "context_window": 0,  # audio model
+        "owner": "OpenAI",
+        "pricing_in": 0.04,  # per audio-hour (89% cheaper than OpenAI)
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["asr"],
+        "tps_approx": 228,  # 228x realtime
+        "tier": "dev",
+        "description": "Whisper Large v3 Turbo via Groq. 228× realtime. $0.04/hr (89% cheaper than OpenAI).",
+    },
+    # --- TTS ---
+    "canopylabs/orpheus-v1-english": {
+        "context_window": 0,  # TTS model
+        "owner": "Canopy Labs",
+        "pricing_in": 22.0,  # per 1M input chars
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["tts"],
+        "tps_approx": 0,
+        "tier": "dev",
+        "description": "Orpheus TTS (English). $22/1M input chars.",
+    },
+    "canopylabs/orpheus-arabic-saudi": {
+        "context_window": 0,  # TTS model
+        "owner": "Canopy Labs",
+        "pricing_in": 40.0,  # per 1M input chars
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["tts"],
+        "tps_approx": 0,
+        "tier": "dev",
+        "description": "Orpheus TTS (Arabic/Saudi). $40/1M input chars.",
+    },
+    # --- Safety ---
+    "meta-llama/llama-prompt-guard-2-22m": {
+        "context_window": 4096,
+        "owner": "Meta",
+        "pricing_in": 0.0,
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["safety"],
+        "tps_approx": 2000,
+        "tier": "free",
+        "description": "Llama Prompt Guard 2 (22M). Content safety classification.",
+    },
+    "meta-llama/llama-prompt-guard-2-86m": {
+        "context_window": 4096,
+        "owner": "Meta",
+        "pricing_in": 0.0,
+        "pricing_out": 0.0,
+        "pricing_cached": 0.0,
+        "capabilities": ["safety"],
+        "tps_approx": 1500,
+        "tier": "free",
+        "description": "Llama Prompt Guard 2 (86M). Content safety classification.",
+    },
+    # --- Arabic ---
+    "allam-2-7b": {
+        "context_window": 4096,
+        "owner": "SDAIA",
+        "pricing_in": 0.05,
+        "pricing_out": 0.08,
+        "pricing_cached": 0.025,
+        "capabilities": ["json_mode"],
+        "tps_approx": 500,
+        "tier": "free",
+        "description": "Allam 2 7B. Arabic-focused LLM. 4K context.",
+    },
+}
+# fmt: on
+
+# Fallback chain (configurable): cheapest → powerful → strict schema
+GROQ_FALLBACK_CHAIN = [
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b",
+]
+
+# Production recommended defaults per use case
+GROQ_PROD_MODELS = {
+    "default": "llama-3.1-8b-instant",
+    "strict_schema": "openai/gpt-oss-20b",
+    "complex": "llama-3.3-70b-versatile",
+    "fastest": "llama-3.1-8b-instant",
+}
+
+
+# =============================================================================
 # Fas 4.1+ : Agent / Customer metrics (local + hybrid) - Pydantic for merging into CallAnalysisReport
 # =============================================================================
 

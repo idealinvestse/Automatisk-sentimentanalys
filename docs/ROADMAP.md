@@ -17,7 +17,8 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | **Speaker Diarization**     | ✅ Done    | `pyannote.audio` + strong heuristic/energy-based fallback in `diarization.py` |
 | **Call Analysis Pipeline**  | ✅ Done    | `CallAnalysisPipeline` with full orchestration      |
 | **Analysis Registry**       | ✅ Done    | Aspect, Emotion, Role, Trajectory, Intent, Summary, Topics, Spoken Normalizer |
-| **Mistral LLM Integration** | ✅ Done    | Hybrid local + `mistralai/mistral-medium-3.5`, structured output, caching, privacy logging |
+| **Mistral LLM Integration** | ✅ Done    | Hybrid local + Mistral via OpenRouter, structured output, caching, privacy logging |
+| **Groq Cloud Integration**  | ✅ Done    | `GroqClient` + `GroqAnalyzer`, 17-model registry, GDPR gate, pricing tracking |
 | **Agent Performance**       | ✅ Done    | `agent_performance.py`, cached metrics              |
 | **QA & Compliance**         | ✅ Done    | `compliance_qa.py`, YAML scorecards, hybrid scoring |
 | **Insights & Search**       | ✅ Done    | `insights_aggregator.py`, `semantic_search.py` (FAISS) |

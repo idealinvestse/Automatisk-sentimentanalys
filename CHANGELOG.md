@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Groq Cloud LLM integration**: New provider alongside Mistral/OpenRouter
+  - `src/llm/groq_client.py` — `GroqClient` with OpenAI-compatible API, caching, cost tracking
+  - `src/llm/groq_analyzer.py` — `GroqAnalyzer` with strict Pydantic schemas
+  - `src/llm/schemas.py` — `GROQ_MODELS` registry (17 models) with pricing, capabilities, tiers
+  - GDPR gate: `groq_eu_residency` config flag + pipeline enforcement + per-call anonymize check
+  - CLI: `--provider groq --groq-eu-residency` (also available via API + NiceGUI dropdown)
+  - Tests: `tests/test_groq_client.py` + Groq tests in `tests/test_llm_analyzer.py` (all mocked)
+  - Docs: `docs/LLM_PROVIDERS.md` (full comparison matrix), updated `ROADMAP.md`, `LLM_AGENT_GUIDE.md`
+  - Fallback chain: 8B → 70B → gpt-oss-20b (config-driven)
+  - See `docs/LLM_PROVIDERS.md` for full pricing matrix and GDPR guidance.
 - **Fas 3 – NiceGUI Dashboard (Fas 4-visualisering)**:
   - Nya flikar: **Agent Performance**, **Fas 4 Insikter**
   - Komponenter: `agent_performance.py`, `qa_scorecard.py`, `insights_hot_topics.py`, `alerts_panel.py`

@@ -544,6 +544,16 @@ def analyze_call_cmd(
     deep_analysis: bool = typer.Option(
         False, "--deep-analysis", help="Force the deep LLM path (equivalent to --use-mistral-llm for callcenter use)."
     ),
+    provider: str = typer.Option(
+        "openrouter",
+        "--provider",
+        help="LLM provider: openrouter (default) | groq. Groq is faster/cheaper but US-hosted (GDPR: enable --groq-eu-residency or PII redaction).",
+    ),
+    groq_eu_residency: bool = typer.Option(
+        False,
+        "--groq-eu-residency",
+        help="GDPR gate: affirm EU data residency for Groq calls. If false, PII redaction must be active before any Groq call.",
+    ),
     # Sentiment settings
     sentiment_model: str = typer.Option(DEFAULT_SENTIMENT_MODEL, help="Sentiment model name"),
     lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
@@ -597,13 +607,23 @@ def analyze_call_cmd(
         use_mistral_llm=use_mistral_llm,
         llm_model=llm_model,
         deep_analysis=deep_analysis,
+        provider=provider,
+        groq_eu_residency=groq_eu_residency,
     )
 
     if use_mistral_llm or deep_analysis:
+        provider_label = "Groq Cloud" if provider == "groq" else "Mistral/OpenRouter"
+        extra_warning = ""
+        if provider == "groq" and not groq_eu_residency:
+            extra_warning = (
+                "\n[yellow]⚠️  GDPR WARNING: Groq data centers are US + Saudi Arabia (NO EU hosting). "
+                "Ensure --groq-eu-residency or PII redaction is active.[/yellow]"
+            )
         console.print(
-            "[yellow]Mistral/OpenRouter LLM deep analysis ENABLED for this run. "
+            f"[yellow]{provider_label} LLM deep analysis ENABLED for this run. "
             "Full conversation (with roles) will be sent to external service. "
             "See INFO logs for GDPR/egress notice. Cost tracked in meta.[/yellow]"
+            f"{extra_warning}"
         )
 
     with Progress(

@@ -33,8 +33,11 @@ class CallAnalysisPipeline:
         asr_model: ASR model name or alias (e.g., 'kb-whisper-large').
         Note: 'whisperx' provides word-level alignment and optional integrated diarization.
         use_mistral_llm: Force use of Mistral via OpenRouter for holistic analysis (Task 3.2.2).
-        llm_model: Specific Mistral model on OpenRouter (default mistralai/mistral-medium-3.5).
+        llm_model: Specific LLM model slug (OpenRouter or Groq, depending on provider).
         deep_analysis: Alias / stronger signal to enable the LLM deep path (profile + length + low conf heuristics also apply).
+        llm_api_key: Explicit API key override (e.g. from dashboard UI).
+        provider: LLM provider: 'openrouter' (default) | 'groq'.
+        groq_eu_residency: GDPR gate for Groq (US/Saudi data centers).
     """
 
     def __init__(
@@ -53,6 +56,8 @@ class CallAnalysisPipeline:
         deep_analysis: bool = False,
         # explicit override (e.g. from dashboard UI or API). Highest priority in get_openrouter_api_key.
         llm_api_key: str | None = None,
+        provider: str = "openrouter",
+        groq_eu_residency: bool = False,
         cache: Any | None = None,
     ) -> None:
         self.sentiment_model = sentiment_model
@@ -67,6 +72,8 @@ class CallAnalysisPipeline:
         self.llm_model = llm_model
         self.deep_analysis = deep_analysis
         self.llm_api_key = llm_api_key
+        self.provider = provider
+        self.groq_eu_residency = groq_eu_residency
 
         # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
         try:
@@ -77,6 +84,13 @@ class CallAnalysisPipeline:
                 self.use_mistral_llm = bool(llm_spec.get("enabled", False))
             if self.llm_model is None:
                 self.llm_model = llm_spec.get("default_model")
+            # Auto-detect provider from profile config
+            if self.provider == "openrouter" and llm_spec.get("provider"):
+                self.provider = str(llm_spec.get("provider", "openrouter"))
+            # Groq GDPR gate from profile
+            if self.provider == "groq" and not self.groq_eu_residency:
+                groq_cfg = (spec or {}).get("groq", {}) or {}
+                self.groq_eu_residency = bool(groq_cfg.get("groq_eu_residency", False))
         except Exception:
             # Profile system optional for pure LLM usage; non-fatal
             pass
@@ -151,6 +165,106 @@ class CallAnalysisPipeline:
         except Exception as e:
             logger.warning("Mistral holistic step failed (will use local only): %s", e)
             return {"llm_used": False, "llm_fallback_reason": str(e), "error": str(e)}
+
+    def _should_use_groq_llm(self, segments: list) -> bool:
+        """Decision logic for Groq hybrid path."""
+        if self.provider != "groq":
+            return False
+        if self.deep_analysis or self.use_mistral_llm:
+            return True
+        if self.profile in {"callcenter", "call", "customer_service"} and len(segments) >= 6:
+            return True
+        return False
+
+    def _run_groq_holistic(
+        self,
+        segments: list[Segment] | list[dict[str, Any]],
+        results: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Call the Groq analyzer (if available) and return enriched result or fallback dict.
+
+        GDPR gate: groq_eu_residency must be True or anonymize_before_llm must be active.
+        """
+        try:
+            from .llm.groq_analyzer import GroqAnalyzer
+
+            role_map = results.get("role") or {}
+            seg_dicts: list[dict[str, Any]] = []
+            for s in segments:
+                if isinstance(s, dict):
+                    seg_dicts.append(s)
+                else:
+                    seg_dicts.append(s.to_dict())
+
+            # GDPR gate: check if PII redaction was applied or eu_residency flag is set
+            pii_redacted = bool(
+                results.get("pii_redaction", {}).get("total_redacted", 0) > 0
+                if isinstance(results.get("pii_redaction"), dict)
+                else False
+            )
+
+            if not self.groq_eu_residency and not pii_redacted:
+                logger.warning(
+                    "GROQ GDPR GATE: groq_eu_residency=OFF and no PII redaction detected. "
+                    "Groq data centers are US/Saudi Arabia (no EU hosting). "
+                    "Falling back to local analysis only."
+                )
+                return {
+                    "llm_used": False,
+                    "meta": {
+                        "llm_used": False,
+                        "llm_fallback_reason": "groq_gdpr_gate",
+                        "provider": "groq",
+                    },
+                }
+
+            groq_analyzer = GroqAnalyzer(
+                model=self.llm_model,
+                api_key=self.llm_api_key,
+                groq_eu_residency=self.groq_eu_residency,
+            )
+            llm_out = groq_analyzer.analyze_full_conversation(
+                segments=seg_dicts,
+                role_map=role_map if isinstance(role_map, dict) else {},
+                local_results=results,
+                profile_name=self.profile,
+                anonymize_before_llm=pii_redacted,
+            )
+            if llm_out.get("fallback"):
+                llm_out["meta"] = llm_out.get("meta", {})
+                llm_out["meta"]["llm_used"] = False
+                llm_out["meta"]["llm_fallback_reason"] = llm_out.get("meta", {}).get(
+                    "fallback_reason", "groq_llm_error_or_disabled"
+                )
+            else:
+                llm_out.setdefault("meta", {})
+                llm_out["meta"]["llm_used"] = True
+                llm_out["meta"]["provider"] = "groq"
+            return llm_out
+        except Exception as e:
+            logger.warning("Groq holistic step failed (will use local only): %s", e)
+            return {
+                "llm_used": False,
+                "llm_fallback_reason": str(e),
+                "error": str(e),
+                "meta": {"provider": "groq"},
+            }
+
+    def _should_use_any_llm(self, segments: list) -> bool:
+        """Unified decision: should we use ANY LLM path based on provider?"""
+        if self.provider == "groq":
+            return self._should_use_groq_llm(segments)
+        return self._should_use_mistral_llm(segments)
+
+    def _run_llm_holistic(
+        self,
+        segments: list[Segment] | list[dict[str, Any]],
+        results: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Route to the correct LLM analyzer based on provider."""
+        if self.provider == "groq":
+            return self._run_groq_holistic(segments, results)
+        return self._run_mistral_holistic(segments, results)
 
     def analyze_audio(
         self,
@@ -297,16 +411,19 @@ class CallAnalysisPipeline:
             results["agent_performance"] = {"error": str(e), "fallback": True}
             local_assess = None
 
-        # --- Mistral / LLM holistic layer (Fas 3.2) ---
-        # Now runs *after* agent_performance so local_ctx in mistral_analyzer receives
+        # --- LLM holistic layer (Fas 3.2) ---
+        # Now runs *after* agent_performance so local_ctx receives
         # the metrics for detailed assessment + hybrid coaching recommendations (4.1.2).
+        # Provider: Mistral/OpenRouter (default) or Groq (fast/cheap, but US-hosted).
         llm_result: dict[str, Any] = {}
-        if self._should_use_mistral_llm(transcript.segments or []):
-            llm_result = self._run_mistral_holistic(transcript.segments or [], results)
+        if self._should_use_any_llm(transcript.segments or []):
+            llm_result = self._run_llm_holistic(transcript.segments or [], results)
             results["llm"] = llm_result
             if llm_result.get("meta", {}).get("llm_used"):
-                logger.info("Pipeline used Mistral LLM for holistic analysis (model=%s, cached=%s)",
-                            llm_result.get("meta", {}).get("model"), llm_result.get("meta", {}).get("cached"))
+                logger.info("Pipeline used %s LLM for holistic analysis (model=%s, cached=%s)",
+                            self.provider,
+                            llm_result.get("meta", {}).get("model"),
+                            llm_result.get("meta", {}).get("cached"))
 
         # Merge LLM agent_assessment (if present from 4.1.2+ or Fas3) over local for results["agent_assessment"]
         # This ensures report always has rich agent_assessment when deep analysis used.
@@ -322,15 +439,23 @@ class CallAnalysisPipeline:
         # LLM only used for hybrid/llm criteria when deep path active (logged).
         try:
             from .compliance_qa import score_call_with_default_scorecard
-            from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
             use_llm_qa = bool(self.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used"))
             qa_analyzer = None
             if use_llm_qa:
-                qa_analyzer = ConversationMistralAnalyzer(
-                model=self.llm_model,
-                api_key=self.llm_api_key,
-            )
+                if self.provider == "groq":
+                    from .llm.groq_analyzer import GroqAnalyzer
+                    qa_analyzer = GroqAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                        groq_eu_residency=self.groq_eu_residency,
+                    )
+                else:
+                    from .llm.mistral_analyzer import ConversationMistralAnalyzer
+                    qa_analyzer = ConversationMistralAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                    )
             qa_res = score_call_with_default_scorecard(
                 segments=transcript.segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
@@ -501,15 +626,17 @@ class CallAnalysisPipeline:
             results["agent_performance"] = {"error": str(e), "fallback": True}
             local_assess = None
 
-        # --- Mistral / LLM holistic layer (Fas 3.2) ---
+        # --- LLM holistic layer (Fas 3.2) ---
         # Now runs *after* agent_performance so local metrics reach the LLM for detailed assessment.
         llm_result: dict[str, Any] = {}
-        if self._should_use_mistral_llm(typed_segments or []):
-            llm_result = self._run_mistral_holistic(typed_segments or [], results)
+        if self._should_use_any_llm(typed_segments or []):
+            llm_result = self._run_llm_holistic(typed_segments or [], results)
             results["llm"] = llm_result
             if llm_result.get("meta", {}).get("llm_used"):
-                logger.info("Pipeline used Mistral LLM for holistic analysis (model=%s, cached=%s)",
-                            llm_result.get("meta", {}).get("model"), llm_result.get("meta", {}).get("cached"))
+                logger.info("Pipeline used %s LLM for holistic analysis (model=%s, cached=%s)",
+                            self.provider,
+                            llm_result.get("meta", {}).get("model"),
+                            llm_result.get("meta", {}).get("cached"))
 
         # Merge LLM agent_assessment (if present) over local (segments path)
         llm_assess = (results.get("llm") or {}).get("agent_assessment")
@@ -520,13 +647,23 @@ class CallAnalysisPipeline:
         # --- Fas 4.2 QA (segments path, explicit) ---
         try:
             from .compliance_qa import score_call_with_default_scorecard
-            from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
             use_llm_qa = bool(self.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used"))
-            qa_analyzer = ConversationMistralAnalyzer(
-                model=self.llm_model,
-                api_key=self.llm_api_key,
-            ) if use_llm_qa else None
+            qa_analyzer = None
+            if use_llm_qa:
+                if self.provider == "groq":
+                    from .llm.groq_analyzer import GroqAnalyzer
+                    qa_analyzer = GroqAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                        groq_eu_residency=self.groq_eu_residency,
+                    )
+                else:
+                    from .llm.mistral_analyzer import ConversationMistralAnalyzer
+                    qa_analyzer = ConversationMistralAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                    )
             qa_res = score_call_with_default_scorecard(
                 segments=typed_segments or [],
                 role_map=role_map if isinstance(role_map, dict) else {},
@@ -599,15 +736,24 @@ class CallAnalysisPipeline:
         """
         try:
             from .insights_aggregator import aggregate_call_reports
-            from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
             mistral = None
             if self.use_mistral_llm or self.deep_analysis:
-                mistral = ConversationMistralAnalyzer(
-                    model=self.llm_model,
-                    api_key=self.llm_api_key,
-                )
-                logger.info("Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)")
+                if self.provider == "groq":
+                    from .llm.groq_analyzer import GroqAnalyzer
+                    mistral = GroqAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                        groq_eu_residency=self.groq_eu_residency,
+                    )
+                    logger.info("Fas 4.3 aggregator using Groq for cluster/topic descriptions (selective)")
+                else:
+                    from .llm.mistral_analyzer import ConversationMistralAnalyzer
+                    mistral = ConversationMistralAnalyzer(
+                        model=self.llm_model,
+                        api_key=self.llm_api_key,
+                    )
+                    logger.info("Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)")
 
             agg_dict = aggregate_call_reports(reports, mistral_analyzer=mistral)
             logger.info(

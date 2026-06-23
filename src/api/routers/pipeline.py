@@ -56,6 +56,8 @@ def _fas4_pipeline(
         llm_model=req.llm_model,
         deep_analysis=req.deep_analysis,
         llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
+        provider=getattr(req, "provider", "openrouter"),
+        groq_eu_residency=getattr(req, "groq_eu_residency", False),
     )
 
 
@@ -75,6 +77,8 @@ async def analyze_pipeline(
         llm_model=req.llm_model,
         deep_analysis=req.deep_analysis,
         llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
+        provider=req.provider,
+        groq_eu_residency=req.groq_eu_residency,
     )
 
     async def _do() -> PipelineResponse:
