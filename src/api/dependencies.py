@@ -71,6 +71,8 @@ def create_pipeline(
     llm_model: str | None = None,
     deep_analysis: bool = False,
     llm_api_key: str | None = None,
+    provider: str = "openrouter",
+    groq_eu_residency: bool = False,
 ) -> CallAnalysisPipeline:
     return CallAnalysisPipeline(
         sentiment_model=sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
@@ -80,6 +82,8 @@ def create_pipeline(
         llm_model=llm_model,
         deep_analysis=deep_analysis,
         llm_api_key=llm_api_key,
+        provider=provider,
+        groq_eu_residency=groq_eu_residency,
         cache=cache,
     )
 

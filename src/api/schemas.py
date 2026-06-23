@@ -183,12 +183,21 @@ class PipelineRequest(BaseModel):
     sentiment_model: str | None = Field(None, description="Optional sentiment model override")
     device: str = Field("auto")
     # LLM deep analysis (Fas 3)
-    use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
-    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
+    use_mistral_llm: bool = Field(False, description="Enable LLM holistic analysis")
+    llm_model: str | None = Field(None, description="Override LLM model slug")
     deep_analysis: bool = Field(False, description="Force deep LLM path")
     llm_api_key: str | None = Field(
         None,
-        description="Optional explicit OpenRouter API key (overrides env/file). Use with care over HTTP.",
+        description="Optional explicit API key (overrides env/file). Use with care over HTTP.",
+    )
+    provider: str = Field(
+        "openrouter",
+        description="LLM provider: openrouter (default) | groq",
+        pattern=r"^(openrouter|groq)$",
+    )
+    groq_eu_residency: bool = Field(
+        False,
+        description="GDPR gate for Groq: affirm EU data residency (default: OFF).",
     )
 
     @field_validator("segments")
@@ -382,12 +391,21 @@ class Fas4LlmFlags(BaseModel):
         False,
         description="Force re-analysis of all calls; default uses per-call report cache",
     )
-    use_mistral_llm: bool = Field(False, description="Enable Mistral/OpenRouter holistic analysis")
-    llm_model: str | None = Field(None, description="Override Mistral model slug on OpenRouter")
+    use_mistral_llm: bool = Field(False, description="Enable LLM holistic analysis")
+    llm_model: str | None = Field(None, description="Override LLM model slug")
     deep_analysis: bool = Field(False, description="Force deep LLM path")
     llm_api_key: str | None = Field(
         None,
         description="Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY.",
+    )
+    provider: str = Field(
+        "openrouter",
+        description="LLM provider: openrouter (default) | groq",
+        pattern=r"^(openrouter|groq)$",
+    )
+    groq_eu_residency: bool = Field(
+        False,
+        description="GDPR gate for Groq: affirm EU data residency (default: OFF).",
     )
 
 

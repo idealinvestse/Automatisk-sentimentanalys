@@ -201,6 +201,8 @@ class NiceGUIAPIClient:
         deep_analysis: bool = False,
         device: str = "auto",
         llm_model: str | None = None,
+        provider: str = "openrouter",
+        groq_eu_residency: bool = False,
     ) -> dict[str, Any]:
         """POST /analyze_pipeline – full CallAnalysisPipeline on segments."""
         payload: dict[str, Any] = {
@@ -208,6 +210,8 @@ class NiceGUIAPIClient:
             "device": device,
             "use_mistral_llm": use_mistral_llm,
             "deep_analysis": deep_analysis,
+            "provider": provider,
+            "groq_eu_residency": groq_eu_residency,
         }
         if llm_model:
             payload["llm_model"] = llm_model
@@ -391,6 +395,7 @@ class NiceGUIAPIClient:
         profile: str = "callcenter",
         use_mistral_llm: bool = False,
         deep_analysis: bool = False,
+        provider: str = "openrouter",
     ) -> dict[str, Any]:
         """POST /qa/score – compliance QA scorecard for one call."""
         return await self._post(
@@ -400,6 +405,7 @@ class NiceGUIAPIClient:
                 "profile": profile,
                 "use_mistral_llm": use_mistral_llm,
                 "deep_analysis": deep_analysis,
+                "provider": provider,
             },
         )
 

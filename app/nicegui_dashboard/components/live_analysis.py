@@ -35,7 +35,25 @@ def render_text_pipeline_section(state: DashboardState) -> None:
         placeholder='[{"text": "Hej, hur kan jag hjälpa dig?", "speaker": "Agent"}]',
     ).classes("w-full")
 
-    use_llm = ui.checkbox("Använd Mistral LLM (deep_analysis)", value=False)
+    use_llm = ui.checkbox("Använd LLM deep analysis", value=False)
+    provider_dropdown = ui.select(
+        label="LLM-provider",
+        options=["openrouter", "groq"],
+        value="openrouter",
+    ).classes("w-48")
+    provider_dropdown.bind_visibility_from(use_llm, "value")
+    groq_gdpr_notice = ui.label(
+        "⚠️ Groq: US/Saudi data centers (no EU hosting). Enable PII redaction."
+    ).classes("text-caption text-warning")
+    groq_gdpr_notice.set_visibility(False)
+
+    def _on_provider_change(e: Any) -> None:
+        groq_gdpr_notice.set_visibility(e.value == "groq" and bool(use_llm.value))
+
+    provider_dropdown.on("update:model-value", _on_provider_change)
+    use_llm.on("update:model-value", lambda e: groq_gdpr_notice.set_visibility(
+        provider_dropdown.value == "groq" and bool(e.value)
+    ))
     result_container = ui.column().classes("w-full q-mt-md")
 
     async def run_analysis() -> None:
@@ -69,6 +87,7 @@ def render_text_pipeline_section(state: DashboardState) -> None:
                 segments,
                 use_mistral_llm=bool(use_llm.value),
                 deep_analysis=bool(use_llm.value),
+                provider=provider_dropdown.value,
             )
             state.api_connected = True
 
