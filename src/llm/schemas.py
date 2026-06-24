@@ -611,3 +611,37 @@ class CallAgentPerformance(BaseModel):
         default_factory=list, description="Immediate rule-based suggestions (e.g. 'Agent bör hälsa tidigare')."
     )
     evidence_summary: str | None = Field(None, description="Short Swedish summary of key metric drivers.")
+
+
+# =============================================================================
+# Fas 4.5: LLM-Judge for low-confidence segments (Task A.1)
+# =============================================================================
+
+
+class LLMJudgeVerdict(BaseModel):
+    """Verdict from LLM-judge on a single segment with low confidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    segment_index: int = Field(..., ge=0, description="Index of the segment in the conversation.")
+    original_sentiment: str = Field(..., description="positive/negative/neutral from local sentiment")
+    original_confidence: float = Field(..., ge=0.0, le=1.0, description="Original confidence score (0-1)")
+    judge_label: str = Field(..., description="positive/negative/neutral from LLM judge")
+    judge_confidence: float = Field(..., ge=0.0, le=1.0, description="LLM judge confidence (0-1)")
+    reasoning: str = Field(..., min_length=1, description="1-2 sentences in Swedish explaining the judgment")
+    model: str = Field(..., description="Model identifier e.g. llama-3.1-8b-instant")
+    cost_usd: float = Field(0.0, ge=0.0, description="Cost in USD for this judgment")
+    latency_ms: int = Field(0, ge=0, description="Latency in milliseconds for the LLM call")
+
+
+class LLMJudgeResult(BaseModel):
+    """Aggregated LLM-judge result for a conversation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdicts: list[LLMJudgeVerdict] = Field(default_factory=list, description="Individual verdicts for low-confidence segments")
+    triggered_segments: int = Field(0, ge=0, description="How many segments were sent to LLM judge")
+    skipped_segments: int = Field(0, ge=0, description="How many segments were above confidence threshold")
+    total_cost_usd: float = Field(0.0, ge=0.0, description="Total cost across all judgments")
+    budget_exceeded: bool = Field(False, description="True if budget limit stopped further LLM calls")
+    fallback_used: bool = Field(False, description="True if LLM failed and local heuristic fallback was used")
