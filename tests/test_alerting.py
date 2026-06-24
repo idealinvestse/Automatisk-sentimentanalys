@@ -1,9 +1,10 @@
 """Tests for alerting webhook (retry, circuit breaker, config)."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from src.alerting import AlertEngine, Alert, EvidenceSpan, load_alerting_config
+from src.alerting import Alert, AlertEngine, EvidenceSpan, load_alerting_config
 
 
 @pytest.fixture

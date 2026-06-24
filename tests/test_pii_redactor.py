@@ -1,13 +1,13 @@
 """Tests for PII redaction hardening (Luhn, expanded Swedish names, addresses)."""
 
 import pytest
+
 from src.llm.pii_redactor import (
+    _ADDRESS_RE,
+    _COMMON_SWEDISH_FIRST_NAMES,
     _is_valid_luhn,
     redact_pii,
     redact_segments,
-    _CREDIT_CARD_RE,
-    _ADDRESS_RE,
-    _COMMON_SWEDISH_FIRST_NAMES,
 )
 
 
@@ -143,13 +143,13 @@ def sample_segments():
 
 def test_redact_segments_with_profile(sample_segments, monkeypatch):
     """redact_segments honors profile llm.anonymize_before_llm flag."""
-    # Mock profile resolution to enable redaction
-    import src.llm.pii_redactor as pr
+    # Patch resolve_profile in src.profiles (where it's defined) — redact_segments imports it lazily
+    import src.profiles as prof_mod
 
     def fake_resolve(*args, **kwargs):
         return None, {"llm": {"anonymize_before_llm": True}}
 
-    monkeypatch.setattr(pr, "resolve_profile", fake_resolve)
+    monkeypatch.setattr(prof_mod, "resolve_profile", fake_resolve)
     redacted, log = redact_segments(sample_segments, profile_name="callcenter", return_log=True)
     assert log.total_redacted > 0
     assert any("4111111111111111" not in seg["text"] for seg in redacted)

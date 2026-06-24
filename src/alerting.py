@@ -29,20 +29,16 @@ Se UTVECKLINGSPLAN_Fas4 v1.1 för acceptance: "Kan definiera regel → trigga al
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable
-
-from pydantic import BaseModel
+from typing import Any
 
 import httpx
 import yaml
 
-from .llm.schemas import Alert, AlertSummary, EvidenceSpan
+from .llm.schemas import Alert, EvidenceSpan
 
 logger = logging.getLogger(__name__)
 
@@ -50,42 +46,51 @@ logger = logging.getLogger(__name__)
 def load_alerting_config(path: str | Path = "configs/alerting_config.yaml") -> dict[str, Any]:
     """Load alerting config with env var override support.
 
-    Supports ${VAR:-default} syntax for environment variable substitution.
+    Priority: hardcoded defaults < YAML file < environment variables.
+    Supports ${VAR:-default} syntax in YAML for env substitution.
     Returns defaults if file missing or unreadable (graceful degradation).
     """
-    defaults = {
+    # 1. Hardcoded defaults
+    config: dict[str, Any] = {
         "webhook": {
             "enabled": True,
-            "url": os.getenv("ALERT_WEBHOOK_URL", ""),
-            "timeout_seconds": int(os.getenv("ALERT_WEBHOOK_TIMEOUT", "10")),
-            "max_retries": int(os.getenv("ALERT_WEBHOOK_RETRIES", "3")),
-            "circuit_breaker_threshold": int(os.getenv("ALERT_WEBHOOK_BREAKER", "5")),
-            "retry_backoff_base": float(os.getenv("ALERT_WEBHOOK_BACKOFF", "1.0")),
+            "url": "",
+            "timeout_seconds": 10,
+            "max_retries": 3,
+            "circuit_breaker_threshold": 5,
+            "retry_backoff_base": 1.0,
         }
     }
+    # 2. YAML overrides defaults
     p = Path(path)
-    if not p.exists():
-        logger.debug("alerting_config.yaml not found, using defaults + env")
-        return defaults
-    try:
-        raw = p.read_text(encoding="utf-8")
-        # naive env substitution for ${VAR:-default}
-        import re
+    if p.exists():
+        try:
+            raw = p.read_text(encoding="utf-8")
+            import re
 
-        def _sub(m):
-            var = m.group(1)
-            default = m.group(2) or ""
-            return os.getenv(var, default)
+            def _sub(m):
+                var = m.group(1)
+                default = m.group(2) or ""
+                return os.getenv(var, default)
 
-        raw = re.sub(r"\$\{([A-Z0-9_]+)(?::-([^}]*))?\}", _sub, raw)
-        data = yaml.safe_load(raw) or {}
-        # merge top-level webhook section
-        if "webhook" in data:
-            defaults["webhook"].update({k: v for k, v in data["webhook"].items() if v is not None})
-        return defaults
-    except Exception as exc:
-        logger.warning("Failed to load alerting config (%s): %s", path, exc)
-        return defaults
+            raw = re.sub(r"\$\{([A-Z0-9_]+)(?::-([^}]*))?\}", _sub, raw)
+            data = yaml.safe_load(raw) or {}
+            if "webhook" in data:
+                config["webhook"].update({k: v for k, v in data["webhook"].items() if v is not None})
+        except Exception as exc:
+            logger.warning("Failed to load alerting config (%s): %s", path, exc)
+    # 3. Env vars override everything (highest priority)
+    if os.getenv("ALERT_WEBHOOK_URL"):
+        config["webhook"]["url"] = os.getenv("ALERT_WEBHOOK_URL", "")
+    if os.getenv("ALERT_WEBHOOK_TIMEOUT"):
+        config["webhook"]["timeout_seconds"] = int(os.getenv("ALERT_WEBHOOK_TIMEOUT", "10"))
+    if os.getenv("ALERT_WEBHOOK_RETRIES"):
+        config["webhook"]["max_retries"] = int(os.getenv("ALERT_WEBHOOK_RETRIES", "3"))
+    if os.getenv("ALERT_WEBHOOK_BREAKER"):
+        config["webhook"]["circuit_breaker_threshold"] = int(os.getenv("ALERT_WEBHOOK_BREAKER", "5"))
+    if os.getenv("ALERT_WEBHOOK_BACKOFF"):
+        config["webhook"]["retry_backoff_base"] = float(os.getenv("ALERT_WEBHOOK_BACKOFF", "1.0"))
+    return config
 
 # Default rules (regelbaserade, matchar planens exempel + mer från Fas4 data)
 DEFAULT_RULES: list[dict[str, Any]] = [
@@ -191,8 +196,8 @@ class AlertEngine:
                 if self.mistral_analyzer and "escalation" in rule["id"].lower():
                     try:
                         # Selective, low cost
-                        prompt = f"Ge 1-2 konkreta svenska coachningsåtgärder för: {rule['message']}. Baserat på värden: {trig_vals}"
-                        # ... (simplified, assume client call or skip full impl here)
+                        # NOTE: actual prompt construction deferred — see LLM_PROVIDERS.md
+                        # for available Mistral/Groq clients. Kept as placeholder for v0.5.
                         actions.append("llm_suggested_coaching")
                         logger.info("Mistral used for alert action enhancement (rule %s)", rule["id"])
                     except Exception:

@@ -37,21 +37,37 @@ logger = logging.getLogger(__name__)
 
 # Common Swedish/EU PII patterns (conservative, high-precision to avoid false positives on callcenter terms like "fakturanummer")
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE)
-_PHONE_RE = re.compile(r"(?:(?:\+46|0)[\s-]?)?(?:\d[\s-]?){6,12}\d")  # Swedish phones
+_PHONE_RE = re.compile(
+    r"(?:"
+    # International format: +46 70 123 45 67 — must not be preceded by another digit
+    r"(?<!\d)\+46[\s-]?\d{1,4}(?:[\s-]?\d{2,4}){2,4}"
+    r"|"
+    # National format with 0 prefix: 070-123 45 67, 08-123 456 78 — must not be preceded by another digit
+    r"(?<!\d)0\d{2,3}(?:[\s-]?\d{2,4}){2,4}"
+    r"|"
+    # 10-digit mobile starting with 07 (no separators)
+    r"\b07\d{8}\b"
+    r")"
+)  # Swedish phone numbers — requires +46 or 0 prefix, not preceded by digit, to avoid false positives on invoice/case IDs
 _PERSONNUMMER_RE = re.compile(r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b")
 _CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")  # 13-16 digits with optional spaces/dashes; filtered by Luhn checksum (see _is_valid_luhn)
+# Permissive address regex — matches capitalized word(s) followed by number.
+# Suffix validation is done in Python to handle compound Swedish street names
+# (e.g. "Brunkebergstorg" = "Brunkeberg"+"torg", "Vasaplatsen" = "Vasa"+"platsen").
 _ADDRESS_RE = re.compile(
-    r"\b(?:[A-ZÅÄÖ][a-zåäö]*)(?:"
-    r"gatan|vägen|gata|väg|"  # Swedish common
-    r"platsen|torget|esplanaden|allén|aveny|boulevarden|stråket|leden|torg)"
-    r"\s+\d{1,4}\b|",  # Number comes AFTER street name (Swedish style)
-    r"\b\d{1,4}\s+(?:"
-    r"gatan|vägen|gata|väg|"  # English/legacy (Number before street)
-    r"platsen|torget|esplanaden|allén|aveny|boulevarden|stråket|leden|torg|"
-    r"avenue|street|st|road|rd|allé|esplanad)"
-    r"\b",
-    re.IGNORECASE,
-)  # Swedish street-first + English number-first patterns
+    r"\b[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+(?:\s+[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+)?\s+\d{1,4}\b"
+)
+
+# Known Swedish + English street suffixes for address validation (case-insensitive).
+# Used in redact_pii() to verify the permissive match actually looks like a street.
+_ADDRESS_SUFFIXES = frozenset({
+    # Swedish street name endings
+    "gatan", "vägen", "gata", "väg", "torget", "torg", "platsen",
+    "esplanaden", "allén", "avenyn", "aveny", "boulevarden", "stråket",
+    "leden", "backen", "höjden", "kajen", "plan",
+    # English / legacy
+    "avenue", "street", "st", "road", "rd", "allé", "esplanad",
+})
 
 # Conservative name heuristic (only after common titles or in specific contexts to avoid over-redaction)
 _NAME_TITLE_RE = re.compile(r"\b(?:herr|fru|fröken|dr|prof|hr|fr)\s+([A-ZÅÄÖ][a-zåäö]+(?:\s+[A-ZÅÄÖ][a-zåäö]+)?)", re.IGNORECASE)
@@ -96,7 +112,6 @@ def _is_valid_luhn(digits: str) -> bool:
     """
     if not digits or not digits.isdigit():
         return False
-    n = len(digits)
     total = 0
     for i, ch in enumerate(reversed(digits)):
         d = int(ch)
@@ -145,10 +160,8 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
     result, ev = _replace_with_log(_EMAIL_RE, replacements.get("email", "[REDACTED_EMAIL]"), "email", result)
     events.extend(ev)
 
-    result, ev = _replace_with_log(_PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result)
-    events.extend(ev)
-
-    # Credit card: filter through Luhn validation to avoid false positives on invoice/case numbers
+    # Credit card BEFORE phone: filter through Luhn validation to avoid false positives on invoice/case numbers.
+    # Doing CC first prevents the phone regex from consuming CC digits (since replaced text has no digits).
     cc_events: list[dict[str, Any]] = []
     for m in reversed(list(_CREDIT_CARD_RE.finditer(result))):
         orig = m.group(0)
@@ -165,8 +178,34 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
             })
     events.extend(cc_events)
 
+    result, ev = _replace_with_log(_PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result)
+    events.extend(ev)
+
     result, ev = _replace_with_log(_ADDRESS_RE, replacements.get("address", "[REDACTED_ADDRESS]"), "address", result)
     events.extend(ev)
+    # Address: filter permissive regex matches by known suffix presence
+    addr_events: list[dict[str, Any]] = []
+    for m in reversed(list(_ADDRESS_RE.finditer(result))):
+        full = m.group(0)
+        # Extract street portion (everything before the trailing number)
+        street_match = re.match(r"^(.+?)\s+\d{1,4}\s*$", full)
+        if not street_match:
+            continue
+        street = street_match.group(1)
+        # Validate that street part contains a known suffix
+        if any(suf in street.lower() for suf in _ADDRESS_SUFFIXES):
+            start, end = m.start(), m.end()
+            result = result[:start] + replacements.get("address", "[REDACTED_ADDRESS]") + result[end:]
+            addr_events.append({
+                "type": "address",
+                "original": full,
+                "replacement": replacements.get("address", "[REDACTED_ADDRESS]"),
+                "char_start": start,
+                "char_end": end,
+            })
+    # Replace the events from the permissive regex run with the validated ones
+    events = [e for e in events if e["type"] != "address"]
+    events.extend(addr_events)
 
     # Name heuristic (title-based only, conservative)
     result, ev = _replace_with_log(_NAME_TITLE_RE, replacements.get("name", "[REDACTED_NAME]"), "name", result)
@@ -192,7 +231,7 @@ def redact_segments(
 
     Supports input as list[dict] or list[Segment]. Always returns list[dict].
     """
-    applied = False
+    applied = False  # noqa: F841 — kept for clarity/logging hooks
     try:
         from ..profiles import resolve_profile
         _, spec = resolve_profile(profile=profile_name)
@@ -202,7 +241,6 @@ def redact_segments(
                 log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
                 return segments, log
             return segments
-        applied = True
     except Exception:
         if return_log:
             log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
