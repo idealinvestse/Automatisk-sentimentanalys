@@ -81,7 +81,7 @@ def _get_sentiment_label_and_conf(result: dict[str, Any]) -> tuple[str, float]:
 def _build_judge_prompt(segments: list[Segment], sentiment_results: list[dict[str, Any]]) -> list[dict[str, str]]:
     """Build a minimal JSON-mode prompt for judging the given low-conf segments."""
     lines: list[str] = []
-    for i, (seg, sent) in enumerate(zip(segments, sentiment_results)):
+    for i, (seg, sent) in enumerate(zip(segments, sentiment_results, strict=False)):
         label, conf = _get_sentiment_label_and_conf(sent)
         lines.append(
             f"Segment {i}: text=\"{seg.text[:200]}\" original_sentiment={label} confidence={conf:.2f}"
@@ -109,7 +109,7 @@ def _build_judge_prompt(segments: list[Segment], sentiment_results: list[dict[st
 def _mock_judge_response(segments: list[Segment], sentiment_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Very small deterministic mock for tests when no real client is available."""
     out: list[dict[str, Any]] = []
-    for idx, (seg, sent) in enumerate(zip(segments, sentiment_results)):
+    for idx, (_seg, sent) in enumerate(zip(segments, sentiment_results, strict=False)):
         orig_label, orig_conf = _get_sentiment_label_and_conf(sent)
         # Flip only if very uncertain (<0.4) else keep original
         if orig_conf < 0.4 and orig_label == "neutral":
@@ -219,7 +219,7 @@ class LLMJudgeAnalyzer(Analyzer):
 
         # 1. Identify low-confidence segments
         low_conf_indices: list[int] = []
-        for idx, (seg, sent) in enumerate(zip(segments, sentiment_results)):
+        for idx, (_seg, sent) in enumerate(zip(segments, sentiment_results, strict=False)):
             _, conf = _get_sentiment_label_and_conf(sent)
             if conf < self.min_confidence:
                 low_conf_indices.append(idx)

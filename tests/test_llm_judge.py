@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import ValidationError
 
-from src.analysis.llm_judge import LLMJudgeAnalyzer, DEFAULT_MIN_CONFIDENCE
+from src.analysis.llm_judge import DEFAULT_MIN_CONFIDENCE, LLMJudgeAnalyzer
 from src.core.models import AnalysisContext, Segment
 from src.llm.schemas import LLMJudgeResult, LLMJudgeVerdict
 
