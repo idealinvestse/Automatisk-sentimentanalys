@@ -8,6 +8,16 @@ This document provides a high-level overview of the project's maturity and futur
 
 The project has reached a **mature beta / early production** stage. **Fas 4 (Call Center Backend) is complete** and validated (Fas 1 gate: 509 tests, 86 %+ coverage). Release documentation updated in CHANGELOG, README, API.md, and FAS4_COMPLETION.md.
 
+> **Note:** Test count is a snapshot at Fas 4 sign-off. Current count is **581 test functions across 57 test files** (delta includes Groq integration, transcription presets, dashboard tests, and PII coverage added post-Fas 4). See `pytest --collect-only` for live count.
+
+### Known Stubs / Deferred Items (v0.4.1)
+
+| Component | Status | Note |
+|-----------|--------|------|
+| `src/analysis/llm_judge.py` | 🟡 Stub | Registered in registry but `analyze()` returns `[]`. Planned for v0.5 (low-confidence routing). |
+| `src/alerting.py:193` | 🟡 TODO | Webhook delivery logs payload but does not POST. Planned for v0.5 (httpx + retry + circuit breaker). |
+| YouTube ingest (Fas 5) | ❌ Removed | Rolled back in commit `46bc04c` (experimental, not re-introduced in v0.5 scope). |
+
 ### Completed Features
 
 | Area                        | Status     | Key Components                                      |

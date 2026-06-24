@@ -57,7 +57,7 @@ CallAnalysisReport (returned to CLI / API / Dashboard)
 | `src/lexicon.py`            | Lexicon blending                                                        | - |
 | `configs/`                  | YAML configs, hotwords, llm_config.yaml                                 | `callcenter_hotwords.txt` |
 | `docs/`                     | All documentation                                                       | `ROADMAP.md`, `API.md`, this file |
-| `tests/`                    | 31+ test files                                                          | `test_pipeline.py`, `test_llm_*.py` |
+| `tests/`                    | 57 test files (581 test functions)                                    | `test_pipeline.py`, `test_llm_*.py` |
 
 ## 4. Getting Started (for Agents)
 
