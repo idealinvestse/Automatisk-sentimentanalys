@@ -7,12 +7,22 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 # --- emotion_timeline helpers ---
 from app.nicegui_dashboard.components.emotion_timeline import (
     _extract_emotion_series,
     build_emotion_timeline_figure,
+)
+
+# --- hot_topic_wordcloud helpers ---
+from app.nicegui_dashboard.components.hot_topic_wordcloud import (
+    _extract_topics,
+    build_hot_topics_treemap,
+)
+
+# --- llm_judge_breakdown helpers ---
+from app.nicegui_dashboard.components.llm_judge_breakdown import (
+    _extract_llm_judge_verdicts,
+    _get_confidence_color,
 )
 
 
@@ -33,13 +43,6 @@ def test_emotion_timeline_empty_state() -> None:
     assert fig is not None
 
 
-# --- hot_topic_wordcloud helpers ---
-from app.nicegui_dashboard.components.hot_topic_wordcloud import (
-    _extract_topics,
-    build_hot_topics_treemap,
-)
-
-
 def test_wordcloud_renders() -> None:
     """Treemap renders from demo or report topics."""
     fig = build_hot_topics_treemap(None)
@@ -54,13 +57,6 @@ def test_wordcloud_empty_state() -> None:
     assert isinstance(topics, list)
     fig = build_hot_topics_treemap(report)
     assert fig is not None
-
-
-# --- llm_judge_breakdown helpers ---
-from app.nicegui_dashboard.components.llm_judge_breakdown import (
-    _extract_llm_judge_verdicts,
-    _get_confidence_color,
-)
 
 
 def test_llm_judge_breakdown_renders() -> None:
