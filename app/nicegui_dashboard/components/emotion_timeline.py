@@ -81,7 +81,7 @@ def build_emotion_timeline_figure(report: dict[str, Any] | None) -> go.Figure:
     # Build DataFrame for px.line (long form)
     records: list[dict[str, Any]] = []
     for emotion_name, scores in emotion_dict.items():
-        for i, score in zip(indices, scores):
+        for i, score in zip(indices, scores, strict=False):
             records.append({"segment": i, "emotion": emotion_name, "score": score})
 
     if not records:

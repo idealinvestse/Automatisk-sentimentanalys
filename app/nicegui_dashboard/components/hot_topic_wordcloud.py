@@ -94,7 +94,7 @@ def build_hot_topics_treemap(reports: list[dict[str, Any]] | dict[str, Any] | No
 
     if reports is None:
         topics = _build_demo_topics()
-    elif isinstance(reports, list) or isinstance(reports, dict):
+    elif isinstance(reports, (list, dict)):
         topics = _extract_topics(reports)
 
     if not topics:
@@ -129,7 +129,7 @@ def render_hot_topics_wordcloud(reports: list[dict[str, Any]] | dict[str, Any] |
     topics: list[dict[str, Any]] = []
     if reports is None:
         topics = _build_demo_topics()
-    elif isinstance(reports, list) or isinstance(reports, dict):
+    elif isinstance(reports, (list, dict)):
         topics = _extract_topics(reports)
 
     if not topics:
