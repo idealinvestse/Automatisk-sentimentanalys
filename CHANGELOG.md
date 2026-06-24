@@ -7,8 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Doc reconciliation** (commit `54bb46d`):
+  - `docs/LLM_AGENT_GUIDE.md`: test file count updated from "31+" to actual 57 / 581 test functions
+  - `docs/ROADMAP.md`: qualified "509 tests" claim as Fas 4 gate snapshot, added "Known Stubs / Deferred Items" section listing `llm_judge` stub, alerting webhook TODO, and YouTube ingest rollback
+  - Findings from code review session 2026-06-24 (glm-5.2 plan + grok-4.3 review)
+
+### Security
+- **PII-redaction hardening** (PR #17):
+  - Luhn validation for credit cards (prevents false positives on invoice/case numbers)
+  - Swedish first names list expanded from 10 → ~60 entries (SCB top)
+  - Swedish address pattern expansion (suffix-based + Python validation for compound words)
+  - Phone regex requires +46/0 prefix with `(?<!\d)` lookbehind (avoids matching 13-16 digit IDs)
+  - CC checked before phone (priority order)
+  - New `app/nicegui_dashboard/components/pii_audit.py` for PII event visibility
+- **Alerting webhook production-grade** (PR #17):
+  - `httpx.AsyncClient` with 10s timeout + 3 retries + exponential backoff
+  - Circuit breaker: webhook disabled after 5 consecutive failures
+  - Externalized config: `configs/alerting_config.yaml`
+  - Env override priority: env vars > YAML > hardcoded defaults
+
+## [0.4.1] - 2026-06-24
+
 ### Added
-- **Groq Cloud LLM integration**: New provider alongside Mistral/OpenRouter
+- **Groq Cloud LLM integration** (commit `e91edf1`, PR #16): New provider alongside Mistral/OpenRouter
   - `src/llm/groq_client.py` — `GroqClient` with OpenAI-compatible API, caching, cost tracking
   - `src/llm/groq_analyzer.py` — `GroqAnalyzer` with strict Pydantic schemas
   - `src/llm/schemas.py` — `GROQ_MODELS` registry (17 models) with pricing, capabilities, tiers
@@ -30,7 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Korrigerad empati-aggregering i `local_agent_metrics`
   - Alerts-badge uppdaterar färg vid refresh
 
-## [0.4.1] - 2026-06-19 (v0.5-prep)
+## [0.5-prep] - 2026-06-19 (Fas 4 Backend, never tagged as v0.4.1)
+
+> Note: this entry originally documented work intended for v0.4.1 but
+> never formally tagged. Renamed to [0.5-prep] to avoid duplicate version
+> headers. The Fas 4 backend code is still present in main and will be
+> released as v0.5.0 after LLM-judge + dashboard viz work lands.
 
 ### Added
 - **Fas 4 – Call Center Backend (komplett)**:
