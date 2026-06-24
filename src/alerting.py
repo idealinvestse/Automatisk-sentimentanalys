@@ -31,14 +31,61 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import time
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Callable
 
 from pydantic import BaseModel
 
+import httpx
+import yaml
+
 from .llm.schemas import Alert, AlertSummary, EvidenceSpan
 
 logger = logging.getLogger(__name__)
+
+
+def load_alerting_config(path: str | Path = "configs/alerting_config.yaml") -> dict[str, Any]:
+    """Load alerting config with env var override support.
+
+    Supports ${VAR:-default} syntax for environment variable substitution.
+    Returns defaults if file missing or unreadable (graceful degradation).
+    """
+    defaults = {
+        "webhook": {
+            "enabled": True,
+            "url": os.getenv("ALERT_WEBHOOK_URL", ""),
+            "timeout_seconds": int(os.getenv("ALERT_WEBHOOK_TIMEOUT", "10")),
+            "max_retries": int(os.getenv("ALERT_WEBHOOK_RETRIES", "3")),
+            "circuit_breaker_threshold": int(os.getenv("ALERT_WEBHOOK_BREAKER", "5")),
+            "retry_backoff_base": float(os.getenv("ALERT_WEBHOOK_BACKOFF", "1.0")),
+        }
+    }
+    p = Path(path)
+    if not p.exists():
+        logger.debug("alerting_config.yaml not found, using defaults + env")
+        return defaults
+    try:
+        raw = p.read_text(encoding="utf-8")
+        # naive env substitution for ${VAR:-default}
+        import re
+
+        def _sub(m):
+            var = m.group(1)
+            default = m.group(2) or ""
+            return os.getenv(var, default)
+
+        raw = re.sub(r"\$\{([A-Z0-9_]+)(?::-([^}]*))?\}", _sub, raw)
+        data = yaml.safe_load(raw) or {}
+        # merge top-level webhook section
+        if "webhook" in data:
+            defaults["webhook"].update({k: v for k, v in data["webhook"].items() if v is not None})
+        return defaults
+    except Exception as exc:
+        logger.warning("Failed to load alerting config (%s): %s", path, exc)
+        return defaults
 
 # Default rules (regelbaserade, matchar planens exempel + mer från Fas4 data)
 DEFAULT_RULES: list[dict[str, Any]] = [
@@ -108,9 +155,17 @@ def _safe_eval_condition(condition: str, signals: dict[str, Any]) -> bool:
 class AlertEngine:
     """Main alerting engine. Regelbaserat med stöd för custom rules och aggregator triggers."""
 
-    def __init__(self, rules: list[dict[str, Any]] | None = None, mistral_analyzer: Any | None = None):
+    def __init__(
+        self,
+        rules: list[dict[str, Any]] | None = None,
+        mistral_analyzer: Any | None = None,
+        config: dict[str, Any] | None = None,
+    ):
         self.rules = rules or DEFAULT_RULES
         self.mistral_analyzer = mistral_analyzer  # optional for enhanced actions
+        self.config = config or load_alerting_config()
+        self._consecutive_failures = 0
+        self._webhook_disabled = False
 
     def check(self, signals: dict[str, Any]) -> list[Alert]:
         """Check per-call or batch signals against rules. Returns list of triggered Alerts with evidence."""
@@ -184,15 +239,72 @@ class AlertEngine:
         }
 
     def notify_webhook(self, alert: Alert, url: str | None = None, call_id: str | None = None) -> dict:
-        """Stub for webhook. In real: requests.post(url, json=payload).
-        Here: returns the payload and logs.
+        """Send webhook notification with retry, backoff, and circuit breaker.
+
+        Implements production-grade delivery:
+        - 10s timeout per attempt
+        - 3 retries with exponential backoff (1s, 2s, 4s)
+        - Circuit breaker: disabled after 5 consecutive failures
+        - Logs success/failure/circuit state
         """
         payload = self.build_webhook_payload(alert, call_id)
-        if url:
-            logger.info("Would POST to webhook %s: %s", url, json.dumps(payload)[:200])
-            # TODO: actual http in production
-        else:
+        if not url:
             logger.info("Alert webhook payload (no url configured): %s", payload)
+            return payload
+
+        # Circuit breaker check
+        if getattr(self, "_webhook_disabled", False):
+            logger.warning("Webhook circuit breaker OPEN – delivery skipped")
+            return payload
+
+        max_retries = 3
+        base_backoff = 1.0
+        timeout = 10.0
+
+        attempt = 0
+        while attempt < max_retries:
+            attempt += 1
+            try:
+                resp = httpx.post(
+                    url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=timeout,
+                )
+                if resp.status_code < 400:
+                    logger.info(
+                        "Webhook delivered (attempt %d/%d): %s -> %s",
+                        attempt, max_retries, alert.rule_id, resp.status_code
+                    )
+                    # Reset failure counter on success
+                    self._consecutive_failures = 0
+                    return payload
+                else:
+                    logger.warning(
+                        "Webhook HTTP %s (attempt %d): %s",
+                        resp.status_code, attempt, resp.text[:200]
+                    )
+            except httpx.TimeoutException:
+                logger.warning("Webhook timeout (attempt %d/%d)", attempt, max_retries)
+            except Exception as exc:
+                logger.warning("Webhook error (attempt %d/%d): %s", attempt, max_retries, exc)
+
+            self._consecutive_failures = getattr(self, "_consecutive_failures", 0) + 1
+
+            # Circuit breaker trigger
+            if self._consecutive_failures >= 5:
+                self._webhook_disabled = True
+                logger.error(
+                    "Webhook circuit breaker OPEN after %d consecutive failures – disabled",
+                    self._consecutive_failures
+                )
+                break
+
+            if attempt < max_retries:
+                sleep_s = base_backoff * (2 ** (attempt - 1))
+                logger.debug("Backing off %.1fs before retry", sleep_s)
+                time.sleep(sleep_s)
+
         return payload
 
 
