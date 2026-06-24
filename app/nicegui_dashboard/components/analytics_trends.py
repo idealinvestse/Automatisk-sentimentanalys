@@ -11,6 +11,9 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.call_detail import find_report
+from app.nicegui_dashboard.components.emotion_timeline import render_emotion_timeline
+from app.nicegui_dashboard.components.hot_topic_wordcloud import render_hot_topics_wordcloud
+from app.nicegui_dashboard.services.calls_filter import search_table_reports
 from app.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
     build_escalation_figure,
@@ -20,7 +23,6 @@ from app.nicegui_dashboard.services.chart_data import (
     extract_agent_trend_rows,
     list_call_options,
 )
-from app.nicegui_dashboard.services.calls_filter import search_table_reports
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import filter_reports
 
@@ -32,9 +34,8 @@ def render_analytics_tab(
 ) -> Callable[[], None]:
     """Render analytics charts. Returns refresh callback."""
 
-    if not state.filters.get("analytics_call_id"):
-        if state.reports:
-            state.filters["analytics_call_id"] = state.reports[0].get("call_id")
+    if not state.filters.get("analytics_call_id") and state.reports:
+        state.filters["analytics_call_id"] = state.reports[0].get("call_id")
 
     def _filtered_reports() -> list[dict[str, Any]]:
         base = filter_reports(state.reports, state.filters)
@@ -88,12 +89,22 @@ def render_analytics_tab(
         with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
             with ui.card().classes("flex-1 min-w-[280px]"):
                 ui.label("Heta ämnen").classes("text-subtitle2")
-                topics_plot = ui.plotly(build_hot_topics_figure(reports)).classes("w-full")
+                ui.plotly(build_hot_topics_figure(reports)).classes("w-full")
 
             with ui.card().classes("flex-1 min-w-[280px]"):
                 ui.label("Eskaleringstrender").classes("text-subtitle2")
                 esc_plot = ui.plotly(build_escalation_figure(trend_rows)).classes("w-full")
                 esc_plot.on("plotly_click", _handle_plotly_click)
+
+        # Fas 3 viz additions (emotion timeline + hot topics wordcloud/treemap)
+        with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
+            with ui.card().classes("flex-1 min-w-[420px]"):
+                ui.label("Emotion timeline").classes("text-subtitle2")
+                render_emotion_timeline(report)
+
+            with ui.card().classes("flex-1 min-w-[320px]"):
+                ui.label("Heta ämnen (treemap)").classes("text-subtitle2")
+                render_hot_topics_wordcloud(reports)
 
     charts_section()
     return charts_section.refresh

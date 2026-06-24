@@ -10,6 +10,7 @@ from typing import Any
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.llm_judge_breakdown import render_llm_judge_breakdown
 from app.nicegui_dashboard.components.virtual_transcript import (
     render_timeline,
     render_transcript_panel,
@@ -189,6 +190,9 @@ def render_call_detail_tab(
         ui.label("Strukturerade insikter (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
         with ui.expansion("Sammanfattning & agentbedömning", icon="insights").classes("w-full"):
             ui.markdown(_build_insights_markdown(report))
+
+        # Fas 3 viz: LLM-judge breakdown (only if verdicts or demo data present)
+        render_llm_judge_breakdown(report)
 
         if on_back:
             back_label = _BACK_LABELS.get(
