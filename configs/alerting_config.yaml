@@ -1,0 +1,14 @@
+# Alerting Webhook Configuration (v0.5)
+# Loaded via src/core/config.py or direct yaml.safe_load.
+# Env overrides: ALERT_WEBHOOK_URL, ALERT_WEBHOOK_TIMEOUT, etc.
+
+webhook:
+  enabled: true
+  url: ${ALERT_WEBHOOK_URL:-}
+  timeout_seconds: 10
+  max_retries: 3
+  circuit_breaker_threshold: 5
+  retry_backoff_base: 1.0
+  # Optional: headers, auth (future extension)
+  # headers:
+  #   Authorization: "Bearer ${ALERT_WEBHOOK_TOKEN:-}"

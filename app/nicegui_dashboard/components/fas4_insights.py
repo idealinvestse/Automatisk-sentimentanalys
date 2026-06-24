@@ -11,6 +11,7 @@ from nicegui import ui
 
 from app.nicegui_dashboard.components.alerts_panel import render_alerts_panel
 from app.nicegui_dashboard.components.insights_hot_topics import render_insights_section
+from app.nicegui_dashboard.components.pii_audit import render_pii_audit_panel
 from app.nicegui_dashboard.components.qa_scorecard import render_qa_scorecard_section
 from app.nicegui_dashboard.state import DashboardState
 
@@ -47,6 +48,19 @@ def render_fas4_insights_tab(
                     on_dismiss_change=on_alerts_change,
                 )
             )
+
+        # PII Audit panel (non-blocking, demo fallback)
+        with ui.card().classes("w-full q-mt-md"):
+            if state.reports and state.selected_call_id:
+                selected = next(
+                    (r for r in state.reports if r.get("call_id") == state.selected_call_id), None
+                )
+                if selected:
+                    render_pii_audit_panel(selected.get("results"))
+                else:
+                    render_pii_audit_panel(None)
+            else:
+                render_pii_audit_panel(None)  # demo/empty state
 
     def refresh_all() -> None:
         for fn in refreshers:
