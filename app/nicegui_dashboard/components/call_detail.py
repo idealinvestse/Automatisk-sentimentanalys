@@ -16,6 +16,7 @@ from app.nicegui_dashboard.components.virtual_transcript import (
     scroll_transcript_to_index,
 )
 from app.nicegui_dashboard.services.qa_display import qa_chip_color
+from app.nicegui_dashboard.components.llm_judge_breakdown import render_llm_judge_breakdown
 from app.nicegui_dashboard.services.transcript_virtualizer import filter_segments_with_index
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import enrich_segments_with_sentiment, get_overall_sentiment
@@ -189,6 +190,9 @@ def render_call_detail_tab(
         ui.label("Strukturerade insikter (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
         with ui.expansion("Sammanfattning & agentbedömning", icon="insights").classes("w-full"):
             ui.markdown(_build_insights_markdown(report))
+
+        # Fas 3 viz: LLM-judge breakdown (only if verdicts or demo data present)
+        render_llm_judge_breakdown(report)
 
         if on_back:
             back_label = _BACK_LABELS.get(

@@ -11,6 +11,8 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.call_detail import find_report
+from app.nicegui_dashboard.components.emotion_timeline import render_emotion_timeline
+from app.nicegui_dashboard.components.hot_topic_wordcloud import render_hot_topics_wordcloud
 from app.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
     build_escalation_figure,
@@ -94,6 +96,16 @@ def render_analytics_tab(
                 ui.label("Eskaleringstrender").classes("text-subtitle2")
                 esc_plot = ui.plotly(build_escalation_figure(trend_rows)).classes("w-full")
                 esc_plot.on("plotly_click", _handle_plotly_click)
+
+        # Fas 3 viz additions (emotion timeline + hot topics wordcloud/treemap)
+        with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
+            with ui.card().classes("flex-1 min-w-[420px]"):
+                ui.label("Emotion timeline").classes("text-subtitle2")
+                render_emotion_timeline(report)
+
+            with ui.card().classes("flex-1 min-w-[320px]"):
+                ui.label("Heta ämnen (treemap)").classes("text-subtitle2")
+                render_hot_topics_wordcloud(reports)
 
     charts_section()
     return charts_section.refresh
