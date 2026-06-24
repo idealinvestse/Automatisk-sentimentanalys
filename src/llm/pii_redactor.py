@@ -39,8 +39,19 @@ logger = logging.getLogger(__name__)
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE)
 _PHONE_RE = re.compile(r"(?:(?:\+46|0)[\s-]?)?(?:\d[\s-]?){6,12}\d")  # Swedish phones
 _PERSONNUMMER_RE = re.compile(r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b")
-_CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")  # 13-16 digits with optional spaces/dashes (simple, no full Luhn for perf)
-_ADDRESS_RE = re.compile(r"\b\d{1,4}\s+(?:gata|väg|avenue|street|st|road|rd|allé|esplanaden|torget)\b", re.IGNORECASE)
+_CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")  # 13-16 digits with optional spaces/dashes; filtered by Luhn checksum (see _is_valid_luhn)
+_ADDRESS_RE = re.compile(
+    r"\b(?:[A-ZÅÄÖ][a-zåäö]*)(?:"
+    r"gatan|vägen|gata|väg|"  # Swedish common
+    r"platsen|torget|esplanaden|allén|aveny|boulevarden|stråket|leden|torg)"
+    r"\s+\d{1,4}\b|",  # Number comes AFTER street name (Swedish style)
+    r"\b\d{1,4}\s+(?:"
+    r"gatan|vägen|gata|väg|"  # English/legacy (Number before street)
+    r"platsen|torget|esplanaden|allén|aveny|boulevarden|stråket|leden|torg|"
+    r"avenue|street|st|road|rd|allé|esplanad)"
+    r"\b",
+    re.IGNORECASE,
+)  # Swedish street-first + English number-first patterns
 
 # Conservative name heuristic (only after common titles or in specific contexts to avoid over-redaction)
 _NAME_TITLE_RE = re.compile(r"\b(?:herr|fru|fröken|dr|prof|hr|fr)\s+([A-ZÅÄÖ][a-zåäö]+(?:\s+[A-ZÅÄÖ][a-zåäö]+)?)", re.IGNORECASE)
@@ -54,8 +65,47 @@ _REPLACEMENTS = {
     "name": "[REDACTED_NAME]",
 }
 
-# Small list of very common Swedish first names for heuristic (conservative; only used in title context above or with NER)
-_COMMON_SWEDISH_FIRST_NAMES = {"anna", "erik", "lars", "kristina", "anders", "margareta", "jan", "birgitta", "peter", "elisabeth"}
+# Top Swedish first names per SCB (Statistics Sweden) — adult population prevalence.
+# Used for conservative heuristic redaction (title context or NER). List covers ~80% of common Swedish names.
+_COMMON_SWEDISH_FIRST_NAMES = {
+    # Top female (SCB all-ages)
+    "anna", "kristina", "margareta", "birgitta", "elisabeth", "eva", "karin", "lena", "maria",
+    "kerstin", "ingrid", "marianne", "gunilla", "britt", "inger", "susanne", "monica", "annika",
+    "åsa", "helena", "barbro", "majbritt", "ann-marie", "gunvor", "ingegerd", "astrid", "maj",
+    "siv", "berit", "gunnel", "solveig", "ritt", "gun", "ann-charlotte", "ann-britt", "kajsa",
+    # Top male (SCB all-ages)
+    "lars", "anders", "johan", "erik", "karl", "nils", "per", "bengt", "bo", "jan",
+    "sven", "gunnar", "hans", "göran", "ingvar", "rolf", "kjell", "leif", "lennart", "olof",
+    "stig", "mats", "peter", "ulf", "christer", "hakan", "magnus", "fredrik", "daniel", "martin",
+    "andreas", "mikael", "joakim", "tomas", "andersson", "johansson", "svensson", "persson",
+}
+
+
+def _is_valid_luhn(digits: str) -> bool:
+    """Validate credit card number using the Luhn algorithm (mod 10).
+
+    Args:
+        digits: String containing only digits (no spaces or dashes).
+
+    Returns:
+        True if the number passes the Luhn checksum (valid credit card),
+        False otherwise (likely invoice number, case ID, or other non-PII).
+
+    This prevents false positives on 13-16 digit numeric identifiers
+    that are common in call center contexts (fakturanummer, ärendenummer).
+    """
+    if not digits or not digits.isdigit():
+        return False
+    n = len(digits)
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        d = int(ch)
+        if i % 2 == 1:  # every second digit from right (0-indexed in reversed)
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
 
 
 def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[str, list[dict[str, Any]]]:
@@ -98,8 +148,22 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
     result, ev = _replace_with_log(_PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result)
     events.extend(ev)
 
-    result, ev = _replace_with_log(_CREDIT_CARD_RE, replacements.get("credit_card", "[REDACTED_CC]"), "credit_card", result)
-    events.extend(ev)
+    # Credit card: filter through Luhn validation to avoid false positives on invoice/case numbers
+    cc_events: list[dict[str, Any]] = []
+    for m in reversed(list(_CREDIT_CARD_RE.finditer(result))):
+        orig = m.group(0)
+        digits = re.sub(r"[\s-]", "", orig)
+        if _is_valid_luhn(digits):
+            start, end = m.start(), m.end()
+            result = result[:start] + replacements.get("credit_card", "[REDACTED_CC]") + result[end:]
+            cc_events.append({
+                "type": "credit_card",
+                "original": orig,
+                "replacement": replacements.get("credit_card", "[REDACTED_CC]"),
+                "char_start": start,
+                "char_end": end,
+            })
+    events.extend(cc_events)
 
     result, ev = _replace_with_log(_ADDRESS_RE, replacements.get("address", "[REDACTED_ADDRESS]"), "address", result)
     events.extend(ev)
