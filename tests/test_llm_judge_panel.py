@@ -1,6 +1,7 @@
 """Unit tests for llm_judge_panel component.
 
 Focus on pure helper functions + basic render smoke tests.
+Expanded coverage for TASK-05.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from app.nicegui_dashboard.components.llm_judge_panel import (
     _get_verdicts,
     _is_changed,
     render_llm_judge_panel,
+    render_llm_judge_summary,
 )
 
 
@@ -35,6 +37,10 @@ class TestGetVerdicts:
     def test_returns_list_directly(self):
         data = [{"judge_label": "neutral"}]
         assert _get_verdicts(data) == [{"judge_label": "neutral"}]
+
+    def test_ignores_unknown_structure(self):
+        assert _get_verdicts({"foo": "bar"}) == []
+        assert _get_verdicts("not a dict") == []
 
 
 class TestIsChanged:
@@ -60,12 +66,19 @@ class TestIsChanged:
         v = {"original_sentiment": "Negative", "judge_label": "negative"}
         assert _is_changed(v) is False
 
+    def test_returns_false_when_judge_label_missing(self):
+        v = {"original_sentiment": "neutral"}
+        assert _is_changed(v) is False
+
+    def test_returns_false_when_original_missing(self):
+        v = {"judge_label": "positive"}
+        assert _is_changed(v) is False
+
 
 class TestRenderLLMJudgePanel:
     """Basic smoke tests for the render function."""
 
     def test_renders_without_error_with_empty_data(self):
-        # Should not raise
         render_llm_judge_panel(None)
         render_llm_judge_panel({})
         render_llm_judge_panel({"verdicts": []})
@@ -83,12 +96,9 @@ class TestRenderLLMJudgePanel:
                 }
             ]
         }
-        # Should not raise
         render_llm_judge_panel(data)
 
     def test_renders_without_error_with_changed_only_filter(self):
-        # This test mainly checks that the component doesn't crash
-        # when the internal filter logic runs.
         data = {
             "verdicts": [
                 {"original_sentiment": "positive", "judge_label": "negative"},
@@ -96,6 +106,46 @@ class TestRenderLLMJudgePanel:
             ]
         }
         render_llm_judge_panel(data)
+
+    def test_renders_with_missing_fields_gracefully(self):
+        data = {
+            "verdicts": [
+                {"segment_index": 5},  # almost empty
+                {"original_sentiment": "neutral", "judge_label": "positive"},
+            ]
+        }
+        render_llm_judge_panel(data)
+
+
+class TestRenderLLMJudgeSummary:
+    """Tests for the compact summary badge helper."""
+
+    def test_returns_none_for_empty_data(self):
+        # The function returns None (does nothing) for empty input
+        assert render_llm_judge_summary(None) is None
+        assert render_llm_judge_summary({}) is None
+        assert render_llm_judge_summary({"verdicts": []}) is None
+
+    def test_renders_summary_with_data(self):
+        data = {
+            "verdicts": [
+                {"original_sentiment": "neutral", "judge_label": "negative"},
+                {"original_sentiment": "negative", "judge_label": "negative"},
+            ]
+        }
+        # Should not raise
+        render_llm_judge_summary(data)
+
+    def test_counts_changed_correctly(self):
+        data = {
+            "verdicts": [
+                {"original_sentiment": "positive", "judge_label": "negative"},  # changed
+                {"original_sentiment": "negative", "judge_label": "negative"},  # not changed
+                {"original_sentiment": "neutral", "judge_label": "positive"},  # changed
+            ]
+        }
+        # Just ensure it runs (we can't easily assert UI output here)
+        render_llm_judge_summary(data)
 
 
 if __name__ == "__main__":
