@@ -1,65 +1,30 @@
 
 ---
 
-### TASK-05: Lägg till enhetstester för `llm_judge_panel` (särskilt filter-logik och tomma tillstånd)
-**Why this task now**: Efter code review identifierades att filter-logiken ("Endast ändrade") och hantering av tomma tillstånd behöver testtäckning för att undvika regressioner när panelen utvecklas vidare.
+### TASK-07: Gör circuit breaker state mer robust vid multi-worker deployment
+**Why this task now**: Den nuvarande implementationen i `src/api/routers/alerting.py` använder en modulnivå `_status_engine`. Detta fungerar bra för single-worker development men blir problematiskt vid flera uvicorn workers, reloads eller horisontell skalning.
 
 **Description**:
-- Skriv tester för `render_llm_judge_panel` och `render_llm_judge_summary`.
-- Täck fall: normal data, filter "Endast ändrade", tom data, saknade fält (`segment_index`, `reasoning` etc.), edge cases för `_is_changed()`.
-- Använd NiceGUI test-mönster eller enkla enhetstester på hjälpfunktionerna.
+- Utvärdera alternativ: Redis-baserad state, `app.state`-baserad lösning, eller en dedikerad liten service.
+- Välj en enkel men robust lösning för produktionsanvändning.
+- Uppdatera `get_alerting_status` och `reset_circuit_breaker` endpoints att använda den nya lösningen.
+- Dokumentera begränsningar och rekommendationer i `docs/`.
 
 **Primary files / components**:
-- `tests/test_llm_judge_panel.py` (ny fil)
-- `app/nicegui_dashboard/components/llm_judge_panel.py`
-
-**Estimated effort**: Small (1 session).
-
-**Dependencies / prerequisites**: TASK-02 (panelen finns).
-
-**Expected impact / value**: Medel. Ökar förtroendet för komponenten och gör framtida ändringar säkrare.
-
-**Risks / things to watch**: NiceGUI-komponenter kan vara svåra att enhetstesta; fokusera på rena hjälpfunktioner (`_get_verdicts`, `_is_changed`).
-
-**Success criteria**:
-- Bra testtäckning på filter-logik och edge cases.
-- Tester körs gröna i CI.
-
----
-
-### TASK-06: Exponera webhook/circuit breaker status från `AlertEngine` till dashboard
-**Why this task now**: Code review visade att statusraden i `alerts_panel.py` är statisk/hårdkodad. För att göra alerting verkligen produktionsmogen behöver vi visa verkligt tillstånd (CLOSED/OPEN, antal failures).
-
-**Description**:
-- Exponera `AlertEngine` circuit breaker state (t.ex. via en singleton, dashboard state eller enkel API-endpoint `/alerting/status`).
-- Uppdatera `alerts_panel.py` att visa dynamisk status (färgkodad: grön = CLOSED, röd = OPEN).
-- Eventuellt lägg till reset-knapp för circuit breaker i test_lab.
-
-**Primary files / components**:
+- `src/api/routers/alerting.py`
 - `src/alerting.py`
-- `app/nicegui_dashboard/components/alerts_panel.py`
-- `app/nicegui_dashboard/services/nicegui_api_client.py` (om ny endpoint)
-- `src/api/routers/` (valfritt)
+- `src/api/app.py` (lifespan / app.state)
+- Eventuellt Redis-beroende eller enklare in-memory store
 
 **Estimated effort**: Medium.
 
-**Dependencies / prerequisites**: TASK-04 (alerting polish).
+**Dependencies / prerequisites**: TASK-06 (alerting status).
 
-**Expected impact / value**: Hög för reliability. QA-teamet ser direkt om webhooken är nere.
+**Expected impact / value**: Hög för production readiness och reliability.
 
-**Risks / things to watch**: Undvik att göra `AlertEngine` till en global singleton om det inte redan är så. Bättre att exponera via en service eller dashboard state.
+**Risks / things to watch**: Undvik att göra alerting state för komplext. Börja med en enkel men tydlig förbättring.
 
 **Success criteria**:
-- Dashboard visar korrekt circuit breaker status i realtid.
-- Status uppdateras när breaker öppnas/stängs.
-
----
-
-## How to use this file
-En agent (eller du) bör:
-1. Välja en task (börja med TASK-01 eller TASK-02 beroende på vad som känns mest prioriterat).
-2. Läsa relevanta delar av `AGENT_CONTEXT.md` + `PROJECT_STATUS.md`.
-3. Implementera.
-4. Efter avslut: Kör `github-project-status` igen (och eventuellt denna deep-dive skill).
-
-**Rekommenderad ordning just nu**: TASK-01 → TASK-02 → TASK-03 (foundational + direkt nytta för dashboard).
+- Circuit breaker state är konsekvent även vid flera workers.
+- Reset-funktionen fungerar som förväntat.
+- Bra dokumentation av begränsningar.
