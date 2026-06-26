@@ -1,8 +1,13 @@
 # Automatisk-sentimentanalys
 
-**Svenskt Call Center Intelligence-system** med sentimentanalys, ASR (tal-till-text), speaker diarization, intent-klassificering och LLM-stöd (Mistral/OpenRouter).
+**Svenskt Call Center Intelligence-system** med sentimentanalys, ASR (tal-till-text), speaker diarization, intent-klassificering och LLM-stöd (Mistral/OpenRouter/Groq).
 
 GDPR-vänligt, skalbart och byggt för svenska kundtjänstsamtal.
+
+> **För absolut senaste systembeskrivning, feature status och komplett agent-kontext:**  
+> Se [PROJECT_STATUS.md](PROJECT_STATUS.md) och [AGENT_CONTEXT.md](AGENT_CONTEXT.md).  
+> Dessa filer hålls synkade med kodbasen via github-project-status skill.  
+> **Last updated:** 2026-06-26
 
 ## Snabbstart
 
@@ -38,4 +43,4 @@ Vid **Använd Backend API**: sätt `API_MEDIA_ROOT` till projektroten så upplad
 .\launcher.ps1 provision           # full install inkl. ASR (eller GUI: Hantera ASR / Transkribering)
 ```
 
-Se `docs/` och `ROADMAP.md` för mer information.
+Se `docs/`, `ROADMAP.md`, `PROJECT_STATUS.md` och `AGENT_CONTEXT.md` för mer information.
