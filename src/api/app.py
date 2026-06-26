@@ -1,1 +1,8 @@
-from .routers import conversation, health, pipeline, scan, text, transcription, ws_transcription, alerting
+    app.include_router(health.router)
+    app.include_router(text.router, dependencies=_auth)
+    app.include_router(transcription.router, dependencies=_auth)
+    app.include_router(conversation.router, dependencies=_auth)
+    app.include_router(pipeline.router, dependencies=_auth)
+    app.include_router(scan.router, dependencies=_auth)
+    app.include_router(ws_transcription.router)
+    app.include_router(alerting.router, dependencies=_auth)
