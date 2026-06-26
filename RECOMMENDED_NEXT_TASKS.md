@@ -1,142 +1,57 @@
-# RECOMMENDED NEXT TASKS — Automatisk-sentimentanalys
-
-**Generated:** 2026-06-26 via github-repo-deep-dive skill  
-**After clarifying questions with user**  
-**Based on fresh PROJECT_STATUS.md + AGENT_CONTEXT.md (2026-06-26)**
-
-## Understanding & Rationale
-
-Användaren har tydligt prioriterat:
-- **Huvudmål närmaste 2–4 veckor**: En **polerad Fas 4-dashboard som QA-team faktiskt använder dagligen**.
-- Starkt fokus på **LLM-judge-integration + Dashboard-visualisering/UX** samt Alerting/webhook.
-- Föredrar **foundational improvements** som gör allt framtida arbete mycket enklare (istället för rena quick wins).
-- Långsiktigt: Bättre UX för call center-personal + högre reliability.
-
-**Deep dive-insikt**: `src/analysis/llm_judge.py` är redan väl implementerat (batchning, budget-guard, graceful fallback, EXTERNAL LLM CALL-logging, Pydantic-schemas). Problemet är att den **inte är wired** in i `CallAnalysisPipeline`, inte exponerad via API och inte visualiserad i NiceGUI-dashboard. Detta är den största "missing link" just nu.
-
-Därför blir de högst rankade uppgifterna de som:
-1. Gör LLM-judge till en förstklassig, pålitlig del av pipelinen (foundational).
-2. Ger synlig, användbar visualisering i dashboarden (direkt kopplat till huvudmålet).
-3. Förbättrar reliability och dataflöde så att dashboarden känns snabb och stabil för daglig användning.
-
-## Ranked Task List
-
-### TASK-01: Wire LLMJudgeAnalyzer fullt in i CallAnalysisPipeline + API
-**Why this task now**: Högst värde + foundational. LLM-judge finns implementerat men används inte i det riktiga flödet. När den är wired kan dashboarden konsumera verdict pålitligt och QA-team får direkt nytta på låg-confidence segment (där det behövs mest). Bygger direkt på befintlig kod i `src/analysis/llm_judge.py`.
-
-**Description**:
-- Lägg till `llm_judge` i `CallAnalysisPipeline` (efter `sentiment` i topo-sort).
-- Exponera resultatet i API-schemas och `/pipeline` + `/analyze` endpoints.
-- Uppdatera `ctx.results` och `report.results` så att downstream (dashboard, caching, alerting) kan använda det.
-- Lägg till grundläggande tester i `tests/test_pipeline.py` och `tests/test_llm_judge.py`.
-
-**Primary files / components**:
-- `src/pipeline.py` (main pipeline wiring)
-- `src/api/schemas.py` + `src/api/routers/pipeline.py`
-- `src/analysis/llm_judge.py` (små justeringar om behövs)
-- `tests/test_pipeline.py` + `tests/test_api.py`
-
-**Estimated effort**: Medium (1–2 sessioner) — befintlig implementation är ren och väldokumenterad.
-
-**Dependencies / prerequisites**: Fresh `AGENT_CONTEXT.md` + `PROJECT_STATUS.md` (har vi). Inga andra tasks.
-
-**Expected impact / value**: Mycket hög. Gör att Fas 4-dashboard kan visa actionable judge-verdicts. Unblockar TASK-02.
-
-**Risks / things to watch**: Budget/cost tracking i judge måste respekteras. Fallback-beteende måste vara graceful.
-
-**Success criteria**:
-- `llm_judge` körs automatiskt på låg-confidence segment i pipeline.
-- Resultat syns i API-response och sparas i report.
-- Inga regressioner i befintliga sentiment/intent-flöden (alla tester gröna).
 
 ---
 
-### TASK-02: Skapa/utöka NiceGUI-komponent för LLM-judge verdicts + integrera i Fas 4-dashboard
-**Why this task now**: Direkt kopplat till användarens huvudmål ("polerad Fas 4-dashboard som QA-team använder dagligen"). Ger synlig nytta och gör dashboarden mer komplett.
+### TASK-05: Lägg till enhetstester för `llm_judge_panel` (särskilt filter-logik och tomma tillstånd)
+**Why this task now**: Efter code review identifierades att filter-logiken ("Endast ändrade") och hantering av tomma tillstånd behöver testtäckning för att undvika regressioner när panelen utvecklas vidare.
 
 **Description**:
-- Skapa ny komponent `llm_judge_panel.py` eller utöka befintlig (t.ex. `fas4_insights.py` eller `call_detail.py`).
-- Visa per-segment: original sentiment + judge_label + judge_confidence + reasoning (på svenska).
-- Integrera i `call_detail` flik och/eller ny "LLM Judge Insights" sektion.
-- Använd `NiceGUIAPIClient` för att hämta data (eller local `fas4_data.py`).
-- Lägg till enkel filtering/sortering på low-confidence segments.
+- Skriv tester för `render_llm_judge_panel` och `render_llm_judge_summary`.
+- Täck fall: normal data, filter "Endast ändrade", tom data, saknade fält (`segment_index`, `reasoning` etc.), edge cases för `_is_changed()`.
+- Använd NiceGUI test-mönster eller enkla enhetstester på hjälpfunktionerna.
 
 **Primary files / components**:
-- `app/nicegui_dashboard/components/` (ny fil eller utökning)
-- `app/nicegui_dashboard/services/nicegui_api_client.py` + `fas4_data.py`
-- `app/nicegui_dashboard/main.py` eller layout (för att lägga till flik/sektion)
+- `tests/test_llm_judge_panel.py` (ny fil)
+- `app/nicegui_dashboard/components/llm_judge_panel.py`
 
-**Estimated effort**: Medium (1–2 sessioner) — NiceGUI-komponenter är väletablerade i projektet.
+**Estimated effort**: Small (1 session).
 
-**Dependencies / prerequisites**: TASK-01 (pipeline + API måste leverera judge-data).
+**Dependencies / prerequisites**: TASK-02 (panelen finns).
 
-**Expected impact / value**: Hög. Gör dashboarden mer användbar för QA-team direkt.
+**Expected impact / value**: Medel. Ökar förtroendet för komponenten och gör framtida ändringar säkrare.
 
-**Risks / things to watch**: Håll UI ren och inte överbelastad. Använd befintliga mönster från `emotion_timeline.py` och `insights_hot_topics.py`.
+**Risks / things to watch**: NiceGUI-komponenter kan vara svåra att enhetstesta; fokusera på rena hjälpfunktioner (`_get_verdicts`, `_is_changed`).
 
 **Success criteria**:
-- LLM-judge verdicts visas snyggt och begripligt i dashboarden.
-- QA-användare kan se varför ett segment fick en viss bedömning.
-- Inga prestandaproblem (använd caching).
+- Bra testtäckning på filter-logik och edge cases.
+- Tester körs gröna i CI.
 
 ---
 
-### TASK-03: Förbättra caching + async data fetching i NiceGUI dashboard (foundational reliability)
-**Why this task now**: Foundational improvement som gör dashboarden snabbare och mer pålitlig för daglig användning. Stödjer både TASK-02 och långsiktigt UX/reliability-mål.
+### TASK-06: Exponera webhook/circuit breaker status från `AlertEngine` till dashboard
+**Why this task now**: Code review visade att statusraden i `alerts_panel.py` är statisk/hårdkodad. För att göra alerting verkligen produktionsmogen behöver vi visa verkligt tillstånd (CLOSED/OPEN, antal failures).
 
 **Description**:
-- Se över `NiceGUIAPIClient` och `fas4_data.py` — se till att alla Fas 4-endpoints använder cache på rätt sätt.
-- Gör async hämtning utanför `@ui.refreshable` där det behövs (följ mönster från tidigare fixes).
-- Lägg till loading states och error handling i komponenter.
-- Överväg att utöka `AggregateCache` för dashboard-specifika queries.
+- Exponera `AlertEngine` circuit breaker state (t.ex. via en singleton, dashboard state eller enkel API-endpoint `/alerting/status`).
+- Uppdatera `alerts_panel.py` att visa dynamisk status (färgkodad: grön = CLOSED, röd = OPEN).
+- Eventuellt lägg till reset-knapp för circuit breaker i test_lab.
 
 **Primary files / components**:
-- `app/nicegui_dashboard/services/nicegui_api_client.py`
-- `app/nicegui_dashboard/services/fas4_data.py`
-- `src/caching.py`
-- Flera dashboard-komponenter (för loading/error states)
-
-**Estimated effort**: Medium — mycket av grundarbetet finns redan.
-
-**Dependencies / prerequisites**: Inga hårda, men synergi med TASK-01/02.
-
-**Expected impact / value**: Hög foundational. Dashboarden känns proffsigt snabb och stabil.
-
-**Risks / things to watch**: Cache invalidation måste vara korrekt.
-
-**Success criteria**:
-- Dashboard laddar snabbt även med många samtal.
-- Inga stale data-problem.
-- Bra UX vid nätverksproblem eller långsamma backend-anrop.
-
----
-
-### TASK-04: Polera Alerting webhook till produktionskvalitet + enkel UI i test_lab
-**Why this task now**: En av de delar användaren nämnde som smärtsam. Webhook har redan circuit breaker och retries, men saknar enkel testbarhet och mark-as-handled-flöde.
-
-**Description**:
-- Lägg till "Test Webhook" knapp i `test_lab.py`.
-- Implementera "Mark as handled" för alerts i dashboard (stub → riktig).
-- Förbättra error logging och retry-beteende om nödvändigt.
-- Uppdatera `configs/alerting_config.yaml` dokumentation.
-
-**Primary files / components**:
-- `app/nicegui_dashboard/components/test_lab.py`
-- `app/nicegui_dashboard/components/alerts_panel.py`
 - `src/alerting.py`
-- `configs/alerting_config.yaml`
+- `app/nicegui_dashboard/components/alerts_panel.py`
+- `app/nicegui_dashboard/services/nicegui_api_client.py` (om ny endpoint)
+- `src/api/routers/` (valfritt)
 
-**Estimated effort**: Small–Medium.
+**Estimated effort**: Medium.
 
-**Dependencies / prerequisites**: Inga hårda.
+**Dependencies / prerequisites**: TASK-04 (alerting polish).
 
-**Expected impact / value**: Medel — gör alerting mer användbart i praktiken.
+**Expected impact / value**: Hög för reliability. QA-teamet ser direkt om webhooken är nere.
 
-**Risks / things to watch**: Håll det enkelt; det är inte huvudfokus just nu.
+**Risks / things to watch**: Undvik att göra `AlertEngine` till en global singleton om det inte redan är så. Bättre att exponera via en service eller dashboard state.
 
 **Success criteria**:
-- Webhook kan testas enkelt från dashboard.
-- Alerts kan markeras som hanterade.
+- Dashboard visar korrekt circuit breaker status i realtid.
+- Status uppdateras när breaker öppnas/stängs.
 
 ---
 
