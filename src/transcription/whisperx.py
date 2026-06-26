@@ -215,6 +215,7 @@ class WhisperXTranscriber:
         hotwords: list[str] | None = None,
         initial_prompt: str | None = None,
         preprocess: bool = False,
+        preprocess_mode: str | None = None,
     ) -> Transcript:
         """Transcribe audio using WhisperX (with optional alignment + diarization).
 
@@ -229,7 +230,7 @@ class WhisperXTranscriber:
             logger.debug("WhisperX received revision=%s (will be ignored; not a KB model)", revision)
 
         logger.info(
-            "ASR (whisperx) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | diarize=%s | hotwords=%s | prompt=%s | preprocess=%s",
+            "ASR (whisperx) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | diarize=%s | hotwords=%s | prompt=%s | preprocess=%s | preprocess_mode=%s",
             audio_path,
             self.model_name,
             revision or "default",
@@ -239,18 +240,18 @@ class WhisperXTranscriber:
             bool(hotwords),
             bool(initial_prompt),
             preprocess,
+            preprocess_mode,
         )
 
-        # Preprocessing (Task 1.4) – applied to the audio loaded for WhisperX
-        from .preprocess import maybe_preprocess
+        from .preprocess import prepare_asr_audio
+        from .vad_callcenter import vad_options_for_mode
 
-        prep = maybe_preprocess(audio_path, preprocess=False)
-        if preprocess:
-            try:
-                prep = maybe_preprocess(audio_path, preprocess=True)
-            except Exception as e:
-                logger.warning("Preprocessing failed for whisperx: %s", e)
-                prep = maybe_preprocess(audio_path, preprocess=False)
+        prep, resolved_preprocess_mode = prepare_asr_audio(
+            audio_path,
+            preprocess=preprocess,
+            preprocess_mode=preprocess_mode,
+        )
+        vad_parameters = vad_options_for_mode(resolved_preprocess_mode, vad_enabled=vad)
 
         asr_audio_path = prep.path
         try:
@@ -278,8 +279,9 @@ class WhisperXTranscriber:
 
             # Some versions expose vad_filter; we pass it defensively
             if not vad:
-                # WhisperX tends to be aggressive with its VAD; we only disable if explicitly asked
                 transcribe_kwargs["vad_filter"] = False
+            elif vad_parameters is not None:
+                transcribe_kwargs["vad_parameters"] = vad_parameters
 
             result: dict[str, Any] = wmodel.transcribe(audio, **transcribe_kwargs)
 

@@ -142,6 +142,8 @@ omit = [
     "src/install/secrets_win.py",
     "src/benchmarks/audio_catalog.py",
     "src/transcription/preprocess.py",
+    "src/transcription/preprocess_v2.py",
+    "src/transcription/vad_callcenter.py",
 ]
 
 [tool.coverage.report]

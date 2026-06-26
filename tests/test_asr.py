@@ -374,7 +374,7 @@ class TestHotwordsAndInitialPrompt:
 
 
 class TestPreprocessParam:
-    """Task 1.4: basic wiring test for preprocess flag."""
+    """Task 1.4 + A-1: preprocess flag and callcenter VAD wiring."""
 
     def test_preprocess_param_accepted(self):
         mock_model = MagicMock()
@@ -390,5 +390,26 @@ class TestPreprocessParam:
             t = get_transcriber(backend="faster", device="cpu")
             _ = t.transcribe("test.wav", preprocess=True, chunk_length_s=0)
 
-        # Should not crash, and we can check the call happened
         assert mock_model.transcribe.called
+
+    def test_callcenter_preprocess_passes_vad_parameters(self):
+        mock_model = MagicMock()
+        mock_info = MagicMock()
+        mock_info.duration = 3.0
+        mock_seg = MagicMock(start=0, end=3, text="test", words=[])
+        mock_model.transcribe.return_value = ([mock_seg], mock_info)
+
+        with (
+            patch("src.transcription.faster_whisper.WhisperModel", return_value=mock_model),
+            patch("src.transcription.faster_whisper._HAS_FASTER", True),
+            patch(
+                "src.transcription.preprocess.prepare_asr_audio",
+                return_value=(MagicMock(path="clean.wav", cleanup=MagicMock()), "callcenter"),
+            ),
+        ):
+            t = get_transcriber(backend="faster", device="cpu")
+            _ = t.transcribe("test.wav", preprocess_mode="callcenter", chunk_length_s=0)
+
+        _, kwargs = mock_model.transcribe.call_args
+        assert kwargs.get("vad_parameters") is not None
+        assert kwargs["vad_parameters"]["threshold"] == 0.35

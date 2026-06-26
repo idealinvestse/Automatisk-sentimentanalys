@@ -119,6 +119,7 @@ class Transcriber(Protocol):
         hotwords: list[str] | None = None,
         initial_prompt: str | None = None,
         preprocess: bool = False,
+        preprocess_mode: str | None = None,
     ) -> Transcript:
         """Transcribe an audio file and return a Transcript object.
 
@@ -137,8 +138,11 @@ class Transcriber(Protocol):
                       callcenter vocabulary.
             initial_prompt: Optional text prompt to condition the decoder (helps with
                             style, names, expected terminology at the start of the call).
-            preprocess: If True, run optional audio preprocessing (high-pass + noise
-                        reduction if noisereduce installed) before ASR. Improves WER
-                        on noisy call center recordings.
+            preprocess: If True, run basic audio preprocessing (high-pass + noise
+                        reduction if noisereduce installed) before ASR.
+            preprocess_mode: Explicit mode: ``off``, ``basic``, or ``callcenter``.
+                               ``callcenter`` enables v2 bandpass/normalize chain and
+                               tuned VAD for Swedish telephone recordings. Overrides
+                               ``preprocess`` when set.
         """
         ...

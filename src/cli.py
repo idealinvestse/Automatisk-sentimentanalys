@@ -23,6 +23,7 @@ from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
 from .sentiment import analyze_smart
 from .transcription import get_transcriber
+from .transcription.factory import resolve_preprocess_mode
 
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
 console = Console()
@@ -369,6 +370,11 @@ def transcribe_cmd(
     preprocess: bool = typer.Option(
         False, "--preprocess", help="Enable audio preprocessing (high-pass filter + optional noise reduction) before ASR. Useful for noisy recordings."
     ),
+    preprocess_mode: str | None = typer.Option(
+        None,
+        "--preprocess-mode",
+        help="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD for Swedish telephony).",
+    ),
     output_json: str | None = typer.Option(
         None, help="Optional path to save transcript JSON (single input)"
     ),
@@ -426,6 +432,10 @@ def transcribe_cmd(
                     auto_load=not no_hotwords,
                 )
 
+                resolved_preprocess_mode = resolve_preprocess_mode(
+                    preprocess=preprocess,
+                    preprocess_mode=preprocess_mode,
+                )
                 tr_obj = transcriber.transcribe(
                     audio_path=path,
                     language=language,
@@ -439,6 +449,7 @@ def transcribe_cmd(
                     hotwords=parsed_hotwords,
                     initial_prompt=initial_prompt,
                     preprocess=preprocess,
+                    preprocess_mode=resolved_preprocess_mode,
                 )
                 tr = tr_obj.to_dict()
                 ok += 1
@@ -530,6 +541,16 @@ def analyze_call_cmd(
     preprocess: bool = typer.Option(
         False, "--preprocess", help="Enable audio preprocessing (high-pass + noise reduction) before ASR."
     ),
+    preprocess_mode: str | None = typer.Option(
+        None,
+        "--preprocess-mode",
+        help="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD for Swedish telephony).",
+    ),
+    profile: str = typer.Option(
+        "callcenter",
+        "--profile",
+        help="Analysis profile (callcenter enables callcenter preprocess when --preprocess is set).",
+    ),
     # LLM / Mistral holistic (Fas 3.2+)
     use_mistral_llm: bool = typer.Option(
         False,
@@ -602,6 +623,7 @@ def analyze_call_cmd(
     pipeline = CallAnalysisPipeline(
         sentiment_model=sentiment_model,
         device=device,
+        profile=profile,
         asr_backend=backend,
         asr_model=model,
         use_mistral_llm=use_mistral_llm,
@@ -652,6 +674,7 @@ def analyze_call_cmd(
                     hotwords=parsed_hotwords,
                     initial_prompt=initial_prompt,
                     preprocess=preprocess,
+                    preprocess_mode=preprocess_mode,
                 )
                 report_dict = report.to_dict()
             except Exception as e:

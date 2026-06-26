@@ -38,6 +38,7 @@ class AsrDefaults(BaseModel):
     language: str = "sv"
     hotwords_file: str = "configs/callcenter_hotwords.txt"
     preprocess: bool = False
+    preprocess_mode: Literal["off", "basic", "callcenter"] = "off"
 
 
 class LlmConfig(BaseModel):

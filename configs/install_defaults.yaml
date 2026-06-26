@@ -18,6 +18,7 @@ asr:
   language: sv
   hotwords_file: configs/callcenter_hotwords.txt
   preprocess: false
+  preprocess_mode: off  # off | basic | callcenter (v2 bandpass + tuned VAD)
 
 llm:
   enabled: false

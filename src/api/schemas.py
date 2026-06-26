@@ -84,6 +84,10 @@ class TranscribeRequest(AsrParamsMixin):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
     word_timestamps: bool = Field(True)
     preprocess: bool = Field(False, description="Enable audio preprocessing before ASR")
+    preprocess_mode: str | None = Field(
+        None,
+        description="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD). Overrides legacy boolean when set.",
+    )
 
     @field_validator("audio_path")
     @classmethod

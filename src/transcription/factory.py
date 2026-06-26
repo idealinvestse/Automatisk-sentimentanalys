@@ -7,6 +7,7 @@ from functools import lru_cache
 
 from .base import Transcriber
 from .faster_whisper import FasterWhisperTranscriber
+from .preprocess import PreprocessMode, normalize_preprocess_mode
 from .transformers import TransformersTranscriber
 # whisperx is imported lazily inside the factory so that the package is only
 # required when the user actually selects backend="whisperx".
@@ -89,3 +90,25 @@ def get_transcriber(
         model_name=model_name,
         device=device,
     )
+
+
+def resolve_preprocess_mode(
+    *,
+    preprocess: bool = False,
+    preprocess_mode: str | PreprocessMode | None = None,
+    profile: str | None = None,
+) -> PreprocessMode:
+    """Resolve ASR preprocessing mode from flags and optional profile defaults.
+
+    When ``preprocess_mode`` is unset and ``profile`` is a call-center profile,
+    ``preprocess=True`` maps to ``callcenter`` instead of ``basic``.
+    """
+    if preprocess_mode is not None:
+        return normalize_preprocess_mode(preprocess_mode=preprocess_mode)
+
+    if preprocess:
+        profile_key = (profile or "").strip().lower()
+        if profile_key in {"callcenter", "call", "customer_service"}:
+            return "callcenter"
+        return "basic"
+    return "off"

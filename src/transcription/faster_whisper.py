@@ -94,6 +94,7 @@ class FasterWhisperTranscriber:
         hotwords: list[str] | None = None,
         initial_prompt: str | None = None,
         preprocess: bool = False,
+        preprocess_mode: str | None = None,
         on_chunk_progress: Callable[[int, int], None] | None = None,
     ) -> Transcript:
         """Transcribe audio file using faster-whisper."""
@@ -109,7 +110,7 @@ class FasterWhisperTranscriber:
             revision = None
 
         logger.info(
-            "ASR (faster-whisper) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | hotwords=%s | prompt=%s | preprocess=%s",
+            "ASR (faster-whisper) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | hotwords=%s | prompt=%s | preprocess=%s | preprocess_mode=%s",
             audio_path,
             self.model_name,
             revision or "default",
@@ -118,21 +119,19 @@ class FasterWhisperTranscriber:
             bool(hotwords),
             bool(initial_prompt),
             preprocess,
+            preprocess_mode,
         )
 
-        # Optional preprocessing (high-pass + noise reduction) – Task 1.4
-        # Applied to the audio fed to the ASR model. Diarization (if requested)
-        # still runs on the original file.
-        from .preprocess import maybe_preprocess
+        # Optional preprocessing (basic or call-center v2). Diarization still uses original file.
+        from .preprocess import prepare_asr_audio
+        from .vad_callcenter import vad_options_for_mode
 
-        prep = maybe_preprocess(audio_path, preprocess=False)
-        if preprocess:
-            try:
-                prep = maybe_preprocess(audio_path, preprocess=True)
-                logger.info("Preprocessing enabled – using cleaned audio for ASR")
-            except Exception as e:
-                logger.warning("Preprocessing failed, falling back to original audio: %s", e)
-                prep = maybe_preprocess(audio_path, preprocess=False)
+        prep, resolved_preprocess_mode = prepare_asr_audio(
+            audio_path,
+            preprocess=preprocess,
+            preprocess_mode=preprocess_mode,
+        )
+        vad_parameters = vad_options_for_mode(resolved_preprocess_mode, vad_enabled=vad)
 
         asr_audio_path = prep.path
         try:
@@ -166,15 +165,17 @@ class FasterWhisperTranscriber:
 
             # Fast path: no chunking requested or very short audio
             if not USE_CHUNKING:
-                segments_iter, info = wmodel.transcribe(
-                    asr_audio_path,
-                    language=language,
-                    beam_size=beam_size,
-                    vad_filter=vad,
-                    word_timestamps=word_timestamps,
-                    initial_prompt=initial_prompt,
-                    hotwords=hotwords_str,
-                )
+                transcribe_kwargs: dict[str, Any] = {
+                    "language": language,
+                    "beam_size": beam_size,
+                    "vad_filter": vad,
+                    "word_timestamps": word_timestamps,
+                    "initial_prompt": initial_prompt,
+                    "hotwords": hotwords_str,
+                }
+                if vad_parameters is not None:
+                    transcribe_kwargs["vad_parameters"] = vad_parameters
+                segments_iter, info = wmodel.transcribe(asr_audio_path, **transcribe_kwargs)
                 dur = getattr(info, "duration", None)
 
                 for seg_count, s in enumerate(segments_iter, start=1):
@@ -232,15 +233,17 @@ class FasterWhisperTranscriber:
                 except Exception:
                     # Fallback: fall back to non-chunked to avoid hard failure
                     logger.warning("Could not import decode_audio; falling back to full-file transcription.")
-                    segments_iter, info = wmodel.transcribe(
-                        asr_audio_path,
-                        language=language,
-                        beam_size=beam_size,
-                        vad_filter=vad,
-                        word_timestamps=word_timestamps,
-                        initial_prompt=initial_prompt,
-                        hotwords=hotwords_str,
-                    )
+                    fallback_kwargs: dict[str, Any] = {
+                        "language": language,
+                        "beam_size": beam_size,
+                        "vad_filter": vad,
+                        "word_timestamps": word_timestamps,
+                        "initial_prompt": initial_prompt,
+                        "hotwords": hotwords_str,
+                    }
+                    if vad_parameters is not None:
+                        fallback_kwargs["vad_parameters"] = vad_parameters
+                    segments_iter, info = wmodel.transcribe(asr_audio_path, **fallback_kwargs)
                     dur = getattr(info, "duration", None)
                     # (the non-chunked building code is duplicated below for the fallback)
                     for s in segments_iter:
@@ -300,15 +303,17 @@ class FasterWhisperTranscriber:
 
                     # Transcribe the numpy chunk (faster-whisper accepts ndarray)
                     try:
-                        segments_iter, _ = wmodel.transcribe(
-                            chunk,
-                            language=language,
-                            beam_size=beam_size,
-                            vad_filter=vad,
-                            word_timestamps=word_timestamps,
-                            initial_prompt=initial_prompt,
-                            hotwords=hotwords_str,
-                        )
+                        chunk_kwargs: dict[str, Any] = {
+                            "language": language,
+                            "beam_size": beam_size,
+                            "vad_filter": vad,
+                            "word_timestamps": word_timestamps,
+                            "initial_prompt": initial_prompt,
+                            "hotwords": hotwords_str,
+                        }
+                        if vad_parameters is not None:
+                            chunk_kwargs["vad_parameters"] = vad_parameters
+                        segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
                     except Exception as ce:
                         logger.warning("Chunk %d transcription failed: %s. Skipping chunk.", chunk_index, ce)
                         pos += step

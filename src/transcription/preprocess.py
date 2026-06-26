@@ -36,11 +36,30 @@ import subprocess
 import tempfile
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Iterator
+from typing import Iterator, Literal
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+PreprocessMode = Literal["off", "basic", "callcenter"]
+
+_MODE_ALIASES: dict[str, PreprocessMode] = {
+    "": "off",
+    "off": "off",
+    "false": "off",
+    "none": "off",
+    "0": "off",
+    "basic": "basic",
+    "true": "basic",
+    "legacy": "basic",
+    "v1": "basic",
+    "1": "basic",
+    "callcenter": "callcenter",
+    "call_center": "callcenter",
+    "cc": "callcenter",
+    "v2": "callcenter",
+}
 
 
 @dataclass
@@ -193,11 +212,68 @@ def preprocess_audio(
         raise RuntimeError(f"Preprocessing failed: {e}") from e
 
 
+def normalize_preprocess_mode(
+    *,
+    preprocess: bool = False,
+    preprocess_mode: str | PreprocessMode | None = None,
+) -> PreprocessMode:
+    """Resolve preprocessing mode from explicit mode or legacy boolean flag."""
+    if preprocess_mode is not None:
+        key = str(preprocess_mode).strip().lower()
+        resolved = _MODE_ALIASES.get(key)
+        if resolved is not None:
+            return resolved
+        logger.warning("Unknown preprocess_mode '%s'; defaulting to off", preprocess_mode)
+        return "off"
+    return "basic" if preprocess else "off"
+
+
+def maybe_preprocess_for_mode(
+    audio_path: str,
+    mode: PreprocessMode | str,
+) -> PreprocessHandle:
+    """Return a handle to preprocessed audio for the given mode."""
+    resolved = normalize_preprocess_mode(preprocess_mode=str(mode))
+    if resolved == "off":
+        return PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path)
+    if resolved == "callcenter":
+        from .preprocess_v2 import preprocess_audio_callcenter
+
+        return preprocess_audio_callcenter(audio_path)
+    return preprocess_audio(audio_path, highpass=True, noise_reduction=True)
+
+
 def maybe_preprocess(audio_path: str, preprocess: bool = False) -> PreprocessHandle:
     """Return a handle to preprocessed audio, or the original path if disabled."""
-    if not preprocess:
-        return PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path)
-    return preprocess_audio(audio_path, highpass=True, noise_reduction=True)
+    return maybe_preprocess_for_mode(
+        audio_path,
+        normalize_preprocess_mode(preprocess=preprocess),
+    )
+
+
+def prepare_asr_audio(
+    audio_path: str,
+    *,
+    preprocess: bool = False,
+    preprocess_mode: str | PreprocessMode | None = None,
+) -> tuple[PreprocessHandle, PreprocessMode]:
+    """Resolve mode, preprocess audio, and fall back to original on failure."""
+    mode = normalize_preprocess_mode(preprocess=preprocess, preprocess_mode=preprocess_mode)
+    if mode == "off":
+        return (
+            PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path),
+            mode,
+        )
+    try:
+        handle = maybe_preprocess_for_mode(audio_path, mode)
+        logger.info("Preprocessing enabled | mode=%s | path=%s", mode, handle.path)
+        return handle, mode
+    except Exception as exc:
+        logger.warning("Preprocessing failed (mode=%s), falling back to original audio: %s", mode, exc)
+        return (
+            PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path),
+            "off",
+        )
 
 
 @contextmanager

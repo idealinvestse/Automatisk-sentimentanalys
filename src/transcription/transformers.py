@@ -86,6 +86,7 @@ class TransformersTranscriber:
         hotwords: list[str] | None = None,
         initial_prompt: str | None = None,
         preprocess: bool = False,
+        preprocess_mode: str | None = None,
     ) -> Transcript:
         """Transcribe audio file using Hugging Face Transformers."""
         t0 = time.time()
@@ -100,7 +101,7 @@ class TransformersTranscriber:
             revision = None
 
         logger.info(
-            "ASR (transformers) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | chunk=%ds | hotwords=%s | prompt=%s | preprocess=%s",
+            "ASR (transformers) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | chunk=%ds | hotwords=%s | prompt=%s | preprocess=%s | preprocess_mode=%s",
             audio_path,
             self.model_name,
             revision or "default",
@@ -110,18 +111,16 @@ class TransformersTranscriber:
             bool(hotwords),
             bool(initial_prompt),
             preprocess,
+            preprocess_mode,
         )
 
-        # Preprocessing (Task 1.4)
-        from .preprocess import maybe_preprocess
+        from .preprocess import prepare_asr_audio
 
-        prep = maybe_preprocess(audio_path, preprocess=False)
-        if preprocess:
-            try:
-                prep = maybe_preprocess(audio_path, preprocess=True)
-            except Exception as e:
-                logger.warning("Preprocessing failed for transformers backend: %s", e)
-                prep = maybe_preprocess(audio_path, preprocess=False)
+        prep, _resolved_mode = prepare_asr_audio(
+            audio_path,
+            preprocess=preprocess,
+            preprocess_mode=preprocess_mode,
+        )
 
         asr_audio_path = prep.path
         try:

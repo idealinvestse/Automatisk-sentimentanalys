@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from ..transcription import get_transcriber
+from ..transcription.factory import resolve_preprocess_mode
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ def asr_kwargs_from(
         "hotwords": getattr(req, "hotwords", None),
         "initial_prompt": getattr(req, "initial_prompt", None),
         "preprocess": preprocess,
+        "preprocess_mode": getattr(req, "preprocess_mode", None),
     }
     if audio_path is not None:
         kwargs["audio_path"] = audio_path
@@ -56,6 +58,8 @@ def transcribe_helper(
     hotwords: list[str] | None = None,
     initial_prompt: str | None = None,
     preprocess: bool = False,
+    preprocess_mode: str | None = None,
+    profile: str | None = None,
 ) -> dict[str, Any]:
     """Run ASR transcription and return the result as a plain dict.
 
@@ -82,6 +86,11 @@ def transcribe_helper(
         Transcription result as a plain dict (via ``Transcript.to_dict()``).
     """
     transcriber = get_transcriber(backend=backend, model_name=model, device=device)
+    resolved_preprocess_mode = resolve_preprocess_mode(
+        preprocess=preprocess,
+        preprocess_mode=preprocess_mode,
+        profile=profile,
+    )
     transcript = transcriber.transcribe(
         audio_path=audio_path,
         language=language,
@@ -95,5 +104,6 @@ def transcribe_helper(
         hotwords=hotwords,
         initial_prompt=initial_prompt,
         preprocess=preprocess,
+        preprocess_mode=resolved_preprocess_mode,
     )
     return transcript.to_dict()
