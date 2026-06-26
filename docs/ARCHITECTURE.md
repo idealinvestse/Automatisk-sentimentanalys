@@ -53,6 +53,7 @@ Both entry points share the same underlying analysis and transcription engines, 
 │  • src/sentiment.py – HF transformers sentiment pipeline    │
 │  • src/transcription/ – ASR (faster, transformers, whisperx)│
 │    + preprocess.py (Task 1.4: high-pass + optional noisereduce) │
+│    + preprocess_v2.py + vad_callcenter.py (Transcription v2 A-1) │
 │  • src/analysis/aspect.py – ABSA (hybrid keyword + sentiment) │
 │  • src/intent.py – intent classification (heuristic/model)  │
 │  • src/summarizer.py – abstractive summarization            │
