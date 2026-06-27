@@ -65,7 +65,7 @@ def resolve_python(cfg: UserConfig) -> Path:
 
 def build_child_env(cfg: UserConfig) -> dict[str, str]:
     """Full environment dict for subprocess.Popen."""
-    apply_secrets_to_env()
+    apply_secrets_to_env(cfg.resolved_app_root())
     env = os.environ.copy()
     env.update(config_to_env(cfg))
 

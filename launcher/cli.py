@@ -126,13 +126,14 @@ def set_secret_cmd(
         secret = from_file.read_text(encoding="utf-8").strip().splitlines()[0]
     if not secret:
         raise typer.BadParameter("Provide --value or --from-file")
-    set_secret(kind, secret)  # type: ignore[arg-type]
+    root = _app_root_option()
+    set_secret(kind, secret, app_root=root)  # type: ignore[arg-type]
     console.print(f"[green]Stored {kind} secret[/green]")
 
 
 @app.command("clear-secret")
 def clear_secret_cmd(kind: str = typer.Argument(...)) -> None:
-    delete_secret(kind)  # type: ignore[arg-type]
+    delete_secret(kind, app_root=_app_root_option())  # type: ignore[arg-type]
     console.print(f"[green]Cleared {kind}[/green]")
 
 
