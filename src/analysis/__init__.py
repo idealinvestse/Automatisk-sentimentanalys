@@ -28,6 +28,10 @@ from .active_listening import ActiveListeningBehaviorAnalyzer
 from .upsell_opportunity import UpsellOpportunityDetector
 from .resolution_probability import ResolutionProbabilityPredictor
 
+# Journey & dialect (added 2026-06-27)
+from .multi_turn_journey import MultiTurnJourneyMapper
+from .dialect_sensitivity import DialectSensitivityAnalyzer
+
 __all__ = [
     "Analyzer",
     "get_registered_analyzers",
@@ -49,4 +53,6 @@ __all__ = [
     "ActiveListeningBehaviorAnalyzer",
     "UpsellOpportunityDetector",
     "ResolutionProbabilityPredictor",
+    "MultiTurnJourneyMapper",
+    "DialectSensitivityAnalyzer",
 ]
