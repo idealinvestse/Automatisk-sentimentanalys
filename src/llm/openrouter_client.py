@@ -1,93 +1,53 @@
-    def fetch_and_save_models_catalog(
-        output_path: str | Path = "data/openrouter_models_catalog.json",
-        api_key: str | None = None,
-        include_pricing: bool = True,
-    ) -> dict[str, Any]:
-        """Scan OpenRouter for all available models and save catalog with cost + short info.
 
-        Uses the public /api/v1/models endpoint (no key required for basic info, but key recommended
-        for accurate pricing and to avoid rate limits).
+    def refresh_pricing_from_catalog(self, catalog_path: str | Path = "data/openrouter_models_catalog.json") -> int:
+        """Ladda pricing dynamiskt från model catalog (scannad via CLI eller dashboard).
 
-        Saves a JSON with:
-        - scanned_at (ISO)
-        - count
-        - models: list of {id, name, description (short), context_length, pricing {prompt, completion per token USD}, architecture, capabilities...}
-
-        This enables dynamic model selection in dashboard/launcher and cost estimation beyond the
-        hardcoded Mistral subset in PRICING.
-
-        Call from CLI: python -m src.cli scan-openrouter-models
-        Or from dashboard settings button.
+        Uppdaterar self.PRICING med live-värden från OpenRouter.
+        Returnerar antal modeller som uppdaterades.
         """
-        import urllib.request
-        import urllib.error
+        from .model_catalog import load_catalog
 
-        url = "https://openrouter.ai/api/v1/models"
-        headers = {}
-        key = api_key or get_openrouter_api_key()
-        if key:
-            headers["Authorization"] = f"Bearer {key}"
+        cat = load_catalog(catalog_path)
+        if not cat or not cat.get("models"):
+            logger.warning("Ingen model catalog hittades – använder hardcoded PRICING")
+            return 0
 
-        logger.info("Scanning OpenRouter for available models...")
-        try:
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=45) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
-
-            models_raw = raw.get("data", [])
-            catalog_models = []
-
-            for m in models_raw:
-                pricing = m.get("pricing", {}) or {}
-                # pricing values are USD per token (e.g. 0.0000015 = $1.5/M)
-                model_entry = {
-                    "id": m.get("id"),
-                    "name": m.get("name"),
-                    "description": (m.get("description") or "")[:600].strip(),  # short info
-                    "context_length": m.get("context_length"),
-                    "pricing": {
-                        "prompt": float(pricing.get("prompt", 0)) if pricing.get("prompt") else 0.0,
-                        "completion": float(pricing.get("completion", 0)) if pricing.get("completion") else 0.0,
-                        "prompt_per_million": round(float(pricing.get("prompt", 0)) * 1_000_000, 4) if pricing.get("prompt") else 0,
-                        "completion_per_million": round(float(pricing.get("completion", 0)) * 1_000_000, 4) if pricing.get("completion") else 0,
-                    },
-                    "architecture": m.get("architecture", {}),
-                    "top_provider": m.get("top_provider", {}),
-                    "per_request_limits": m.get("per_request_limits"),
+        updated = 0
+        for m in cat["models"]:
+            mid = m.get("id")
+            if not mid:
+                continue
+            p = m.get("pricing", {})
+            prompt = p.get("prompt_per_token_usd") or p.get("prompt") or 0.0
+            comp = p.get("completion_per_token_usd") or p.get("completion") or 0.0
+            if prompt or comp:
+                self.PRICING[mid] = {
+                    "input": float(prompt),
+                    "output": float(comp),
                 }
-                catalog_models.append(model_entry)
+                updated += 1
 
-            catalog = {
-                "scanned_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "source": url,
-                "count": len(catalog_models),
-                "models": catalog_models,
-            }
+        # Också uppdatera default om Mistral finns
+        if "mistralai/mistral-medium-3.5" in self.PRICING:
+            self.DEFAULT_MODEL = "mistralai/mistral-medium-3.5"
 
-            out_path = Path(output_path)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            with out_path.open("w", encoding="utf-8") as f:
-                json.dump(catalog, f, indent=2, ensure_ascii=False)
+        logger.info(f"[pricing] Uppdaterade {updated} modeller från catalog")
+        return updated
 
-            logger.info(f"✅ Saved {len(catalog_models)} OpenRouter models to {out_path} (with pricing + description)")
-            return catalog
-
-        except urllib.error.HTTPError as e:
-            logger.error(f"OpenRouter models API error: {e.code} {e.reason}")
-            raise LLMError(f"Failed to fetch models from OpenRouter: {e}") from e
-        except Exception as e:
-            logger.error(f"Unexpected error scanning OpenRouter models: {e}", exc_info=True)
-            raise LLMError(f"Model catalog scan failed: {e}") from e
-
-    @classmethod
-    def load_models_catalog(cls, path: str | Path = "data/openrouter_models_catalog.json") -> dict[str, Any] | None:
-        """Load previously saved catalog (for dashboard/launcher model picker)."""
-        p = Path(path)
-        if not p.exists():
+    def _compute_approx_cost(self, usage: Any, model: str) -> float | None:
+        """Approximate USD cost from usage tokens + dynamic or hardcoded pricing."""
+        if usage is None:
             return None
         try:
-            with p.open("r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.warning(f"Could not load model catalog {p}: {e}")
+            pt = getattr(usage, "prompt_tokens", 0) or 0
+            ct = getattr(usage, "completion_tokens", 0) or 0
+            # Först försök dynamic från catalog
+            prices = self.PRICING.get(model)
+            if not prices:
+                # Försök refresh en gång
+                self.refresh_pricing_from_catalog()
+                prices = self.PRICING.get(model, self.PRICING.get("default", {"input": 1.5e-6, "output": 7.5e-6}))
+            cost = (pt * prices["input"]) + (ct * prices["output"])
+            return round(cost, 6)
+        except Exception:
             return None
