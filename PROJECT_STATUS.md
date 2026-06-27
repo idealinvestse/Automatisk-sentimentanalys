@@ -1,17 +1,16 @@
 # Project Status — Automatisk-sentimentanalys
 
-**Last Updated:** 2026-06-27 14:45 CEST via github-project-status skill  
+**Last Updated:** 2026-06-27 14:52 CEST via github-project-status skill  
 **Repository:** https://github.com/idealinvestse/Automatisk-sentimentanalys  
 **Current Branch:** main  
 **Working Tree:** Clean
 
 ## Recent Activity
-- Sprint "Production & Advanced Capabilities" (TASK-14 to TASK-18) completed and pushed
-- Full fine-tuning pipeline + live training + model selector in dashboard
+- Sprint "Production & Advanced Capabilities" (TASK-14 to TASK-18) completed
+- Full fine-tuning pipeline + live training + model selector
 - Production real-time (WebSocket), multi-worker scaling, Docker/VPS ready
-- Advanced automation (auto-reports, scheduled insights, external API)
-- UX/accessibility polish, multi-user, demo-mode
-- Full tests, security audit, v0.5 prep
+- Advanced automation, UX polish, tests, v0.5 prep
+- **.grok/skills/ populated with 6 custom skills** (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) — now fully available in Grok Build
 
 ## System Description
 Automatisk-sentimentanalys är ett svenskt Call Center Intelligence-system för automatisk analys av kundtjänstsamtal. Systemet hanterar hela kedjan från ljudfil till insikter: ASR/transkribering (faster-whisper + WhisperX med diarization för svenska), multi-dimensionell analys (sentiment, emotion, intent-klassificering, aspect-based sentiment, topics/hot topics, insights/root cause), LLM-stöd (Mistral, OpenRouter, Groq med GDPR/EU-residency), PII-redaktion, compliance/QA-scorecards (regel + LLM hybrid), agent performance metrics, semantic search över samtal, alerting och realtids-dashboard.
@@ -21,7 +20,7 @@ Det löser problemet med manuell genomgång av samtal i call centers genom att a
 Byggt modulärt i Python med registry-pattern för analys-steg, pluggable LLM-providers, FastAPI-backend, NiceGUI modern dashboard, CLI och PowerShell-launcher/installer. Starkt fokus på svenska språket, PII-skydd, caching/pre-computation för prestanda och omfattande tester/evaluering.
 
 ## Architecture Overview
-- **Core Pipeline** (`src/pipeline.py`, `src/analysis/registry.py`): CallAnalysisPipeline som kör transkription 	o analysis steps (sentiment, emotion, intent, llm_judge, pii_redactor, etc.) 	o aggregation/insights. Graceful degradation och caching.
+- **Core Pipeline** (`src/pipeline.py`, `src/analysis/registry.py`): CallAnalysisPipeline som kör transkription → analysis steps (sentiment, emotion, intent, llm_judge, pii_redactor, etc.) → aggregation/insights. Graceful degradation och caching.
 - **Transcription Layer** (`src/transcription/`): Factory för faster-whisper, WhisperX, Transformers; preprocess, diarization (`src/diarization.py`).
 - **Analysis Modules** (`src/analysis/`, `src/sentiment.py`, `src/intent.py`, `src/llm/`): Sentiment, emotion, intent, aspect, topics, trajectory, llm_judge, role_classifier, pii_redactor, negation handling, blending.
 - **LLM Providers** (`src/llm/`): GroqClient/Analyzer, MistralAnalyzer, OpenRouterClient; schemas, prompts, PII-safe routing. Fallback chains och EU-residency gate.
@@ -30,7 +29,8 @@ Byggt modulärt i Python med registry-pattern för analys-steg, pluggable LLM-pr
 - **Launcher & Desktop** (`launcher/`, `Sentimentanalys.bat`, installer/): PowerShell launcher för ASR status/install/download/provision, UI panels, env builder. InnoSetup för Windows portable/exe.
 - **Data & Training** (`data/`, `scripts/`, `src/finetune.py`, `src/evaluate.py`): Callcenter train/val datasets (CSV/JSONL), sensaldo lexicon, intent data; prepare, train_intent, evaluate_fas4_validation. Fine_tuning dir.
 - **Infra** (`Dockerfile`, `docker-compose.nicegui.yml`, `pyproject.toml`, `Makefile`, `configs/`): Docker support, optional deps (cli, api, dashboard-nicegui, diarize), preflight/provision för modeller/secrets på Windows, YAML configs för llm, alerting, qa_scorecards.
-- **Key Data Flows**: Audio upload 	o ASR 	o segments + speakers 	o pipeline analysis 	o structured report (sentiment scores, intents, QA, alerts, insights, llm_judge verdicts, alerting status) 	o stored/cached 	o dashboard/API consumption.
+- **Key Data Flows**: Audio upload → ASR → segments + speakers → pipeline analysis → structured report (sentiment scores, intents, QA, alerts, insights, llm_judge verdicts, alerting status) → stored/cached → dashboard/API consumption.
+- **Grok Build Optimization**: `.grok/skills/` med 6 custom skills (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) — gör repot fullt agent-native i Grok Build.
 
 **Tech Stack**: Python 3.10+, PyTorch ecosystem (faster-whisper, pyannote for diarization), FastAPI + Uvicorn, NiceGUI, Pydantic, httpx, caching, pandas, OpenAI-compatible LLM clients, pytest (500+ tests), pre-commit, GitHub Actions CI.
 
@@ -54,6 +54,7 @@ Byggt modulärt i Python med registry-pattern för analys-steg, pluggable LLM-pr
 - Real-time & Scaling: WebSocket, multi-worker alerting state (JSON persistent), Docker/VPS ready (TASK-15).
 - Automation: Auto-reports, scheduled insights, external API (TASK-16).
 - UX: Polish, accessibility, multi-user, demo-mode (TASK-17).
+- **Grok Build / Agent Readiness**: Full .grok/skills/ med 6 high-value custom skills + enhanced AGENTS.md + Grok Build quickstart i README.
 
 ### In Progress / Partial
 - Full production fine-tuning training loop and evaluation on real callcenter data.
@@ -75,3 +76,4 @@ Byggt modulärt i Python med registry-pattern för analys-steg, pluggable LLM-pr
 - Kör full test suite + E2E validation.
 - Re-run github-project-status and github-repo-deep-dive after next coding round.
 - Focus on production deployment and customer demo.
+- Använd de nya skillsen i .grok/skills/ (code-review-reflector, repo-health-check m.fl.) för kvalitet och momentum.

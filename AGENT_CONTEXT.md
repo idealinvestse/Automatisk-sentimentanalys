@@ -1,10 +1,10 @@
 # AGENT CONTEXT — Automatisk-sentimentanalys
-**Generated:** 2026-06-27 | Use this file as the single source of truth when continuing development.
+**Generated:** 2026-06-27 14:52 CEST | Use this file as the single source of truth when continuing development.
 
 ## 1. What This System Is
 Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkribering (ASR + diarization), intent/ emotion/ aspect-analys, LLM-baserad QA/compliance, PII-redaktion, insikter, agent performance metrics och realtids-dashboard. Byggt för svenska kundtjänstsamtal med stark GDPR-fokus, skalbarhet och self-hosted/VPS-deployment. Mål: ersätta manuell samtalshantering med automatiserad, pålitlig analys som ger actionable insights till QA, coacher och chefer.
 
-**Core Value**: End-to-end från ljud 	o strukturerad rapport (sentiment scores, intents, QA-evidence, alerts, hot topics, coaching tips) 	o dashboard/API consumption. Stödjer batch, real-time WS och interaktiv NiceGUI UI.
+**Core Value**: End-to-end från ljud → strukturerad rapport (sentiment scores, intents, QA-evidence, alerts, hot topics, coaching tips) → dashboard/API consumption. Stödjer batch, real-time WS och interaktiv NiceGUI UI.
 
 ## 2. Current Feature Inventory
 
@@ -21,6 +21,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - Infra: pyproject.toml optional deps, Docker, Makefile, configs (llm, alerting, qa_scorecards), Windows installer/launcher, tests (500+ , high src/ coverage).
 - Fine-tuning: src/fine_tuning/ + integration in dashboard model selector + live training support.
 - Real-time & Production: WebSocket, persistent alerting state (JSON), multi-worker ready, Docker/VPS support.
+- **Grok Build Optimization**: `.grok/skills/` med 6 custom skills (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) + enhanced AGENTS.md + Grok Build quickstart i README.
 
 **In Progress**:
 - Full production fine-tuning training loop and evaluation.
@@ -41,6 +42,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Launcher** (launcher/): Process manager, ASR dialog, status panel, env builder, pid store. PowerShell entry for desktop users.
 - **Data Layer**: Local CSV/JSONL + in-memory/demo providers. Caching for expensive aggregations.
 - **Key Invariants**: Always PII-safe (redact before LLM if flag set), graceful degradation (missing optional deps don't crash core), Swedish-first (lexicon, prompts, data), structured output everywhere (Pydantic), tests cover happy + edge paths.
+- **Grok Build Specific**: .grok/skills/ + AGENTS.md gör repot omedelbart användbart i Grok Build utan extra setup.
 
 **Design Decisions**: Registry pattern for extensibility (easy add new analysis step). Provider abstraction for LLM. Hybrid rule+LLM for QA. Pre-compute + cache for dashboard speed. Windows launcher to lower barrier for non-dev users.
 
@@ -55,6 +57,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - pyproject.toml — Dependencies, optional groups (cli, api, dashboard-nicegui, diarize), scripts.
 - configs/ — llm_config.yaml, alerting_config.yaml, qa_scorecards/*.yaml, install_defaults.
 - tests/ — Extensive; run with pytest. Many test_*.py mirroring src/.
+- **.grok/skills/** — Custom skills (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) — använd dessa direkt i Grok Build.
 - docs/LLM_AGENT_GUIDE.md — **Most important for agents**: architecture philosophy, patterns, what to do/not do, security rules.
 
 ## 5. How to Work With This Codebase
@@ -74,6 +77,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
   - API endpoint: Router in routers/, service if needed, schema, test.
 - **Testing**: Unit + integration. Mock external (LLM, ASR heavy). Use fixtures. Aim high coverage on src/.
 - **Docs**: Update ROADMAP/CHANGELOG on releases. Use this AGENT_CONTEXT + PROJECT_STATUS as single source. Re-run github-project-status skill after significant changes.
+- **Grok Build**: Använd skills i .grok/skills/ direkt (t.ex. "github-project-status skill" eller "code-review-reflector").
 
 ## 6. Open Tasks & Priorities
 - High-priority: v0.5 release + tagging + customer demo.
@@ -82,4 +86,4 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - Sync ROADMAP.md with latest TASK numbering.
 
 ## 7. Context for Future Agents
-After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature, see src/analysis/registry.py and src/llm/schemas.py. Dashboard components should use nicegui_api_client.py for backend data.
+After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature, see src/analysis/registry.py and src/llm/schemas.py. Dashboard components should use nicegui_api_client.py for backend data. Använd .grok/skills/ för kvalitet, review och launch-hjälp.
