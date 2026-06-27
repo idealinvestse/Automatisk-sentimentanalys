@@ -1,21 +1,12 @@
 # Projektstatus - Automatisk Sentimentanalys
 
-**Senast uppdaterad:** 2026-06-27 14:15 CEST
+**Senast uppdaterad:** 2026-06-27 14:20 CEST
 
-## ✅ Alla rekommenderade nästa steg + Användarval 1-4 utförda
+## ✅ TASK-08 Fine-tuning pipeline initierad & implementering påbörjad (efter 'Kör nästa steg direkt')
+- Skapade src/fine_tuning/ modulstruktur
+- Uppdaterade configs och pipeline hooks
+- Förberett träning i notebook + CLI
 
-**TASK-07:** ✅ Klar
-**TASK-08 (Fine-tuning initierad):** ✅ Utkast genererat + befintlig finetune.py granskad och redo för expansion
-**Dokumentation:** ✅ Uppdaterad + ny Fas 5-plan
+**Status:** Hög fart mot v0.4 med svensk callcenter-superior modell.
 
-**Genomfört idag:** 
-- 1. Full fine-tuning pipeline utkast med LoRA + callcenter-specifik prep
-- 2. PROJECT_STATUS + AGENT_CONTEXT uppdaterade
-- 3. UTVECKLINGSPLAN_Fas5.md skapad
-- 4. Djupanalys av pipeline.py, alerting & finetune.py
-
-**Nästa prioritet:** Implementera dataset-prep + första träningskörning → integrera model i pipeline → v0.4 release
-
-**Status:** Hög fart. Core extremt stark. Nu skalar vi intelligensen med domain fine-tuning.
-
-Teknisk skuld: Mycket låg.
+Nästa: Träna första modellen + dashboard integration.
