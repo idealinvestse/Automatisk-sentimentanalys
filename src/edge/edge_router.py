@@ -1,0 +1,1 @@
+# Privacy-first hybrid router: local-first → cloud fallback with PII gate

@@ -1,0 +1,1 @@
+# Edge AI module for Fas 5 - On-device Swedish Call Center Analysis
