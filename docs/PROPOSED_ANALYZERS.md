@@ -1,20 +1,19 @@
-# 📋 PROPOSED ANALYZERS – Research & Prioritering (2026-06-27)
+# Föreslagna nya Analyzers för Automatisk-sentimentanalys (Research 2026-06-27)
 
-Baserat på research av Gong, Chorus, Cresta, Observe.ai, AmplifAI, CallMiner m.fl.
+**Källa**: Analys av globala 2026 best practices (AmplifAI, Zoom, Level AI, Capacity, Balto etc.) + svenska specifika (Konsumentverket, GDPR, kundklagomål på servicekvalitet).
 
-## Topp 10 rekommenderade nya analyzers (prioriterade efter värde för svensk kundtjänst)
+**Kategorier & Prioritet**
 
-**1. EmpathyAndRapportAnalyzer** (Högsta prioritet)
-**2. ComplianceAndDisclosureVerifier**
-**3. ObjectionHandlingEffectiveness**
-**4. EscalationChurnRiskPredictor**
-**5. TalkRatioAndBehavioralMetrics** (talk ratio, filler words, pace, interruptions)
-**6. CustomerEffortScoreCES + JourneyStage**
-**7. ScriptAdherenceVsFlexibility**
-**8. VoiceOfCustomerThemeExtractor**
-**9. AgentSkillGapDetector**
-**10. DeEscalationSuccessDetector**
+## 1. Hög prioritet (stort värde nu)
+- **ComplianceGuardAnalyzer** (GDPR + Konsumentverket) – Kontrollerar consent, PII-hantering, klagomålsrättsinformation, script compliance.
+- **EmpathyTrajectoryAnalyzer** – Mäta empati över tid + specifika triggers.
+- **CustomerFrictionMapper** – Identifiera friction points (väntetid, upprepning, rigiditet).
+- **PredictiveEscalationChurn** – Prediktera eskalering/churn-risk baserat på hela samtalet.
 
-Varje med detaljerad spec (requires, output, LLM-hybrid etc.).
+## 2. Mycket värdefulla
+- **RealTimeCoachingSuggester** – Ger agent prompts under eller direkt efter samtal.
+- **VoCImpactAnalyzer** – Extraherar themes + beräknar business impact (kostnad för retur, churn etc.).
+- **ResolutionQualityScore** – Multi-turn resolution depth + customer confirmation.
+- **ScriptAdherenceWithFlex** – Mäta adherence men belöna smart deviation.
 
-Redo att implementera topp 3–5 direkt.
+**Rekommendation**: Börja med Compliance + Empathy + Friction + Predictive – dessa ger störst ROI för QA/coaching/processförbättring.
