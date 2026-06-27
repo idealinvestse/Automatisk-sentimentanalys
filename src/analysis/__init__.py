@@ -24,6 +24,10 @@ from .customer_effort import CustomerEffortScoreAnalyzer
 from .compliance_risk import ComplianceRiskAnalyzer
 from .active_listening import ActiveListeningBehaviorAnalyzer
 
+# Revenue & outcome focused (added 2026-06-27)
+from .upsell_opportunity import UpsellOpportunityDetector
+from .resolution_probability import ResolutionProbabilityPredictor
+
 __all__ = [
     "Analyzer",
     "get_registered_analyzers",
@@ -43,4 +47,6 @@ __all__ = [
     "CustomerEffortScoreAnalyzer",
     "ComplianceRiskAnalyzer",
     "ActiveListeningBehaviorAnalyzer",
+    "UpsellOpportunityDetector",
+    "ResolutionProbabilityPredictor",
 ]
