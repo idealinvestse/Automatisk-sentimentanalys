@@ -15,9 +15,10 @@ SERVICE_NAME = "Sentimentanalys"
 SECRET_NAMES = {
     "openrouter": "OPENROUTER_API_KEY",
     "huggingface": "HF_TOKEN",
+    "groq": "GROQ_API_KEY",
 }
 
-SecretKind = Literal["openrouter", "huggingface"]
+SecretKind = Literal["openrouter", "huggingface", "groq"]
 
 _OPENROUTER_FILE_CANDIDATES = (
     Path("configs/openrouter.key"),

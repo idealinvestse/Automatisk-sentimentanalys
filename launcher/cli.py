@@ -119,8 +119,8 @@ def set_secret_cmd(
     value: str | None = typer.Option(None, help="Secret value"),
     from_file: Path | None = typer.Option(None, "--from-file"),
 ) -> None:
-    if kind not in ("openrouter", "huggingface"):
-        raise typer.BadParameter("kind must be openrouter or huggingface")
+    if kind not in ("openrouter", "huggingface", "groq"):
+        raise typer.BadParameter("kind must be openrouter, huggingface, or groq")
     secret = value
     if from_file:
         secret = from_file.read_text(encoding="utf-8").strip().splitlines()[0]

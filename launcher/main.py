@@ -20,6 +20,7 @@ from .process_manager import start_api, start_dashboard, stop_service
 from .scroll_frame import ScrollableFrame
 from .status_snapshot import collect_snapshot
 from .ui_asr_dialog import open_asr_manager_dialog
+from .ui_settings_dialog import open_settings_dialog
 from .ui_status_panel import StatusPanel
 
 _AUTO_REFRESH_MS = 2000
@@ -69,7 +70,7 @@ class LauncherApp(tk.Tk):
             ("Stop API", lambda: self._run_service_action("api", "stop")),
             ("Start Dashboard", lambda: self._run_service_action("dashboard", "start")),
             ("Stop Dashboard", lambda: self._run_service_action("dashboard", "stop")),
-            ("Configure (Setup Hub)", self._open_setup_hub),
+            ("Inställningar…", self._open_settings),
             ("Doctor / Health check", self._run_doctor),
             ("Hantera ASR / Transkribering", self._open_asr_manager),
             ("Open CLI (PowerShell)", self._open_cli),
@@ -164,16 +165,17 @@ class LauncherApp(tk.Tk):
 
         threading.Thread(target=work, daemon=True).start()
 
-    def _open_setup_hub(self) -> None:
+    def _open_settings(self) -> None:
         self.cfg = load_user_config(_app_root())
-        root = working_directory(self.cfg)
-        py = resolve_python(self.cfg)
-        subprocess.Popen(
-            [str(py), "-m", "streamlit", "run", "app/setup_hub.py"],
-            cwd=str(root),
-            env=build_child_env(self.cfg),
+        open_settings_dialog(
+            self,
+            _app_root(),
+            self.event_log,
+            on_saved=self._refresh_status,
+            on_provision=self._provision,
+            on_open_asr=self._open_asr_manager,
         )
-        self.event_log.info("Opened Setup Hub (Streamlit)", phase="launcher")
+        self.event_log.info("Opened settings dialog", phase="launcher")
 
     def _open_asr_manager(self) -> None:
         if self._busy:

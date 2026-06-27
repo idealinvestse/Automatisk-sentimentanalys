@@ -35,3 +35,24 @@ services:
   dashboard_enabled: true
   dashboard_port: 8080
   dashboard_ui: nicegui
+
+runtime:
+  api:
+    api_key: ""
+    cors_origins: ""
+    media_root: ""
+    rate_limit_rpm: 0
+    use_redis_cache: false
+    redis_url: ""
+    allow_client_llm_key: false
+  alerting:
+    webhook_enabled: false
+    webhook_url: ""
+    timeout_seconds: 10
+    max_retries: 3
+    circuit_breaker_threshold: 5
+    retry_backoff_base: 1.0
+  dashboard:
+    api_base_url: "http://127.0.0.1:8000"
+    storage_secret: ""
+    dev_mode: false

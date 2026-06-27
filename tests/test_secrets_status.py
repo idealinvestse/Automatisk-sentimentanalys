@@ -11,6 +11,7 @@ def test_secret_status_shape(monkeypatch) -> None:
     status = secret_status()
     assert "openrouter" in status
     assert "huggingface" in status
+    assert "groq" in status
     for entry in status.values():
         assert "configured" in entry
         assert "source" in entry

@@ -1,4 +1,8 @@
-"""Streamlit setup hub for Windows installer / launcher configuration."""
+"""Streamlit setup hub for Windows installer / launcher configuration.
+
+DEPRECATED: Use the Tkinter "Inställningar" dialog in launcher/main.py instead.
+This module is kept for one release as a fallback entry point.
+"""
 
 from __future__ import annotations
 

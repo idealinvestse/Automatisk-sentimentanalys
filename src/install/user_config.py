@@ -105,7 +105,7 @@ def save_user_config(cfg: UserConfig, path: Path | None = None) -> Path:
 
 
 def config_to_env(cfg: UserConfig) -> dict[str, str]:
-    """Environment variables for child processes (API, CLI, Streamlit)."""
+    """Environment variables for child processes (API, CLI, dashboard)."""
     env: dict[str, str] = {}
     env["HF_HOME"] = str(cfg.resolved_hf_home())
     env["SENTIMENT_APP_ROOT"] = str(cfg.resolved_app_root())
@@ -113,4 +113,37 @@ def config_to_env(cfg: UserConfig) -> dict[str, str]:
     env["SENTIMENT_LOG_LEVEL"] = cfg.log_level
     if cfg.llm.enabled:
         env["SENTIMENT_LLM_ENABLED"] = "1"
+
+    api_rt = cfg.runtime.api
+    if api_rt.api_key:
+        env["SENTIMENT_API_KEY"] = api_rt.api_key
+    if api_rt.cors_origins:
+        env["API_CORS_ORIGINS"] = api_rt.cors_origins
+    if api_rt.media_root:
+        env["API_MEDIA_ROOT"] = api_rt.media_root
+    if api_rt.rate_limit_rpm > 0:
+        env["API_RATE_LIMIT_RPM"] = str(api_rt.rate_limit_rpm)
+    if api_rt.use_redis_cache:
+        env["API_USE_REDIS_CACHE"] = "1"
+    if api_rt.redis_url:
+        env["REDIS_URL"] = api_rt.redis_url
+    if api_rt.allow_client_llm_key:
+        env["API_ALLOW_CLIENT_LLM_KEY"] = "1"
+
+    alert = cfg.runtime.alerting
+    if alert.webhook_enabled and alert.webhook_url:
+        env["ALERT_WEBHOOK_URL"] = alert.webhook_url
+    env["ALERT_WEBHOOK_TIMEOUT"] = str(alert.timeout_seconds)
+    env["ALERT_WEBHOOK_RETRIES"] = str(alert.max_retries)
+    env["ALERT_WEBHOOK_BREAKER"] = str(alert.circuit_breaker_threshold)
+    env["ALERT_WEBHOOK_BACKOFF"] = str(alert.retry_backoff_base)
+
+    dash = cfg.runtime.dashboard
+    if dash.api_base_url:
+        env["SENTIMENT_API_BASE_URL"] = dash.api_base_url
+    if dash.storage_secret:
+        env["NICEGUI_STORAGE_SECRET"] = dash.storage_secret
+    if dash.dev_mode:
+        env["SENTIMENT_DEV_MODE"] = "1"
+
     return env
