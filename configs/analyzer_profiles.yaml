@@ -20,6 +20,7 @@ callcenter:
     - resolution_probability
     - root_cause
     - predictive
+    - actionable_coaching
   disabled:
     - spoken_normalizer
 

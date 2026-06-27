@@ -104,6 +104,13 @@ class ResolutionProbabilityResult(BaseModel):
     recommended_action: str = ""
 
 
+class ActionableCoachingResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    coaching_insights: list[dict[str, Any]] = Field(default_factory=list)
+    insight_count: int = Field(ge=0)
+
+
 class NegationSegmentResult(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -135,6 +142,7 @@ def _register_builtin_schemas() -> None:
     AnalyzerResultRegistry.register("compliance_risk", ComplianceRiskResult)
     AnalyzerResultRegistry.register("resolution_probability", ResolutionProbabilityResult)
     AnalyzerResultRegistry.register("negation", NegationSegmentResult)
+    AnalyzerResultRegistry.register("actionable_coaching", ActionableCoachingResult)
 
 
 _register_builtin_schemas()

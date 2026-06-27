@@ -138,8 +138,14 @@ def load(
 
 @lru_cache(maxsize=4)
 def _get_cached(model_name: str, device_key: str) -> SentimentPipeline:
+    """Return a shared pipeline via ModelResourcePool (unified with analyzer path)."""
+    from .analysis.resources import get_pool
+
     device_arg = device_arg_from_key(device_key)
-    return SentimentPipeline(model_name=model_name, device=device_arg)
+    return get_pool().get_sentiment_pipeline(
+        model_name=model_name,
+        device=device_arg,
+    )
 
 
 def analyze(

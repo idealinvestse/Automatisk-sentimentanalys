@@ -62,7 +62,7 @@ def _full_pipeline_analyze(
     pipe = CallAnalysisPipeline(
         sentiment_model=req.sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
         device=req.device,
-        profile="callcenter",
+        profile=_sentiment_profile(req),
         asr_backend=req.backend,
         asr_model=req.model,
         cache=cache,

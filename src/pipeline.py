@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Any
 
-from .analysis import resolve_analyzers_for_profile, run_analyzers
+from .pipeline_steps import apply_early_pii_redaction, run_registry_analyzers
 from .core.models import AnalysisContext, CallAnalysisReport, Segment
 from .llm.mistral_analyzer import ConversationMistralAnalyzer
 from .transcription import get_transcriber
@@ -343,41 +343,18 @@ class CallAnalysisPipeline:
         # Privacy by design: if profile enables anonymize_before_llm, redact here so that
         # local analysis (sentiment, role, intent, etc.) + LLM + final report all see masked data.
         # Detailed log (what/where/type) is attached to results["pii_redaction"] for audit.
-        pii_log = None
-        try:
-            from .llm.pii_redactor import redact_segments
-
-            seg_dicts = [s.to_dict() for s in transcript.segments]
-            redacted_dicts, pii_log = redact_segments(
-                seg_dicts, profile_name=self.profile, return_log=True
-            )
-            if pii_log and pii_log.total_redacted > 0:
-                logger.info(
-                    "Fas 4.4.1 PII redaction (early): %d events, types=%s. Redacted text used for local analysis + LLM + report.",
-                    pii_log.total_redacted, pii_log.types_redacted
-                )
-            # Rebuild segments with redacted text (if any redactions happened)
-            if pii_log and pii_log.total_redacted > 0:
-                transcript.segments = [Segment.from_dict(d) for d in redacted_dicts]
-        except Exception as e:
-            logger.debug("Early PII redaction skipped or failed (non-fatal): %s", e)
-            pii_log = None
-
-        # 2. Create context and run text analysis
-        ctx = AnalysisContext(
-            transcript=transcript,
-            segments=transcript.segments,
+        transcript.segments, pii_log = apply_early_pii_redaction(
+            transcript.segments,
+            profile_name=self.profile,
         )
 
-        resolved_selected = resolve_analyzers_for_profile(
-            self.profile,
-            explicit_selected=selected_analyzers,
-        )
-        results = run_analyzers(
-            ctx,
-            selected=resolved_selected,
+        results = run_registry_analyzers(
+            transcript.segments,
+            profile=self.profile,
+            selected_analyzers=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
             async_mode=self.async_analyzers,
+            transcript=transcript,
         )
 
         # Attach early PII redaction log (if any) to results for audit / downstream (Fas 4.4.1)
@@ -572,38 +549,15 @@ class CallAnalysisPipeline:
             )
 
         # --- Fas 4.4.1: Early PII Redaction (segments path, before analyzers/LLM) ---
-        pii_log = None
-        try:
-            from .llm.pii_redactor import redact_segments
-
-            seg_dicts = [s.to_dict() for s in typed_segments]
-            redacted_dicts, pii_log = redact_segments(
-                seg_dicts, profile_name=self.profile, return_log=True
-            )
-            if pii_log and pii_log.total_redacted > 0:
-                logger.info(
-                    "Fas 4.4.1 PII redaction (early, segments): %d events, types=%s",
-                    pii_log.total_redacted, pii_log.types_redacted
-                )
-            if pii_log and pii_log.total_redacted > 0:
-                typed_segments = [Segment.from_dict(d) for d in redacted_dicts]
-        except Exception as e:
-            logger.debug("Early PII redaction (segments) skipped: %s", e)
-            pii_log = None
-
-        # Create context and run text analysis
-        ctx = AnalysisContext(
-            transcript=None,
-            segments=typed_segments,
+        typed_segments, pii_log = apply_early_pii_redaction(
+            typed_segments,
+            profile_name=self.profile,
         )
 
-        resolved_selected = resolve_analyzers_for_profile(
-            self.profile,
-            explicit_selected=selected_analyzers,
-        )
-        results = run_analyzers(
-            ctx,
-            selected=resolved_selected,
+        results = run_registry_analyzers(
+            typed_segments,
+            profile=self.profile,
+            selected_analyzers=selected_analyzers,
             analyzer_configs=self._build_analyzer_configs(),
             async_mode=self.async_analyzers,
         )

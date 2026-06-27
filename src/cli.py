@@ -84,6 +84,29 @@ def _parse_asr_hotwords(
     return None
 
 
+@app.command("new-analyzer")
+def new_analyzer_cmd(
+    name: str = typer.Argument(..., help="Analyzer name (snake_case)"),
+    force: bool = typer.Option(False, "--force", help="Overwrite if file exists"),
+) -> None:
+    """Scaffold a new analyzer from the project template (EXT-01)."""
+    import re
+    from pathlib import Path
+
+    if not re.match(r"^[a-z][a-z0-9_]*$", name):
+        raise typer.BadParameter("Name must be snake_case (e.g. my_insight)")
+
+    template = Path(__file__).resolve().parent / "analysis" / "templates" / "new_analyzer_template.py"
+    target = Path(__file__).resolve().parent / "analysis" / f"{name}.py"
+    if target.exists() and not force:
+        raise typer.Exit(code=1)
+    content = template.read_text(encoding="utf-8")
+    content = content.replace("your_analyzer", name).replace("YourAnalyzer", "".join(p.capitalize() for p in name.split("_")) + "Analyzer")
+    target.write_text(content, encoding="utf-8")
+    console.print(f"[green]Created[/green] {target}")
+    console.print("Autodiscovery will register it on next import. Run: python -m src.cli analyzers-graph")
+
+
 @app.command("analyzers-graph")
 def analyzers_graph_cmd(
     profile: str = typer.Option(
@@ -594,7 +617,17 @@ def analyze_call_cmd(
     profile: str = typer.Option(
         "callcenter",
         "--profile",
-        help="Analysis profile (callcenter enables callcenter preprocess when --preprocess is set).",
+        help="Analysis profile (callcenter, sales, complaint, support, teknisk_support).",
+    ),
+    selected_analyzers: str | None = typer.Option(
+        None,
+        "--selected-analyzers",
+        help="Comma-separated analyzer names (overrides profile default; deps auto-resolved).",
+    ),
+    async_analyzers: bool = typer.Option(
+        False,
+        "--async-analyzers",
+        help="Run independent analyzers in parallel within dependency levels.",
     ),
     # LLM / Mistral holistic (Fas 3.2+)
     use_mistral_llm: bool = typer.Option(
@@ -665,6 +698,11 @@ def analyze_call_cmd(
     # NOTE: asr_backend + asr_model are forwarded so that --backend whisperx (and --model)
     # actually affect the transcription step inside analyze-call. Previously these
     # CLI flags were accepted but ignored for the full pipeline command.
+    selected_list = (
+        [a.strip() for a in selected_analyzers.split(",") if a.strip()]
+        if selected_analyzers
+        else None
+    )
     pipeline = CallAnalysisPipeline(
         sentiment_model=sentiment_model,
         device=device,
@@ -676,6 +714,7 @@ def analyze_call_cmd(
         deep_analysis=deep_analysis,
         provider=provider,
         groq_eu_residency=groq_eu_residency,
+        async_analyzers=async_analyzers,
     )
 
     if use_mistral_llm or deep_analysis:
@@ -720,6 +759,7 @@ def analyze_call_cmd(
                     initial_prompt=initial_prompt,
                     preprocess=preprocess,
                     preprocess_mode=preprocess_mode,
+                    selected_analyzers=selected_list,
                 )
                 report_dict = report.to_dict()
             except Exception as e:

@@ -31,7 +31,7 @@ _THREAD_POOL: ThreadPoolExecutor | None = None
 IO_BOUND_ANALYZERS: frozenset[str] = frozenset({"llm_judge"})
 
 _SKIP_AUTODISCOVER = frozenset(
-    {"base", "registry", "graph", "resources", "schemas", "__init__"}
+    {"base", "registry", "graph", "resources", "schemas", "templates", "__init__"}
 )
 
 
