@@ -14,6 +14,7 @@ from launcher.settings_service import (
     import_bundle,
     restart_hints,
     save_draft,
+    save_secret_permanent,
     validate_draft,
 )
 from src.install.config_schema import InstallProfile, UserConfig
@@ -85,6 +86,18 @@ def test_restart_hints_on_profile_change() -> None:
     after.install_profile = InstallProfile.full
     hints = restart_hints(before, after)
     assert "api" in hints and "dashboard" in hints
+
+
+def test_save_secret_permanent_writes_user_file(config_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.install.secrets_win import get_secret, user_secret_file
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    path = user_secret_file("openrouter", config_env)
+    msg = save_secret_permanent("openrouter", "sk-or-test-key", config_env)
+    assert path.is_file()
+    assert get_secret("openrouter", config_env) == "sk-or-test-key"
+    assert "Sparad i:" in msg
+    assert "openrouter.key" in msg
 
 
 def test_config_to_env_includes_runtime(config_env: Path) -> None:

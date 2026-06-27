@@ -8,7 +8,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from src.install.config_schema import InstallProfile, UserConfig
-from src.install.secrets_win import SecretKind, secret_status
+from src.install.secrets_win import SecretKind, secret_status, user_secret_file
 
 from .event_log import EventLog
 from .scroll_frame import ScrollableFrame
@@ -23,6 +23,7 @@ from .settings_service import (
     load_settings,
     run_doctor,
     save_draft,
+    save_secret_permanent,
     validate_draft,
 )
 from .ui_asr_dialog import open_asr_manager_dialog
@@ -59,6 +60,7 @@ class SettingsDialog(tk.Toplevel):
         self._draft = snap.config.model_copy(deep=True)
         self._config_path = snap.config_path
         self._pending_secrets: dict[SecretKind, str] = {}
+        self._secret_entries: dict[SecretKind, ttk.Entry] = {}
         self._dirty = False
 
         self._vars: dict[str, tk.Variable] = {}
@@ -220,25 +222,53 @@ class SettingsDialog(tk.Toplevel):
         ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
         self._labeled_check(inner, "Aktivera LLM-analys", "llm.enabled", row=1)
         self._labeled_combo(inner, "Provider", "llm.provider", ("openrouter", "groq"), row=2)
-        self._labeled_entry(inner, "Standardmodell", "llm.default_model", row=3)
-        self._labeled_entry(inner, "Budget per samtal (USD)", "llm.cost_budget_per_call", row=4)
-        self._labeled_check(inner, "Anonymisera före LLM", "llm.anonymize_before_llm", row=5)
-        self._labeled_check(inner, "Logga externa anrop", "llm.log_external_calls", row=6)
+
+        self._llm_openrouter_status = tk.StringVar(value="")
+        ttk.Label(inner, text="OpenRouter API-nyckel").grid(row=3, column=0, sticky=tk.W)
+        or_frame = ttk.Frame(inner)
+        or_frame.grid(row=3, column=1, sticky=tk.EW, pady=2)
+        or_entry = ttk.Entry(or_frame, width=40, show="*")
+        or_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        or_entry.bind("<KeyRelease>", lambda _e: self._on_secret_typed("openrouter"))
+        self._secret_entries["openrouter"] = or_entry
+        ttk.Label(inner, textvariable=self._llm_openrouter_status, foreground="#6b7280").grid(
+            row=4, column=1, sticky=tk.W
+        )
+        or_btn_row = ttk.Frame(inner)
+        or_btn_row.grid(row=5, column=1, sticky=tk.W, pady=(0, 8))
+        ttk.Button(
+            or_btn_row,
+            text="Spara OpenRouter-nyckel permanent",
+            command=self._save_openrouter_key_now,
+        ).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(or_btn_row, text="Rensa", command=lambda: self._clear_secret("openrouter")).pack(
+            side=tk.LEFT
+        )
+
+        self._labeled_entry(inner, "Standardmodell", "llm.default_model", row=6)
+        self._labeled_entry(inner, "Budget per samtal (USD)", "llm.cost_budget_per_call", row=7)
+        self._labeled_check(inner, "Anonymisera före LLM", "llm.anonymize_before_llm", row=8)
+        self._labeled_check(inner, "Logga externa anrop", "llm.log_external_calls", row=9)
+        self._refresh_openrouter_status()
 
     def _build_secrets_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
         self._secret_status_var = tk.StringVar()
         ttk.Label(inner, textvariable=self._secret_status_var, justify=tk.LEFT).grid(
-            row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 8)
+            row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 4)
         )
+        ttk.Label(
+            inner,
+            text="OpenRouter-nyckel konfigureras under fliken LLM. Här: Hugging Face och Groq.",
+            foreground="#6b7280",
+            wraplength=520,
+        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
         labels = {
-            "openrouter": "OpenRouter API-nyckel",
             "huggingface": "Hugging Face-token",
             "groq": "Groq API-nyckel",
         }
-        self._secret_entries: dict[SecretKind, ttk.Entry] = {}
-        row = 1
-        for kind in _SECRET_KINDS:
+        row = 2
+        for kind in ("huggingface", "groq"):
             ttk.Label(inner, text=labels[kind]).grid(row=row, column=0, sticky=tk.W)
             entry = ttk.Entry(inner, width=48, show="*")
             entry.grid(row=row, column=1, sticky=tk.EW, pady=2)
@@ -249,6 +279,11 @@ class SettingsDialog(tk.Toplevel):
             ttk.Button(btn_frame, text="Rensa", command=lambda k=kind: self._clear_secret(k)).pack(
                 side=tk.LEFT, padx=(0, 4)
             )
+            ttk.Button(
+                btn_frame,
+                text="Spara permanent",
+                command=lambda k=kind: self._save_secret_now(k),
+            ).pack(side=tk.LEFT)
             row += 2
         self._refresh_secret_status()
 
@@ -455,6 +490,58 @@ class SettingsDialog(tk.Toplevel):
         self._pending_secrets[kind] = entry.get()
         self._dirty = True
 
+    def _collect_all_pending_secrets(self) -> dict[SecretKind, str]:
+        pending: dict[SecretKind, str] = {}
+        for kind, entry in self._secret_entries.items():
+            value = entry.get().strip()
+            if value:
+                pending[kind] = value
+        return pending
+
+    def _refresh_openrouter_status(self) -> None:
+        info = secret_status(self._app_root).get("openrouter", {})
+        if info.get("configured"):
+            source = info.get("source", "unknown")
+            path = user_secret_file("openrouter", self._app_root)
+            self._llm_openrouter_status.set(f"Konfigurerad (källa: {source}, fil: {path})")
+        else:
+            self._llm_openrouter_status.set("Ingen nyckel sparad")
+
+    def _save_openrouter_key_now(self) -> None:
+        entry = self._secret_entries["openrouter"]
+        value = entry.get().strip()
+        if not value:
+            messagebox.showwarning("OpenRouter", "Ange en API-nyckel först.", parent=self)
+            return
+        try:
+            msg = save_secret_permanent("openrouter", value, self._app_root)
+        except ValueError as exc:
+            messagebox.showerror("OpenRouter", str(exc), parent=self)
+            return
+        self._pending_secrets.pop("openrouter", None)
+        entry.delete(0, tk.END)
+        self._refresh_openrouter_status()
+        self._refresh_secret_status()
+        self._event_log.info("OpenRouter key saved permanently", phase="settings")
+        messagebox.showinfo("OpenRouter", msg, parent=self)
+
+    def _save_secret_now(self, kind: SecretKind) -> None:
+        entry = self._secret_entries[kind]
+        value = entry.get().strip()
+        if not value:
+            messagebox.showwarning("Nycklar", "Ange ett värde först.", parent=self)
+            return
+        try:
+            msg = save_secret_permanent(kind, value, self._app_root)
+        except ValueError as exc:
+            messagebox.showerror("Nycklar", str(exc), parent=self)
+            return
+        self._pending_secrets.pop(kind, None)
+        entry.delete(0, tk.END)
+        self._refresh_secret_status()
+        self._event_log.info(f"Secret saved permanently: {kind}", phase="settings")
+        messagebox.showinfo("Nycklar", msg, parent=self)
+
     def _refresh_secret_status(self) -> None:
         status = secret_status(self._app_root)
         lines = []
@@ -466,15 +553,18 @@ class SettingsDialog(tk.Toplevel):
         self._secret_status_var.set("\n".join(lines))
 
     def _clear_secret(self, kind: SecretKind) -> None:
-        clear_secret(kind)
+        clear_secret(kind, self._app_root)
         self._pending_secrets.pop(kind, None)
         self._secret_entries[kind].delete(0, tk.END)
         self._refresh_secret_status()
+        if kind == "openrouter":
+            self._refresh_openrouter_status()
         self._event_log.info(f"Cleared secret: {kind}", phase="settings")
 
     def _save(self) -> None:
         draft = self._collect_draft()
-        issues = validate_draft(draft, pending_secrets=self._pending_secrets or None)
+        pending = self._collect_all_pending_secrets() or None
+        issues = validate_draft(draft, pending_secrets=pending)
         if issues:
             messagebox.showerror(
                 "Validering",
@@ -486,7 +576,7 @@ class SettingsDialog(tk.Toplevel):
             result = save_draft(
                 draft,
                 baseline=self._baseline,
-                pending_secrets=self._pending_secrets or None,
+                pending_secrets=pending,
             )
         except ValueError as exc:
             messagebox.showerror("Spara", str(exc), parent=self)
@@ -499,9 +589,15 @@ class SettingsDialog(tk.Toplevel):
         for entry in self._secret_entries.values():
             entry.delete(0, tk.END)
         self._refresh_secret_status()
+        self._refresh_openrouter_status()
         self._event_log.info(f"Settings saved to {result.path}", phase="settings")
 
         msg = f"Sparat till:\n{result.path}"
+        if result.secrets_saved:
+            parts = []
+            for kind, backends in result.secrets_saved.items():
+                parts.append(f"{kind}: {', '.join(backends)}")
+            msg += "\n\nNycklar sparade:\n" + "\n".join(parts)
         if result.restart_services:
             msg += f"\n\nStarta om: {', '.join(result.restart_services)}"
         if result.profile_changed:

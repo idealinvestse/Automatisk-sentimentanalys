@@ -11,7 +11,15 @@ from pydantic import ValidationError
 
 from src.install.config_schema import UserConfig
 from src.install.preflight import run_preflight
-from src.install.secrets_win import SecretKind, delete_secret, get_secret, secret_status, set_secret
+from src.install.secrets_win import (
+    SecretKind,
+    SecretStoreError,
+    delete_secret,
+    get_secret,
+    secret_status,
+    set_secret,
+    user_secret_file,
+)
 from src.install.user_config import load_user_config, save_user_config
 
 _SENTIMENT_PROFILES = (
@@ -52,6 +60,26 @@ class SaveResult:
     path: Path
     restart_services: list[str] = field(default_factory=list)
     profile_changed: bool = False
+    secrets_saved: dict[str, list[str]] = field(default_factory=dict)
+
+
+def save_secret_permanent(
+    kind: SecretKind,
+    value: str,
+    app_root: Path | None = None,
+) -> str:
+    """Save one API key immediately; returns user-facing status message."""
+    try:
+        backends = set_secret(kind, value, app_root=app_root)
+    except SecretStoreError as exc:
+        raise ValueError(str(exc)) from exc
+    path = user_secret_file(kind, app_root)
+    parts = []
+    if "keyring" in backends:
+        parts.append("Windows Credential Manager")
+    if "user_file" in backends:
+        parts.append(str(path))
+    return "Sparad i: " + (", ".join(parts) if parts else "miljövariabel (session)")
 
 
 def load_settings(app_root: Path | None = None) -> SettingsSnapshot:
@@ -116,14 +144,16 @@ def validate_draft(
                 )
             )
 
+    root = draft.resolved_app_root()
     if draft.llm.enabled:
-        has_key = bool(pending_secrets and pending_secrets.get("openrouter"))
-        if draft.llm.provider == "openrouter" and not has_key and not get_secret("openrouter"):
+        has_or = bool(pending_secrets and pending_secrets.get("openrouter", "").strip())
+        has_groq = bool(pending_secrets and pending_secrets.get("groq", "").strip())
+        if draft.llm.provider == "openrouter" and not has_or and not get_secret("openrouter", root):
             issues.append(
                 ValidationIssue("llm", "LLM aktiverat med OpenRouter men ingen API-nyckel konfigurerad.")
             )
         if draft.llm.provider == "groq" and not (
-            (pending_secrets and pending_secrets.get("groq")) or get_secret("groq")
+            has_groq or get_secret("groq", root)
         ):
             issues.append(
                 ValidationIssue("llm", "LLM aktiverat med Groq men ingen API-nyckel konfigurerad.")
@@ -180,14 +210,21 @@ def save_draft(
 
     path = save_user_config(draft)
 
+    secrets_saved: dict[str, list[str]] = {}
+    app_root = draft.resolved_app_root()
     if pending_secrets:
         for kind, value in pending_secrets.items():
             if value.strip():
-                set_secret(kind, value)
+                secrets_saved[kind] = set_secret(kind, value, app_root=app_root)
 
     profile_changed = bool(baseline and baseline.install_profile != draft.install_profile)
     services = restart_hints(baseline, draft) if baseline else []
-    return SaveResult(path=path, restart_services=services, profile_changed=profile_changed)
+    return SaveResult(
+        path=path,
+        restart_services=services,
+        profile_changed=profile_changed,
+        secrets_saved=secrets_saved,
+    )
 
 
 def export_bundle(cfg: UserConfig, path: Path) -> None:
@@ -209,5 +246,5 @@ def run_doctor(cfg: UserConfig) -> list[tuple[bool, str, str]]:
     return [(c.ok, c.name, c.message + (f" — {c.detail}" if c.detail else "")) for c in report.checks]
 
 
-def clear_secret(kind: SecretKind) -> None:
-    delete_secret(kind)
+def clear_secret(kind: SecretKind, app_root: Path | None = None) -> None:
+    delete_secret(kind, app_root=app_root)
