@@ -1,13 +1,10 @@
-# Rekommenderade nästa uppgifter (uppdaterad 2026-06-27 efter deep-dive)
+# Rekommenderade nästa uppgifter – Uppdaterad efter användarinput 2026-06-27
 
-## Hög prioritet – Analysfunktioner
-1. **TASK-A1** Konsolidering src/sentiment + analysis/ (hög)
-2. **TASK-A2** Generisk LLMJudgeAnalyzer (mycket hög värde)
-3. **TASK-A3** Aktivera svensk domain-finetune som default
+**Användarprioritet:** Bättre & mer komplexa värdeskapande insikter + Lös svårigheten att lägga till nya analyzers.
 
-## Övrigt
-- Expand LLM Judge
-- Negation propagation
-- Dashboard integration för analyzer results
+**NY HÖGSTA PRIORITET**
+1. **EXT-01** Förbättra Developer Experience för nya analyzers (template + CLI + docs) – gör det extremt enkelt
+2. **INSIGHT-01** Skapa 2-3 nya kraftfulla analyzers: EmpathyScore, CustomerEffortScore (CES), ActionableCoachingInsight
+3. **INSIGHT-02** Förbättra Trajectory + Holistic LLM Insight Generator
 
-**Fokus:** Analyslagret är starkt fundament – nu polish & scale.
+Mål: Projektet ska leverera insikter som faktiskt förändrar hur man coachar agent och driver kundnöjdhet i svensk kundtjänst.
