@@ -19,6 +19,11 @@ from .trajectory import TrajectoryAnalyzer  # Task 2.3
 from .llm_judge import LLMJudgeAnalyzer  # Task 2.4
 from .spoken_normalizer import SpokenNormalizerAnalyzer  # Task 2.5
 
+# New high-value analyzers (added 2026-06-27)
+from .customer_effort import CustomerEffortScoreAnalyzer
+from .compliance_risk import ComplianceRiskAnalyzer
+from .active_listening import ActiveListeningBehaviorAnalyzer
+
 __all__ = [
     "Analyzer",
     "get_registered_analyzers",
@@ -35,4 +40,7 @@ __all__ = [
     "TrajectoryAnalyzer",
     "LLMJudgeAnalyzer",
     "SpokenNormalizerAnalyzer",
+    "CustomerEffortScoreAnalyzer",
+    "ComplianceRiskAnalyzer",
+    "ActiveListeningBehaviorAnalyzer",
 ]
