@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from nicegui import ui
 from nicegui.elements.label import Label
 
+from app.nicegui_dashboard.components.ui_primitives import metric_card as _metric_card
 
-def metric_card(label: str, value: str | int | float, *, color: str = "primary") -> Label:
+
+def metric_card(
+    label: str,
+    value: str | int | float,
+    *,
+    color: str = "primary",
+    size: str = "default",
+) -> Label:
     """Render a metric-style card; returns the value label for live updates."""
-    with ui.card().classes("flex-1"):
-        ui.label(label).classes("text-caption")
-        return ui.label(str(value)).classes(f"text-h4 text-{color}")
+    return _metric_card(label, value, color=color, size=size)

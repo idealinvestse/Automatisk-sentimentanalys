@@ -26,6 +26,7 @@ from app.nicegui_dashboard.components.overview import render_overview_tab
 from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, load_reports_from_api
+from app.nicegui_dashboard.services.report_ingest import append_report_to_state
 from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import create_transcription_state
 from app.nicegui_dashboard.services.ui_helpers import notify_error, notify_success, notify_warning
@@ -70,7 +71,7 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
     with ui.tabs().classes("w-full") as tabs:
         overview_tab = ui.tab("Översikt")
         analytics_tab = ui.tab("Analys & Trender")
-        agent_tab = ui.tab("Agent Performance")
+        agent_tab = ui.tab("Agentprestanda")
         fas4_tab = ui.tab("Fas 4 Insikter")
         detail_tab = ui.tab("Samtalsdetalj")
         trans_tab = ui.tab("Transkribering")
@@ -110,6 +111,22 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
         else:
             target = overview_tab
         tabs.set_value(target)
+
+    def go_to_agent(agent_id: str) -> None:
+        state.selected_agent_id = agent_id
+        tabs.set_value(agent_tab)
+        if refresh_agent:
+            refresh_agent[0]()
+
+    def go_to_overview() -> None:
+        tabs.set_value(overview_tab)
+        if refresh_overview:
+            refresh_overview[0]()
+
+    def on_transcription_report(report: dict) -> None:
+        cid = append_report_to_state(state, report)
+        notify_success(f"Rapport {cid} tillagd i dashboard")
+        go_to_detail(cid, source="overview")
 
     async def reload_from_api() -> None:
         await load_from_api(notify=True)
@@ -162,6 +179,7 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
             refresh_fn = render_overview_tab(
                 state,
                 on_call_select=lambda cid: go_to_detail(cid, source="overview"),
+                on_agent_select=go_to_agent,
                 on_show_example_detail=show_example_detail,
                 on_reload_api=reload_from_api if state.api_client else None,
             )
@@ -186,6 +204,7 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
                 state,
                 on_call_select=lambda cid: go_to_detail(cid, source="fas4"),
                 on_alerts_change=refresh_header,
+                on_topic_filter=go_to_overview,
             )
             refresh_fas4.append(refresh_fn)
 
@@ -195,7 +214,11 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
 
         with ui.tab_panel(trans_tab):
             if state.transcription:
-                render_transcription_tab(state.transcription, api_client=state.api_client)
+                render_transcription_tab(
+                    state.transcription,
+                    api_client=state.api_client,
+                    on_report_ready=on_transcription_report,
+                )
 
         if test_tab is not None:
             with ui.tab_panel(test_tab):

@@ -9,12 +9,13 @@ from typing import Any
 
 from nicegui import ui
 
-from app.services.data_services import compute_kpis
+from app.nicegui_dashboard.components.ui_primitives import metric_card
+from app.nicegui_dashboard.services.analytics_summary import compute_portfolio_kpis
 
 
 def render_kpi_row(reports: list[dict[str, Any]], filters: dict[str, Any] | None = None) -> None:
-    """Render KPI cards computed from reports via data_services.compute_kpis."""
-    kpis = compute_kpis(reports, filters)
+    """Render KPI cards computed from reports via analytics_summary.compute_portfolio_kpis."""
+    kpis = compute_portfolio_kpis(reports, filters)
     qa_display = f"{kpis['qa_avg']}/100" if kpis.get("qa_avg") is not None else "—"
 
     cards = [
@@ -23,10 +24,11 @@ def render_kpi_row(reports: list[dict[str, Any]], filters: dict[str, Any] | None
         ("Negativa", f"{kpis.get('neg_pct', 0)}%", "negative"),
         ("QA Snitt", qa_display, "warning"),
         ("Alerts", str(kpis.get("alerts_count", 0)), "negative"),
+        ("Riskfyllda samtal", str(kpis.get("risky_calls", 0)), "negative"),
+        ("Heta ämnen", str(kpis.get("hot_topics_count", 0)), "info"),
+        ("Agenter", str(kpis.get("unique_agents", 0)), "primary"),
     ]
 
-    with ui.row().classes("w-full gap-4"):
+    with ui.row().classes("w-full gap-3 flex-wrap"):
         for label, value, color in cards:
-            with ui.card().classes("flex-1"):
-                ui.label(label).classes("text-caption")
-                ui.label(value).classes(f"text-h4 text-{color}")
+            metric_card(label, value, color=color, size="compact")

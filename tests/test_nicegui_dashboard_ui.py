@@ -50,18 +50,23 @@ async def test_call_detail_large_virtualized(user) -> None:
 async def test_transcription_monitor_renders(user) -> None:
     await user.open("/transcription")
     await user.should_see("Transkriberingskö")
-    await user.should_see("Start")
-    await user.should_see("Reconnect WS")
+    await user.should_see("Starta")
+    await user.should_see("Återanslut WS")
     await user.should_see("Händelselogg")
     await user.should_see(ui.table)
 
 
 async def test_analytics_tab_renders_charts(user) -> None:
     await user.open("/analytics")
-    await user.should_see("Analys & Trender")
+    await user.should_see("Analys & trender")
+    await user.should_see("Sentimentfördelning")
     await user.should_see("Kundsentiment över tid")
     await user.should_see("Agentprestanda över tid")
     await user.should_see("Heta ämnen")
+    await user.should_see("Detaljerad samtalsöversikt")
+    await user.should_see("Exportera CSV")
+    await user.should_see("Filtrera agent")
+    await user.should_see(ui.table)
 
 
 async def test_test_lab_renders_sections(user) -> None:
@@ -80,3 +85,20 @@ async def test_onboarding_banner_renders(user) -> None:
     await user.open("/onboarding")
     await user.should_see("Kom igång")
     await user.should_see("Samtalsdetalj")
+
+
+async def test_llm_judge_panel_empty_state(user) -> None:
+    await user.open("/llm-judge-empty")
+    await user.should_see("LLM Judge")
+    await user.should_see("Inga LLM-judge bedömningar")
+
+
+async def test_llm_judge_panel_with_data(user) -> None:
+    await user.open("/llm-judge-data")
+    await user.should_see("segment bedömdes")
+    await user.should_see("Motivering")
+
+
+async def test_llm_judge_summary_badge(user) -> None:
+    await user.open("/llm-judge-summary")
+    await user.should_see("LLM Judge:")

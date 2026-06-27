@@ -110,6 +110,14 @@ def load_demo_reports(
     return tuple(reports)
 
 
+def _qa_status_label(passed: Any) -> str:
+    if passed is True:
+        return "Godkänd"
+    if passed is False:
+        return "Underkänd"
+    return "—"
+
+
 def reports_to_table_rows(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Map CallAnalysisReport dicts to ui.table row format."""
     rows: list[dict[str, Any]] = []
@@ -120,12 +128,24 @@ def reports_to_table_rows(reports: list[dict[str, Any]]) -> list[dict[str, Any]]
         qa_score = qa.get("overall_qa_score")
         sentiment = get_overall_sentiment(r)
         display_score = qa_score if qa_score is not None else "—"
+        alerts = (r.get("results") or {}).get("alerts") or []
+        alert_count = len(alerts) if isinstance(alerts, list) else 0
+        risk_level = (
+            qa.get("risk_level")
+            or (r.get("risks") or {}).get("risk_level")
+            or "—"
+        )
         rows.append(
             {
                 "call_id": call_id,
                 "title": r.get("title", call_id),
                 "agent": meta.get("agent", "Okänd"),
+                "category": meta.get("category") or meta.get("topic") or "—",
                 "sentiment": sentiment.get("label", "neutral"),
+                "sentiment_score": sentiment.get("score", 0.0),
+                "risk_level": risk_level,
+                "alert_count": alert_count,
+                "qa_status": _qa_status_label(qa.get("passed")),
                 "qa_score": display_score,
                 "qa_class": qa_score_css_class(display_score),
             }

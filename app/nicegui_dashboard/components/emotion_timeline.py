@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 from nicegui import ui
 
 from app.nicegui_dashboard.components.empty_state import render_empty_state
+from app.nicegui_dashboard.services.analytics_summary import emotion_label_sv, summarize_emotions
 
 
 def _extract_emotion_series(report: dict[str, Any] | None) -> tuple[list[int], dict[str, list[float]]]:
@@ -92,14 +93,15 @@ def build_emotion_timeline_figure(report: dict[str, Any] | None) -> go.Figure:
     import pandas as pd  # Local import – dashboard env has pandas via nicegui/plotly stack
 
     df = pd.DataFrame(records)
+    df["emotion_sv"] = df["emotion"].map(emotion_label_sv)
     fig = px.line(
         df,
         x="segment",
         y="score",
-        color="emotion",
+        color="emotion_sv",
         markers=True,
-        title="Emotion scores per segment",
-        labels={"segment": "Segment index", "score": "Score (0-1)", "emotion": "Emotion"},
+        title="Känslor per segment",
+        labels={"segment": "Segment", "score": "Poäng (0–1)", "emotion_sv": "Känsla"},
     )
     fig.update_layout(
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -120,11 +122,19 @@ def render_emotion_timeline(report: dict[str, Any] | None) -> None:
     if not indices or not emotion_dict:
         render_empty_state(
             icon="timeline",
-            title="Ingen emotion-data",
-            hint="Välj ett samtal med emotion-analys eller använd demo-data.",
+            title="Ingen känslodata",
+            hint="Välj ett samtal där pipeline har kört emotion-analys på segment.",
         )
         return
 
+    ranked = summarize_emotions(report)
+    if ranked:
+        with ui.row().classes("gap-2 flex-wrap q-mb-sm"):
+            for emo in ranked[:5]:
+                ui.chip(
+                    f"{emo['label_sv']}: snitt {emo['avg']:.2f}, topp {emo['peak']:.2f}",
+                    color="accent",
+                ).classes("text-caption")
+
     fig = build_emotion_timeline_figure(report)
-    plot = ui.plotly(fig).classes("w-full")
-    plot.props("style='height: 280px'")
+    ui.plotly(fig).classes("w-full chart-container")

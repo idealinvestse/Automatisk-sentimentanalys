@@ -12,7 +12,6 @@ import pytest
 from app.nicegui_dashboard.components.llm_judge_panel import (
     _get_verdicts,
     _is_changed,
-    render_llm_judge_panel,
     render_llm_judge_summary,
 )
 
@@ -75,77 +74,13 @@ class TestIsChanged:
         assert _is_changed(v) is False
 
 
-class TestRenderLLMJudgePanel:
-    """Basic smoke tests for the render function."""
-
-    def test_renders_without_error_with_empty_data(self):
-        render_llm_judge_panel(None)
-        render_llm_judge_panel({})
-        render_llm_judge_panel({"verdicts": []})
-
-    def test_renders_without_error_with_normal_data(self):
-        data = {
-            "verdicts": [
-                {
-                    "segment_index": 2,
-                    "original_sentiment": "neutral",
-                    "original_confidence": 0.45,
-                    "judge_label": "negative",
-                    "judge_confidence": 0.82,
-                    "reasoning": "Kund nämner frustration.",
-                }
-            ]
-        }
-        render_llm_judge_panel(data)
-
-    def test_renders_without_error_with_changed_only_filter(self):
-        data = {
-            "verdicts": [
-                {"original_sentiment": "positive", "judge_label": "negative"},
-                {"original_sentiment": "negative", "judge_label": "negative"},
-            ]
-        }
-        render_llm_judge_panel(data)
-
-    def test_renders_with_missing_fields_gracefully(self):
-        data = {
-            "verdicts": [
-                {"segment_index": 5},  # almost empty
-                {"original_sentiment": "neutral", "judge_label": "positive"},
-            ]
-        }
-        render_llm_judge_panel(data)
-
-
 class TestRenderLLMJudgeSummary:
-    """Tests for the compact summary badge helper."""
+    """Tests for the compact summary badge helper (pure logic)."""
 
     def test_returns_none_for_empty_data(self):
-        # The function returns None (does nothing) for empty input
         assert render_llm_judge_summary(None) is None
         assert render_llm_judge_summary({}) is None
         assert render_llm_judge_summary({"verdicts": []}) is None
-
-    def test_renders_summary_with_data(self):
-        data = {
-            "verdicts": [
-                {"original_sentiment": "neutral", "judge_label": "negative"},
-                {"original_sentiment": "negative", "judge_label": "negative"},
-            ]
-        }
-        # Should not raise
-        render_llm_judge_summary(data)
-
-    def test_counts_changed_correctly(self):
-        data = {
-            "verdicts": [
-                {"original_sentiment": "positive", "judge_label": "negative"},  # changed
-                {"original_sentiment": "negative", "judge_label": "negative"},  # not changed
-                {"original_sentiment": "neutral", "judge_label": "positive"},  # changed
-            ]
-        }
-        # Just ensure it runs (we can't easily assert UI output here)
-        render_llm_judge_summary(data)
 
     def test_filter_changed_only_logic(self):
         """Test filter counts for 'Endast ändrade' mode."""

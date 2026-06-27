@@ -1,20 +1,29 @@
-"""Call Detail View – header, timeline, transcript, structured insights.
-
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (virtualiserat transkript)
-"""
+"""Call Detail View – header, timeline, transcript, structured insights."""
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.call_alerts_section import render_call_alerts_section
+from app.nicegui_dashboard.components.emotion_timeline import render_emotion_timeline
+from app.nicegui_dashboard.components.empty_state import render_empty_state
+from app.nicegui_dashboard.components.evidence_panel import render_evidence_panel
 from app.nicegui_dashboard.components.llm_judge_panel import render_llm_judge_panel
+from app.nicegui_dashboard.components.pii_audit import render_pii_audit_panel
+from app.nicegui_dashboard.components.ui_primitives import render_section_title
 from app.nicegui_dashboard.components.virtual_transcript import (
     render_timeline,
     render_transcript_panel,
     scroll_transcript_to_index,
+)
+from app.nicegui_dashboard.services.analytics_summary import compute_call_snapshot, summarize_emotions
+from app.nicegui_dashboard.services.chart_data import (
+    build_trajectory_figure,
+    segment_index_from_trajectory_x,
 )
 from app.nicegui_dashboard.services.qa_display import qa_chip_color
 from app.nicegui_dashboard.services.transcript_virtualizer import filter_segments_with_index
@@ -25,8 +34,10 @@ from app.services.data_services import enrich_segments_with_sentiment, get_overa
 def find_report(reports: list[dict[str, Any]], call_id: str | None) -> dict[str, Any] | None:
     if not call_id:
         return None
+    needle = str(call_id)
     for report in reports:
-        if report.get("call_id") == call_id:
+        rid = str(report.get("call_id") or report.get("id") or "")
+        if rid == needle:
             return report
     return None
 
@@ -44,6 +55,14 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     parts: list[str] = []
     llm = report.get("llm") or {}
     results = report.get("results") or {}
+
+    root = llm.get("root_cause") or {}
+    if isinstance(root, dict) and root.get("summary"):
+        parts.append(f"**Rotorsak:** {root['summary']}")
+
+    traj = llm.get("trajectory") or {}
+    if isinstance(traj, dict) and traj.get("summary"):
+        parts.append(f"**Kundresa:** {traj['summary']}")
 
     actionable = llm.get("actionable_summary") or {}
     if isinstance(actionable, dict) and actionable:
@@ -76,7 +95,7 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
 
     alerts = results.get("alerts") or []
     if alerts:
-        parts.append(f"**Alerts:** {len(alerts)} st")
+        parts.append(f"**Aviseringar:** {len(alerts)} st")
 
     if not parts:
         summary = report.get("summary") or {}
@@ -88,9 +107,35 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     return "\n\n".join(parts)
 
 
+def _render_intent_topics(report: dict[str, Any]) -> None:
+    intents = report.get("intent_results") or []
+    topics = (report.get("results") or {}).get("topics") or report.get("topics") or []
+    if isinstance(topics, dict):
+        topics = topics.get("topics") or []
+    if not intents and not topics:
+        return
+    with ui.expansion("Intent & ämnen", icon="label", value=False).classes("w-full"):
+        if intents:
+            ui.label("Intent").classes("text-caption text-grey")
+            with ui.row().classes("flex-wrap gap-1 q-mb-sm"):
+                for item in intents[:12]:
+                    if isinstance(item, dict):
+                        label = item.get("intent") or item.get("label") or "?"
+                        ui.chip(str(label), color="info").classes("text-caption")
+        if topics:
+            ui.label("Ämnen").classes("text-caption text-grey")
+            with ui.row().classes("flex-wrap gap-1"):
+                for t in topics[:12]:
+                    if isinstance(t, dict):
+                        word = t.get("word") or t.get("topic") or "?"
+                        ui.chip(str(word), color="primary").classes("text-caption")
+
+
 _BACK_LABELS = {
     "overview": "Tillbaka till Översikt",
     "analytics": "Tillbaka till Analys & Trender",
+    "agent_performance": "Tillbaka till Agentprestanda",
+    "fas4": "Tillbaka till Fas 4 Insikter",
 }
 
 
@@ -108,8 +153,11 @@ def render_call_detail_tab(
     def _render_content() -> None:
         report = find_report(state.reports, state.selected_call_id)
         if not report:
-            ui.label("🔍 Samtalsdetalj").classes("text-h6")
-            ui.label("Välj ett samtal i Översikt-tabellen.").classes("text-body2")
+            render_empty_state(
+                icon="call",
+                title="Inget samtal valt",
+                hint="Välj ett samtal i tabellen under Översikt.",
+            )
             return
 
         call_id = report.get("call_id", "UNKNOWN")
@@ -117,8 +165,19 @@ def render_call_detail_tab(
         sentiment = get_overall_sentiment(report)
         qa = (report.get("results") or {}).get("qa") or {}
         qa_score = qa.get("overall_qa_score", "—")
+        snapshot = compute_call_snapshot(report)
 
-        ui.label(f"🔍 Samtalsdetalj – {call_id}").classes("text-h6")
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label(f"Samtalsdetalj – {call_id}").classes("text-h6")
+            ui.button(
+                "Ladda ner JSON",
+                icon="download",
+                on_click=lambda: ui.download(
+                    json.dumps(report, ensure_ascii=False, indent=2, default=str).encode("utf-8"),
+                    f"{call_id}_rapport.json",
+                ),
+            ).props("outline dense")
+
         with ui.card().classes("w-full"):
             ui.label(report.get("title", call_id)).classes("text-subtitle1")
             with ui.row().classes("gap-2 flex-wrap"):
@@ -126,6 +185,27 @@ def render_call_detail_tab(
                 ui.chip(f"Längd: {_format_duration(meta.get('duration_s'))}")
                 ui.chip(f"Sentiment: {sentiment.get('label', 'neutral')}", color="secondary")
                 ui.chip(f"QA: {qa_score}/100", color=qa_chip_color(qa_score))
+
+        if snapshot:
+            with ui.card().classes("w-full q-mt-sm"):
+                render_section_title("Samtalsöversikt", icon="insights")
+                with ui.row().classes("gap-2 flex-wrap"):
+                    ui.chip(f"Kategori: {snapshot.get('category', '—')}")
+                    ui.chip(f"Trend: {snapshot.get('trajectory_trend', '—')}", color="info")
+                    ui.chip(f"Aviseringar: {snapshot.get('alert_count', 0)}")
+                    ui.chip(f"Segment: {snapshot.get('segment_count', 0)}")
+                    if snapshot.get("trajectory_min") is not None:
+                        ui.chip(
+                            f"Sentiment: {snapshot['trajectory_min']} … {snapshot['trajectory_max']}"
+                        )
+                    ui.chip(f"Negativa toppar: {snapshot.get('negative_peaks', 0)}", color="negative")
+                emotions = summarize_emotions(report)
+                if emotions:
+                    with ui.row().classes("gap-1 flex-wrap q-mt-xs"):
+                        for emo in emotions[:3]:
+                            ui.chip(f"{emo['label_sv']} {emo['avg']:.2f}", color="accent").classes(
+                                "text-caption"
+                            )
 
         ui.separator()
         enriched = enrich_segments_with_sentiment(
@@ -143,7 +223,23 @@ def render_call_detail_tab(
             else:
                 refresh_transcript.refresh()
 
-        ui.label("Interaktiv Timeline").classes("text-subtitle2 q-mt-md")
+        render_section_title("Kundsentiment över tid", icon="show_chart")
+        traj_plot = ui.plotly(build_trajectory_figure(report)).classes("w-full chart-container")
+
+        def _on_traj_click(e: Any) -> None:
+            args = getattr(e, "args", e) or {}
+            points = args.get("points") or []
+            if not points:
+                return
+            pt = points[0] if isinstance(points, list) else points
+            x_val = pt.get("x") if isinstance(pt, dict) else None
+            if x_val is not None:
+                idx = segment_index_from_trajectory_x(report, float(x_val))
+                on_timeline_select(idx)
+
+        traj_plot.on("plotly_click", _on_traj_click)
+
+        render_section_title("Interaktiv tidslinje", icon="timeline")
         with ui.card().classes("w-full"):
             render_timeline(
                 enriched,
@@ -152,7 +248,7 @@ def render_call_detail_tab(
                 virt_state=virt_state,
             )
 
-        ui.label("Transkript (sökbart)").classes("text-subtitle2 q-mt-md")
+        render_section_title("Transkript (sökbart)", icon="article")
 
         @ui.refreshable
         def refresh_transcript() -> None:
@@ -187,11 +283,18 @@ def render_call_detail_tab(
         _update_search_hint()
         refresh_transcript()
 
-        ui.label("Strukturerade insikter (LLM + Fas4)").classes("text-subtitle2 q-mt-md")
+        render_section_title("Strukturerade insikter", icon="psychology")
         with ui.expansion("Sammanfattning & agentbedömning", icon="insights").classes("w-full"):
             ui.markdown(_build_insights_markdown(report))
 
-        # Fas 4 viz: LLM-judge panel (only if verdicts or demo data present)
+        render_evidence_panel(report)
+        render_call_alerts_section(report)
+        render_pii_audit_panel(report.get("results"))
+        _render_intent_topics(report)
+
+        with ui.expansion("Känsloprofil", icon="mood", value=False).classes("w-full"):
+            render_emotion_timeline(report)
+
         render_llm_judge_panel((report.get("results") or {}).get("llm_judge"))
 
         if on_back:

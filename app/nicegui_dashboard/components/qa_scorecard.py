@@ -11,8 +11,10 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.call_detail import find_report
+from app.nicegui_dashboard.components.ui_primitives import metric_card
+from app.nicegui_dashboard.services.analytics_summary import qa_problem_calls
 from app.nicegui_dashboard.services.fas4_data import format_evidence_spans, local_qa_from_report
-from app.nicegui_dashboard.services.qa_display import qa_chip_color, qa_score_css_class
+from app.nicegui_dashboard.services.qa_display import qa_chip_color
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import filter_reports
 
@@ -75,20 +77,31 @@ def render_qa_scorecard_section(
         risk = qa.get("risk_level", "—")
 
         with ui.row().classes("w-full gap-4 flex-wrap q-mb-md"):
-            with ui.card().classes("flex-1 min-w-[160px]"):
-                ui.label("QA-poäng").classes("text-caption text-grey")
-                ui.label(str(score if score is not None else "—")).classes(
-                    f"text-h5 {qa_score_css_class(score)}"
-                )
-            with ui.card().classes("flex-1 min-w-[160px]"):
-                ui.label("Status").classes("text-caption text-grey")
-                ui.chip(
-                    "Godkänd" if passed else "Underkänd",
-                    color="positive" if passed else "negative",
-                )
-            with ui.card().classes("flex-1 min-w-[160px]"):
-                ui.label("Risknivå").classes("text-caption text-grey")
-                ui.chip(str(risk), color=qa_chip_color(score))
+            metric_card(
+                "QA-poäng",
+                score if score is not None else "—",
+                color=qa_chip_color(score),
+                size="compact",
+            )
+            metric_card(
+                "Status",
+                "Godkänd" if passed else "Underkänd",
+                color="positive" if passed else "negative",
+                size="compact",
+            )
+            metric_card(
+                "Risknivå",
+                str(risk),
+                color=qa_chip_color(score),
+                size="compact",
+            )
+
+        flags = qa.get("compliance_flags") or []
+        if flags:
+            ui.label("Compliance-flaggor").classes("text-subtitle2 q-mt-xs")
+            with ui.row().classes("flex-wrap gap-1"):
+                for flag in flags[:12]:
+                    ui.chip(str(flag), color="warning").props("dense")
 
         passed_crit = qa.get("passed_criteria") or []
         failed_crit = qa.get("failed_criteria") or []
@@ -127,7 +140,7 @@ def render_qa_scorecard_section(
                         {"name": "criterion", "label": "Kriterium", "field": "criterion"},
                         {"name": "passed", "label": "OK", "field": "passed"},
                         {"name": "score", "label": "Poäng", "field": "score"},
-                        {"name": "evidence", "label": "Evidence", "field": "evidence"},
+                        {"name": "evidence", "label": "Bevis", "field": "evidence"},
                     ],
                     rows=rows,
                     row_key="criterion",
@@ -144,6 +157,32 @@ def render_qa_scorecard_section(
                 "Öppna i Samtalsdetalj",
                 on_click=lambda: on_call_select(call_id),
             ).props("flat").classes("q-mt-sm")
+
+        problem_rows = qa_problem_calls(reports)
+        if problem_rows:
+            ui.label("Samtal med QA-problem").classes("text-subtitle2 q-mt-md")
+            prob_table = ui.table(
+                columns=[
+                    {"name": "call_id", "label": "ID", "field": "call_id"},
+                    {"name": "title", "label": "Titel", "field": "title"},
+                    {"name": "agent", "label": "Agent", "field": "agent"},
+                    {"name": "qa_score", "label": "QA", "field": "qa_score"},
+                    {"name": "risk_level", "label": "Risk", "field": "risk_level"},
+                    {"name": "passed", "label": "Godkänd", "field": "passed"},
+                ],
+                rows=problem_rows,
+                row_key="call_id",
+            ).classes("w-full")
+
+            def _problem_row_click(e: Any) -> None:
+                if not on_call_select:
+                    return
+                row = e.args[1] if len(e.args) > 1 else e.args[0]
+                cid = row.get("call_id") if isinstance(row, dict) else None
+                if cid:
+                    on_call_select(str(cid))
+
+            prob_table.on("rowClick", _problem_row_click)
 
     qa_section()
     return qa_section.refresh

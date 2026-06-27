@@ -25,6 +25,26 @@ _QA_CELL_SLOT = """
 </q-td>
 """
 
+_QA_STATUS_CELL_SLOT = """
+<q-td :props="props">
+  <q-chip
+    v-if="props.value === 'Godkänd'"
+    dense
+    color="positive"
+    text-color="white"
+    :label="props.value"
+  />
+  <q-chip
+    v-else-if="props.value === 'Underkänd'"
+    dense
+    color="negative"
+    text-color="white"
+    :label="props.value"
+  />
+  <span v-else class="text-grey">{{ props.value }}</span>
+</q-td>
+"""
+
 
 def render_calls_table(
     state: DashboardState,
@@ -76,7 +96,11 @@ def render_calls_table(
                     hint=f"Inget samtal matchar «{query}». Prova ett kortare sökord eller annat ämne.",
                 )
             else:
-                ui.label("Inga samtal att visa.").classes("text-caption q-mb-sm")
+                render_empty_state(
+                    icon="inbox",
+                    title="Inga samtal att visa",
+                    hint="Ladda data från API eller justera filter.",
+                )
         else:
             ui.label(
                 f"Visar {len(rows)} av {total_count} samtal · sida {state.table_page}/{total_pages}"
@@ -87,7 +111,11 @@ def render_calls_table(
                     {"name": "call_id", "label": "ID", "field": "call_id", "align": "left"},
                     {"name": "title", "label": "Ämne", "field": "title", "align": "left"},
                     {"name": "agent", "label": "Agent", "field": "agent", "align": "left"},
+                    {"name": "category", "label": "Kategori", "field": "category", "align": "left"},
                     {"name": "sentiment", "label": "Sentiment", "field": "sentiment", "align": "left"},
+                    {"name": "risk_level", "label": "Risk", "field": "risk_level", "align": "left"},
+                    {"name": "alert_count", "label": "Aviseringar", "field": "alert_count", "align": "left"},
+                    {"name": "qa_status", "label": "QA-status", "field": "qa_status", "align": "left"},
                     {"name": "qa_score", "label": "QA", "field": "qa_score", "align": "left"},
                 ],
                 rows=rows,
@@ -95,6 +123,7 @@ def render_calls_table(
                 pagination={"rowsPerPage": 0},
             ).classes("w-full")
             table.add_slot("body-cell-qa_score", _QA_CELL_SLOT)
+            table.add_slot("body-cell-qa_status", _QA_STATUS_CELL_SLOT)
 
             def handle_row_click(e: Any) -> None:
                 row = e.args[1] if len(e.args) > 1 else e.args[0]

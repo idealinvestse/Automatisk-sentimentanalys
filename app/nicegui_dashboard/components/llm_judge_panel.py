@@ -41,7 +41,7 @@ def render_llm_judge_panel(
     verdicts = _get_verdicts(llm_judge_result)
 
     with ui.card().classes("w-full"):
-        ui.label(title).classes("text-lg font-semibold mb-1")
+        ui.label(title).classes("text-subtitle1 q-mb-sm")
 
         if not verdicts:
             render_empty_state(
@@ -55,15 +55,17 @@ def render_llm_judge_panel(
         total = len(verdicts)
 
         # Header with stats + filter
-        with ui.row().classes("items-center justify-between w-full mb-2"):
-            ui.markdown(f"**{total}** segment bedömdes | **{changed_count}** ändrade").classes("text-sm text-gray-600")
+        with ui.row().classes("items-center justify-between w-full q-mb-sm"):
+            ui.markdown(f"**{total}** segment bedömdes | **{changed_count}** ändrade").classes(
+                "text-caption text-grey"
+            )
 
             with ui.row().classes("items-center gap-1"):
                 filter_mode = ui.toggle(
                     ["Alla", "Endast ändrade"],
                     value="Alla",
                     on_change=lambda e: refresh_panel.refresh(),
-                ).props("dense toggle-color=primary").classes("text-sm")
+                ).props("dense toggle-color=primary").classes("text-caption")
 
                 ui.icon("help_outline", size="xs").classes("text-grey cursor-help").tooltip(
                     "Visar endast segment där LLM:en ändrade den ursprungliga sentiment-bedömningen (t.ex. neutral → negative)."
@@ -95,18 +97,19 @@ def render_llm_judge_panel(
                 else:
                     color = "grey"
 
-                with ui.card().classes("mb-2 p-2 q-pa-sm"):
+                with ui.card().classes("q-mb-sm q-pa-sm"):
                     with ui.row().classes("items-center justify-between"):
-                        ui.badge(f"Seg {seg_idx}", color="dark").classes("text-xs")
+                        ui.badge(f"Seg {seg_idx}", color="dark").classes("text-caption")
                         ui.html(f"<b>Original:</b> {orig_label} <span class='text-caption'>({orig_conf:.2f})</span>")
-                        ui.badge(str(judge_label).upper(), color=color).classes("text-sm")
+                        ui.badge(str(judge_label).upper(), color=color).classes("text-caption")
 
-                    ui.html(
-                        f"<b>LLM:</b> {judge_label} <span style='color:{color}'>({judge_conf:.2f})</span>"
-                    ).classes("text-sm q-mt-xs")
+                    with ui.row().classes("items-center gap-2 q-mt-xs"):
+                        ui.label("LLM:").classes("text-caption")
+                        ui.badge(str(judge_label).upper(), color=color).classes("text-caption")
+                        ui.badge(f"{judge_conf:.2f}", color=color).classes("text-caption")
 
                     if reasoning:
-                        with ui.expansion("Motivering", icon="info").classes("w-full text-sm q-mt-xs"):
+                        with ui.expansion("Motivering", icon="info").classes("w-full text-caption q-mt-xs"):
                             ui.markdown(reasoning)
 
         refresh_panel()

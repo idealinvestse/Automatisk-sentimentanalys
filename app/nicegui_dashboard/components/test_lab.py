@@ -10,6 +10,7 @@ from typing import Any, Callable
 from nicegui import ui
 
 from app.nicegui_dashboard.components.live_analysis import render_text_pipeline_section
+from app.nicegui_dashboard.components.ui_primitives import render_section_title, render_tab_header
 from app.nicegui_dashboard.services.nicegui_api_client import APIError
 from app.nicegui_dashboard.services.test_lab_service import (
     default_run_settings,
@@ -48,10 +49,10 @@ _SCENARIO_OPTIONS = [
 
 def render_test_lab_tab(state: DashboardState) -> None:
     """Render consolidated test lab with nested sub-tabs."""
-    ui.label("Testlabb").classes("text-h6")
-    ui.label(
-        "Testa ljudprover från samples/audio, pipeline, systemhälsa och sparade rapporter."
-    ).classes("text-caption q-mb-md")
+    render_tab_header(
+        "Testlabb",
+        hint="Testa ljudprover från samples/audio, pipeline, systemhälsa och sparade rapporter.",
+    )
 
     results_holder: dict[str, Any] = {"data": None, "container": None}
 
@@ -108,7 +109,7 @@ def _render_results_panel(container: ui.column, data: Any, *, title: str = "Resu
                     {"name": "ok", "label": "OK", "field": "ok"},
                     {"name": "expected", "label": "Förväntat", "field": "expected"},
                     {"name": "pred", "label": "Faktiskt", "field": "pred"},
-                    {"name": "preview", "label": "Preview", "field": "preview", "align": "left"},
+                    {"name": "preview", "label": "Förhandsvisning", "field": "preview", "align": "left"},
                 ],
                 rows=rows,
                 row_key="path",
@@ -164,16 +165,16 @@ def _render_audio_section(state: DashboardState, results_holder: dict[str, Any])
 
     with ui.row().classes("w-full gap-4 q-mb-md flex-wrap"):
         pack_select = ui.select(
-            label="Pack",
+            label="Paket",
             options=pack_opts,
             value=filter_state["pack"],
-        ).classes("min-w-[200px]")
+        ).classes("min-w-card")
         emotion_select = ui.select(
             label="Känsla",
             options=emotion_opts,
             value="",
-        ).classes("min-w-[160px]")
-        search_input = ui.input(label="Sök sökväg", placeholder="Actor_01").classes("min-w-[200px]")
+        ).classes("min-w-card")
+        search_input = ui.input(label="Sök sökväg", placeholder="Actor_01").classes("min-w-48")
         limit_input = ui.number(label="Max rader", value=50, min=5, max=500).classes("w-28")
 
     run_mode = ui.toggle(["Lokal", "API"], value="Lokal").classes("q-mb-sm")
@@ -181,14 +182,14 @@ def _render_audio_section(state: DashboardState, results_holder: dict[str, Any])
     with ui.expansion("ASR-inställningar", icon="tune").classes("w-full q-mb-md"):
         with ui.row().classes("gap-4 flex-wrap"):
             backend_input = ui.select(
-                label="Backend",
+                label="Motor",
                 options=["faster", "transformers", "whisperx"],
                 value=defaults["backend"],
             ).classes("w-40")
             model_input = ui.input(label="Modell", value=defaults["model"]).classes("w-48")
             language_input = ui.input(label="Språk", value="en").classes("w-24")
             device_input = ui.select(
-                label="Device",
+                label="Enhet",
                 options=["auto", "cpu", "cuda", "cuda:0", "mps"],
                 value=defaults["device"],
             ).classes("w-32")
@@ -226,7 +227,7 @@ def _render_audio_section(state: DashboardState, results_holder: dict[str, Any])
                     {"name": "emotion", "label": "Känsla", "field": "emotion"},
                     {"name": "expected", "label": "Förväntat", "field": "expected"},
                     {"name": "statement", "label": "Text", "field": "statement", "align": "left"},
-                    {"name": "actor", "label": "Actor", "field": "actor"},
+                    {"name": "actor", "label": "Talare", "field": "actor"},
                 ],
                 rows=rows,
                 row_key="id",
@@ -397,14 +398,14 @@ def _render_audio_section(state: DashboardState, results_holder: dict[str, Any])
         ui.button("Sentimentkedja", icon="psychology", on_click=_make_runner("sentiment"))
 
     ui.separator().classes("q-my-md")
-    ui.label("Batch-scenario").classes("text-subtitle2")
+    render_section_title("Batch-scenario", icon="science")
 
     scenario_select = ui.select(
         label="Scenario",
         options={o["value"]: o["label"] for o in _SCENARIO_OPTIONS},
         value="smoke",
     ).classes("w-64")
-    scenario_limit = ui.number(label="Limit", value=3, min=1, max=50).classes("w-24")
+    scenario_limit = ui.number(label="Max antal", value=3, min=1, max=50).classes("w-24")
     dry_run_cb = ui.checkbox("Dry-run (ingen ML)", value=False)
 
     async def run_scenario() -> None:
@@ -447,7 +448,7 @@ def _render_text_section(state: DashboardState) -> None:
     render_text_pipeline_section(state)
 
     ui.separator().classes("q-my-lg")
-    ui.label("Textsentiment (samples/examples.txt)").classes("text-subtitle1 q-mb-sm")
+    render_section_title("Textsentiment (samples/examples.txt)", icon="text_fields")
 
     examples = load_examples_txt()
     if not examples:
@@ -487,7 +488,7 @@ def _render_text_section(state: DashboardState) -> None:
                     first = results[0]
                     if isinstance(first, list) and first:
                         best = max(first, key=lambda x: float(x.get("score", 0)))
-                        ui.label(f"Label: {best.get('label')} (score {best.get('score', 0):.2f})").classes(
+                        ui.label(f"Sentiment: {best.get('label')} (poäng {best.get('score', 0):.2f})").classes(
                             "text-body1"
                         )
                     else:
@@ -505,7 +506,7 @@ def _render_text_section(state: DashboardState) -> None:
 
 
 def _render_system_section(state: DashboardState) -> None:
-    ui.label("Systemhälsa").classes("text-subtitle1 q-mb-sm")
+    render_section_title("Systemhälsa", icon="health_and_safety")
     ui.label(f"Projektrot: {repo_root()}").classes("text-caption")
     media_root = os.environ.get("API_MEDIA_ROOT")
     if media_root:
@@ -558,7 +559,7 @@ def _render_system_section(state: DashboardState) -> None:
 
 
 def _render_reports_section(results_holder: dict[str, Any]) -> None:
-    ui.label("Sparade ljudrapporter").classes("text-subtitle1 q-mb-sm")
+    render_section_title("Sparade ljudrapporter", icon="description")
     reports_container = ui.column().classes("w-full")
     preview_container = ui.column().classes("w-full q-mt-md")
 

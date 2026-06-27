@@ -24,15 +24,29 @@ from app.nicegui_dashboard.services.calls_filter import (
     search_table_reports,
 )
 from app.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
+from app.nicegui_dashboard.services.analytics_summary import (
+    build_calls_overview_rows,
+    compute_call_snapshot,
+    compute_portfolio_kpis,
+    overview_rows_to_csv_bytes,
+    summarize_emotions,
+)
+from app.nicegui_dashboard.services.report_ingest import (
+    append_report_to_state,
+    normalize_transcription_to_report,
+)
 from app.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
     build_escalation_figure,
     build_hot_topics_figure,
+    build_sentiment_distribution_figure,
     build_trajectory_figure,
     call_id_from_plotly_click,
+    compute_sentiment_distribution,
     extract_agent_trend_rows,
     extract_trajectory_points,
     list_call_options,
+    segment_index_from_trajectory_x,
 )
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, reports_to_table_rows
 from app.nicegui_dashboard.services.transcript_virtualizer import (
@@ -368,6 +382,29 @@ class TestChartData:
         fig = build_escalation_figure(rows)
         assert fig.data[0].y == (2,)
 
+    def test_build_sentiment_distribution_figure(self):
+        load_demo_reports.cache_clear()
+        reports = list(load_demo_reports())
+        dist = compute_sentiment_distribution(reports)
+        assert dist
+        fig = build_sentiment_distribution_figure(reports)
+        assert len(fig.data) == 1
+
+    def test_trajectory_figure_includes_rolling_average(self):
+        report = {
+            "call_id": "CALL-X",
+            "title": "Test",
+            "segments": [
+                {"start": i * 10, "text": f"seg {i}", "speaker": "Kund"}
+                for i in range(5)
+            ],
+            "sentiment_results": [
+                {"label": "neutral", "score": 0.5 - i * 0.1} for i in range(5)
+            ],
+        }
+        fig = build_trajectory_figure(report)
+        assert len(fig.data) >= 2
+
     def test_list_call_options(self):
         reports = [{"call_id": "CALL-001", "title": "Test"}]
         opts = list_call_options(reports)
@@ -376,6 +413,91 @@ class TestChartData:
     def test_call_id_from_plotly_click(self):
         event = {"points": [{"customdata": "CALL-002"}]}
         assert call_id_from_plotly_click(event) == "CALL-002"
+
+
+class TestAnalyticsSummary:
+    def test_compute_call_snapshot(self):
+        load_demo_reports.cache_clear()
+        report = list(load_demo_reports())[0]
+        snap = compute_call_snapshot(report)
+        assert snap["call_id"]
+        assert "segment_count" in snap
+        assert "trajectory_trend" in snap
+
+    def test_build_calls_overview_rows(self):
+        load_demo_reports.cache_clear()
+        reports = list(load_demo_reports())
+        rows = build_calls_overview_rows(reports)
+        assert len(rows) == len(reports)
+        assert "trend" in rows[0]
+
+    def test_compute_portfolio_kpis_extended(self):
+        load_demo_reports.cache_clear()
+        reports = list(load_demo_reports())
+        kpis = compute_portfolio_kpis(reports)
+        assert "unique_agents" in kpis
+        assert kpis["unique_agents"] >= 1
+
+    def test_summarize_emotions_empty(self):
+        assert summarize_emotions({"segments": []}) == []
+
+    def test_overview_rows_to_csv_bytes(self):
+        load_demo_reports.cache_clear()
+        rows = build_calls_overview_rows(list(load_demo_reports()))
+        data = overview_rows_to_csv_bytes(rows)
+        text = data.decode("utf-8-sig")
+        assert "ID" in text.splitlines()[0]
+        assert "Ämne" in text.splitlines()[0]
+        assert "CALL-001" in text
+        assert text.count("\n") >= len(rows)
+
+    def test_qa_problem_calls(self):
+        from app.nicegui_dashboard.services.analytics_summary import qa_problem_calls
+
+        reports = [
+            {
+                "call_id": "C1",
+                "title": "Fail",
+                "meta": {"agent": "A"},
+                "results": {"qa": {"passed": False, "overall_qa_score": 40}},
+            }
+        ]
+        problems = qa_problem_calls(reports)
+        assert len(problems) == 1
+        assert problems[0]["call_id"] == "C1"
+
+
+class TestReportIngest:
+    def test_normalize_transcription_to_report(self):
+        raw = {
+            "segments": [{"text": "Hej", "speaker": "Agent"}],
+            "filename": "test_call.wav",
+        }
+        report = normalize_transcription_to_report(raw)
+        assert report["call_id"] == "test_call"
+        assert len(report["segments"]) == 1
+
+    def test_append_report_to_state(self):
+        from app.nicegui_dashboard.state import DashboardState
+
+        state = DashboardState(reports=[])
+        cid = append_report_to_state(state, {"call_id": "NEW-1", "title": "Ny"})
+        assert cid == "NEW-1"
+        assert state.selected_call_id == "NEW-1"
+        assert len(state.reports) == 1
+
+
+class TestTrajectorySegmentIndex:
+    def test_segment_index_from_trajectory_x(self):
+        report = {
+            "segments": [
+                {"start": 0, "text": "a"},
+                {"start": 10, "text": "b"},
+                {"start": 20, "text": "c"},
+            ],
+            "sentiment_results": [{}, {}, {}],
+        }
+        assert segment_index_from_trajectory_x(report, 10.0) == 1
 
 
 class TestWebSocketReconnect:
@@ -482,6 +604,10 @@ class TestCallDetailHelpers:
         assert find_report(reports, "CALL-002")["call_id"] == "CALL-002"
         assert find_report(reports, None) is None
         assert find_report(reports, "MISSING") is None
+
+    def test_find_report_by_id_field(self):
+        reports = [{"id": "LEGACY-1", "title": "Legacy"}]
+        assert find_report(reports, "LEGACY-1")["title"] == "Legacy"
 
     def test_format_duration(self):
         assert _format_duration(125) == "2 min 5s"

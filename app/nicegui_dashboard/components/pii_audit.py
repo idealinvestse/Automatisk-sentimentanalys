@@ -10,6 +10,8 @@ from typing import Any
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.empty_state import render_empty_state
+
 
 def render_pii_audit_panel(results: dict[str, Any] | None = None) -> None:
     """Render PII audit panel showing redaction breakdown.
@@ -21,27 +23,23 @@ def render_pii_audit_panel(results: dict[str, Any] | None = None) -> None:
     pii_log = results.get("pii_redaction") if results else None
 
     with ui.card().classes("w-full"):
-        ui.label("PII-redaktion Audit").classes("text-h6 q-mb-sm")
+        ui.label("PII-redaktion – granskning").classes("text-h6 q-mb-sm")
         ui.separator()
 
         if not pii_log or not pii_log.get("events"):
-            _render_empty_state()
+            render_empty_state(
+                icon="shield",
+                title="Ingen PII-redaktion utförd",
+                hint=(
+                    "När profilens llm.anonymize_before_llm=True och PII hittas, "
+                    "visas detaljer här."
+                ),
+            )
             return
 
         _render_summary_stats(pii_log)
         _render_breakdown(pii_log)
         _render_sample_events(pii_log)
-
-
-def _render_empty_state() -> None:
-    """Empty state when no PII redaction data available."""
-    with ui.column().classes("items-center text-center q-pa-md"):
-        ui.icon("shield", size="3em").classes("text-grey-5")
-        ui.label("Ingen PII-redaktion utförd").classes("text-subtitle1 q-mt-sm")
-        ui.label(
-            "När profilens llm.anonymize_before_llm=True och PII hittas, "
-            "visas detaljer här."
-        ).classes("text-caption text-grey-6")
 
 
 def _render_summary_stats(pii_log: dict[str, Any]) -> None:

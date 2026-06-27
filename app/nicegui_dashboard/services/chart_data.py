@@ -10,7 +10,7 @@ from typing import Any
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from app.services.data_services import _get_sentiment_score, get_hot_topics
+from app.services.data_services import _get_sentiment_score, get_hot_topics, get_overall_sentiment
 
 _POSITIVE_HINTS = ("tack", "bra", "hjälp", "upplösning", "glad", "nöjd")
 _NEGATIVE_HINTS = ("arg", "less", "skandal", "frustrer", "upprörd", "chef", "arn")
@@ -138,23 +138,36 @@ def extract_agent_trend_rows(reports: list[dict[str, Any]]) -> list[dict[str, An
     return rows
 
 
+def _rolling_average(values: list[float], window: int = 3) -> list[float]:
+    if not values:
+        return []
+    out: list[float] = []
+    for i in range(len(values)):
+        start = max(0, i - window + 1)
+        chunk = values[start : i + 1]
+        out.append(round(sum(chunk) / len(chunk), 3))
+    return out
+
+
 def build_trajectory_figure(report: dict[str, Any] | None) -> go.Figure:
     """Line chart: customer sentiment over call timeline."""
     fig = go.Figure()
     if not report:
-        fig.update_layout(title="Sentiment trajectory – inget samtal valt", height=320)
+        fig.update_layout(title="Kundsentiment – inget samtal valt", height=320)
         return fig
 
     points = extract_trajectory_points(report)
     call_id = report.get("call_id", "?")
     title = report.get("title", call_id)
+    xs = [p["x"] for p in points]
+    ys = [p["y"] for p in points]
 
     fig.add_trace(
         go.Scatter(
-            x=[p["x"] for p in points],
-            y=[p["y"] for p in points],
+            x=xs,
+            y=ys,
             mode="lines+markers",
-            name="Kundsentiment",
+            name="Segment",
             customdata=[[p["call_id"], p.get("label", "")] for p in points],
             hovertemplate=(
                 "<b>%{customdata[0]}</b><br>"
@@ -164,17 +177,41 @@ def build_trajectory_figure(report: dict[str, Any] | None) -> go.Figure:
                 "<extra></extra>"
             ),
             line={"color": "#42a5f5", "width": 2},
-            marker={"size": 8},
+            marker={"size": 7},
         )
     )
+    if len(ys) >= 3:
+        fig.add_trace(
+            go.Scatter(
+                x=xs,
+                y=_rolling_average(ys),
+                mode="lines",
+                name="Glidande medel (3)",
+                line={"color": "#ffb74d", "width": 2, "dash": "dot"},
+                hovertemplate="Medel: %{y:.2f}<extra></extra>",
+            )
+        )
     fig.add_hline(y=0, line_dash="dot", line_color="gray", opacity=0.5)
+    if ys:
+        fig.add_hrect(y0=min(ys), y1=max(ys), fillcolor="rgba(66,165,245,0.08)", line_width=0)
     fig.update_layout(
-        title=f"Sentiment trajectory – {call_id}: {title}",
+        title=f"Kundsentiment – {call_id}",
         xaxis_title="Tid (s) / tur",
         yaxis_title="Sentiment (−1 … +1)",
         height=340,
         margin={"l": 40, "r": 20, "t": 50, "b": 40},
         hovermode="closest",
+        legend={"orientation": "h", "y": 1.15},
+    )
+    fig.add_annotation(
+        text=title,
+        xref="paper",
+        yref="paper",
+        x=0,
+        y=1.12,
+        showarrow=False,
+        font={"size": 11, "color": "#9e9e9e"},
+        align="left",
     )
     return fig
 
@@ -183,23 +220,25 @@ def build_agent_trends_figure(rows: list[dict[str, Any]]) -> go.Figure:
     """Dual-metric agent performance across calls."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     if not rows:
-        fig.update_layout(title="Agent trends – ingen data", height=340)
+        fig.update_layout(title="Agentprestanda – ingen data", height=340)
         return fig
 
     x_labels = [r["call_id"] for r in rows]
     meta = [[r["call_id"], r.get("agent", ""), r.get("title", "")] for r in rows]
+    empathy_vals = [r.get("empathy") for r in rows]
+    qa_vals = [r.get("qa") for r in rows]
     fig.add_trace(
         go.Scatter(
             x=x_labels,
-            y=[r.get("empathy") for r in rows],
+            y=empathy_vals,
             mode="lines+markers",
-            name="Empathy",
+            name="Empati",
             customdata=meta,
             hovertemplate=(
                 "<b>%{customdata[0]}</b><br>"
                 "%{customdata[2]}<br>"
                 "Agent: %{customdata[1]}<br>"
-                "Empathy: %{y:.2f}"
+                "Empati: %{y:.2f}"
                 "<extra></extra>"
             ),
             line={"color": "#66bb6a"},
@@ -207,10 +246,22 @@ def build_agent_trends_figure(rows: list[dict[str, Any]]) -> go.Figure:
         ),
         secondary_y=False,
     )
+    empathy_present = [v for v in empathy_vals if v is not None]
+    if empathy_present:
+        avg_emp = sum(empathy_present) / len(empathy_present)
+        fig.add_hline(
+            y=avg_emp,
+            line_dash="dash",
+            line_color="#66bb6a",
+            opacity=0.4,
+            annotation_text=f"Snitt empati {avg_emp:.2f}",
+            annotation_position="top left",
+            secondary_y=False,
+        )
     fig.add_trace(
         go.Scatter(
             x=x_labels,
-            y=[r.get("qa") for r in rows],
+            y=qa_vals,
             mode="lines+markers",
             name="QA-score",
             customdata=meta,
@@ -227,14 +278,14 @@ def build_agent_trends_figure(rows: list[dict[str, Any]]) -> go.Figure:
         secondary_y=True,
     )
     fig.update_layout(
-        title="Agent performance trends (empathy & QA per samtal)",
+        title="Agentprestanda per samtal (empati & QA)",
         height=360,
         margin={"l": 40, "r": 40, "t": 50, "b": 60},
         legend={"orientation": "h", "y": 1.12},
         hovermode="x unified",
     )
-    fig.update_yaxes(title_text="Empathy (0–1)", secondary_y=False, range=[0, 1])
-    fig.update_yaxes(title_text="QA-score", secondary_y=True, range=[0, 100])
+    fig.update_yaxes(title_text="Empati (0–1)", secondary_y=False, range=[0, 1])
+    fig.update_yaxes(title_text="QA-poäng", secondary_y=True, range=[0, 100])
     fig.update_xaxes(tickangle=-30)
     return fig
 
@@ -253,21 +304,24 @@ def build_hot_topics_figure(reports: list[dict[str, Any]]) -> go.Figure:
         topics = [{"topic": t, "volume": c} for t, c in categories.most_common(8)]
     fig = go.Figure()
     if not topics:
-        fig.update_layout(title="Hot topics – ingen data", height=300)
+        fig.update_layout(title="Heta ämnen – ingen data", height=300)
         return fig
 
+    total = sum(t["volume"] for t in topics) or 1
     fig.add_trace(
         go.Bar(
             x=[t["volume"] for t in topics],
             y=[t["topic"] for t in topics],
             orientation="h",
             marker={"color": "#ab47bc"},
-            customdata=[t["topic"] for t in topics],
-            hovertemplate="%{y}: %{x} samtal<extra></extra>",
+            customdata=[[t["topic"], round(t["volume"] / total * 100)] for t in topics],
+            hovertemplate="%{y}<br>%{x} samtal (%{customdata[1]}%)<extra></extra>",
+            text=[f"{t['volume']}" for t in topics],
+            textposition="outside",
         )
     )
     fig.update_layout(
-        title="Hot topics",
+        title="Heta ämnen – fördelning",
         xaxis_title="Antal samtal",
         height=300,
         margin={"l": 120, "r": 20, "t": 40, "b": 40},
@@ -279,7 +333,7 @@ def build_escalation_figure(rows: list[dict[str, Any]]) -> go.Figure:
     """Escalation / alert count per call."""
     fig = go.Figure()
     if not rows:
-        fig.update_layout(title="Escalation trends – ingen data", height=300)
+        fig.update_layout(title="Eskalering – ingen data", height=300)
         return fig
 
     colors = ["#ef5350" if r.get("escalation", 0) > 0 else "#90a4ae" for r in rows]
@@ -296,19 +350,96 @@ def build_escalation_figure(rows: list[dict[str, Any]]) -> go.Figure:
                 "<b>%{customdata[0]}</b><br>"
                 "%{customdata[1]}<br>"
                 "Agent: %{customdata[2]}<br>"
-                "Alerts: %{y}"
+                "Aviseringar: %{y}"
                 "<extra></extra>"
             ),
         )
     )
+    total_alerts = sum(r.get("escalation", 0) for r in rows)
     fig.update_layout(
-        title="Escalation & alerts per samtal",
-        yaxis_title="Antal alerts / risk",
+        title=f"Eskalering & aviseringar per samtal (totalt {total_alerts})",
+        yaxis_title="Antal aviseringar / risk",
         height=300,
         margin={"l": 40, "r": 20, "t": 40, "b": 60},
     )
     fig.update_xaxes(tickangle=-30)
     return fig
+
+
+def compute_sentiment_distribution(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Count calls per overall sentiment label."""
+    from collections import Counter
+
+    counter: Counter[str] = Counter()
+    for report in reports:
+        label = get_overall_sentiment(report).get("label", "neutral")
+        display = "Positiv" if "pos" in str(label).lower() else (
+            "Negativ" if "neg" in str(label).lower() else "Neutral"
+        )
+        counter[display] += 1
+    total = max(1, len(reports))
+    return [
+        {"label": lbl, "count": cnt, "pct": round(cnt / total * 100)}
+        for lbl, cnt in counter.most_common()
+    ]
+
+
+def build_sentiment_distribution_figure(reports: list[dict[str, Any]]) -> go.Figure:
+    """Pie chart of overall call sentiment distribution."""
+    dist = compute_sentiment_distribution(reports)
+    fig = go.Figure()
+    if not dist:
+        fig.update_layout(title="Sentimentfördelning – ingen data", height=280)
+        return fig
+
+    colors = {
+        "Positiv": "#66bb6a",
+        "Neutral": "#90a4ae",
+        "Negativ": "#ef5350",
+    }
+    fig.add_trace(
+        go.Pie(
+            labels=[d["label"] for d in dist],
+            values=[d["count"] for d in dist],
+            hole=0.45,
+            marker={"colors": [colors.get(d["label"], "#42a5f5") for d in dist]},
+            customdata=[[d["pct"]] for d in dist],
+            hovertemplate="%{label}<br>%{value} samtal (%{customdata[0]}%)<extra></extra>",
+            textinfo="label+percent",
+        )
+    )
+    fig.update_layout(
+        title="Sentimentfördelning (alla samtal i urval)",
+        height=280,
+        margin={"l": 20, "r": 20, "t": 40, "b": 20},
+        showlegend=False,
+    )
+    return fig
+
+
+def segment_index_from_trajectory_x(report: dict[str, Any] | None, x_value: float) -> int:
+    """Map Plotly trajectory x-coordinate to nearest segment index."""
+    if not report:
+        return 0
+    points = extract_trajectory_points(report)
+    if not points:
+        return 0
+    segments = report.get("segments") or []
+    if segments and points[0].get("x") == segments[0].get("start", 0):
+        best_idx = 0
+        best_dist = float("inf")
+        for i, seg in enumerate(segments):
+            start = float(seg.get("start", i * 10))
+            dist = abs(start - x_value)
+            if dist < best_dist:
+                best_dist = dist
+                best_idx = i
+        return best_idx
+    try:
+        idx = int(round(x_value))
+    except (TypeError, ValueError):
+        idx = 0
+    return max(0, min(idx, len(segments) - 1 if segments else idx))
 
 
 def call_id_from_plotly_click(event: dict[str, Any]) -> str | None:

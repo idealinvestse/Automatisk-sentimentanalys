@@ -9,6 +9,10 @@ from __future__ import annotations
 from nicegui import ui
 
 from app.nicegui_dashboard.components.agent_performance import render_agent_performance_tab
+from app.nicegui_dashboard.components.llm_judge_panel import (
+    render_llm_judge_panel,
+    render_llm_judge_summary,
+)
 from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
 from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
 from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
@@ -100,6 +104,41 @@ def _test_lab_page() -> None:
 @ui.page("/onboarding")
 def _onboarding_page() -> None:
     render_onboarding_banner()
+
+
+@ui.page("/llm-judge-empty")
+def _llm_judge_empty_page() -> None:
+    render_llm_judge_panel(None)
+
+
+@ui.page("/llm-judge-data")
+def _llm_judge_data_page() -> None:
+    render_llm_judge_panel(
+        {
+            "verdicts": [
+                {
+                    "segment_index": 2,
+                    "original_sentiment": "neutral",
+                    "original_confidence": 0.45,
+                    "judge_label": "negative",
+                    "judge_confidence": 0.82,
+                    "reasoning": "Kund nämner frustration.",
+                }
+            ]
+        }
+    )
+
+
+@ui.page("/llm-judge-summary")
+def _llm_judge_summary_page() -> None:
+    render_llm_judge_summary(
+        {
+            "verdicts": [
+                {"original_sentiment": "neutral", "judge_label": "negative"},
+                {"original_sentiment": "negative", "judge_label": "negative"},
+            ]
+        }
+    )
 
 
 @ui.page("/")

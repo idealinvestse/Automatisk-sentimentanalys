@@ -10,6 +10,8 @@ from typing import Any
 
 from nicegui import ui
 
+from app.nicegui_dashboard.components.empty_state import render_empty_state
+from app.nicegui_dashboard.components.hot_topic_wordcloud import render_hot_topics_wordcloud
 from app.nicegui_dashboard.services.fas4_data import (
     fetch_hot_topics,
     fetch_semantic_search,
@@ -27,6 +29,7 @@ def render_insights_section(
     state: DashboardState,
     *,
     on_call_select: Callable[[str], None] | None = None,
+    on_topic_select: Callable[[str], None] | None = None,
 ) -> Callable[[], None]:
     """Hot topics table + semantic search with ranked results."""
 
@@ -72,7 +75,7 @@ def render_insights_section(
     @ui.refreshable
     def insights_section() -> None:
         reports = _reports()
-        ui.label("💡 Insikter & Hot Topics").classes("text-subtitle1 q-mb-sm")
+        ui.label("💡 Insikter & heta ämnen").classes("text-subtitle1 q-mb-sm")
 
         if not reports:
             ui.label("Ingen data för insikter.").classes("text-caption")
@@ -81,17 +84,35 @@ def render_insights_section(
         ui.label(f"Hot topics: {topics_source['value']}").classes("text-caption q-mb-xs")
         rows = topics_cache["rows"]
         if rows:
-            ui.table(
+            topics_table = ui.table(
                 columns=[
                     {"name": "topic", "label": "Ämne", "field": "topic"},
                     {"name": "volume", "label": "Volym", "field": "volume"},
                     {"name": "sentiment", "label": "Sentiment", "field": "sentiment"},
                     {"name": "trend", "label": "Trend", "field": "trend"},
-                    {"name": "evidence", "label": "Evidence", "field": "evidence"},
+                    {"name": "evidence", "label": "Bevis", "field": "evidence"},
                 ],
                 rows=rows,
                 row_key="topic",
             ).classes("w-full")
+
+            def _topic_row_click(e: Any) -> None:
+                row = e.args[1] if len(e.args) > 1 else e.args[0]
+                topic = row.get("topic") if isinstance(row, dict) else None
+                if not topic:
+                    return
+                state.filters["topic_filter"] = str(topic).lower()
+                if on_topic_select:
+                    on_topic_select(str(topic))
+                ui.notify(f"Filter på ämne: {topic}", type="info")
+                insights_section.refresh()
+
+            topics_table.on("rowClick", _topic_row_click)
+            ui.label("Klicka på ett ämne för att filtrera samtal.").classes(
+                "text-caption text-grey q-mt-xs"
+            )
+            with ui.card().classes("w-full q-mt-sm"):
+                render_hot_topics_wordcloud(reports)
         elif topics_cache["loaded"]:
             ui.label("Inga hot topics hittades.").classes("text-caption")
         else:
@@ -157,7 +178,11 @@ def render_insights_section(
 
             with results_container:
                 if not hits:
-                    ui.label("Inga träffar.").classes("text-caption")
+                    render_empty_state(
+                        icon="search_off",
+                        title="Inga träffar",
+                        hint="Prova en annan sökfråga eller justera agentfiltret.",
+                    )
                 else:
                     for hit in hits:
                         if not isinstance(hit, dict):

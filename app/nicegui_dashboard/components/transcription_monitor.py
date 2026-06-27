@@ -6,13 +6,14 @@ Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect + polling fal
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from nicegui import ui
 
-from app.nicegui_dashboard.components.empty_state import render_empty_state
-from app.nicegui_dashboard.components.metric_card import metric_card
+from app.nicegui_dashboard.components.ui_primitives import metric_card, render_section_title
 from app.nicegui_dashboard.components.transcription_adhoc import render_adhoc_section
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_presets import (
@@ -31,6 +32,22 @@ from app.nicegui_dashboard.services.transcription_service import TranscriptionSt
 from app.nicegui_dashboard.settings import ws_status_label
 
 
+_LOG_LEVEL_SLOT = """
+<q-td :props="props">
+  <span :class="props.row.level_class">{{ props.value }}</span>
+</q-td>
+"""
+
+
+def _log_level_class(level: str) -> str:
+    lvl = str(level or "INFO").upper()
+    if lvl == "ERROR":
+        return "log-error"
+    if lvl == "WARNING":
+        return "log-warning"
+    return "log-info"
+
+
 def _fmt_elapsed(seconds: float | None) -> str:
     if seconds is None:
         return "—"
@@ -40,10 +57,20 @@ def _fmt_elapsed(seconds: float | None) -> str:
     return f"{secs}s"
 
 
+def _log_level_counts(logs: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"ERROR": 0, "WARNING": 0, "INFO": 0}
+    for entry in logs:
+        lvl = str(entry.get("level", "INFO")).upper()
+        if lvl in counts:
+            counts[lvl] += 1
+    return counts
+
+
 def render_transcription_tab(
     trans_state: TranscriptionState,
     *,
     api_client: NiceGUIAPIClient | None = None,
+    on_report_ready: Callable[[dict[str, Any]], None] | None = None,
 ) -> None:
     """Render full transcription monitor view."""
     render_adhoc_section(trans_state, api_client=api_client)
@@ -58,18 +85,23 @@ def render_transcription_tab(
     settings = trans_state.settings
     scan_cfg = trans_state.scan_config
 
+    render_section_title("Köstatus", icon="queue")
     with ui.row().classes("w-full gap-4 q-mb-md flex-wrap"):
         pending_metric = metric_card("Väntande", len(trans_state.queue))
         status_metric = metric_card("Status", "Pågår" if status.get("is_running") else "Vilande")
-        progress_metric = metric_card("Progress", f"{status.get('processed', 0)}/{status.get('total', 0)}")
+        progress_metric = metric_card("Framsteg", f"{status.get('processed', 0)}/{status.get('total', 0)}")
         api_metric = metric_card("API", "På" if status.get("use_api") else "Av")
         ws_metric = metric_card("WebSocket", ws_status_label(trans_state.ws_status))
         preset_metric = metric_card("Preset", trans_state.active_preset)
-        strategy_metric = metric_card("Strategi", trans_state.api_strategy)
 
+    render_section_title("Jobbinfo", icon="work")
     with ui.row().classes("w-full gap-4 q-mb-sm flex-wrap"):
         job_metric = metric_card("Job-ID", (status.get("active_job_id") or "—")[:8])
         elapsed_metric = metric_card("Tid", _fmt_elapsed(trans_state.elapsed_seconds()))
+
+    render_section_title("Senaste jobb", icon="info")
+    with ui.card().classes("w-full q-mb-sm"):
+        last_job_label = ui.label("—").classes("text-body2")
 
     progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes("w-full q-mb-sm")
     current_label = ui.label(f"Aktuell fil: {status.get('current_file') or '—'}").classes("text-caption")
@@ -84,7 +116,6 @@ def render_transcription_tab(
         api_metric.set_text("På" if s.get("use_api") else "Av")
         ws_metric.set_text(ws_status_label(trans_state.ws_status))
         preset_metric.set_text(trans_state.active_preset)
-        strategy_metric.set_text(trans_state.api_strategy)
         job_id = s.get("active_job_id") or ""
         job_metric.set_text(job_id[:8] if job_id else "—")
         elapsed_metric.set_text(_fmt_elapsed(trans_state.elapsed_seconds()))
@@ -100,6 +131,16 @@ def render_transcription_tab(
             )
         else:
             api_limit_hint.set_text("")
+        if trans_state.logs:
+            last = trans_state.logs[-1]
+            msg = str(last.get("msg", "—"))
+            proc = s.get("processed", 0)
+            total = s.get("total", 0)
+            if total:
+                msg = f"{msg} ({proc}/{total})"
+            last_job_label.set_text(msg)
+        else:
+            last_job_label.set_text("Ingen logg ännu")
 
     def _update_poll_timer() -> None:
         poll_timer.active = trans_state.needs_polling_fallback()
@@ -142,13 +183,13 @@ def render_transcription_tab(
         ui.notify(f"Skannade mapp – {n} filer i kön")
 
     with ui.row().classes("gap-2 q-mb-md flex-wrap"):
-        ui.button("▶️ Start", color="primary", on_click=start_batch)
-        ui.button("⏸️ Paus", on_click=pause_batch)
-        ui.button("▶️ Återuppta", on_click=resume_batch)
-        ui.button("⏹️ Stopp", color="negative", on_click=stop_batch)
-        ui.button("🛑 Avbryt jobb", color="negative", on_click=cancel_batch).props("outline")
-        ui.button("🔌 Reconnect WS", on_click=reconnect_ws).props("outline")
-        ui.button("📂 Skanna mapp", on_click=scan_folder).props("outline")
+        ui.button("Starta", icon="play_arrow", color="primary", on_click=start_batch)
+        ui.button("Pausa", icon="pause", on_click=pause_batch)
+        ui.button("Återuppta", icon="play_arrow", on_click=resume_batch)
+        ui.button("Stoppa", icon="stop", color="negative", on_click=stop_batch)
+        ui.button("Avbryt jobb", icon="cancel", color="negative", on_click=cancel_batch).props("outline")
+        ui.button("Återanslut WS", icon="cable", on_click=reconnect_ws).props("outline")
+        ui.button("Skanna mapp", icon="folder_open", on_click=scan_folder).props("outline")
 
     # --- Presets ---
     with ui.expansion("📋 Presets", value=False).classes("w-full"):
@@ -391,112 +432,125 @@ def render_transcription_tab(
             ),
         ).classes("w-full")
 
-    ui.label("Väntande filer (persistent kö)").classes("text-subtitle2 q-mt-md")
-    queue_table = ui.table(
-        columns=[
-            {"name": "name", "label": "Fil", "field": "name", "align": "left"},
-            {"name": "path", "label": "Sökväg", "field": "path", "align": "left"},
-            {"name": "size_kb", "label": "KB", "field": "size_kb", "align": "right"},
-            {"name": "modified", "label": "Ändrad", "field": "modified", "align": "left"},
-        ],
-        rows=[],
-        row_key="path",
-        selection="single",
-        pagination={"rowsPerPage": 10},
-    ).classes("w-full q-mb-sm")
+    with ui.card().classes("w-full q-mt-md"):
+        render_section_title("Väntande filer (persistent kö)", icon="folder")
+        queue_table = ui.table(
+            columns=[
+                {"name": "name", "label": "Fil", "field": "name", "align": "left"},
+                {"name": "path", "label": "Sökväg", "field": "path", "align": "left"},
+                {"name": "size_kb", "label": "KB", "field": "size_kb", "align": "right"},
+                {"name": "modified", "label": "Ändrad", "field": "modified", "align": "left"},
+            ],
+            rows=[],
+            row_key="path",
+            selection="single",
+            pagination={"rowsPerPage": 10},
+        ).classes("w-full q-mb-sm")
 
-    def refresh_queue() -> None:
-        rows = trans_state.queue_rows()
-        queue_table.rows = rows
-        queue_table.update()
+        def refresh_queue() -> None:
+            rows = trans_state.queue_rows()
+            queue_table.rows = rows
+            queue_table.update()
 
-    def remove_selected_queue() -> None:
-        selected = queue_table.selected
-        if not selected:
-            ui.notify("Välj en rad i kön", type="warning")
-            return
-        for row in selected:
-            trans_state.remove_from_queue(row.get("path", ""))
-        refresh_queue()
-        ui.notify("Borttagen från kön")
+        def remove_selected_queue() -> None:
+            selected = queue_table.selected
+            if not selected:
+                ui.notify("Välj en rad i kön", type="warning")
+                return
+            for row in selected:
+                trans_state.remove_from_queue(row.get("path", ""))
+            refresh_queue()
+            ui.notify("Borttagen från kön")
 
-    def export_queue() -> None:
-        data = json.dumps(trans_state.queue_rows(), indent=2, ensure_ascii=False)
-        ui.download(data.encode("utf-8"), "transcription_queue.json")
+        def export_queue() -> None:
+            data = json.dumps(trans_state.queue_rows(), indent=2, ensure_ascii=False)
+            ui.download(data.encode("utf-8"), "transcription_queue.json")
 
-    with ui.row().classes("gap-2 q-mb-md"):
-        ui.button("Ta bort vald", on_click=remove_selected_queue).props("outline")
-        ui.button("Rensa kö", on_click=lambda: (trans_state.clear_queue(), refresh_queue())).props("outline")
-        ui.button("Exportera kö", on_click=export_queue).props("outline")
+        with ui.row().classes("gap-2 q-mb-sm"):
+            ui.button("Ta bort vald", on_click=remove_selected_queue).props("outline")
+            ui.button("Rensa kö", on_click=lambda: (trans_state.clear_queue(), refresh_queue())).props("outline")
+            ui.button("Exportera kö", on_click=export_queue).props("outline")
 
-    ui.label("📜 Händelselogg (live)").classes("text-subtitle2 q-mt-md")
+    with ui.card().classes("w-full q-mt-md"):
+        render_section_title("Händelselogg (live)", icon="history")
 
-    log_table = ui.table(
-        columns=[
-            {"name": "ts", "label": "Tid", "field": "ts", "align": "left"},
-            {"name": "level", "label": "Nivå", "field": "level", "align": "left"},
-            {"name": "source", "label": "Källa", "field": "source", "align": "left"},
-            {"name": "file", "label": "Fil", "field": "file", "align": "left"},
-            {"name": "msg", "label": "Meddelande", "field": "msg", "align": "left"},
-        ],
-        rows=[],
-        row_key="ts",
-        pagination={"rowsPerPage": 0},
-    ).classes("w-full max-h-64")
+        with ui.row().classes("w-full gap-4 flex-wrap q-mb-sm"):
+            err_metric = metric_card("ERROR", 0, color="negative", size="compact")
+            warn_metric = metric_card("WARNING", 0, color="warning", size="compact")
+            info_metric = metric_card("INFO", 0, color="primary", size="compact")
 
-    log_filters: dict[str, Any] = {"level": "", "source": "", "search": "", "limit": 100}
+        log_table = ui.table(
+            columns=[
+                {"name": "ts", "label": "Tid", "field": "ts", "align": "left"},
+                {"name": "level", "label": "Nivå", "field": "level", "align": "left"},
+                {"name": "source", "label": "Källa", "field": "source", "align": "left"},
+                {"name": "file", "label": "Fil", "field": "file", "align": "left"},
+                {"name": "msg", "label": "Meddelande", "field": "msg", "align": "left"},
+            ],
+            rows=[],
+            row_key="ts",
+            pagination={"rowsPerPage": 0},
+        ).classes("w-full max-h-64")
+        log_table.add_slot("body-cell-level", _LOG_LEVEL_SLOT)
 
-    def refresh_log() -> None:
-        entries = trans_state.filtered_logs(
-            level=log_filters["level"] or None,
-            source=log_filters["source"] or None,
-            search=log_filters["search"] or "",
-            limit=int(log_filters["limit"] or 100),
-        )
-        log_table.rows = [
-            {
-                "ts": e.get("ts", ""),
-                "level": e.get("level", "INFO"),
-                "source": e.get("source", "local"),
-                "file": e.get("file") or "",
-                "msg": e.get("msg", ""),
-            }
-            for e in entries
-        ]
-        log_table.update()
+        log_filters: dict[str, Any] = {"level": "", "source": "", "search": "", "limit": 100}
 
-    with ui.row().classes("w-full gap-2 flex-wrap q-mb-sm"):
-        ui.select(
-            options={"": "Alla", "INFO": "INFO", "WARNING": "WARNING", "ERROR": "ERROR"},
-            label="Nivå",
-            value="",
-            on_change=lambda e: (log_filters.update({"level": e.value or ""}), refresh_log()),
-        ).classes("w-32")
-        ui.select(
-            options={"": "Alla", "local": "Lokal", "ws": "WebSocket"},
-            label="Källa",
-            value="",
-            on_change=lambda e: (log_filters.update({"source": e.value or ""}), refresh_log()),
-        ).classes("w-32")
-        ui.input(
-            "Sök",
-            value="",
-            on_change=lambda e: (log_filters.update({"search": e.value or ""}), refresh_log()),
-        ).classes("flex-grow")
-        ui.select(
-            options={50: "50", 100: "100", 200: "200"},
-            label="Visa",
-            value=100,
-            on_change=lambda e: (log_filters.update({"limit": e.value or 100}), refresh_log()),
-        ).classes("w-24")
+        def refresh_log() -> None:
+            entries = trans_state.filtered_logs(
+                level=log_filters["level"] or None,
+                source=log_filters["source"] or None,
+                search=log_filters["search"] or "",
+                limit=int(log_filters["limit"] or 100),
+            )
+            log_table.rows = [
+                {
+                    "ts": e.get("ts", ""),
+                    "level": e.get("level", "INFO"),
+                    "level_class": _log_level_class(e.get("level", "INFO")),
+                    "source": e.get("source", "local"),
+                    "file": e.get("file") or "",
+                    "msg": e.get("msg", ""),
+                }
+                for e in entries
+            ]
+            log_table.update()
+            counts = _log_level_counts(trans_state.logs)
+            err_metric.set_text(str(counts["ERROR"]))
+            warn_metric.set_text(str(counts["WARNING"]))
+            info_metric.set_text(str(counts["INFO"]))
 
-    def export_log() -> None:
-        data = json.dumps(trans_state.logs, indent=2, ensure_ascii=False)
-        ui.download(data.encode("utf-8"), f"transcription_log_{datetime.now():%Y%m%d_%H%M%S}.json")
+        with ui.row().classes("w-full gap-2 flex-wrap q-mb-sm"):
+            ui.select(
+                options={"": "Alla", "INFO": "INFO", "WARNING": "WARNING", "ERROR": "ERROR"},
+                label="Nivå",
+                value="",
+                on_change=lambda e: (log_filters.update({"level": e.value or ""}), refresh_log()),
+            ).classes("w-32")
+            ui.select(
+                options={"": "Alla", "local": "Lokal", "ws": "WebSocket"},
+                label="Källa",
+                value="",
+                on_change=lambda e: (log_filters.update({"source": e.value or ""}), refresh_log()),
+            ).classes("w-32")
+            ui.input(
+                "Sök",
+                value="",
+                on_change=lambda e: (log_filters.update({"search": e.value or ""}), refresh_log()),
+            ).classes("flex-grow")
+            ui.select(
+                options={50: "50", 100: "100", 200: "200"},
+                label="Visa",
+                value=100,
+                on_change=lambda e: (log_filters.update({"limit": e.value or 100}), refresh_log()),
+            ).classes("w-24")
 
-    with ui.row().classes("gap-2 q-mt-sm q-mb-md"):
-        ui.button("Rensa logg", on_click=lambda: (trans_state.clear_logs(), refresh_log())).props("outline")
-        ui.button("Exportera logg", on_click=export_log).props("outline")
+        def export_log() -> None:
+            data = json.dumps(trans_state.logs, indent=2, ensure_ascii=False)
+            ui.download(data.encode("utf-8"), f"transcription_log_{datetime.now():%Y%m%d_%H%M%S}.json")
+
+        with ui.row().classes("gap-2 q-mt-sm"):
+            ui.button("Rensa logg", on_click=lambda: (trans_state.clear_logs(), refresh_log())).props("outline")
+            ui.button("Exportera logg", on_click=export_log).props("outline")
 
     def _sync_ui_from_state() -> None:
         nonlocal settings, scan_cfg, status
@@ -510,9 +564,27 @@ def render_transcription_tab(
         refresh_queue()
         _update_poll_timer()
 
-    def on_push_event(event_type: str, _payload: dict) -> None:
-        if event_type in {"log", "progress", "status", "done", "ws", "log_clear", "queue"}:
+    last_reported: dict[str, Any] = {"key": None}
+
+    def on_push_event(event_type: str, payload: dict) -> None:
+        if event_type in {"log", "progress", "status", "done", "ws", "log_clear", "queue", "adhoc"}:
             refresh_all()
+        if on_report_ready and event_type == "adhoc":
+            result = payload.get("result")
+            if result and not payload.get("running"):
+                report_key = (
+                    payload.get("filename")
+                    or str(id(result))
+                )
+                if last_reported["key"] != report_key:
+                    last_reported["key"] = report_key
+                    from app.nicegui_dashboard.services.report_ingest import (
+                        normalize_transcription_to_report,
+                    )
+
+                    stem = Path(str(payload.get("filename") or "")).stem or None
+                    report = normalize_transcription_to_report(result, call_id=stem)
+                    on_report_ready(report)
 
     trans_state.add_listener(on_push_event)
 

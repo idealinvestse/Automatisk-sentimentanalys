@@ -140,6 +140,27 @@ def render_hot_topics_wordcloud(reports: list[dict[str, Any]] | dict[str, Any] |
         )
         return
 
-    fig = build_hot_topics_treemap(reports)
-    plot = ui.plotly(fig).classes("w-full")
-    plot.props("style='height: 260px'")
+    total_weight = sum(t["weight"] for t in topics) or 1.0
+    with ui.row().classes("w-full gap-4 flex-wrap"):
+        with ui.column().classes("flex-1 min-w-card"):
+            fig = build_hot_topics_treemap(reports)
+            ui.plotly(fig).classes("w-full chart-container")
+        with ui.column().classes("flex-1 min-w-card"):
+            ui.label("Ämnesfrekvens").classes("text-subtitle2 q-mb-xs")
+            ui.table(
+                columns=[
+                    {"name": "word", "label": "Ämne", "field": "word", "align": "left"},
+                    {"name": "weight", "label": "Frekvens", "field": "weight", "align": "left"},
+                    {"name": "share", "label": "Andel", "field": "share", "align": "left"},
+                ],
+                rows=[
+                    {
+                        "word": t["word"],
+                        "weight": round(t["weight"], 1),
+                        "share": f"{round(t['weight'] / total_weight * 100)}%",
+                    }
+                    for t in topics[:12]
+                ],
+                row_key="word",
+                pagination={"rowsPerPage": 6},
+            ).classes("w-full")

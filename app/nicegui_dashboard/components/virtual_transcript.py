@@ -35,12 +35,15 @@ def _segment_time_label(seg: dict[str, Any]) -> str:
 
 
 def _sentiment_css(seg: dict[str, Any]) -> str:
+    classes: list[str] = []
+    if seg.get("is_negative_peak"):
+        classes.append("segment-negative-peak")
     sent = str(seg.get("sentiment_label", "neutral")).lower()
     if "neg" in sent:
-        return "text-negative"
-    if "pos" in sent:
-        return "text-positive"
-    return ""
+        classes.append("text-negative")
+    elif "pos" in sent:
+        classes.append("text-positive")
+    return " ".join(classes)
 
 
 def _timeline_caption_text(selected_idx: int, total: int, *, virtual: bool) -> str:
@@ -74,7 +77,7 @@ def render_timeline(
         "text-caption q-mb-xs"
     )
 
-    scroll = ui.scroll_area().classes("w-full").style("height: 12rem")
+    scroll = ui.scroll_area().classes("w-full timeline-panel")
 
     @ui.refreshable
     def timeline_body() -> None:
@@ -201,7 +204,7 @@ def render_transcript_panel(
             virt_state["tx_end"] = new_end
             transcript_body.refresh()
 
-    scroll = ui.scroll_area(on_scroll=on_transcript_scroll).classes("w-full").style("height: 18rem")
+    scroll = ui.scroll_area(on_scroll=on_transcript_scroll).classes("w-full transcript-panel")
     with scroll:
         transcript_body()
 
