@@ -1,0 +1,15 @@
+# Dynamic analyzer registration (allowlisted modules only).
+# Built-in analyzers are auto-discovered from src/analysis/; this file adds plugins.
+
+allowlist_prefixes:
+  - src.analysis.
+  - sentiment_analyzers.
+
+builtin: []  # empty = rely on autodiscovery
+
+plugins: []
+# Example (disabled by default):
+#  - module: my_company_plugin.analyzers
+#    class: BankComplianceAnalyzer
+#    name: bank_compliance
+#    enabled: false

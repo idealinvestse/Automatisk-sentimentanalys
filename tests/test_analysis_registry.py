@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.analysis.base import Analyzer
-from src.analysis.registry import _ANALYZER_REGISTRY, register_analyzer, run_analyzers
+from src.analysis.registry import _ANALYZER_REGISTRY, ensure_analyzers_loaded, register_analyzer, run_analyzers
 from src.core.errors import AnalysisError
 from src.core.models import AnalysisContext
 
@@ -13,10 +13,9 @@ from src.core.models import AnalysisContext
 @pytest.fixture(autouse=True)
 def clean_registry():
     """Fixture to ensure the global registry is cleared of test-specific mock analyzers."""
-    # Save a copy of the registry keys/values
+    ensure_analyzers_loaded()
     saved_registry = dict(_ANALYZER_REGISTRY)
     yield
-    # Restore the registry to its original state after the test
     _ANALYZER_REGISTRY.clear()
     _ANALYZER_REGISTRY.update(saved_registry)
 

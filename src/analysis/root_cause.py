@@ -86,4 +86,3 @@ class RootCauseInsightAnalyzer(Analyzer):
             "evidence_examples": evidence_list[:5],
             "overall_risk": "high" if sorted_causes[0][1] > 2 else "medium",
         }
-"

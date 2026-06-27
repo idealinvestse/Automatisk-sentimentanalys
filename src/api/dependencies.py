@@ -73,6 +73,7 @@ def create_pipeline(
     llm_api_key: str | None = None,
     provider: str = "openrouter",
     groq_eu_residency: bool = False,
+    async_analyzers: bool = False,
 ) -> CallAnalysisPipeline:
     return CallAnalysisPipeline(
         sentiment_model=sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
@@ -85,6 +86,7 @@ def create_pipeline(
         provider=provider,
         groq_eu_residency=groq_eu_residency,
         cache=cache,
+        async_analyzers=async_analyzers,
     )
 
 

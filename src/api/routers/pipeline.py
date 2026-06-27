@@ -71,6 +71,7 @@ async def analyze_pipeline(
     logger.info("Running full pipeline on %d segment(s)", len(req.segments))
     pipe = create_pipeline(
         cache=cache,
+        profile=req.profile,
         sentiment_model=req.sentiment_model,
         device=req.device,
         use_mistral_llm=req.use_mistral_llm,
@@ -79,10 +80,15 @@ async def analyze_pipeline(
         llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
         provider=req.provider,
         groq_eu_residency=req.groq_eu_residency,
+        async_analyzers=req.async_analyzers,
     )
 
     async def _do() -> PipelineResponse:
-        report = await asyncio.to_thread(pipe.analyze_segments, req.segments)
+        report = await asyncio.to_thread(
+            pipe.analyze_segments,
+            req.segments,
+            req.selected_analyzers,
+        )
         return PipelineResponse(
             sentiment_results=report.sentiment_results,
             intent_results=[

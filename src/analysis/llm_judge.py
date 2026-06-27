@@ -25,6 +25,7 @@ Config keys (all optional):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -358,3 +359,11 @@ class LLMJudgeAnalyzer(Analyzer):
             (time.time() - start_time) * 1000,
         )
         return result
+
+    async def analyze_async(self, ctx: AnalysisContext) -> LLMJudgeResult:
+        """Async entry point for parallel registry execution (I/O-bound LLM calls)."""
+        return await asyncio.to_thread(self.analyze, ctx)
+
+    async def analyze_async(self, ctx: AnalysisContext) -> LLMJudgeResult:
+        """Async entry point for parallel registry execution (I/O-bound LLM calls)."""
+        return await asyncio.to_thread(self.analyze, ctx)

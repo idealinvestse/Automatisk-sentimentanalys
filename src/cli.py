@@ -84,6 +84,51 @@ def _parse_asr_hotwords(
     return None
 
 
+@app.command("analyzers-graph")
+def analyzers_graph_cmd(
+    profile: str = typer.Option(
+        "callcenter",
+        "--profile",
+        help="Highlight analyzers active for this profile",
+    ),
+    fmt: str = typer.Option(
+        "text",
+        "--format",
+        help="Output format: text | mermaid | json",
+    ),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional file path to write graph output",
+    ),
+) -> None:
+    """Show registered analyzer dependency graph (debugging / documentation)."""
+    from .analysis.graph import build_dependency_graph, to_json, to_mermaid, to_text_summary
+    from .analysis.registry import ensure_analyzers_loaded, get_analyzer_registry, resolve_analyzers_for_profile
+
+    ensure_analyzers_loaded()
+    registry = get_analyzer_registry()
+    selected = resolve_analyzers_for_profile(profile)
+    highlight = set(selected) if selected else set(registry.keys())
+    graph = build_dependency_graph(registry, selected=highlight)
+
+    if fmt == "mermaid":
+        content = to_mermaid(graph, highlight=highlight)
+    elif fmt == "json":
+        content = to_json(graph)
+    else:
+        content = to_text_summary(graph)
+        if selected:
+            content = f"Profile: {profile}\nSelected: {', '.join(selected)}\n\n" + content
+
+    if output:
+        Path(output).write_text(content, encoding="utf-8")
+        console.print(f"[green]Wrote graph to {output}[/green]")
+    else:
+        console.print(content)
+
+
 @app.command("sentiment")
 def sentiment_cmd(
     text: str | None = typer.Option(None, help="Analysera en enskild text"),

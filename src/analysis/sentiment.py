@@ -39,7 +39,9 @@ class SentimentAnalyzer(Analyzer):
 
     def _get_pipeline(self) -> SentimentPipeline:
         if self._pipeline is None:
-            self._pipeline = SentimentPipeline(
+            from .resources import get_pool
+
+            self._pipeline = get_pool().get_sentiment_pipeline(
                 model_name=self.model_name,
                 device=self.device,
                 return_all_scores=self.return_all_scores,

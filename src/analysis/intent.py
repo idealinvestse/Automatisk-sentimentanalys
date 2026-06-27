@@ -30,7 +30,9 @@ class IntentAnalyzer(Analyzer):
 
     def _get_classifier(self) -> IntentClassifier:
         if self._classifier is None:
-            self._classifier = IntentClassifier(backend=self.backend)
+            from .resources import get_pool
+
+            self._classifier = get_pool().get_intent_classifier(backend=self.backend)
         return self._classifier
 
     def analyze(self, ctx: AnalysisContext) -> list[tuple[str, float]]:

@@ -9,7 +9,7 @@ import logging
 import time
 from typing import Any
 
-from .analysis import run_analyzers
+from .analysis import resolve_analyzers_for_profile, run_analyzers
 from .core.models import AnalysisContext, CallAnalysisReport, Segment
 from .llm.mistral_analyzer import ConversationMistralAnalyzer
 from .transcription import get_transcriber
@@ -60,6 +60,7 @@ class CallAnalysisPipeline:
         provider: str = "openrouter",
         groq_eu_residency: bool = False,
         cache: Any | None = None,
+        async_analyzers: bool = False,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -75,6 +76,7 @@ class CallAnalysisPipeline:
         self.llm_api_key = llm_api_key
         self.provider = provider
         self.groq_eu_residency = groq_eu_residency
+        self.async_analyzers = async_analyzers
 
         # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
         try:
@@ -367,10 +369,15 @@ class CallAnalysisPipeline:
             segments=transcript.segments,
         )
 
+        resolved_selected = resolve_analyzers_for_profile(
+            self.profile,
+            explicit_selected=selected_analyzers,
+        )
         results = run_analyzers(
             ctx,
-            selected=selected_analyzers,
+            selected=resolved_selected,
             analyzer_configs=self._build_analyzer_configs(),
+            async_mode=self.async_analyzers,
         )
 
         # Attach early PII redaction log (if any) to results for audit / downstream (Fas 4.4.1)
@@ -590,10 +597,15 @@ class CallAnalysisPipeline:
             segments=typed_segments,
         )
 
+        resolved_selected = resolve_analyzers_for_profile(
+            self.profile,
+            explicit_selected=selected_analyzers,
+        )
         results = run_analyzers(
             ctx,
-            selected=selected_analyzers,
+            selected=resolved_selected,
             analyzer_configs=self._build_analyzer_configs(),
+            async_mode=self.async_analyzers,
         )
 
         # Attach early PII redaction log (segments path)

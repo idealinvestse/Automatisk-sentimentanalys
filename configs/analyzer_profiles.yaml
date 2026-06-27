@@ -1,0 +1,85 @@
+# Profile-driven analyzer activation (merged into profiles.py at load time).
+# explicit selected_analyzers in API/CLI overrides these defaults.
+
+callcenter:
+  default_selected:
+    - sentiment
+    - intent
+    - role
+    - emotion
+    - trajectory
+    - negation
+    - customer_effort
+    - empathy
+    - compliance_risk
+    - insights
+    - active_listening
+  optional:
+    - llm_judge
+    - upsell_opportunity
+    - resolution_probability
+    - root_cause
+    - predictive
+  disabled:
+    - spoken_normalizer
+
+call:
+  default_selected:
+    - sentiment
+    - intent
+    - role
+    - emotion
+    - trajectory
+    - summary
+    - topics
+  disabled:
+    - llm_judge
+
+sales:
+  default_selected:
+    - sentiment
+    - intent
+    - role
+    - upsell_opportunity
+    - resolution_probability
+    - customer_effort
+  disabled:
+    - compliance_risk
+
+complaint:
+  default_selected:
+    - sentiment
+    - intent
+    - trajectory
+    - negation
+    - empathy
+    - root_cause
+    - compliance_risk
+    - active_listening
+    - customer_effort
+  disabled:
+    - upsell_opportunity
+
+teknisk_support:
+  default_selected:
+    - sentiment
+    - intent
+    - topics
+    - summary
+    - root_cause
+  disabled:
+    - upsell_opportunity
+    - llm_judge
+
+support:
+  default_selected:
+    - sentiment
+    - intent
+    - role
+    - customer_effort
+    - empathy
+    - resolution_probability
+    - insights
+
+default:
+  default_selected: null  # null = run all registered analyzers (backward compatible)

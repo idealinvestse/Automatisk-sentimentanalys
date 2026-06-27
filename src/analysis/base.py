@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from ..core.models import AnalysisContext
 
 
+@runtime_checkable
 class Analyzer(Protocol):
     """Protocol for conversation and text analyzers."""
 

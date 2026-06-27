@@ -81,4 +81,3 @@ class ResolutionProbabilityPredictor(Analyzer):
                 "empathy_impact": emp,
             }
         }
-"

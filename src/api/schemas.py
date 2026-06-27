@@ -184,6 +184,18 @@ class PipelineRequest(BaseModel):
         ...,
         description="ASR segments with 'text' and optionally 'speaker' keys",
     )
+    profile: str = Field(
+        "default",
+        description="Analysis profile (callcenter, sales, complaint, support, teknisk_support, ...)",
+    )
+    selected_analyzers: list[str] | None = Field(
+        None,
+        description="Explicit analyzer subset (overrides profile default_selected; deps auto-resolved)",
+    )
+    async_analyzers: bool = Field(
+        False,
+        description="Run independent analyzers in parallel within dependency levels",
+    )
     sentiment_model: str | None = Field(None, description="Optional sentiment model override")
     device: str = Field("auto")
     # LLM deep analysis (Fas 3)
