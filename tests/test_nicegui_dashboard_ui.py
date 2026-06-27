@@ -8,12 +8,11 @@ from __future__ import annotations
 import pytest
 from nicegui import ui
 
-from tests.fixtures import nicegui_test_pages
+_NICEGUI_MAIN = "tests/fixtures/nicegui_test_pages.py"
 
-_PAGES = nicegui_test_pages
+pytestmark = pytest.mark.nicegui_main_file(_NICEGUI_MAIN)
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_overview_renders_kpi_and_table(user) -> None:
     await user.open("/overview")
     await user.should_see("Översikt")
@@ -22,7 +21,6 @@ async def test_overview_renders_kpi_and_table(user) -> None:
     await user.should_see(ui.table)
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_overview_search_and_pagination_controls(user) -> None:
     await user.open("/overview")
     await user.should_see("Sök samtal")
@@ -30,14 +28,12 @@ async def test_overview_search_and_pagination_controls(user) -> None:
     await user.should_see("Nästa")
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_overview_search_shows_no_hits_empty_state(user) -> None:
     await user.open("/overview-search")
     await user.should_see("Inga träffar")
     await user.should_see("__no_match_xyz__")
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_call_detail_renders_transcript(user) -> None:
     await user.open("/call-detail")
     await user.should_see("Samtalsdetalj")
@@ -45,14 +41,12 @@ async def test_call_detail_renders_transcript(user) -> None:
     await user.should_see("Strukturerade insikter")
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_call_detail_large_virtualized(user) -> None:
     await user.open("/call-detail-large")
     await user.should_see("virtualiserad")
     await user.should_see("Virtualiserat transkript")
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_transcription_monitor_renders(user) -> None:
     await user.open("/transcription")
     await user.should_see("Transkriberingskö")
@@ -62,7 +56,6 @@ async def test_transcription_monitor_renders(user) -> None:
     await user.should_see(ui.table)
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_analytics_tab_renders_charts(user) -> None:
     await user.open("/analytics")
     await user.should_see("Analys & Trender")
@@ -71,7 +64,6 @@ async def test_analytics_tab_renders_charts(user) -> None:
     await user.should_see("Heta ämnen")
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_test_lab_renders_sections(user) -> None:
     await user.open("/test-lab")
     await user.should_see("Testlabb")
@@ -84,7 +76,6 @@ async def test_test_lab_renders_sections(user) -> None:
     await user.should_see(ui.table)
 
 
-@pytest.mark.module_under_test(_PAGES)
 async def test_onboarding_banner_renders(user) -> None:
     await user.open("/onboarding")
     await user.should_see("Kom igång")

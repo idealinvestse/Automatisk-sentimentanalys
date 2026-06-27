@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .audio_catalog import load_catalog
-from .audio_models import SampleFilter, ScenarioId
+from .audio_models import SampleFilter
 from .audio_runner import run_scenario
 from .audio_scenarios import SCENARIO_IDS
 
@@ -139,7 +139,7 @@ def audio_smoke(
 
 @audio_app.command("run")
 def audio_run(
-    scenario: ScenarioId = typer.Option("asr", "--scenario"),
+    scenario: str = typer.Option("asr", "--scenario", help=f"Scenario: {', '.join(SCENARIO_IDS)}"),
     pack: str | None = typer.Option(None, "--pack"),
     tags: str | None = typer.Option(None, "--tags"),
     emotions: str | None = typer.Option(None, "--emotions"),

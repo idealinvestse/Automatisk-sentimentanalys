@@ -14,16 +14,26 @@ from src.benchmarks.audio_catalog import (
 )
 from src.benchmarks.audio_models import SampleFilter
 from src.benchmarks.audio_scenarios import resolve_samples
+from tests.fixtures.ravdess_catalog import REPO_AUDIO_ROOT, load_test_catalog
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-AUDIO_ROOT = REPO_ROOT / "samples" / "audio"
+AUDIO_ROOT = REPO_AUDIO_ROOT
 
 
 @pytest.fixture
-def catalog() -> AudioCatalog:
+def catalog(tmp_path) -> AudioCatalog:
     if not (AUDIO_ROOT / "manifest.yaml").is_file():
         pytest.skip("samples/audio/manifest.yaml not present")
-    return load_catalog(AUDIO_ROOT)
+    cat, _ = load_test_catalog(tmp_path)
+    return cat
+
+
+@pytest.fixture
+def expected_ravdess_count(tmp_path) -> int:
+    if not (AUDIO_ROOT / "manifest.yaml").is_file():
+        pytest.skip("samples/audio/manifest.yaml not present")
+    _, count = load_test_catalog(tmp_path)
+    return count
 
 
 def test_default_audio_root_finds_manifest():
@@ -36,9 +46,9 @@ def test_manifest_loads(catalog: AudioCatalog):
     assert catalog.manifest.packs["ravdess_en"].parser == "ravdess_speech"
 
 
-def test_ravdess_file_count(catalog: AudioCatalog):
+def test_ravdess_file_count(catalog: AudioCatalog, expected_ravdess_count: int):
     samples = catalog.discover(SampleFilter(pack_ids=["ravdess_en"]))
-    assert len(samples) == 1440
+    assert len(samples) == expected_ravdess_count
 
 
 def test_ravdess_parse_known_filename(catalog: AudioCatalog):
@@ -85,10 +95,10 @@ def test_sv_callcenter_disabled_without_files(catalog: AudioCatalog):
         assert "sv_callcenter" not in active
 
 
-def test_validate_ravdess_pack(catalog: AudioCatalog):
+def test_validate_ravdess_pack(catalog: AudioCatalog, expected_ravdess_count: int):
     report = catalog.validate()
     ravdess = report.packs["ravdess_en"]
     assert ravdess["active"] is True
-    assert ravdess["file_count"] == 1440
+    assert ravdess["file_count"] == expected_ravdess_count
     assert ravdess["parse_failures"] == 0
     assert report.ok is True

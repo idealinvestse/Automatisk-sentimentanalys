@@ -6,7 +6,7 @@ import pytest
 
 from src.transcription.factory import clear_transcriber_cache
 
-# pytest_plugins = ["nicegui.testing.plugin"]  # requires selenium (not in env)
+pytest_plugins = ["nicegui.testing.plugin"]
 
 
 @pytest.fixture(autouse=True)

@@ -40,6 +40,13 @@ class AsrDefaults(BaseModel):
     preprocess: bool = False
     preprocess_mode: Literal["off", "basic", "callcenter"] = "off"
 
+    @field_validator("preprocess_mode", mode="before")
+    @classmethod
+    def _coerce_preprocess_mode(cls, value: object) -> object:
+        if isinstance(value, bool):
+            return "basic" if value else "off"
+        return value
+
 
 class LlmConfig(BaseModel):
     enabled: bool = False

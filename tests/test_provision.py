@@ -93,7 +93,10 @@ def test_run_provision_downloads_ffmpeg_when_missing(tmp_path: Path, monkeypatch
     def fake_download(url: str, dest: Path, *, timeout: float = 300.0) -> None:
         dest.write_bytes(zip_path.read_bytes())
 
-    with patch("src.install.provision._download_file", side_effect=fake_download):
+    with (
+        patch("src.install.provision._download_file", side_effect=fake_download),
+        patch("src.install.provision.resolve_ffmpeg", return_value=None),
+    ):
         report = run_provision(
             cfg,
             InstallProfile.cli,
