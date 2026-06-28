@@ -113,9 +113,6 @@ class AspectAnalyzer(Analyzer):
             # For each matched aspect, get sentiment on the evidence (the segment or a window)
             # Simple: run sentiment on the full segment text for the aspect
             try:
-                sent_results = sentiment_analyzer.analyze(ctx)  # but this is whole ctx
-                # Better: run per segment text
-                # Since SentimentAnalyzer.analyze expects ctx, we do a mini call
                 mini_ctx = AnalysisContext(segments=[seg])
                 sent_list = sentiment_analyzer.analyze(mini_ctx)
                 sent = sent_list[0] if sent_list else {"label": "neutral", "score": 0.0}

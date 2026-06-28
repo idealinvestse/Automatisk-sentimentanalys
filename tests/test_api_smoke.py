@@ -45,6 +45,16 @@ def test_metrics_endpoint() -> None:
     assert "alerting_circuit_breaker_open" in body or "prometheus_client not installed" in body
 
 
+def test_http_request_metrics_recorded() -> None:
+    r = client.get("/health")
+    assert r.status_code == 200
+    metrics = client.get("/metrics").text
+    if "prometheus_client not installed" in metrics:
+        pytest.skip("prometheus_client not installed")
+    assert "http_requests_total" in metrics
+    assert 'method="GET"' in metrics
+
+
 def test_openapi_has_core_paths() -> None:
     r = client.get("/openapi.json")
     assert r.status_code == 200

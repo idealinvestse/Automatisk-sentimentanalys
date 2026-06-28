@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
-from ..alerting_state import AlertingStateManager
-from .metrics import render_metrics, update_alerting_metrics
+from ...alerting_state import AlertingStateManager
+from ..metrics import render_metrics, update_alerting_metrics
 
 router = APIRouter(tags=["Health"])
 

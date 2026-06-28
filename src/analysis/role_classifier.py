@@ -63,7 +63,7 @@ class RoleAnalyzer(Analyzer):
 
     @property
     def requires(self) -> list[str]:
-        return []  # can use diarization results if present in ctx; sentiment optional for variance
+        return ["sentiment"]  # sentiment_variance needs aligned sentiment results
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         """Return role map + extended Fas 4.1 features.

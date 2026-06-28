@@ -61,6 +61,9 @@ def validate_analyzer_result(
     try:
         if isinstance(raw, BaseModel):
             return raw.model_dump()
+        if isinstance(raw, list):
+            validated_items = [schema.model_validate(item).model_dump() for item in raw]
+            return validated_items
         validated = schema.model_validate(raw)
         return validated.model_dump()
     except ValidationError as exc:

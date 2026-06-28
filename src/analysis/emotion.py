@@ -18,7 +18,7 @@ from .registry import register_analyzer
 logger = logging.getLogger(__name__)
 
 EMOTION_KEYWORDS = {
-    "frustration": ["jättegrött", "trött", "irriterad", "frustrerad", "arg", "jävla", "fan"],
+    "frustration": ["jättearg", "trött", "irriterad", "frustrerad", "arg", "jävla", "fan"],
     "ilska": ["arg", "rasande", "ilska", "förbannad", "jävla", "helvete"],
     "besvikelse": ["besviken", "trist", "ledsen", "synd", "inte bra"],
     "förvirring": ["förvirrad", "förstår inte", "hur", "vad", "oklart", "konstigt"],

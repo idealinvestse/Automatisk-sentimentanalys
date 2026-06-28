@@ -53,7 +53,6 @@ further tuned in Task 3.2.1 (iterative testing on Swedish callcenter samples).
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 from typing import Any
@@ -63,41 +62,13 @@ from .openrouter_client import OpenRouterClient
 from .pii_redactor import redact_segments
 from .prompts import build_user_prompt, get_system_prompt
 from .schemas import CallLLMOutput, LLM_OUTPUT_JSON_SCHEMA
+from .transcript_utils import build_role_labeled_transcript, make_transcript_hash
 
 logger = logging.getLogger(__name__)
 
-
-def _build_role_labeled_transcript(
-    segments: list[dict[str, Any]] | list[Segment],
-    role_map: dict[str, str] | None = None,
-) -> str:
-    """Turn segments into a clean, role-aware transcript for the LLM."""
-    lines: list[str] = []
-    for i, seg in enumerate(segments):
-        if isinstance(seg, dict):
-            text = seg.get("text", "").strip()
-            speaker = seg.get("speaker") or seg.get("speaker_label") or "UNKNOWN"
-        else:
-            text = getattr(seg, "text", "").strip()
-            speaker = getattr(seg, "speaker", None) or "UNKNOWN"
-
-        role = "UNKNOWN"
-        if role_map and speaker in role_map:
-            role = role_map[speaker].upper()
-        elif speaker and "agent" in str(speaker).lower():
-            role = "AGENT"
-        elif speaker and "customer" in str(speaker).lower():
-            role = "CUSTOMER"
-
-        prefix = f"[{role}]" if role != "UNKNOWN" else f"[{speaker}]"
-        lines.append(f"{prefix} {text}")
-
-    return "\n".join(lines)
-
-
-def _make_transcript_hash(transcript: str, role_map: dict | None) -> str:
-    payload = transcript + json.dumps(role_map or {}, sort_keys=True)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+# Backward-compatible aliases (prefer transcript_utils imports in new code)
+_build_role_labeled_transcript = build_role_labeled_transcript
+_make_transcript_hash = make_transcript_hash
 
 
 class ConversationMistralAnalyzer:

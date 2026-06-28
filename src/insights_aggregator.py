@@ -59,6 +59,30 @@ from .llm.schemas import AggregatedInsights, EvidenceSpan, HotTopic
 
 logger = logging.getLogger(__name__)
 
+
+def _sentiment_trend_label(values: list[float]) -> str:
+    """Estimate trend from ordered sentiment samples (first half vs second half)."""
+    if not values:
+        return "stable"
+    if len(values) < 4:
+        avg = sum(values) / len(values)
+        if avg > 0.2:
+            return "up"
+        if avg < -0.2:
+            return "down"
+        return "stable"
+    mid = len(values) // 2
+    first = sum(values[:mid]) / max(1, mid)
+    second = sum(values[mid:]) / max(1, len(values) - mid)
+    diff = second - first
+    if diff > 0.1:
+        return "up"
+    if diff < -0.1:
+        return "down"
+    return "stable"
+
+
+
 # Optional heavy deps for semantic clustering (Fas 4.3)
 try:
     from sentence_transformers import SentenceTransformer  # type: ignore
@@ -251,12 +275,7 @@ class InsightsAggregator:
             if vol < min_volume:
                 continue
             avg_s = sum(sents) / vol
-            # Very simple trend proxy (if we had time series per topic we'd do better; here overall slope placeholder)
-            trend = "stable"
-            if avg_s > 0.2:
-                trend = "up"
-            elif avg_s < -0.2:
-                trend = "down"
+            trend = _sentiment_trend_label(sents)
 
             ev_spans = topic_evidence.get(topic, [])[:3]
             quotes = topic_quotes.get(topic, [])[:3]

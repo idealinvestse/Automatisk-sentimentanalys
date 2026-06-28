@@ -29,7 +29,7 @@ class ActionableCoachingAnalyzer(Analyzer):
 
     @property
     def requires(self) -> list[str]:
-        return ["empathy", "customer_effort", "trajectory"]
+        return ["empathy", "customer_effort", "trajectory", "compliance_risk"]
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         empathy = ctx.results.get("empathy") or {}

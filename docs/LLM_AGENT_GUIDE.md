@@ -146,6 +146,20 @@ When modifying pipeline logic, keep error isolation (`try/except` + logging + co
 - Prompts live in `prompts.py`. Schemas in `schemas.py`.
 - See `docs/LLM_PROVIDERS.md` for full comparison matrix.
 
+#### Holistic LLM dual-path (Mistral vs Groq)
+
+The pipeline runs **local registry analyzers first**, then optionally enriches with a **single holistic LLM call** per conversation (`run_llm_holistic` in `pipeline_steps.py`). This is intentionally separate from per-analyzer LLM usage:
+
+| Path | When | Entry point | Output location |
+|------|------|-------------|-----------------|
+| **Registry analyzers** | Always (profile-selected) | `run_analyzers()` | `report.results["<name>"]` |
+| **Holistic Mistral** | `provider=openrouter` + key + `use_mistral_llm`/`deep_analysis` | `run_mistral_holistic()` | `report.llm` (trajectory, root_cause, agent_assessment, …) |
+| **Holistic Groq** | `provider=groq` + key + same flags | `run_groq_holistic()` | Same shape as Mistral (`report.llm`) |
+
+Both holistic providers share `src/llm/transcript_utils.py` for role-labeled transcripts and cache keys. On any failure the pipeline **falls back to local-only** results (`llm.meta.llm_used = false`). Groq requires PII redaction or EU residency flag before external calls — see `SECURITY.md`.
+
+Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPORTED_TASKS` in `mistral_analyzer.py` / `groq_analyzer.py` and schemas in `llm/schemas.py` instead.
+
 ### 5.4 Graceful Degradation
 
 - If `pyannote.audio` is missing → use heuristic VAD in `diarization.py`.

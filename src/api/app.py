@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 
@@ -37,7 +38,7 @@ from .error_responses import (
     error_code_for,
     error_response,
 )
-from .metrics import init_app_info
+from .metrics import init_app_info, record_http_request
 from .middleware_rate_limit import RateLimitMiddleware
 from .routers import (
     alerting,
@@ -79,7 +80,10 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
+        started = time.perf_counter()
         response = await call_next(request)
+        duration = time.perf_counter() - started
+        record_http_request(request.method, request.url.path, response.status_code, duration)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"

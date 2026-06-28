@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..base import Analyzer
-from ...core.models import AnalysisContext
+from ..core.models import AnalysisContext
 from ..registry import register_analyzer
 
 

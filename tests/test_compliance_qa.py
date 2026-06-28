@@ -36,6 +36,30 @@ class TestComplianceQA:
             }
         }
         result = scorer.score_conversation(SEGMENTS, role_map=ROLE_MAP, local_signals=signals)
-        assert result.passed or not result.passed  # structured output exists
         assert isinstance(result.passed_criteria, list)
         assert isinstance(result.failed_criteria, list)
+
+    def test_local_signals_boost_empathy_criterion(self):
+        scorer = QAScorer(scorecard_path="standard_support_v1")
+        base = scorer.score_conversation(SEGMENTS, role_map=ROLE_MAP)
+        boosted = scorer.score_conversation(
+            SEGMENTS,
+            role_map=ROLE_MAP,
+            local_signals={"agent_performance": {"agent": {"empathy_score": 0.95}}},
+        )
+        empathy_base = next(c for c in base.criteria_results if c.id == "empathy")
+        empathy_boost = next(c for c in boosted.criteria_results if c.id == "empathy")
+        assert empathy_boost.score >= empathy_base.score
+
+    def test_local_compliance_flags_penalize_criteria(self):
+        scorer = QAScorer(scorecard_path="standard_support_v1")
+        flagged = scorer.score_conversation(
+            SEGMENTS,
+            role_map=ROLE_MAP,
+            local_signals={
+                "agent_performance": {"agent": {"compliance_flags": ["unauthorized_promise"]}},
+            },
+        )
+        tone = next(c for c in flagged.criteria_results if c.id == "tone_professional")
+        assert tone.score <= 0.4
+        assert tone.passed is False

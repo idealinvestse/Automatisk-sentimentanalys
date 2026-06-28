@@ -110,6 +110,61 @@ def _make_evidence_span(text: str, speaker: str | None, turn: int | None) -> Evi
     return EvidenceSpan(text=text[:200], speaker_role=speaker, turn_index=turn)
 
 
+def _local_empathy_score(local_signals: dict[str, Any] | None) -> float | None:
+    """Extract normalized empathy 0-1 from agent_performance / agent_assessment."""
+    if not local_signals:
+        return None
+    assess = local_signals.get("agent_assessment") or {}
+    if isinstance(assess, dict) and assess.get("empathy_score") is not None:
+        return float(assess["empathy_score"])
+    ap = local_signals.get("agent_performance") or {}
+    if isinstance(ap, dict):
+        agent = ap.get("agent") or {}
+        if isinstance(agent, dict) and agent.get("empathy_score") is not None:
+            return float(agent["empathy_score"])
+    return None
+
+
+def _local_compliance_flags(local_signals: dict[str, Any] | None) -> list[str]:
+    if not local_signals:
+        return []
+    flags: list[str] = []
+    assess = local_signals.get("agent_assessment") or {}
+    if isinstance(assess, dict):
+        flags.extend(str(f) for f in (assess.get("compliance_flags") or []))
+    ap = local_signals.get("agent_performance") or {}
+    if isinstance(ap, dict):
+        agent = ap.get("agent") or {}
+        if isinstance(agent, dict):
+            flags.extend(str(f) for f in (agent.get("compliance_flags") or []))
+    return flags
+
+
+def _apply_local_signal_adjustment(
+    criterion_id: str,
+    score: float,
+    passed: bool,
+    local_signals: dict[str, Any] | None,
+) -> tuple[float, bool]:
+    """Blend quantitative Fas 4.1 signals into selected QA criteria."""
+    if not local_signals:
+        return score, passed
+
+    if criterion_id == "empathy":
+        emp = _local_empathy_score(local_signals)
+        if emp is not None:
+            blended = round(0.7 * score + 0.3 * emp, 3)
+            return blended, blended >= 0.5
+
+    if criterion_id in {"no_promises_broken", "tone_professional", "compliance_script"}:
+        flags = _local_compliance_flags(local_signals)
+        if flags:
+            penalized = min(score, 0.4)
+            return penalized, False
+
+    return score, passed
+
+
 def _compute_rule_based(
     criterion: dict[str, Any],
     segments: list[dict | Segment],
@@ -301,6 +356,8 @@ class QAScorer:
             else:
                 sc, pas, ev, spans = _compute_rule_based(c, seg_dicts, role_map)
                 used_llm = False
+
+            sc, pas = _apply_local_signal_adjustment(cid, sc, pas, local_signals)
 
             weighted_sum += sc * w
 

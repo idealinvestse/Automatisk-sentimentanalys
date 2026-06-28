@@ -21,6 +21,19 @@ from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
 
+_ESCALATION_INTENTS = {"complaint", "klagomål", "escalation", "reklamation"}
+_NEGATIVE_SENTIMENTS = {"negativ", "negative", "negative sentiment"}
+
+
+def _label_from_result(item: Any, *keys: str) -> str:
+    if not isinstance(item, dict):
+        return ""
+    for key in keys:
+        val = item.get(key)
+        if val:
+            return str(val).lower()
+    return ""
+
 
 @register_analyzer("multi_turn_journey")
 class MultiTurnJourneyMapper(Analyzer):
@@ -39,18 +52,23 @@ class MultiTurnJourneyMapper(Analyzer):
         if not ctx.segments or len(ctx.segments) < 3:
             return {"journey_stages": [], "resolved": False, "message": "Too short for journey mapping"}
 
-        # Simple stage detection based on intent + sentiment changes
+        intents = ctx.results.get("intent") or []
+        sentiments = ctx.results.get("sentiment") or []
+
         stages = []
         current_stage = "opening"
         unresolved = 0
 
         for i, seg in enumerate(ctx.segments):
             text = (seg.text or "").lower()
-            intent = ctx.results.get("intent", [])
-            sentiment = ctx.results.get("sentiment", [])
+            intent_label = _label_from_result(intents[i] if i < len(intents) else {}, "intent", "label")
+            sent_label = _label_from_result(sentiments[i] if i < len(sentiments) else {}, "label")
 
             if i == 0:
                 current_stage = "opening"
+            elif intent_label in _ESCALATION_INTENTS or sent_label in _NEGATIVE_SENTIMENTS:
+                current_stage = "escalation"
+                unresolved += 1
             elif any(kw in text for kw in ["men", "dock", "fortfarande", "inte hjälpt"]):
                 current_stage = "escalation"
                 unresolved += 1
@@ -62,6 +80,8 @@ class MultiTurnJourneyMapper(Analyzer):
                 "start": getattr(seg, "start", 0),
                 "speaker": getattr(seg, "speaker", None),
                 "text_snippet": seg.text[:60] if seg.text else "",
+                "intent": intent_label or None,
+                "sentiment": sent_label or None,
             })
 
         resolved = stages[-1]["stage"] == "resolution" if stages else False
