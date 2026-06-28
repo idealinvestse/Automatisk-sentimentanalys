@@ -38,6 +38,13 @@ def test_health_ok() -> None:
     assert r.json().get("status") in ("ok", "healthy")
 
 
+def test_metrics_endpoint() -> None:
+    r = client.get("/metrics")
+    assert r.status_code == 200
+    body = r.text
+    assert "alerting_circuit_breaker_open" in body or "prometheus_client not installed" in body
+
+
 def test_openapi_has_core_paths() -> None:
     r = client.get("/openapi.json")
     assert r.status_code == 200

@@ -37,8 +37,18 @@ from .error_responses import (
     error_code_for,
     error_response,
 )
+from .metrics import init_app_info
 from .middleware_rate_limit import RateLimitMiddleware
-from .routers import alerting, conversation, health, pipeline, scan, text, transcription, ws_transcription
+from .routers import (
+    alerting,
+    conversation,
+    health,
+    pipeline,
+    scan,
+    text,
+    transcription,
+    ws_transcription,
+)
 from .settings import get_api_settings
 from .transcription_events import TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
@@ -92,6 +102,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     hub.bind_loop(asyncio.get_running_loop())
     app.state.transcription_events = hub
     app.state.transcription_jobs = TranscriptionJobRegistry()
+    init_app_info(version="0.4.1")
     logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
     yield
     logger.info("Swedish Sentiment API shutting down")

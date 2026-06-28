@@ -18,11 +18,10 @@ Agents should follow the patterns described in `LLM_AGENT_GUIDE.md` (especially 
    ```bash
    git checkout -b feature/your-feature-name
    ```
-2. **Install development dependencies** (preferred — single source of truth in `pyproject.toml`):
+2. **Install development dependencies** (single source of truth in `pyproject.toml`):
    ```bash
    pip install -e ".[dev,api,dashboard-nicegui,diarize]"
    ```
-   Legacy: `pip install -r requirements.txt -r requirements-dev.txt` also works.
 3. Make your changes following the guidelines in `docs/LLM_AGENT_GUIDE.md`.
 4. **Run tests and linting**:
    ```bash
@@ -51,6 +50,10 @@ Agents should follow the patterns described in `LLM_AGENT_GUIDE.md` (especially 
 
 - Update `README.md` and relevant files in `docs/` when adding user-facing features.
 - For larger changes, update or create entries in `CHANGELOG.md`.
+
+## Reporting Issues
+
+See [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) before deploying to production.
 
 ## Test coverage
 

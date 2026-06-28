@@ -44,7 +44,18 @@ class AlertingStateManager:
 
     def get_status(self) -> dict[str, Any]:
         with self._lock:
-            return dict(self._read())
+            data = dict(self._read())
+            data["path"] = str(self.path)
+            return data
+
+    def _update_prometheus_metrics(self) -> None:
+        """Push current circuit breaker state to Prometheus gauges."""
+        try:
+            from src.api.metrics import update_alerting_metrics
+
+            update_alerting_metrics(self)
+        except Exception as exc:
+            logger.debug("Prometheus metrics update skipped: %s", exc)
 
     def record_failure(self, threshold: int = 5) -> dict[str, Any]:
         with self._lock:
@@ -54,7 +65,10 @@ class AlertingStateManager:
             if failures >= threshold:
                 data["circuit_breaker_open"] = True
             self._write(data)
-            return dict(data)
+            result = dict(data)
+            result["path"] = str(self.path)
+        self._update_prometheus_metrics()
+        return result
 
     def record_success(self) -> dict[str, Any]:
         with self._lock:
@@ -62,13 +76,19 @@ class AlertingStateManager:
             data["consecutive_failures"] = 0
             data["circuit_breaker_open"] = False
             self._write(data)
-            return dict(data)
+            result = dict(data)
+            result["path"] = str(self.path)
+        self._update_prometheus_metrics()
+        return result
 
     def reset(self) -> dict[str, Any]:
         with self._lock:
             data = {"consecutive_failures": 0, "circuit_breaker_open": False}
             self._write(data)
-            return dict(data)
+            result = dict(data)
+            result["path"] = str(self.path)
+        self._update_prometheus_metrics()
+        return result
 
     def sync_to_engine(self, engine: Any) -> None:
         """Apply persisted circuit breaker flags onto an AlertEngine instance."""
@@ -84,3 +104,4 @@ class AlertingStateManager:
             data["consecutive_failures"] = getattr(engine, "_consecutive_failures", 0)
             data["circuit_breaker_open"] = getattr(engine, "_webhook_disabled", False)
             self._write(data)
+        self._update_prometheus_metrics()
