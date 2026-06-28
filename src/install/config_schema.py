@@ -63,7 +63,14 @@ class ServicesConfig(BaseModel):
     api_port: int = 8000
     dashboard_enabled: bool = True
     dashboard_port: int = 8080
-    dashboard_ui: Literal["nicegui", "streamlit"] = "nicegui"
+    dashboard_ui: Literal["nicegui"] = "nicegui"
+
+    @field_validator("dashboard_ui", mode="before")
+    @classmethod
+    def _coerce_dashboard_ui(cls, value: object) -> object:
+        if isinstance(value, str) and value.strip().lower() == "streamlit":
+            return "nicegui"
+        return value
 
 
 class ApiRuntimeConfig(BaseModel):

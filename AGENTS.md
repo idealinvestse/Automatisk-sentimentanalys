@@ -13,6 +13,12 @@ This guide is the single source of truth and contains:
 - Coding standards, security rules, and what to do / NOT to do
 - Swedish localization and call-center domain specifics
 
+**Also read:**
+- `docs/ROADMAP.md` – Current maturity and completed features (Fas 1–4)
+- `docs/CLEANUP_PLAN.md` – Documentation debt and consolidation plan
+- `README.md` – Quickstart and overview
+- `SECURITY.md` – Important privacy and security considerations for call center data
+
 **Always read `docs/LLM_AGENT_GUIDE.md` before proposing or making code changes.**
 
 ## Quickstart for Grok Build / AI Agents
@@ -56,7 +62,7 @@ python -m app.nicegui_dashboard.main
 
 - [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current feature status, architecture overview, open tasks.
 - [AGENT_CONTEXT.md](AGENT_CONTEXT.md) — Complete briefing optimized for LLM context windows.
-- [CHANGELOG.md](CHANGELOG.md) & [ROADMAP.md](ROADMAP.md) — History and future plans.
+- [CHANGELOG.md](CHANGELOG.md) & [docs/ROADMAP.md](docs/ROADMAP.md) — History and future plans.
 - `docs/` — Architecture, LLM guide, Fas summaries, API docs.
 
 These are kept in sync via `github-project-status` skill after every significant session.

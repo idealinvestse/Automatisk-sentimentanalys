@@ -243,10 +243,10 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
             log.error(dep_error, phase="dashboard.start")
         raise RuntimeError(dep_error)
     dashboard_ui = getattr(cfg.services, "dashboard_ui", "nicegui") or "nicegui"
-    if dashboard_ui == "streamlit":
+    if dashboard_ui != "nicegui":
         if log:
             log.warn(
-                "DASHBOARD_UI=streamlit är avvecklad. Startar NiceGUI istället.",
+                f"DASHBOARD_UI={dashboard_ui!r} stöds inte längre. Startar NiceGUI istället.",
                 phase="dashboard.start",
             )
         dashboard_ui = "nicegui"

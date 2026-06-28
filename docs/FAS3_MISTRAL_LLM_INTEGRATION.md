@@ -97,7 +97,7 @@ See `src/profiles.py` and `configs/llm_config.yaml` (example).
 
 ### 6. Dashboard
 ```powershell
-streamlit run app/dashboard.py
+python -m app.nicegui_dashboard.main
 ```
 - Sidebar → "Mistral LLM" checkbox.
 - Live-analys section will show **✨ LLM-enhanced (Mistral via OpenRouter)** badge + nice expanders for:

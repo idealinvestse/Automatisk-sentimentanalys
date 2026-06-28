@@ -291,26 +291,25 @@ class LLMJudgeAnalyzer(Analyzer):
                     len(batch_indices),
                 )
 
+                meta: dict[str, Any] = {}
+                judge_items: list[dict[str, Any]]
+
                 # Call client (mock path for tests, real path otherwise)
                 if hasattr(client, "structured_chat"):
                     # Real path (OpenRouter/Groq)
                     try:
-                        # We use a tiny schema for the batch verdict list
-                        # (in production a real Pydantic model would be passed)
                         raw, meta = client.structured_chat(
                             messages=messages,
                             json_schema={"type": "array", "items": {"type": "object"}},
                             task_name="llm_judge",
                             model=self.model,
                         )
-                        # raw may be list or dict; normalize
                         judge_items = raw if isinstance(raw, list) else raw.get("verdicts", [])
                     except Exception as e:
                         logger.warning("LLMJudge structured_chat failed: %s → fallback", e)
                         judge_items = _mock_judge_response(batch_segments, batch_sent)
                         fallback_used = True
                 else:
-                    # Test / mock path
                     judge_items = _mock_judge_response(batch_segments, batch_sent)
 
                 # Validate and build verdicts
@@ -324,16 +323,15 @@ class LLMJudgeAnalyzer(Analyzer):
                             judge_confidence=float(item.get("judge_confidence", 0.7)),
                             reasoning=item.get("reasoning", "Ingen motivering."),
                             model=self.model,
-                            cost_usd=float(meta.get("cost_usd", 0.0003)) if "meta" in dir() else 0.0003,
-                            latency_ms=int(meta.get("latency_ms", 180)) if "meta" in dir() else 180,
+                            cost_usd=float(meta.get("cost_usd", 0.0003)),
+                            latency_ms=int(meta.get("latency_ms", 180)),
                         )
                         verdicts.append(v)
                     except (ValidationError, KeyError, IndexError) as ve:
                         logger.warning("LLMJudge verdict validation failed: %s", ve)
                         continue
 
-                # cost bookkeeping
-                batch_cost = float(meta.get("cost_usd", est_cost)) if "meta" in dir() else est_cost
+                batch_cost = float(meta.get("cost_usd", est_cost))
                 total_cost += batch_cost
 
             except Exception as e:
@@ -359,10 +357,6 @@ class LLMJudgeAnalyzer(Analyzer):
             (time.time() - start_time) * 1000,
         )
         return result
-
-    async def analyze_async(self, ctx: AnalysisContext) -> LLMJudgeResult:
-        """Async entry point for parallel registry execution (I/O-bound LLM calls)."""
-        return await asyncio.to_thread(self.analyze, ctx)
 
     async def analyze_async(self, ctx: AnalysisContext) -> LLMJudgeResult:
         """Async entry point for parallel registry execution (I/O-bound LLM calls)."""

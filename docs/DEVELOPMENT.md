@@ -66,7 +66,7 @@ Key principles:
 ### CLI
 ```bash
 python -m src.cli --help
-python -m src.cli analyze-call samples/call.wav --backend faster --language sv
+python -m src.cli analyze-call samples/audio/sv/ --backend faster --language sv
 ```
 
 ### API

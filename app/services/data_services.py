@@ -1,4 +1,4 @@
-"""Data services for the Streamlit Call Center Dashboard MVP (Fas 5.0).
+"""Data services for the NiceGUI Call Center Dashboard MVP (Fas 5.0).
 
 This module provides:
 - Realistic canned Swedish call center demo transcripts (4-6 short conversations).
@@ -10,7 +10,7 @@ This module provides:
 
 Design notes for migratability (per plan):
 - All helpers take/return plain serializable data (dicts, lists, primitives).
-- No Streamlit state here (pure functions + cached).
+- No UI state here (pure functions + cached).
 - Future React: these become API response mappers / React Query hooks or utils.
 - "Always show evidence" from backend (spans, quotes, local or llm) is respected by callers.
 - Performance: heavy pipeline runs are cached by st.cache_data; transcripts are small & deterministic.

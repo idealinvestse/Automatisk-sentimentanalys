@@ -3,7 +3,7 @@
 **Branch:** `api-review-v2-hardening`  
 **Date:** 2026-06-03  
 **Source:** DesignAgent + ImplementationAgents + TestAgent + baseline tooling  
-**Plan:** [API_REVIEW_HARDENING_PLAN.md](./API_REVIEW_HARDENING_PLAN.md)
+**Plan:** [API_REVIEW_HARDENING_PLAN.md](./archive/API_REVIEW_HARDENING_PLAN.md)
 
 ---
 

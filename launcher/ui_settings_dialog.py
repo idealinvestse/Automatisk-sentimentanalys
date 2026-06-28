@@ -194,7 +194,7 @@ class SettingsDialog(tk.Toplevel):
         self._labeled_entry(inner, "API-port", "services.api_port", row=2)
         self._labeled_check(inner, "Dashboard aktiverad", "services.dashboard_enabled", row=3)
         self._labeled_entry(inner, "Dashboard-port", "services.dashboard_port", row=4)
-        self._labeled_combo(inner, "Dashboard-UI", "services.dashboard_ui", ("nicegui", "streamlit"), row=5)
+        self._labeled_combo(inner, "Dashboard-UI", "services.dashboard_ui", ("nicegui",), row=5)
 
     def _build_asr_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)

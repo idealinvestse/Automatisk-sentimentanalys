@@ -1,6 +1,6 @@
 """UI helper utilities: notifications and loading patterns.
 
-Fas 4 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 4 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 """
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
-## Fas 6: Distributed Intelligence Network & Commercial Launch (Q4 2026 – 2027)
+# Roadmap
 
-Vision: Bygg ett decentraliserat nordiskt nätverk av Edge-noder som delar anonymiserade insikter och skapar en tokeniserad marknad för call center intelligence.
+**Aktuell roadmap och projektstatus:** [docs/ROADMAP.md](docs/ROADMAP.md)
+
+Historisk svensk fasöversikt: [docs/archive/ROADMAP_SV.md](docs/archive/ROADMAP_SV.md)
+
+Long-term vision (Edge AI / Fas 6): se [AGENT_CONTEXT.md](AGENT_CONTEXT.md) och [SYNERGY_ANALYSIS_Fas5.md](SYNERGY_ANALYSIS_Fas5.md).

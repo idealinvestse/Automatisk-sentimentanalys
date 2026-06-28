@@ -1,6 +1,6 @@
 """Filtered calls table with search, pagination, and row-click navigation.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (paginering + sökning)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (paginering + sökning)
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Real-time transcription event hub for WebSocket clients.
 
-Fas 3 WebSocket – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 3 WebSocket – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 Thread-safe emit from batch workers; async broadcast to subscribers.
 """
 

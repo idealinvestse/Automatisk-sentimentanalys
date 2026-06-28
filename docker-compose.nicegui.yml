@@ -1,5 +1,5 @@
 # Fas 5 – NiceGUI Dashboard + FastAPI backend (Streamlit dashboard avvecklad)
-# docs/MIGRATION_TO_NICEGUI_PLAN.md
+# docs/archive/MIGRATION_TO_NICEGUI_PLAN.md
 #
 # Usage:
 #   docker compose -f docker-compose.nicegui.yml up --build

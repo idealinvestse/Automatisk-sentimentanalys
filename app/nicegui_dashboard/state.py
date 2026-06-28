@@ -1,6 +1,6 @@
 """Session state for the NiceGUI dashboard.
 
-Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §5 (State Management)
+Fas 3 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §5 (State Management)
 """
 
 from __future__ import annotations

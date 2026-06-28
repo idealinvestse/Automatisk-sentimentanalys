@@ -4,10 +4,9 @@
 
 GDPR-vänligt, skalbart och byggt för svenska kundtjänstsamtal.
 
-> **För absolut senaste systembeskrivning, feature status och komplett agent-kontext:**  
-> Se [PROJECT_STATUS.md](PROJECT_STATUS.md) och [AGENT_CONTEXT.md](AGENT_CONTEXT.md).  
-> Dessa filer hålls synkade med kodbasen via github-project-status skill.  
-> **Last updated:** 2026-06-27
+> **Status och roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md) · [PROJECT_STATUS.md](PROJECT_STATUS.md)  
+> **För agenter:** [AGENT_CONTEXT.md](AGENT_CONTEXT.md) → [docs/LLM_AGENT_GUIDE.md](docs/LLM_AGENT_GUIDE.md)  
+> **Last updated:** 2026-06-28
 
 ## Grok Build / AI Agent Development (snabbstart)
 
@@ -61,11 +60,4 @@ Vid **Använd Backend API**: sätt `API_MEDIA_ROOT` till projektroten så upplad
 .\launcher.ps1 provision           # full install inkl. ASR (eller GUI: Hantera ASR / Transkribering)
 ```
 
-Se `docs/`, `ROADMAP.md`, `PROJECT_STATUS.md` och `AGENT_CONTEXT.md` för mer information.
-
----
-
-**Note on sections about setup, quickstart, or AI/agents:**
-
-- **Setup/Quickstart:** The "Snabbstart" section provides installation commands (`pip install`, model downloads, CLI/API/Dashboard startup) and Windows launcher scripts for ASR setup.
-- **AI/Agents:** The system includes AI components such as sentiment analysis, ASR (speech-to-text), speaker diarization, intent classification, and LLM support (Mistral/OpenRouter/Groq). References to `AGENT_CONTEXT.md` suggest agent-related functionality, though details are not in this file.
+Se [docs/](docs/), [docs/ROADMAP.md](docs/ROADMAP.md), [PROJECT_STATUS.md](PROJECT_STATUS.md) och [docs/CLEANUP_PLAN.md](docs/CLEANUP_PLAN.md) för mer information.

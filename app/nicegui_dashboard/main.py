@@ -1,6 +1,6 @@
 """NiceGUI Call Center Dashboard – entry point.
 
-Fas 4 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 4 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 Polished UI, error handling, production-ready entry.
 
 Run:

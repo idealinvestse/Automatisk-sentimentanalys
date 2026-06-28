@@ -10,13 +10,15 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 
 > **Note:** Test count is a snapshot at Fas 4 sign-off. Current count is **581 test functions across 57 test files** (delta includes Groq integration, transcription presets, dashboard tests, and PII coverage added post-Fas 4). See `pytest --collect-only` for live count.
 
-### Known Stubs / Deferred Items (v0.4.1)
+### Known Gaps / Deferred Items (v0.4.1)
 
 | Component | Status | Note |
 |-----------|--------|------|
-| `src/analysis/llm_judge.py` | 🟡 Stub | Registered in registry but `analyze()` returns `[]`. Planned for v0.5 (low-confidence routing). |
-| `src/alerting.py:193` | 🟡 TODO | Webhook delivery logs payload but does not POST. Planned for v0.5 (httpx + retry + circuit breaker). |
+| `src/analysis/llm_judge.py` | ✅ Implemented | Low-confidence routing with budget guard; enable via analyzer profile / `analyzer_configs`. |
+| `src/alerting.py` webhook | ✅ Implemented | `notify_webhook()` POSTs via `httpx` with retry + circuit breaker (`configs/alerting_config.yaml`). |
 | YouTube ingest (Fas 5) | ❌ Removed | Rolled back in commit `46bc04c` (experimental, not re-introduced in v0.5 scope). |
+| Pipeline size | 🟡 Tech debt | `CallAnalysisPipeline` (~830 lines) — refactor into explicit steps (see `docs/CLEANUP_PLAN.md`). |
+| Analyzer DX | 🟡 Tech debt | 24+ analyzers; no `new-analyzer` CLI template yet (see `docs/CLEANUP_PLAN.md` EXT-01). |
 
 ### Completed Features
 
@@ -36,7 +38,7 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | **PII Protection**          | ✅ Done    | Early redaction in pipeline for `callcenter` profile |
 | **REST API (v0.4.1)**       | ✅ Done    | Full FastAPI + 5 Fas 4 endpoints, auth, rate limit, caching |
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
-| **Dashboard**               | 🔄 Partial | NiceGUI dashboard (Streamlit avvecklad); Fas 4-vyer planerade |
+| **Dashboard**               | ✅ Done    | NiceGUI standard (`app/nicegui_dashboard/`); Streamlit avvecklad |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
 | **Fas 4 Backend**           | ✅ Done    | Agent perf, QA, insights, search, alerts, caching (validated) |
 
@@ -70,9 +72,4 @@ Build a complete, self-hosted or hybrid **Swedish Call Center Intelligence Platf
 
 ## Historical Plans
 
-Older detailed plans can be found in:
-- `UTVECKLINGSPLAN.md` (largely completed)
-- `UTVECKLINGSPLAN_Fas4_Backend_CallCenter_Features_v1.1.md`
-- `docs/PHASE*.md` and `docs/FAS*.md` files
-
-These are kept for reference. The current `ROADMAP.md` reflects the actual implemented state.
+Older detailed plans are in `docs/archive/` (see `docs/archive/README.md`). Active roadmap: **this file**.

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Documentation cleanup** (2026-06-28): `docs/CLEANUP_PLAN.md`, archive consolidation (`docs/archive/`), canonical `docs/ROADMAP.md`, stub root pointers, removed OpenClaw duplicates and agent build artifacts (`plan.md`, `memory/grok-plans/`).
+- **Streamlit removed**: `app/setup_hub.py` deleted; launcher/config only supports NiceGUI dashboard.
+- **Pipeline refactor**: shared `_run_local_analysis`, `_run_fas4_enrichment`, `_build_report` helpers (~720 lines in `pipeline.py`).
+- **`predictive` analyzer** now delegates to `RiskAnalyzer` (numeric 0–1 scores).
+- **`llm_judge`**: fixed `meta` cost/latency bookkeeping bug.
+
 ### Documentation
 - **Doc reconciliation** (commit `54bb46d`):
   - `docs/LLM_AGENT_GUIDE.md`: test file count updated from "31+" to actual 57 / 581 test functions
@@ -77,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `python -m src.evaluate fas4-validation` – genererar `reports/evaluate_fas4_validation.md`
   - Fas 4 KPI-stubs i `evaluate.py` (QA consistency, coaching precision, hot topic recall, PII coverage, alert rate, cache hit rate)
 - **Tester**: 509+ pytest-tester, 86 %+ coverage på in-scope `src/`-moduler (Fas 1 gate)
-- **Dokumentation**: `docs/FAS4_COMPLETION.md`, utökad `docs/API.md`, `docs/GROK_BUILD_PLAN_FAS1-3.md`
+- **Dokumentation**: `docs/FAS4_COMPLETION.md`, utökad `docs/API.md`, `docs/archive/GROK_BUILD_PLAN_FAS1-3.md`
 
 ### Changed
 - `CallAnalysisPipeline` mergar nu `agent_performance`, `qa`/`compliance_qa`, `pii_redaction`, `alerts` i `report.results`

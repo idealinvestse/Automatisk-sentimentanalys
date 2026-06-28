@@ -82,7 +82,7 @@ pip install -r requirements-api.txt
 ### Launcher & GUI
 
 - `Sentimentanalys.bat` – Simple GUI launcher
-- `streamlit run app/setup_hub.py` – Configuration hub
+- `python -m launcher.main` – Configuration hub
 - `launcher.ps1` – Advanced CLI launcher
 
 ### API as Windows Service (NSSM)

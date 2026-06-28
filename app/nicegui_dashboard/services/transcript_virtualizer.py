@@ -1,6 +1,6 @@
 """Virtual list helpers for large call transcripts.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (virtualisering av transkript)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (virtualisering av transkript)
 """
 
 from __future__ import annotations

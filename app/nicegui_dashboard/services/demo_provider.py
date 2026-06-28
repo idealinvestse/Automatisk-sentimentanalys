@@ -1,6 +1,6 @@
 """Demo data provider for NiceGUI dashboard.
 
-Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 3 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 Loads reports via nicegui_api_client (/analyze_pipeline) with local fallback.
 """
 

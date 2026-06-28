@@ -1,6 +1,6 @@
 """Insights, hot topics and semantic search section.
 
-Fas 3 – docs/GROK_BUILD_PLAN_FAS1-3.md
+Fas 3 – docs/archive/GROK_BUILD_PLAN_FAS1-3.md
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Transcription Monitor UI – persistent queue, controls, live log.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect + polling fallback)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect + polling fallback)
 """
 
 from __future__ import annotations

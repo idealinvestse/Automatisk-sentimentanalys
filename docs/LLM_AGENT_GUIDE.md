@@ -71,7 +71,7 @@ pip install -e ".[dev,diarize]"
 pytest -q
 
 # Run CLI example
-python -m src.cli analyze-call samples/call.wav --backend faster --language sv --log-level INFO
+python -m src.cli analyze-call samples/audio/sv/ --backend faster --language sv --log-level INFO
 
 # Start API
 uvicorn src.api:app --reload
@@ -88,29 +88,38 @@ uvicorn src.api:app --reload
 All new analysis logic should be added as analyzers in `src/analysis/`:
 
 1. Create `src/analysis/your_analyzer.py`
-2. Inherit from `BaseAnalyzer` (see `base.py`)
-3. Implement `analyze(self, context: AnalysisContext) -> dict`
-4. Register it in `registry.py` with a unique name and dependencies.
+2. Implement the `Analyzer` protocol (see `base.py`): `name`, `requires`, `analyze(ctx)`
+3. Register with `@register_analyzer("your_analyzer")` — autodiscovery picks up the module
+4. Put core logic in `src/your_engine.py` when it is reusable outside the registry (optional)
 
 **Example skeleton**:
 ```python
 # src/analysis/your_analyzer.py
-from .base import BaseAnalyzer
+from __future__ import annotations
 
-class YourAnalyzer(BaseAnalyzer):
-    name = "your_analyzer"
-    depends_on = ["sentiment", "role"]   # topological order
+from typing import Any
 
-    def analyze(self, context):
-        # context.segments, context.transcript, etc.
-        return {"your_key": result}
+from ..core.models import AnalysisContext
+from .base import Analyzer
+from .registry import register_analyzer
+
+
+@register_analyzer("your_analyzer")
+class YourAnalyzer(Analyzer):
+    @property
+    def name(self) -> str:
+        return "your_analyzer"
+
+    @property
+    def requires(self) -> list[str]:
+        return ["sentiment", "role_classifier"]  # topological order
+
+    def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
+        # ctx.segments, ctx.results["sentiment"], etc.
+        return {"your_key": "result"}
 ```
 
-Then register:
-```python
-# src/analysis/registry.py
-REGISTRY.register("your_analyzer", YourAnalyzer)
-```
+No manual edit in `registry.py` is required for built-in analyzers (autodiscover in `src/analysis/`).
 
 ### 5.2 Pipeline Steps (in CallAnalysisPipeline)
 

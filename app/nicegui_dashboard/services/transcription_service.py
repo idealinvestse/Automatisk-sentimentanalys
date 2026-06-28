@@ -1,6 +1,6 @@
 """Transcription queue service – persistent JSON + async worker.
 
-Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3 (Transkriberings Monitor)
+Fas 3 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3 (Transkriberings Monitor)
 Uses nicegui_api_client for /transcribe, /batch_transcribe, /scan_process.
 WebSocket push via transcription_ws_client when API mode is active.
 """

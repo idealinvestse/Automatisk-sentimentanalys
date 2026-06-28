@@ -1,6 +1,6 @@
 """WebSocket client for real-time transcription logs from FastAPI backend.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (WebSocket reconnect)
 Exponential backoff, max attempts, status callbacks.
 """
 

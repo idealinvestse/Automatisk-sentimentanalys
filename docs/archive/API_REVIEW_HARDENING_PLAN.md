@@ -7,7 +7,7 @@
 **Status:** Levande dokument ÔÇô uppdateras iterativt under arbetet  
 **Branch:** `api-review-v2-hardening`  
 **Fas-status:** Fas 0ÔÇô5 Ô£à **SIGN-OFF 2026-06-03** ÔÇö branch `api-review-v2-hardening` merge-ready  
-**Referens:** Bygger p├Ñ UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
+**Referens:** Bygger p├Ñ docs/archive/UTVECKLINGSPLAN.md (Fas 4 alla tasks DONE), tidigare docs/archive/REVIEW_MISTRAL_FAS3.md och den initiala API-reviewen 2026-06-03.
 
 ---
 
@@ -194,7 +194,7 @@ I `pipeline.py` hade `deep_analysis=req.use_mistral_llm` i flera endpoints ÔÇ�
 ## 5. Hur man Anv├ñnder Denna Plan med Composer 2.5 / Grok Build
 
 1. Klistra in den "Ultimata prompten" (se separat avsnitt nedan).
-2. Composer/spawnade subagents m├Ñste l├ñsa denna fil (`docs/API_REVIEW_HARDENING_PLAN.md`) som prim├ñr k├ñlla.
+2. Composer/spawnade subagents m├Ñste l├ñsa denna fil (`docs/archive/API_REVIEW_HARDENING_PLAN.md`) som prim├ñr k├ñlla.
 3. F├Âlj faserna strikt i ordning (0 ÔåÆ 5).
 4. Varje fas avslutas med commit + uppdatering av status i denna fil.
 5. Anv├ñnd spawn subagent f├Âr parallellt arbete (t.ex. en ImplementationAgent per router + en TestAgent).

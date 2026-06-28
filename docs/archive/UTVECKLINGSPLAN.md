@@ -1,7 +1,7 @@
 # Utvecklingsplan: Backend-förstärkningar och nya funktioner för Call Center Intelligence (Fas 4)
 
 > **Status: SLUTFÖRD** (2026-06-19, v0.4.1)  
-> Validering: Fas 1 i `docs/GROK_BUILD_PLAN_FAS1-3.md` (509 tester, 86 %+ coverage).  
+> Validering: Fas 1 i `docs/archive/GROK_BUILD_PLAN_FAS1-3.md` (509 tester, 86 %+ coverage).  
 > Slutdokumentation: `docs/FAS4_COMPLETION.md`.  
 > **Nästa steg:** Data/finetuning (Fas 2 i produktroadmap) + NiceGUI dashboard-visualisering (Fas 3 i GROK-plan) + produktion.
 

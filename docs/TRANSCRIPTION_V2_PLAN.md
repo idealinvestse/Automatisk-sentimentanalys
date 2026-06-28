@@ -56,11 +56,11 @@
 
 ```bash
 # Rekommenderat för svenska callcenter-inspelningar
-python -m src.cli transcribe samples/call.wav \
+python -m src.cli transcribe samples/audio/sv/ \
   --preprocess-mode callcenter \
   --backend faster --language sv
 
-python -m src.cli analyze-call samples/call.wav \
+python -m src.cli analyze-call samples/audio/sv/ \
   --preprocess --profile callcenter
 ```
 

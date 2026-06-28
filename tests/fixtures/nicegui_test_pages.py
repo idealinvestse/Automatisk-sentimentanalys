@@ -1,6 +1,6 @@
 """Isolated NiceGUI pages for dashboard component rendering tests.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (utökade tester)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (utökade tester)
 Executed via pytest `user` fixture + @pytest.mark.module_under_test
 """
 

@@ -95,7 +95,6 @@ ignore = [
 known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
-"app/setup_hub.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

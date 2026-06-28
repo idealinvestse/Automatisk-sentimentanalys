@@ -1,6 +1,6 @@
 """Live pipeline analysis section (used by Testlabb).
 
-Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 3 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 """
 
 from __future__ import annotations

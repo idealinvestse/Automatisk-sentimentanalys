@@ -25,16 +25,6 @@ class TestDashboardLauncher:
         monkeypatch.setenv("DASHBOARD_UI", "nicegui")
         assert resolve_dashboard_ui() == "nicegui"
 
-    def test_streamlit_deprecated_exits(self, monkeypatch):
-        import pytest
-
-        from app.dashboard_launcher import main
-
-        monkeypatch.setenv("DASHBOARD_UI", "streamlit")
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 1
-
 
 class TestDataServicesDashboard:
     def test_get_demo_transcripts_count(self):

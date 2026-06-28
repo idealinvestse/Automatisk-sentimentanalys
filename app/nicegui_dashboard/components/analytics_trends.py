@@ -1,6 +1,6 @@
 """Analytics & Trends tab – Plotly charts for sentiment, agents, topics.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (Plotly/Echarts integration)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (Plotly/Echarts integration)
 """
 
 from __future__ import annotations

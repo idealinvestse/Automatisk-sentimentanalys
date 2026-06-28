@@ -72,7 +72,7 @@ Denna plan är optimerad för **Grok Build** och andra coding agents. Följ den 
    - Dokumentera de 5 nya endpoints med request/response-exempel och curl.
    - Inkludera autentisering och rate limit.
 
-4. **ROADMAP.md & UTVECKLINGSPLAN.md**
+4. **ROADMAP.md & docs/archive/UTVECKLINGSPLAN.md**
    - Markera Fas 4 som **Slutförd**.
    - Uppdatera "Nästa steg" till Fas 2 (data/finetuning) + Dashboard-visualisering + produktion.
 
@@ -85,7 +85,7 @@ Denna plan är optimerad för **Grok Build** och andra coding agents. Följ den 
 - Alla nya API-endpoints är väldokumenterade med exempel.
 - En extern person/agent kan använda de nya funktionerna enbart via dokumentationen.
 
-**Påverkade filer:** `CHANGELOG.md`, `README.md`, `docs/API.md`, `ROADMAP.md`, `UTVECKLINGSPLAN.md`
+**Påverkade filer:** `CHANGELOG.md`, `README.md`, `docs/API.md`, `ROADMAP.md`, `docs/archive/UTVECKLINGSPLAN.md`
 
 ---
 
@@ -164,7 +164,7 @@ Denna plan är optimerad för **Grok Build** och andra coding agents. Följ den 
 
 ## Hur du använder denna plan i Grok Build
 
-1. Kopiera denna fil till `docs/GROK_BUILD_PLAN_FAS1-3.md` i repot.
+1. Kopiera denna fil till `docs/archive/GROK_BUILD_PLAN_FAS1-3.md` i repot.
 2. Börja med **Fas 1**.
 3. Efter varje större del: commit + push.
 4. Använd den optimala prompten nedan för att låta Grok exekvera planen.
@@ -174,7 +174,7 @@ Denna plan är optimerad för **Grok Build** och andra coding agents. Följ den 
 ```
 Du är en expert coding agent som arbetar på projektet https://github.com/idealinvestse/Automatisk-sentimentanalys.
 
-Läs in den senaste versionen av filen `docs/GROK_BUILD_PLAN_FAS1-3.md` från main-branchen.
+Läs in den senaste versionen av filen `docs/archive/GROK_BUILD_PLAN_FAS1-3.md` från main-branchen.
 
 Följ planen **exakt** steg för steg. Börja med Fas 1.
 

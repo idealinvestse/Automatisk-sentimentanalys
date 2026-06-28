@@ -41,7 +41,7 @@ Transcription → PII Redaction → Registry Analyzers → Agent Performance →
 ```bash
 pip install -e ".[dev,diarize]"
 pytest -q
-python -m src.cli analyze-call samples/call.wav --backend faster --language sv
+python -m src.cli analyze-call samples/audio/sv/ --backend faster --language sv
 uvicorn src.api:app --reload
 python -m src.evaluate llm-quality
 ```

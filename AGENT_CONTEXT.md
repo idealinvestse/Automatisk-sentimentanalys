@@ -49,7 +49,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 **Design Decisions**: Registry pattern for extensibility (easy add new analysis step). Provider abstraction for LLM. Hybrid rule+LLM for QA. Pre-compute + cache for dashboard speed. Windows launcher to lower barrier for non-dev users. **Ny**: Central model catalog för kostnadskontroll och smart model-val.
 
 ## 4. Important File Map
-- README.md, CHANGELOG.md, ROADMAP.md, UTVECKLINGSPLAN.md, docs/ARCHITECTURE.md, docs/LLM_AGENT_GUIDE.md, docs/FAS4_COMPLETION.md — Read these first on any new session.
+- README.md, CHANGELOG.md, docs/ROADMAP.md, docs/CLEANUP_PLAN.md, docs/ARCHITECTURE.md, docs/LLM_AGENT_GUIDE.md, docs/FAS4_COMPLETION.md — Read these first on any new session.
 - src/pipeline.py — Core orchestration; know the step order and result merging.
 - src/analysis/registry.py — How to register new analyzers; patterns for graceful handling.
 - src/llm/schemas.py + src/llm/prompts.py — LLM output contracts and prompt engineering.
@@ -88,6 +88,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - Further real-time optimizations and Edge AI expansion.
 - Sync ROADMAP.md with latest TASK numbering.
 - **Ny**: Model picker i dashboard + auto cost-optimized routing baserat på catalog. Uppdatera .gitignore för model_catalog.json.
+- **Städning (2026-06-28)**: Legacy-planer arkiverade i `docs/archive/`; Streamlit borttagen; pipeline refaktorerad (`_run_local_analysis`, `_run_fas4_enrichment`, `_build_report`).
 
 ## 7. Context for Future Agents
 After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature (särskilt model catalog / pricing), se src/llm/model_catalog.py och openrouter_client.py. Dashboard components should use nicegui_api_client.py for backend data. Använd .grok/skills/ för kvalitet, review och launch-hjälp. **Ny regel**: Efter model-relaterade ändringar, kör `sentimentanalys scan-openrouter-models` och uppdatera pricing i client.

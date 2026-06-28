@@ -4,7 +4,7 @@ REST API for Swedish sentiment analysis, ASR transcription, call-center pipeline
 
 **Interactive docs:** `http://localhost:8000/docs` (uvicorn)  
 **OpenAPI JSON:** `/openapi.json`  
-**Hardening plan:** [API_REVIEW_HARDENING_PLAN.md](./API_REVIEW_HARDENING_PLAN.md)
+**Hardening plan:** [API_REVIEW_HARDENING_PLAN.md](./archive/API_REVIEW_HARDENING_PLAN.md)
 
 ---
 

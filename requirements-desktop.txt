@@ -1,3 +1,2 @@
-# Streamlit dashboard + setup hub
-streamlit>=1.35.0
+# NiceGUI dashboard + launcher
 plotly>=5.20.0

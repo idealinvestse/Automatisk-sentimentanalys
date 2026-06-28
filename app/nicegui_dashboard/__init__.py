@@ -1,4 +1,4 @@
-"""NiceGUI Call Center Dashboard (Streamlit migration).
+"""NiceGUI Call Center Dashboard.
 
-Fas 1 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 """

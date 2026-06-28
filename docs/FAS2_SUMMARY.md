@@ -19,4 +19,4 @@ Fas 2 etablerar grunden för svensk domänanpassning av call center-sentiment.
 Den verkliga +12-15% macro-F1-förbättringen kräver att LoRA-träningen körs på GPU och att den
 resulterande modellen utvärderas. Pipeline, dataformat och rapportstruktur är klara för detta.
 
-**Uppdatering (Juni 2026)**: Fas 1–3 slutförda enligt `UTVECKLINGSPLAN.md` (inkl. ABSA, emotions, preprocess, hotwords m.m.). Se UTVECKLINGSPLAN.md och uppdaterad README/ARCHITECTURE för full status.
+**Uppdatering (Juni 2026)**: Fas 1–3 slutförda enligt `docs/archive/UTVECKLINGSPLAN.md` (inkl. ABSA, emotions, preprocess, hotwords m.m.). Se docs/archive/UTVECKLINGSPLAN.md och uppdaterad README/ARCHITECTURE för full status.

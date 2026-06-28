@@ -1,4 +1,4 @@
-"""Demo data service for Streamlit MVP dashboard.
+"""Demo data service for NiceGUI MVP dashboard.
 
 Provides realistic Swedish call center conversation examples (canned transcripts)
 and a cached generator that runs the real CallAnalysisPipeline to produce
@@ -25,7 +25,7 @@ import logging
 from functools import lru_cache
 from typing import Any
 
-# Ensure project root on path when run via streamlit
+# Ensure project root on path when run from the dashboard launcher
 import sys
 from pathlib import Path
 if str(Path(__file__).resolve().parents[2]) not in sys.path:

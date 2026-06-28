@@ -14,7 +14,7 @@ Som en del av det pågående projektet att utveckla ett svenskt sentimentanalys-
 
 Fas 4 har levererat många nya moduler (`src/agent_performance.py`, `src/compliance_qa.py`, `src/insights_aggregator.py`, `src/semantic_search.py`, `src/alerting.py`, `src/caching.py`, utökningar i `src/pipeline.py`, `src/llm/*`, `src/api/routers/pipeline.py` m.fl.) och API-endpoints. 
 
-**Dock visar omfattande testing (se TESTING_STATUS_BACKEND_API.md) att systemet fortfarande har instabilitet:**
+**Dock visar omfattande testing (se docs/archive/TESTING_STATUS_BACKEND_API.md) att systemet fortfarande har instabilitet:**
 - Edge cases och error paths hanteras inte alltid graceful.
 - Potentiell duplicerad/onödig kod i routers, helpers och pipeline-logik.
 - Tight coupling mellan HTTP-layer och core analysis.
@@ -100,13 +100,13 @@ Målet med denna refaktorering är att lyfta backend/API från "fungerar mestade
 - Full end-to-end integration tests med samples + mocked LLM/external.
 - Concurrency & chaos testing för error resilience.
 - Uppdatera CI (GitHub Actions) med nya linters, coverage gates.
-- Uppdatera `TESTING_STATUS_BACKEND_API.md` med ny status.
+- Uppdatera `docs/archive/TESTING_STATUS_BACKEND_API.md` med ny status.
 - **Deliverable:** >85% coverage på api+core, alla tester stabila.
 
 ### Fas 6: Dokumentation, Versioning & Release (1–2 dagar)
 - Uppdatera `docs/API.md`, OpenAPI-exempel, README.
 - Inför API versioning (t.ex. prefix `/v1/`) om breaking changes.
-- Uppdatera CHANGELOG.md och UTVECKLINGSPLAN.md.
+- Uppdatera CHANGELOG.md och docs/archive/UTVECKLINGSPLAN.md.
 - Skapa release notes + migreringsguide.
 - **Deliverable:** Produktionsklar dokumentation.
 
@@ -136,7 +136,7 @@ Målet med denna refaktorering är att lyfta backend/API från "fungerar mestade
 - **Komplexitet:** Håll refaktorn inkrementell – en fas i taget, commit ofta.
 
 ## 8. Hur man använder denna plan
-1. Läs in hela planen + relaterade filer (README, TESTING_STATUS_BACKEND_API.md, UTVECKLINGSPLAN.md, src/api/app.py, src/pipeline.py).
+1. Läs in hela planen + relaterade filer (README, docs/archive/TESTING_STATUS_BACKEND_API.md, docs/archive/UTVECKLINGSPLAN.md, src/api/app.py, src/pipeline.py).
 2. Börja med Fas 0 audit.
 3. Använd dedikerad Grok Build-prompt (se separat) för implementation.
 4. Efter varje fas: kör tester, uppdatera status, commit + push.

@@ -1,6 +1,6 @@
 """Calls table search and pagination helpers.
 
-Post-migration UX – docs/MIGRATION_TO_NICEGUI_PLAN.md (Fas 6.1)
+Post-migration UX – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (Fas 6.1)
 """
 
 from __future__ import annotations

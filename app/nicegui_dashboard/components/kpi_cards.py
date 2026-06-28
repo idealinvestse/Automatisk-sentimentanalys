@@ -1,6 +1,6 @@
 """KPI metric cards for the overview tab.
 
-Fas 1 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3 (Portning av KPI-metrics)
+Fas 1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3 (Portning av KPI-metrics)
 """
 
 from __future__ import annotations

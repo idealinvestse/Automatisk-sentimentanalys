@@ -6,7 +6,7 @@ Output: structured Alert + AlertSummary med evidence_spans, recommended_actions 
 
 Stöd för:
 - Definiera regler (default + custom)
-- Webhook-notifieringar (stub + payload builder)
+- Webhook-notifieringar (httpx POST + retry + circuit breaker)
 - Interna workflows (t.ex. "create_coaching_task")
 - Triggas från insights_aggregator (t.ex. hot topic med låg sentiment)
 

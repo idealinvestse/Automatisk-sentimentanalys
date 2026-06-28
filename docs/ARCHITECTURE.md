@@ -11,7 +11,7 @@ The system is designed around two main entry points:
 
 Both entry points share the same underlying analysis and transcription engines, but present different interfaces suited to their respective environments.
 
-**Completed per UTVECKLINGSPLAN.md (Fas 1-3)**: Advanced ASR (WhisperX, hotwords, chunking, preprocess), ABSA (aspects), emotions, role inference, trajectory/escalation, spoken normalization. All new capabilities are modular via the analysis registry and optional transcription params.
+**Completed per docs/archive/UTVECKLINGSPLAN.md (Fas 1-3)**: Advanced ASR (WhisperX, hotwords, chunking, preprocess), ABSA (aspects), emotions, role inference, trajectory/escalation, spoken normalization. All new capabilities are modular via the analysis registry and optional transcription params.
 
 **Fas 3 – Mistral/OpenRouter LLM Integration (European-first)**: Hybrid selective deep path using `mistralai/mistral-medium-3.5` (primary) / Large 3 via OpenRouter for holistic full-conversation analysis (trajectory, root cause, actionable insights, agent assessment). Strict JSON schema + Pydantic validation. Always logged for GDPR. Local fast path remains default. See `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` and `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`.
 

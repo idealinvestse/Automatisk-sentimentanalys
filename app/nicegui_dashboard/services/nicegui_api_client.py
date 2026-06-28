@@ -1,6 +1,6 @@
 """httpx async client for the FastAPI backend.
 
-Fas 3 – docs/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 3 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 Wraps /health, /analyze_pipeline, /transcribe, /batch_transcribe, /scan_process.
 WebSocket logs via /ws/transcription (see transcription_ws_client.py).
 """

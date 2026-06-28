@@ -1,6 +1,6 @@
 """Chart data extraction and Plotly figure builders for analytics tab.
 
-Fas 6.1 – docs/MIGRATION_TO_NICEGUI_PLAN.md (Plotly trajectory & trends)
+Fas 6.1 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md (Plotly trajectory & trends)
 """
 
 from __future__ import annotations
