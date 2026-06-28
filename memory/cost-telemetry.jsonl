@@ -1,0 +1,8 @@
+{"task_id": "test-cost-520", "phase": "plan", "model": "grok-build", "input_tokens": 100, "output_tokens": 50, "cost_usd": 0.01, "recorded_at": "2026-06-28T05:35:09.341530Z"}
+{"task_id": "test-cost-520", "phase": "execute", "model": "grok-build", "input_tokens": 200, "output_tokens": 100, "cost_usd": 0.02, "recorded_at": "2026-06-28T05:35:09.400366Z"}
+{"task_id": "test-cost-502", "phase": "plan", "model": "grok-build", "input_tokens": 100, "output_tokens": 50, "cost_usd": 0.01, "recorded_at": "2026-06-28T05:36:13.157536+00:00"}
+{"task_id": "test-cost-502", "phase": "execute", "model": "grok-build", "input_tokens": 200, "output_tokens": 100, "cost_usd": 0.02, "recorded_at": "2026-06-28T05:36:13.208455+00:00"}
+{"task_id": "test-cost-538", "phase": "plan", "model": "grok-build", "input_tokens": 100, "output_tokens": 50, "cost_usd": 0.01, "recorded_at": "2026-06-28T05:36:17.000012+00:00"}
+{"task_id": "test-cost-538", "phase": "execute", "model": "grok-build", "input_tokens": 200, "output_tokens": 100, "cost_usd": 0.02, "recorded_at": "2026-06-28T05:36:17.049404+00:00"}
+{"task_id": "test-cost-755", "phase": "plan", "model": "grok-build", "input_tokens": 100, "output_tokens": 50, "cost_usd": 0.01, "recorded_at": "2026-06-28T05:36:57.553869+00:00"}
+{"task_id": "test-cost-755", "phase": "execute", "model": "grok-build", "input_tokens": 200, "output_tokens": 100, "cost_usd": 0.02, "recorded_at": "2026-06-28T05:36:57.605831+00:00"}

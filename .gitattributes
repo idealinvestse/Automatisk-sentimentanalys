@@ -1,17 +1,2 @@
-# Enforce LF line endings for text files (prevents CRLF/LF mix warnings on Windows
-# and keeps diffs clean). Matches review feedback for Fas4 changes.
-*.py text eol=lf
-*.md text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.txt text eol=lf
-*.json text eol=lf
-*.toml text eol=lf
-*.cfg text eol=lf
-*.ini text eol=lf
-
-# Binary
-*.png binary
-*.jpg binary
-*.whisper binary
-*.bin binary
+*.sh text eol=lf
+bin/grok-build-cost-report text eol=lf

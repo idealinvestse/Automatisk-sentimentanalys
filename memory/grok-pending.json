@@ -1,0 +1,68 @@
+{
+  "tasks": {
+    "test-cost-520": {
+      "task_id": "test-cost-520",
+      "model": "grok-build",
+      "plan_cost_usd": 0.01,
+      "execute_cost_usd": 0.02,
+      "plan_tokens": {
+        "input": 100,
+        "output": 50
+      },
+      "execute_tokens": {
+        "input": 200,
+        "output": 100
+      },
+      "started_at": "2026-06-28T05:35:09.341530Z",
+      "completed_at": null
+    },
+    "test-cost-502": {
+      "task_id": "test-cost-502",
+      "model": "grok-build",
+      "plan_cost_usd": 0.01,
+      "execute_cost_usd": 0.02,
+      "plan_tokens": {
+        "input": 100,
+        "output": 50
+      },
+      "execute_tokens": {
+        "input": 200,
+        "output": 100
+      },
+      "started_at": "2026-06-28T05:36:13.157536+00:00",
+      "completed_at": null
+    },
+    "test-cost-538": {
+      "task_id": "test-cost-538",
+      "model": "grok-build",
+      "plan_cost_usd": 0.01,
+      "execute_cost_usd": 0.02,
+      "plan_tokens": {
+        "input": 100,
+        "output": 50
+      },
+      "execute_tokens": {
+        "input": 200,
+        "output": 100
+      },
+      "started_at": "2026-06-28T05:36:17.000012+00:00",
+      "completed_at": null
+    },
+    "test-cost-755": {
+      "task_id": "test-cost-755",
+      "model": "grok-build",
+      "plan_cost_usd": 0.01,
+      "execute_cost_usd": 0.02,
+      "plan_tokens": {
+        "input": 100,
+        "output": 50
+      },
+      "execute_tokens": {
+        "input": 200,
+        "output": 100
+      },
+      "started_at": "2026-06-28T05:36:57.553869+00:00",
+      "completed_at": null
+    }
+  }
+}

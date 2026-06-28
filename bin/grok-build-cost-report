@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# grok-build-cost-report — On-demand cost summary for grok-build tasks.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="${GROK_BUILD_WORKSPACE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+TELEMETRY="$WORKSPACE_ROOT/memory/cost-telemetry.jsonl"
+PENDING="$WORKSPACE_ROOT/memory/grok-pending.json"
+
+TASK_FILTER=""
+SINCE=""
+DAYS=7
+
+usage() {
+  cat <<'EOF'
+Usage:
+  grok-build-cost-report [--days N] [--since YYYY-MM-DD] [--task TASK_ID]
+
+Reads memory/cost-telemetry.jsonl and memory/grok-pending.json.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --task) TASK_FILTER="$2"; shift 2 ;;
+    --since) SINCE="$2"; shift 2 ;;
+    --days) DAYS="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown arg: $1" >&2; exit 2 ;;
+  esac
+done
+
+python3 - <<'PY' "$TELEMETRY" "$PENDING" "$TASK_FILTER" "$SINCE" "$DAYS"
+import json, os, sys
+from datetime import datetime, timedelta, timezone
+
+telemetry, pending_path, task_filter, since, days = sys.argv[1:6]
+days = int(days)
+
+rows = []
+if os.path.exists(telemetry):
+    with open(telemetry, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+if since:
+    cutoff = datetime.fromisoformat(since).replace(tzinfo=timezone.utc)
+else:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+def parse_ts(s):
+    if not s:
+        return None
+    ts = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts
+
+filtered = []
+for r in rows:
+    if task_filter and r.get("task_id") != task_filter:
+        continue
+    ts = parse_ts(r.get("recorded_at"))
+    if ts and ts < cutoff:
+        continue
+    filtered.append(r)
+
+if task_filter:
+    print(f"Task: {task_filter}")
+    print("-" * 60)
+    for r in filtered:
+        cost = r.get("cost_usd")
+        cost_s = f"${cost:.4f}" if cost is not None else "n/a"
+        print(f"  {r.get('phase','?'):8}  in={r.get('input_tokens',0):6}  out={r.get('output_tokens',0):6}  cost={cost_s}  @ {r.get('recorded_at','')}")
+    total = sum(r.get("cost_usd") or 0 for r in filtered)
+    print("-" * 60)
+    print(f"Total (known cost): ${total:.4f}")
+else:
+    by_task = {}
+    for r in filtered:
+        tid = r.get("task_id", "unknown")
+        by_task.setdefault(tid, {"plan": 0.0, "execute": 0.0, "rows": 0})
+        c = r.get("cost_usd") or 0
+        by_task[tid][r.get("phase", "plan")] = by_task[tid].get(r.get("phase", "plan"), 0) + c
+        by_task[tid]["rows"] += 1
+    print(f"grok-build cost report (last {days} days)")
+    print("-" * 72)
+    print(f"{'task_id':14}  {'plan_usd':>10}  {'execute_usd':>12}  {'total_usd':>10}  rows")
+    grand = 0.0
+    for tid, agg in sorted(by_task.items()):
+        plan = agg.get("plan", 0) or 0
+        exe = agg.get("execute", 0) or 0
+        tot = plan + exe
+        grand += tot
+        print(f"{tid:14}  {plan:10.4f}  {exe:12.4f}  {tot:10.4f}  {agg['rows']}")
+    print("-" * 72)
+    print(f"{'TOTAL':14}  {'':10}  {'':12}  {grand:10.4f}")
+
+if os.path.exists(pending_path):
+    with open(pending_path, encoding="utf-8") as f:
+        pending = json.load(f)
+    open_tasks = [t for t, v in pending.get("tasks", {}).items() if not v.get("completed_at")]
+    if open_tasks:
+        print(f"\nOpen tasks in grok-pending.json: {', '.join(open_tasks)}")
+PY
