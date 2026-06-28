@@ -62,7 +62,7 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | Priority | Area | Description |
 |----------|------|-------------|
 | High | **PROD-01 Observability** | Structured JSON logging, pipeline/LLM/cache Prometheus metrics, optional OpenTelemetry tracing |
-| High | **DATA-01 Fine-tuning** | CI smoke + nightly eval loop, expanded domain corpus, baseline accuracy gate |
+| High | **DATA-01 Fine-tuning** | Partial: intent corpus + analyzer CI gates + baselines; nightly model train + real corpus import remain |
 | High | **INSIGHT-02 LLM consolidation** | Skip heuristik-analyzers superseded by deep path; see `docs/ANALYZER_STRATEGY.md` |
 | High | **EDGE-01 Edge MVP** | Offline local inference CLI (`sentimentanalys edge-analyze`) |
 | Medium | **Model routing** | Cost/quality tiers via `src/llm/routing.py` + `model_catalog` |

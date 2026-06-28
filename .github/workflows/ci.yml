@@ -114,3 +114,43 @@ jobs:
 
       - name: Validate domain corpus
         run: python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500
+
+      - name: Sentiment eval gate (heuristic smoke)
+        run: python scripts/eval_sentiment_gate.py --backend heuristic --output reports/domain_eval_ci.json
+
+  analyzer-accuracy:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[min,cli,install,dev]"
+
+      - name: Validate intent corpora
+        run: |
+          python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200 --min-per-intent 20
+          python scripts/validate_intent_corpus.py data/intent_val.jsonl --min-rows 50 --min-per-intent 5
+
+      - name: Benchmark intent (fixed val, macro F1 gate)
+        run: |
+          python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --backend heuristic \
+            --output reports/intent_baseline.json --min-macro-f1 0.75
+
+      - name: Benchmark analyzers (fast heuristic sentiment)
+        run: |
+          python scripts/benchmark_analyzers.py --sentiment-backend heuristic \
+            --output reports/analyzer_baseline.json --check-thresholds
+
+      - name: Analyzer accuracy tests
+        env:
+          ANALYZER_VALIDATION_MODE: strict
+        run: |
+          pytest tests/test_analyzer_quality.py tests/test_analyzer_benchmarks.py -q

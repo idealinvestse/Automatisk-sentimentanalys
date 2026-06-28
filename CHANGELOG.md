@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Analyzer Strategy** (`docs/ANALYZER_STRATEGY.md`) — core local vs. deep path tiers (INSIGHT-02).
+- **Analyzer accuracy program (DATA-01)** — `scripts/prepare_intent_data.py`, `validate_intent_corpus.py`, `benchmark_analyzers.py`, `compare_intent_backends.py`, `eval_sentiment_gate.py`, `evaluate_real_corpus.py`; `configs/analyzer_eval.yaml`; CI `analyzer-accuracy` job; labeled fixtures under `tests/fixtures/analyzer_labeled/`.
+- **Intent corpus** — deduplicated balanced train/val JSONL; honest macro F1 metrics in `reports/intent_baseline.json`.
+- **Golden pipeline tests** — 6 callcenter scenarios + `@pytest.mark.slow` unmocked billing test.
 - **API production guards** — `API_PRODUCTION`, `API_REQUIRE_AUTH`, `API_REQUIRE_MEDIA_ROOT` env vars.
 - **Structured JSON logging** (`src/core/logging_config.py`) — `SENTIMENT_JSON_LOGS=1`.
 - **Extended Prometheus metrics** — pipeline, analyzer, LLM, cache counters/histograms.
@@ -19,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Domain corpus tools** — `scripts/validate_domain_corpus.py`, expanded `prepare_callcenter_data.py`.
 
 ### Changed
+- **Intent heuristic** — phrase boosts, disambiguation rules; ~76% macro F1 on honest `intent_val.jsonl`.
+- **Emotion analyzer** — removed broad `hur`/`vad` förvirring markers.
+- **callcenter profile** — `dialect_sensitivity` disabled by default.
+- **LLM quality eval** — schema pass rate + deep-path eligibility in `evaluate llm-quality`.
 - **Deep path skip** — LLM-superseded analyzers skipped when `should_use_any_llm()` is true.
 - **callcenter profile** — empathy/insights/trajectory moved to optional defaults.
 - **Documentation v0.5 sync** — ROADMAP priorities, root plan archive, PROPOSED_ANALYZERS → ANALYZER_STRATEGY.

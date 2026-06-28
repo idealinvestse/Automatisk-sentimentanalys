@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic information request scenario.",
+  "segments": [
+    {"start": 0, "end": 3, "text": "Hej, hur kan jag hjälpa dig?", "speaker": "SPEAKER_0"},
+    {"start": 3, "end": 8, "text": "Vilka öppettider har ni på lördagar?", "speaker": "SPEAKER_1"},
+    {"start": 8, "end": 12, "text": "Vi har öppet tio till fjorton.", "speaker": "SPEAKER_0"}
+  ],
+  "expect": {
+    "results_keys": ["sentiment", "intent", "role"],
+    "intent_contains": "information_request"
+  }
+}

@@ -3,5 +3,8 @@
   "profile": "callcenter",
   "accuracy": 0.72,
   "f1_macro": 0.70,
-  "note": "Baseline reference for finetune-eval CI gate (accuracy >= baseline - 0.02)"
+  "regression_tolerance": 0.02,
+  "heuristic_min_accuracy": 0.40,
+  "heuristic_min_macro_f1": 0.38,
+  "note": "Baseline reference for finetune-eval CI gate (accuracy >= baseline - tolerance)"
 }

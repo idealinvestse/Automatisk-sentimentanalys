@@ -1,800 +1,280 @@
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
-{"text": "Jag har bytt email, kan ni ändra det?", "intent": "account_update"}
-{"text": "Mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
-{"text": "Hur ändrar jag min profil?", "intent": "account_update"}
-{"text": "Jag vill byta lösenord på mitt konto", "intent": "account_update"}
-{"text": "Kan ni hjälpa mig uppdatera mina uppgifter?", "intent": "account_update"}
-{"text": "Jag har flyttat och behöver ny adress", "intent": "account_update"}
 {"text": "Ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Alltså, Hej, mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
+{"text": "God dag, jag behöver ändra min adress i systemet", "intent": "account_update"}
+{"text": "Alltså, God dag, mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
+{"text": "Mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
+{"text": "Ursäkta, hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Eh, Ändra min e-postadress tack", "intent": "account_update"}
 {"text": "Uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
-{"text": "Jag har en fråga om min faktura", "intent": "billing_inquiry"}
-{"text": "Varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
-{"text": "Kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
-{"text": "Jag har inte fått någon faktura än", "intent": "billing_inquiry"}
-{"text": "När ska jag betala?", "intent": "billing_inquiry"}
-{"text": "Kan jag få en specifikation på fakturan?", "intent": "billing_inquiry"}
-{"text": "Det står fel belopp på min faktura", "intent": "billing_inquiry"}
-{"text": "Hur mycket kostar det per månad?", "intent": "billing_inquiry"}
-{"text": "Jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
-{"text": "Kan ni skicka om fakturan?", "intent": "billing_inquiry"}
-{"text": "Produkten fungerar inte som den ska", "intent": "technical_support"}
-{"text": "Jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
-{"text": "Min enhet startar inte", "intent": "technical_support"}
-{"text": "Det står bara och laddar", "intent": "technical_support"}
-{"text": "Appen kraschar hela tiden", "intent": "technical_support"}
-{"text": "Jag kan inte ansluta till internet", "intent": "technical_support"}
-{"text": "Något är fel med min anslutning", "intent": "technical_support"}
-{"text": "Hjälp, ingenting fungerar!", "intent": "technical_support"}
-{"text": "Kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
-{"text": "Jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
-{"text": "Var är min beställning?", "intent": "order_status"}
-{"text": "När kommer mitt paket?", "intent": "order_status"}
-{"text": "Kan ni spåra min leverans?", "intent": "order_status"}
-{"text": "Jag har inte fått någon orderbekräftelse", "intent": "order_status"}
-{"text": "Hur lång är leveranstiden?", "intent": "order_status"}
-{"text": "Är min order skickad än?", "intent": "order_status"}
-{"text": "Jag vill kolla status på min beställning", "intent": "order_status"}
-{"text": "När skickades paketet?", "intent": "order_status"}
-{"text": "Kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
-{"text": "Jag undrar om ni har skickat min vara", "intent": "order_status"}
-{"text": "Jag vill avsluta mitt abonnemang", "intent": "cancellation"}
-{"text": "Hur säger jag upp tjänsten?", "intent": "cancellation"}
-{"text": "Jag vill avboka min prenumeration", "intent": "cancellation"}
-{"text": "Kan ni avsluta mitt konto?", "intent": "cancellation"}
-{"text": "Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
-{"text": "Säg upp allt, jag vill inte vara kund längre", "intent": "cancellation"}
-{"text": "Avboka min beställning", "intent": "cancellation"}
-{"text": "Jag ångrar mig och vill avbryta", "intent": "cancellation"}
-{"text": "Hur lång uppsägningstid har ni?", "intent": "cancellation"}
-{"text": "Avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
-{"text": "Jag är mycket missnöjd med servicen", "intent": "complaint"}
-{"text": "Det här är helt oacceptabelt!", "intent": "complaint"}
-{"text": "Jag vill lämna ett klagomål", "intent": "complaint"}
-{"text": "Ni har behandlat mig dåligt", "intent": "complaint"}
-{"text": "Detta är under all kritik", "intent": "complaint"}
-{"text": "Jag känner mig lurad av er", "intent": "complaint"}
-{"text": "Sämsta servicen jag varit med om", "intent": "complaint"}
-{"text": "Jag vill eskalera mitt ärende", "intent": "complaint"}
-{"text": "Ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
-{"text": "Det här är rena katastrofen", "intent": "complaint"}
-{"text": "Vilka öppettider har ni?", "intent": "information_request"}
-{"text": "Berätta mer om era tjänster", "intent": "information_request"}
-{"text": "Vad kostar det att bli kund?", "intent": "information_request"}
-{"text": "Har ni något erbjudande just nu?", "intent": "information_request"}
-{"text": "Hur fungerar er tjänst?", "intent": "information_request"}
-{"text": "Vilka betalningsalternativ finns?", "intent": "information_request"}
-{"text": "Jag undrar om ni har butik i Stockholm", "intent": "information_request"}
-{"text": "Kan ni berätta om era olika abonnemang?", "intent": "information_request"}
-{"text": "Vad ingår i grundpaketet?", "intent": "information_request"}
-{"text": "Har ni någon app man kan använda?", "intent": "information_request"}
-{"text": "Jag vill ha pengarna tillbaka", "intent": "refund_request"}
-{"text": "Kan ni återbetala min senaste faktura?", "intent": "refund_request"}
-{"text": "Jag har blivit feldebiterad och vill ha återbetalning", "intent": "refund_request"}
-{"text": "När får jag mina pengar tillbaka?", "intent": "refund_request"}
-{"text": "Ni lovade återbetalning men inget har hänt", "intent": "refund_request"}
-{"text": "Kreditera mitt konto tack", "intent": "refund_request"}
-{"text": "Jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
-{"text": "Ni drog för mycket, återbetala mellanskillnaden", "intent": "refund_request"}
-{"text": "Jag vill ha kompensation för strulet", "intent": "refund_request"}
-{"text": "Återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Ursäkta, mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
+{"text": "Eh, alltså, Uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
+{"text": "Alltså, Kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
+{"text": "Ursäkta, uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
+{"text": "Hej, jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Typ Jag behöver ändra min adress i systemet", "intent": "account_update"}
+{"text": "Hej, kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
+{"text": "Hej, jag har flyttat och behöver ny adress", "intent": "account_update"}
+{"text": "God dag, ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Typ Hej, ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Jag behöver ändra min adress i systemet", "intent": "account_update"}
+{"text": "Hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Jag har bytt email, kan ni ändra det?", "intent": "account_update"}
+{"text": "Eh, Hej, ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Jag har flyttat och behöver ny adress", "intent": "account_update"}
+{"text": "Jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Eh, alltså, Ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Kan ni registrera min nya postadress?", "intent": "account_update"}
+{"text": "Typ Hej, jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Eh, alltså, Jag vill ändra min adress", "intent": "account_update"}
+{"text": "Boka om min tid till nästa vecka", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Jag behöver boka servicebesök", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Finns det någon ledig tid imorgon?", "intent": "appointment_booking"}
+{"text": "Kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "God dag, boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Typ God dag, kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "Alltså, Boka om min tid till nästa vecka", "intent": "appointment_booking"}
+{"text": "Har ni drop-in imorgon?", "intent": "appointment_booking"}
+{"text": "Ursäkta, jag vill boka en tid", "intent": "appointment_booking"}
 {"text": "Jag vill boka en tid", "intent": "appointment_booking"}
+{"text": "Jag behöver boka servicebesök", "intent": "appointment_booking"}
+{"text": "När har ni nästa lediga tid?", "intent": "appointment_booking"}
+{"text": "Jag vill ha ett möte med en handläggare", "intent": "appointment_booking"}
+{"text": "Jag måste avboka min tid på fredag", "intent": "appointment_booking"}
+{"text": "Typ Boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Hej, jag behöver boka servicebesök", "intent": "appointment_booking"}
+{"text": "Hej, har ni drop-in imorgon?", "intent": "appointment_booking"}
+{"text": "Eh, Jag vill boka en tid", "intent": "appointment_booking"}
+{"text": "Alltså, Jag måste avboka min tid på fredag", "intent": "appointment_booking"}
+{"text": "Eh, Boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "God dag, har ni drop-in imorgon?", "intent": "appointment_booking"}
 {"text": "Kan jag få en tid på torsdag?", "intent": "appointment_booking"}
 {"text": "Jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Eh, Har ni drop-in imorgon?", "intent": "appointment_booking"}
+{"text": "Eh, Kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Boka om min tid till nästa vecka", "intent": "appointment_booking"}
 {"text": "Finns det någon ledig tid imorgon?", "intent": "appointment_booking"}
-{"text": "Boka in mig på förmiddagen tack", "intent": "appointment_booking"}
-{"text": "Jag måste avboka min tid på fredag", "intent": "appointment_booking"}
-{"text": "När har ni nästa lediga tid?", "intent": "appointment_booking"}
-{"text": "Kan jag boka ett videosamtal?", "intent": "appointment_booking"}
-{"text": "Jag vill ha ett möte med en handläggare", "intent": "appointment_booking"}
-{"text": "Boka om min tid till nästa vecka", "intent": "appointment_booking"}
-{"text": "Hej, jag har en allmän fråga", "intent": "other"}
-{"text": "Jag är osäker på vart jag ska vända mig", "intent": "other"}
-{"text": "Kan ni koppla mig till rätt avdelning?", "intent": "other"}
-{"text": "Jag vill bara testa er support", "intent": "other"}
-{"text": "Tack för hjälpen, hej då!", "intent": "other"}
-{"text": "Jag ringer för att kolla läget", "intent": "other"}
+{"text": "Jag har en fråga om min faktura", "intent": "billing_inquiry"}
+{"text": "Eh, Kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
+{"text": "Typ Varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Hej, kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
+{"text": "Typ Kan ni skicka om fakturan?", "intent": "billing_inquiry"}
+{"text": "Ursäkta, hur mycket kostar det per månad?", "intent": "billing_inquiry"}
+{"text": "God dag, jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
+{"text": "Alltså, God dag, kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
+{"text": "Typ Jag undrar varför fakturan är så hög, inte ett klagomål bara", "intent": "billing_inquiry"}
+{"text": "Ursäkta, kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
+{"text": "God dag, varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Eh, Jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Hej, när ska jag betala?", "intent": "billing_inquiry"}
+{"text": "Typ Jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Kan jag få en specifikation på fakturan?", "intent": "billing_inquiry"}
+{"text": "Kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
+{"text": "God dag, det står fel belopp på min faktura", "intent": "billing_inquiry"}
+{"text": "När ska jag betala?", "intent": "billing_inquiry"}
+{"text": "Ursäkta, varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Hej, jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
+{"text": "Ursäkta, jag har en fråga om min faktura", "intent": "billing_inquiry"}
+{"text": "Vad är den här extra debiteringen på fakturan?", "intent": "billing_inquiry"}
+{"text": "Varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Ursäkta, kan ni skicka om fakturan?", "intent": "billing_inquiry"}
+{"text": "Ursäkta, vad är den här extra debiteringen på fakturan?", "intent": "billing_inquiry"}
+{"text": "God dag, när ska jag betala?", "intent": "billing_inquiry"}
+{"text": "Jag undrar varför fakturan är så hög, inte ett klagomål bara", "intent": "billing_inquiry"}
+{"text": "Alltså, Det står fel belopp på min faktura", "intent": "billing_inquiry"}
+{"text": "Jag vill avsluta mitt abonnemang", "intent": "cancellation"}
+{"text": "Typ Jag vill avsluta mitt abonnemang", "intent": "cancellation"}
+{"text": "Jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Ursäkta, avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
+{"text": "Hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Hej, hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Hej, kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "Eh, alltså, Avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
+{"text": "Eh, alltså, Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
+{"text": "Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Avboka min beställning", "intent": "cancellation"}
+{"text": "Ursäkta, kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "God dag, jag vill avsluta mitt abonnemang", "intent": "cancellation"}
+{"text": "Hej, jag ångrar mig och vill avbryta", "intent": "cancellation"}
+{"text": "Hej, jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "God dag, hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Jag ångrar mig och vill avbryta", "intent": "cancellation"}
+{"text": "Ursäkta, hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Eh, Jag vill säga upp mitt avtal", "intent": "cancellation"}
+{"text": "Hej, jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Alltså, Hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Alltså, Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Säg upp allt, jag vill inte vara kund längre", "intent": "cancellation"}
+{"text": "Kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "God dag, avboka min beställning", "intent": "cancellation"}
+{"text": "Hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Jag vill säga upp mitt avtal", "intent": "cancellation"}
+{"text": "Eh, Ursäkta, det här är helt oacceptabelt!", "intent": "complaint"}
+{"text": "Det här är helt oacceptabelt!", "intent": "complaint"}
+{"text": "Eh, Det här är helt oacceptabelt!", "intent": "complaint"}
+{"text": "Det fungerar inte och det är oacceptabelt", "intent": "complaint"}
+{"text": "Ursäkta, ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "Ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "Detta är under all kritik", "intent": "complaint"}
+{"text": "Jag är mycket missnöjd med servicen", "intent": "complaint"}
+{"text": "Det här är rena katastrofen", "intent": "complaint"}
+{"text": "God dag, jag är mycket missnöjd med servicen", "intent": "complaint"}
+{"text": "Ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Eh, Ursäkta, det här är rena katastrofen", "intent": "complaint"}
+{"text": "Alltså, God dag, min faktura är fel och jag är arg på er", "intent": "complaint"}
+{"text": "Jag vill eskalera mitt ärende", "intent": "complaint"}
+{"text": "Eh, God dag, jag känner mig lurad av er", "intent": "complaint"}
+{"text": "Hej, jag är mycket missnöjd med servicen", "intent": "complaint"}
+{"text": "Eh, alltså, Detta är under all kritik", "intent": "complaint"}
+{"text": "Typ Sämsta servicen jag varit med om", "intent": "complaint"}
+{"text": "Min faktura är fel och jag är arg på er", "intent": "complaint"}
+{"text": "Hej, er support är helt värdelös", "intent": "complaint"}
+{"text": "Eh, alltså, Ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Jag känner mig lurad av er", "intent": "complaint"}
+{"text": "Er support är helt värdelös", "intent": "complaint"}
+{"text": "God dag, ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "Jag är arg och frustrerad över situationen", "intent": "complaint"}
+{"text": "Jag vill lämna ett klagomål", "intent": "complaint"}
+{"text": "Eh, alltså, Hej, jag känner mig lurad av er", "intent": "complaint"}
+{"text": "God dag, jag känner mig lurad av er", "intent": "complaint"}
+{"text": "Ursäkta, kan ni berätta om era olika abonnemang?", "intent": "information_request"}
+{"text": "Vad kostar det att bli kund?", "intent": "information_request"}
+{"text": "Har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Hej, jag undrar om ni har butik i Stockholm", "intent": "information_request"}
+{"text": "Eh, alltså, Vilka öppettider har ni?", "intent": "information_request"}
+{"text": "God dag, vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Vilka öppettider har ni?", "intent": "information_request"}
+{"text": "Vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Alltså, Hej, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Alltså, Hej, har ni någon app man kan använda?", "intent": "information_request"}
+{"text": "Typ Har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Hur fungerar er tjänst?", "intent": "information_request"}
+{"text": "God dag, jag undrar om ni har butik i Stockholm", "intent": "information_request"}
+{"text": "Alltså, Vad kostar det att bli kund?", "intent": "information_request"}
+{"text": "Eh, Vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Typ Vad kostar det att bli kund?", "intent": "information_request"}
+{"text": "Typ Vilka öppettider har ni?", "intent": "information_request"}
+{"text": "Eh, alltså, Kan ni berätta om era olika abonnemang?", "intent": "information_request"}
+{"text": "Vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Ursäkta, har ni någon app man kan använda?", "intent": "information_request"}
+{"text": "Typ Finns det studentrabatt?", "intent": "information_request"}
+{"text": "Eh, Finns det studentrabatt?", "intent": "information_request"}
+{"text": "Alltså, Berätta mer om era tjänster", "intent": "information_request"}
+{"text": "Finns det studentrabatt?", "intent": "information_request"}
+{"text": "Kan ni berätta om era olika abonnemang?", "intent": "information_request"}
+{"text": "Jag undrar om ni har butik i Stockholm", "intent": "information_request"}
+{"text": "God dag, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Eh, Ursäkta, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Hej, kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Var är min beställning?", "intent": "order_status"}
+{"text": "Jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "Kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Hej, har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
+{"text": "Typ Jag har inte fått någon orderbekräftelse", "intent": "order_status"}
+{"text": "Eh, alltså, När kommer mitt paket?", "intent": "order_status"}
+{"text": "Hej, är min order skickad än?", "intent": "order_status"}
+{"text": "Ursäkta, jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "Eh, alltså, Kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
+{"text": "Har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Eh, alltså, Jag har inte fått någon orderbekräftelse", "intent": "order_status"}
+{"text": "Eh, Har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Är min order skickad än?", "intent": "order_status"}
+{"text": "Typ Jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "God dag, jag vill kolla status på min beställning", "intent": "order_status"}
+{"text": "Spårningssidan visar inget", "intent": "order_status"}
+{"text": "Jag har inte fått någon orderbekräftelse", "intent": "order_status"}
+{"text": "Hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Ursäkta, kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
+{"text": "Eh, Kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
+{"text": "När skickades paketet?", "intent": "order_status"}
+{"text": "Alltså, Jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "Ursäkta, var är min beställning?", "intent": "order_status"}
+{"text": "God dag, när kommer mitt paket?", "intent": "order_status"}
+{"text": "Hej, när kommer mitt paket?", "intent": "order_status"}
+{"text": "Typ Jag vill kolla status på min beställning", "intent": "order_status"}
 {"text": "Ursäkta, jag kom fel", "intent": "other"}
-{"text": "Jag har blivit hänvisad hit", "intent": "other"}
+{"text": "Eh, alltså, God dag, tack för hjälpen, hej då!", "intent": "other"}
+{"text": "Tack för hjälpen, hej då!", "intent": "other"}
+{"text": "Jag vet inte riktigt vem jag ska prata med", "intent": "other"}
+{"text": "Kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Alltså, Jag vet inte riktigt vem jag ska prata med", "intent": "other"}
+{"text": "Jag ringer för att kolla läget", "intent": "other"}
+{"text": "Jag vill bara testa er support", "intent": "other"}
+{"text": "Typ Jag vill bara testa er support", "intent": "other"}
+{"text": "God dag, jag hoppas ni kan hjälpa", "intent": "other"}
 {"text": "Är detta kundtjänst?", "intent": "other"}
+{"text": "Eh, Är detta kundtjänst?", "intent": "other"}
+{"text": "Eh, Jag ringer för att kolla läget", "intent": "other"}
+{"text": "Hej, kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Hej, jag har en allmän fråga", "intent": "other"}
+{"text": "Eh, Ursäkta, hej, jag har en allmän fråga", "intent": "other"}
+{"text": "Eh, Ursäkta, jag kom fel", "intent": "other"}
+{"text": "Alltså, Ursäkta, jag söker någon som kan hjälpa mig", "intent": "other"}
+{"text": "God dag, jag ringer för att kolla läget", "intent": "other"}
+{"text": "Hej, jag har blivit hänvisad hit", "intent": "other"}
+{"text": "Eh, Jag är osäker på vart jag ska vända mig", "intent": "other"}
 {"text": "Jag söker någon som kan hjälpa mig", "intent": "other"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
-{"text": "Jag vill ändra min adress", "intent": "account_update"}
+{"text": "Hej, jag vill bara testa er support", "intent": "other"}
+{"text": "Hej, jag söker någon som kan hjälpa mig", "intent": "other"}
+{"text": "Typ Jag har blivit hänvisad hit", "intent": "other"}
+{"text": "God dag, hej, jag har en allmän fråga", "intent": "other"}
+{"text": "Eh, alltså, Jag söker någon som kan hjälpa mig", "intent": "other"}
+{"text": "Jag har blivit hänvisad hit", "intent": "other"}
+{"text": "God dag, jag har blivit feldebiterad och vill ha återbetalning", "intent": "refund_request"}
+{"text": "God dag, kreditera mitt konto tack", "intent": "refund_request"}
+{"text": "Ursäkta, ni drog för mycket, återbetala mellanskillnaden", "intent": "refund_request"}
+{"text": "Typ När får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Typ God dag, jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
+{"text": "Typ Jag vill ha kompensation för strulet", "intent": "refund_request"}
+{"text": "Typ Jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
+{"text": "Eh, Kreditera mitt konto tack", "intent": "refund_request"}
+{"text": "Ni drog för mycket, återbetala mellanskillnaden", "intent": "refund_request"}
+{"text": "Jag vill ha kompensation för strulet", "intent": "refund_request"}
+{"text": "Ursäkta, när får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Typ Kan ni refunda den felaktiga avgiften?", "intent": "refund_request"}
+{"text": "Jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "God dag, jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "Typ God dag, ni lovade återbetalning men inget har hänt", "intent": "refund_request"}
+{"text": "Alltså, Jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "Jag kräver återbetalning för dubbeldebitering", "intent": "refund_request"}
+{"text": "Alltså, Jag kräver återbetalning för dubbeldebitering", "intent": "refund_request"}
+{"text": "Ni debiterade fel, återbetala tack", "intent": "refund_request"}
+{"text": "Alltså, Hej, fakturan är fel, jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "Kreditera mitt konto tack", "intent": "refund_request"}
+{"text": "Jag har blivit feldebiterad och vill ha återbetalning", "intent": "refund_request"}
+{"text": "Jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
+{"text": "Typ Jag kräver återbetalning för dubbeldebitering", "intent": "refund_request"}
+{"text": "Kan ni återbetala min senaste faktura?", "intent": "refund_request"}
+{"text": "God dag, kan ni refunda den felaktiga avgiften?", "intent": "refund_request"}
+{"text": "Kan ni refunda den felaktiga avgiften?", "intent": "refund_request"}
+{"text": "Hej, återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Ursäkta, kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Typ Min enhet startar inte", "intent": "technical_support"}
+{"text": "Alltså, Router blinkar rött hela tiden", "intent": "technical_support"}
+{"text": "Något är fel med min anslutning", "intent": "technical_support"}
+{"text": "Det står bara och laddar", "intent": "technical_support"}
+{"text": "Jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Hej, hjälp, ingenting fungerar!", "intent": "technical_support"}
+{"text": "Typ Hej, produkten fungerar inte som den ska", "intent": "technical_support"}
+{"text": "Eh, alltså, Jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
+{"text": "Appen kraschar hela tiden", "intent": "technical_support"}
+{"text": "God dag, något är fel med min anslutning", "intent": "technical_support"}
+{"text": "Eh, alltså, Router blinkar rött hela tiden", "intent": "technical_support"}
+{"text": "Kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
+{"text": "Typ Hej, wifi fungerar inte efter omstart", "intent": "technical_support"}
+{"text": "Jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
+{"text": "Alltså, God dag, det står bara och laddar", "intent": "technical_support"}
+{"text": "Alltså, Hej, appen kraschar hela tiden", "intent": "technical_support"}
+{"text": "Ursäkta, jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Hjälp, ingenting fungerar!", "intent": "technical_support"}
+{"text": "Ursäkta, det står bara och laddar", "intent": "technical_support"}
+{"text": "Hej, produkten fungerar inte som den ska", "intent": "technical_support"}
+{"text": "Router blinkar rött hela tiden", "intent": "technical_support"}
+{"text": "Typ Appen kraschar hela tiden", "intent": "technical_support"}
+{"text": "Typ God dag, det står bara och laddar", "intent": "technical_support"}
+{"text": "Eh, alltså, Jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
+{"text": "Ursäkta, wifi fungerar inte efter omstart", "intent": "technical_support"}
+{"text": "Hej, wifi fungerar inte efter omstart", "intent": "technical_support"}

@@ -2,6 +2,11 @@
   "profile": "callcenter",
   "accuracy": 0.72,
   "f1_macro": 0.70,
+  "intent_heuristic_val": {
+    "accuracy": 0.7429,
+    "f1_macro": 0.7646,
+    "testset": "data/intent_val.jsonl"
+  },
   "testset": "data/callcenter_val.csv",
-  "note": "Domain baseline for synthetic callcenter val set"
+  "note": "Sentiment baseline on synthetic val; intent metrics on deduplicated intent_val.jsonl (2026-06-28 accuracy program)"
 }

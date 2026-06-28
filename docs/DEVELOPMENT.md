@@ -136,11 +136,22 @@ Common variables:
 ```bash
 pip install -e ".[training,min]"
 python scripts/prepare_callcenter_data.py --target-size 10000
+python scripts/prepare_intent_data.py --per-intent 35
 python scripts/validate_domain_corpus.py data/callcenter_val.csv
+python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200
 python -m src.finetune --config configs/finetune.yaml
 ```
 
-CI runs smoke tests via `configs/finetune.ci.yaml`. Baseline: `reports/finetune_baseline.json`.
+**Analyzer accuracy benchmarks:**
+
+```bash
+python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --min-macro-f1 0.75
+python scripts/benchmark_analyzers.py --check-thresholds
+python scripts/compare_intent_backends.py
+python scripts/evaluate_real_corpus.py --sentiment-csv /path/to/anonymized.csv
+```
+
+CI runs smoke tests via `configs/finetune.ci.yaml`. Baselines: `reports/finetune_baseline.json`, `reports/intent_baseline.json`, `reports/analyzer_baseline.json`.
 
 When `models/callcenter-sentiment-lora/` exists, `callcenter` profile uses it automatically.
 

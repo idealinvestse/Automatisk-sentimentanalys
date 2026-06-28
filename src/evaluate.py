@@ -487,20 +487,25 @@ def _synthetic_callcenter_samples() -> list[dict[str, Any]]:
 
 @app.command("llm-quality")
 def evaluate_llm_quality(
-    output: str | None = typer.Option("reports/llm_quality.json", "--output"),
-    use_real_llm: bool = typer.Option(False, "--use-real-llm", help="Actually call Mistral if OPENROUTER_API_KEY is set (otherwise always fallback path)"),
+    output: str | None = typer.Option("reports/llm_quality_baseline.json", "--output"),
+    use_real_llm: bool = typer.Option(
+        False,
+        "--use-real-llm",
+        help="Actually call Mistral if OPENROUTER_API_KEY is set (otherwise fallback path)",
+    ),
 ):
     """Utvärdera kvalitet på Mistral holistisk analys (Fas 3.3.3).
 
-    Metrics (proxy eftersom vi saknar human labels för insights):
-    - fallback_rate
-    - avg_cost_usd
-    - pct_with_actionable
-    - pct_with_evidence_spans (basic count)
-    - consistency (2 runs on same input -> cached + identical structure)
-    - cost tracking
+    Proxy metrics (no human labels):
+    - fallback_rate, avg_cost_usd, pct_with_actionable, pct_with_evidence
+    - schema_pass_rate (Pydantic validation on output keys)
+    - deep_path_eligible (segment count vs should_use_any_llm gate)
     """
+    from pydantic import ValidationError
+
     from .llm.mistral_analyzer import ConversationMistralAnalyzer
+    from .llm.schemas import CallLLMOutput
+    from .pipeline_steps import PipelineLLMContext, should_use_any_llm
 
     samples = _synthetic_callcenter_samples()
     results = []
@@ -508,13 +513,27 @@ def evaluate_llm_quality(
     fallbacks = 0
     has_actionable = 0
     has_evidence = 0
+    schema_pass = 0
+    deep_path_hits = 0
 
     analyzer = ConversationMistralAnalyzer()
+    llm_ctx = PipelineLLMContext(
+        profile="callcenter",
+        provider="openrouter",
+        use_mistral_llm=use_real_llm,
+        deep_analysis=use_real_llm,
+        llm_model=None,
+        llm_api_key=None,
+        groq_eu_residency=False,
+    )
 
     for sample in samples:
-        for run in range(2):  # consistency check
+        segs = sample["segments"]
+        if should_use_any_llm(segs, llm_ctx):
+            deep_path_hits += 1
+        for run in range(2):
             out = analyzer.analyze_full_conversation(
-                segments=sample["segments"],
+                segments=segs,
                 role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"},
             )
             meta = out.get("meta", {})
@@ -524,7 +543,13 @@ def evaluate_llm_quality(
                 fallbacks += 1
             if out.get("actionable_summary"):
                 has_actionable += 1
-            # crude evidence presence
+            schema_ok = False
+            try:
+                CallLLMOutput.model_validate(out)
+                schema_ok = True
+                schema_pass += 1
+            except ValidationError:
+                pass
             ev = 0
             for k in ("trajectory", "refined_aspects", "root_cause", "agent_assessment"):
                 val = out.get(k) or {}
@@ -546,17 +571,22 @@ def evaluate_llm_quality(
                     "llm_used": meta.get("llm_used", False),
                     "has_actionable": bool(out.get("actionable_summary")),
                     "evidence_count": ev,
+                    "schema_valid": schema_ok,
                 }
             )
 
     n = len(results)
     metrics = {
         "n_runs": n,
+        "n_samples": len(samples),
+        "deep_path_eligible_samples": deep_path_hits,
         "fallback_rate": round(fallbacks / max(1, n), 4),
         "avg_cost_usd": round(sum(costs) / max(1, n), 6),
         "pct_with_actionable": round(has_actionable / max(1, n), 4),
         "pct_with_evidence": round(has_evidence / max(1, n), 4),
+        "schema_pass_rate": round(schema_pass / max(1, n), 4),
         "total_cost_usd": round(sum(costs), 6),
+        "use_real_llm": use_real_llm,
         "consistency_note": "Second run on identical input should be cached (cost ~0) if client cache works.",
     }
 

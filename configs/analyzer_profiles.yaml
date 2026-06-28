@@ -23,7 +23,8 @@ callcenter:
     - actionable_coaching
     - multi_turn_journey
     - spoken_normalizer
-  disabled: []
+  disabled:
+    - dialect_sensitivity
 
 call:
   default_selected:

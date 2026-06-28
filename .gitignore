@@ -151,6 +151,7 @@ agent-tools/
 reports/llm_quality_smoke.json
 reports/llm_human_study_template.md
 reports/audio_*.json
+reports/offline/
 
 # Large local audio datasets (manifest + docs committed; download RAVDESS locally)
 samples/audio/Actor_*/

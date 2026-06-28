@@ -252,36 +252,129 @@ class IntentClassifier:
     # Heuristic backend
     # ------------------------------------------------------------------
     def _classify_heuristic(self, text: str) -> tuple[str, float]:
-        """Keyword-based intent classification."""
+        """Keyword-based intent classification with phrase boosts."""
         lowered = text.lower()
         scores: dict[str, float] = {}
 
+        # Strong multi-word phrase boosts (checked first)
+        phrase_boosts: dict[str, list[str]] = {
+            "refund_request": [
+                "pengarna tillbaka",
+                "återbetala",
+                "återbetalning",
+                "kreditera",
+                "feldebiterad",
+                "kompensation",
+            ],
+            "cancellation": [
+                "säga upp",
+                "avsluta mitt abonnemang",
+                "avsluta mitt konto",
+                "uppsägning",
+                "inte intresserad längre",
+                "gå ur",
+            ],
+            "complaint": [
+                "klagomål",
+                "missnöjd",
+                "oacceptabelt",
+                "under all kritik",
+                "eskalera",
+                "katastrof",
+                "värdelös",
+            ],
+            "appointment_booking": [
+                "boka en tid",
+                "boka om",
+                "omboka",
+                "ledig tid",
+                "videosamtal",
+                "servicebesök",
+            ],
+            "order_status": [
+                "var är min beställning",
+                "orderstatus",
+                "leveransstatus",
+                "spåra min leverans",
+                "orderbekräftelse",
+            ],
+            "technical_support": [
+                "fungerar inte",
+                "felmeddelande",
+                "kraschar",
+                "teknisk hjälp",
+                "wifi",
+                "router",
+                "internet",
+            ],
+            "billing_inquiry": [
+                "min faktura",
+                "fakturan",
+                "debitering",
+                "avgift",
+                "belopp",
+            ],
+            "account_update": [
+                "ändra min adress",
+                "uppdatera mitt telefonnummer",
+                "kontaktuppgifter",
+                "byta lösenord",
+                "ny adress",
+            ],
+            "information_request": [
+                "öppettider",
+                "erbjudande",
+                "betalningsalternativ",
+                "grundpaketet",
+                "studentrabatt",
+            ],
+        }
+        for intent_name, phrases in phrase_boosts.items():
+            hits = sum(1 for p in phrases if p in lowered)
+            if hits:
+                scores[intent_name] = scores.get(intent_name, 0.0) + hits * 0.35
+
         for intent_name, intent_data in CALL_CENTER_INTENTS.items():
-            score = 0.0
+            score = scores.get(intent_name, 0.0)
             keywords = intent_data.get("keywords", [])
-            for kw in keywords:
-                if kw in lowered:
-                    score += 1.0
-            if keywords:
-                score /= len(keywords)
+            kw_hits = sum(1 for kw in keywords if kw in lowered)
+            if kw_hits:
+                score += kw_hits * 0.15
             scores[intent_name] = score
 
-        # Boost "complaint" if strong negative sentiment detected
-        strong_negative = {"dålig", "usel", "katastrof", "skandal", "oacceptabelt", "värdelös"}
+        # Boost complaint on strong negative words
+        strong_negative = {"dålig", "usel", "katastrof", "skandal", "oacceptabelt", "värdelös", "arg"}
         if any(w in lowered for w in strong_negative):
-            scores["complaint"] = min(1.0, scores.get("complaint", 0) + 0.3)
+            scores["complaint"] = scores.get("complaint", 0) + 0.25
+
+        # Penalize generic "other" unless nothing else matches
+        if scores.get("other", 0) > 0 and max(
+            (v for k, v in scores.items() if k != "other"), default=0
+        ) > 0.15:
+            scores["other"] *= 0.3
 
         if not scores or max(scores.values()) == 0:
             return "other", 0.5
 
-        # Break ties deterministically: prefer specific intents over "other" and "information_request"
+        # Disambiguation rules
+        if "boka" in lowered and "avboka" not in lowered and "avsluta" not in lowered:
+            scores["appointment_booking"] = scores.get("appointment_booking", 0) + 0.2
+            scores["cancellation"] = scores.get("cancellation", 0) * 0.5
+        if any(w in lowered for w in ("avsluta", "säga upp", "uppsägning")):
+            scores["cancellation"] = scores.get("cancellation", 0) + 0.3
+            scores["appointment_booking"] = scores.get("appointment_booking", 0) * 0.4
+        if any(w in lowered for w in ("faktura", "debiter", "avgift")) and "återbetala" not in lowered:
+            scores["billing_inquiry"] = scores.get("billing_inquiry", 0) + 0.2
+        if "återbetala" in lowered or "pengarna tillbaka" in lowered:
+            scores["refund_request"] = scores.get("refund_request", 0) + 0.4
+
         best_score = max(scores.values())
         candidates = [k for k, v in scores.items() if v == best_score]
         if len(candidates) > 1:
             priority_order = [
                 "complaint",
-                "cancellation",
                 "refund_request",
+                "cancellation",
                 "billing_inquiry",
                 "technical_support",
                 "account_update",
@@ -290,17 +383,16 @@ class IntentClassifier:
                 "information_request",
                 "other",
             ]
+            best_intent = candidates[0]
             for preferred in priority_order:
                 if preferred in candidates:
-                    best = (preferred, best_score)
+                    best_intent = preferred
                     break
-            else:
-                best = (candidates[0], best_score)
         else:
-            best = (candidates[0], best_score)
+            best_intent = candidates[0]
 
-        confidence = min(1.0, best[1])
-        return best[0], round(confidence, 3)
+        confidence = min(1.0, best_score / 1.5)
+        return best_intent, round(max(confidence, 0.35), 3)
 
     # ------------------------------------------------------------------
     # Model backend
@@ -466,14 +558,15 @@ def generate_intent_dataset(output_path: str, n_examples: int = 800) -> None:
     }
 
     examples: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
     for intent, phrases in templates.items():
         for phrase in phrases:
-            examples.append({"text": phrase, "intent": intent})
+            key = (phrase.lower().strip(), intent)
+            if key not in seen:
+                seen.add(key)
+                examples.append({"text": phrase, "intent": intent})
 
-    # Augment by repeating with slight variations
-    while len(examples) < n_examples:
-        base = examples[len(examples) % len(examples)]
-        examples.append(dict(base))
+    # Deprecated: use scripts/prepare_intent_data.py for balanced train/val splits.
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

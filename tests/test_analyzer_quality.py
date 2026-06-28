@@ -154,6 +154,29 @@ class TestEmotionHybrid:
         out = EmotionAnalyzer().analyze(ctx)
         assert out[0]["primary"] in ("frustration", "besvikelse", "oro", "neutral")
 
+    def test_question_words_do_not_trigger_forvirring(self) -> None:
+        ctx = AnalysisContext(
+            segments=[_seg("Hur lång tid tar det och vad behöver ni?")],
+            results={
+                "sentiment": [{"label": "neutral", "score": 0.5}],
+                "negation": [{"has_negation": False, "negation_count": 0}],
+            },
+        )
+        out = EmotionAnalyzer().analyze(ctx)
+        assert out[0]["primary"] == "neutral"
+
+
+class TestUpsellOpportunity:
+    def test_vad_kostar_alone_not_enough(self) -> None:
+        from src.analysis.upsell_opportunity import UpsellOpportunityDetector
+
+        ctx = AnalysisContext(
+            segments=[_seg("Vad kostar det per månad?")],
+            results={"sentiment": [{"label": "neutral", "score": 0.5}]},
+        )
+        out = UpsellOpportunityDetector().analyze(ctx)
+        assert out["count"] == 0
+
 
 class TestSpokenNormalizer:
     def test_segment_analysis_text_uses_normalized(self) -> None:

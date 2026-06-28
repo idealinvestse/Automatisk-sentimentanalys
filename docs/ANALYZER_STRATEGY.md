@@ -27,7 +27,17 @@ Implemented in `src/pipeline_steps.py`:
 
 **callcenter `optional`:** empathy, insights, trajectory, llm_judge, upsell_opportunity, resolution_probability, root_cause, predictive, actionable_coaching, multi_turn_journey, spoken_normalizer (ASR filler cleanup; feeds sentiment/intent when enabled)
 
+**callcenter `disabled`:** `dialect_sensitivity` (low precision; enable explicitly if needed)
+
 When LLM runs, superseded optional analyzers are skipped automatically. Without LLM, enable them explicitly via `selected_analyzers` or profile config.
+
+## Intent backend selection (DATA-01)
+
+- **Default:** `heuristic` in `IntentAnalyzer` (phrase boosts + disambiguation rules).
+- **Benchmark:** `scripts/benchmark_intent.py --val-file data/intent_val.jsonl` (macro F1 primary).
+- **Model A/B:** `scripts/compare_intent_backends.py`; switch to `model` only if macro F1 ≥ heuristic + 0.05 (`configs/analyzer_eval.yaml`).
+- **Training data:** `scripts/prepare_intent_data.py` → balanced `intent_train.jsonl` / `intent_val.jsonl` (no duplicates).
+- **`spoken_normalizer`:** remains optional until ASR-noisy benchmark shows ≥+2pp sentiment gain on val set.
 
 ## Overlap matrix
 

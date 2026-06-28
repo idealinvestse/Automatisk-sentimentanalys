@@ -1,0 +1,14 @@
+{
+  "_comment": "Synthetic complaint escalation scenario.",
+  "segments": [
+    {"start": 0, "end": 3, "text": "Kundtjänst, mitt namn är Erik.", "speaker": "SPEAKER_0"},
+    {"start": 3, "end": 8, "text": "Det här är helt oacceptabelt, jag är mycket missnöjd.", "speaker": "SPEAKER_1"},
+    {"start": 8, "end": 12, "text": "Jag beklagar, berätta mer.", "speaker": "SPEAKER_0"},
+    {"start": 12, "end": 17, "text": "Jag vill lämna ett klagomål och eskalera ärendet.", "speaker": "SPEAKER_1"}
+  ],
+  "expect": {
+    "results_keys": ["sentiment", "intent", "role", "emotion", "compliance_risk"],
+    "intent_contains": "complaint",
+    "has_negative_sentiment": true
+  }
+}

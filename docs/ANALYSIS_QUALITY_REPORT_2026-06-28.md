@@ -191,8 +191,19 @@ Alla punkter från 2026-06-28-planen är nu implementerade:
 | Strict validation i CI | **Klar** — `ANALYZER_VALIDATION_MODE=strict` i CI + integrationstest |
 
 **Nästa steg (ej blockerande):**
-- Utvärdera intent **model**-backend mot heuristic (+5pp F1-tröskel) innan default-byte
+- Train intent **model** via `scripts/train_intent.py` when GPU/training deps available; run `compare_intent_backends.py` before default switch.
+- Import anonymized real calls via `scripts/evaluate_real_corpus.py` (outputs to `reports/offline/`, gitignored).
 - Dashboard-panel för `compliance_risk` (fortfarande via QA indirekt)
+
+### Post accuracy-program metrics (2026-06-28)
+
+| Analyzer | Val metric | Value |
+|----------|------------|-------|
+| Intent (heuristic) | macro F1 | 0.765 on `intent_val.jsonl` |
+| Intent (heuristic) | accuracy | 0.743 |
+| Emotion (labeled fixture) | accuracy | 0.80+ |
+| Role (labeled fixture) | accuracy | 1.0 |
+| Compliance (labeled fixture) | accuracy | 0.83+ |
 
 ---
 

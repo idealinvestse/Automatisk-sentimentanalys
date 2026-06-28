@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -14,6 +15,8 @@ from ..sentiment import SentimentPipeline
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+DEFAULT_INTENT_MODEL_PATH = os.getenv("INTENT_MODEL_PATH", "models/intent_classifier")
 
 _pool: ModelResourcePool | None = None
 _pool_lock = threading.Lock()
@@ -58,8 +61,16 @@ class ModelResourcePool:
         )
 
     def get_intent_classifier(self, backend: str = "heuristic") -> IntentClassifier:
-        key = ("intent", backend)
-        return self._get_or_create(key, lambda: IntentClassifier(backend=backend))
+        model_path = DEFAULT_INTENT_MODEL_PATH if backend == "model" else None
+        if backend == "model" and not os.path.isdir(model_path or ""):
+            logger.debug("Intent model path missing (%s); using heuristic", model_path)
+            backend = "heuristic"
+            model_path = None
+        key = ("intent", backend, model_path or "")
+        return self._get_or_create(
+            key,
+            lambda: IntentClassifier(backend=backend, model_path=model_path),
+        )
 
     def clear(self) -> None:
         with self._lock:

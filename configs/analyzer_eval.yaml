@@ -1,0 +1,26 @@
+# Analyzer evaluation thresholds for CI and offline benchmarks
+# Primary metrics: macro F1 (intent), accuracy + macro F1 (sentiment)
+
+sentiment:
+  testset: data/callcenter_val.csv
+  min_accuracy: 0.70
+  min_macro_f1: 0.68
+  baseline_file: reports/finetune_baseline.json
+  regression_tolerance: 0.02
+  # Lexicon heuristic smoke (CI fast path via benchmark_analyzers --sentiment-backend heuristic)
+  heuristic_min_accuracy: 0.40
+  heuristic_min_macro_f1: 0.38
+
+intent:
+  val_file: data/intent_val.jsonl
+  train_file: data/intent_train.jsonl
+  min_macro_f1: 0.75
+  min_accuracy: 0.74
+  backend: heuristic
+  model_switch_min_f1_gain: 0.05
+
+labeled_fixtures:
+  emotion: tests/fixtures/analyzer_labeled/emotion_labeled.jsonl
+  role: tests/fixtures/analyzer_labeled/role_labeled.jsonl
+  compliance: tests/fixtures/analyzer_labeled/compliance_labeled.jsonl
+  min_accuracy: 0.60

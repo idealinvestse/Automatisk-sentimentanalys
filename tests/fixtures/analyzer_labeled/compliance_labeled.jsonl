@@ -1,0 +1,12 @@
+{"text": "Jag lovar att det fixas idag.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent", "SPEAKER_1": "customer"}, "expected_risks": ["over_promise"]}
+{"text": "Det är garanterat löst inom en timme.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": ["over_promise"]}
+{"text": "Skicka ditt personnummer i chatten.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": ["data_request"]}
+{"text": "Jag stämmer er om ni inte betalar.", "speaker": "SPEAKER_1", "roles": {"SPEAKER_0": "agent", "SPEAKER_1": "customer"}, "expected_risks": []}
+{"text": "Jag lovar att stämma er.", "speaker": "SPEAKER_1", "roles": {"SPEAKER_0": "agent", "SPEAKER_1": "customer"}, "expected_risks": []}
+{"text": "Samtalet inspelat för kvalitetssäkring.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": ["recording_disclosure"]}
+{"text": "Jag behöver ditt bankkontonummer.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": ["data_request"]}
+{"text": "Tack för att du väntade.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": []}
+{"text": "Jag förstår din frustration.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": []}
+{"text": "Jag kan absolut garantera 100% lösning.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": ["over_promise"]}
+{"text": "Vi behandlar dina personuppgifter enligt GDPR.", "speaker": "SPEAKER_0", "roles": {"SPEAKER_0": "agent"}, "expected_risks": []}
+{"text": "Jag polisanmäler er om detta fortsätter.", "speaker": "SPEAKER_1", "roles": {"SPEAKER_0": "agent", "SPEAKER_1": "customer"}, "expected_risks": []}

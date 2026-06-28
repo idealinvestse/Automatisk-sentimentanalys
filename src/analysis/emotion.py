@@ -21,7 +21,7 @@ EMOTION_KEYWORDS = {
     "frustration": ["jättearg", "trött", "irriterad", "frustrerad", "arg", "jävla", "fan"],
     "ilska": ["rasande", "ilska", "förbannad", "helvete"],
     "besvikelse": ["besviken", "trist", "ledsen", "synd", "inte bra"],
-    "förvirring": ["förvirrad", "förstår inte", "hur", "vad", "oklart", "konstigt"],
+    "förvirring": ["förvirrad", "förstår inte", "vet inte", "oklart", "konstigt"],
     "tillfredsställelse": ["perfekt", "nöjd", "funkar"],
     "oro": ["orolig", "rädd", "osäker", "vad händer", "problem"],
     "glädje": ["glad", "kul", "super"],

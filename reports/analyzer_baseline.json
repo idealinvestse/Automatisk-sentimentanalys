@@ -1,0 +1,252 @@
+{
+  "config": "configs\\analyzer_eval.yaml",
+  "sentiment": {
+    "testset": "data\\callcenter_val.csv",
+    "backend": "heuristic",
+    "accuracy": 0.44,
+    "macro_f1": 0.4021,
+    "per_class": {
+      "negativ": {
+        "precision": 1.0,
+        "recall": 0.1667,
+        "f1": 0.2857,
+        "support": 174
+      },
+      "neutral": {
+        "precision": 0.3518,
+        "recall": 0.9333,
+        "f1": 0.5109,
+        "support": 150
+      },
+      "positiv": {
+        "precision": 0.6986,
+        "recall": 0.2898,
+        "f1": 0.4096,
+        "support": 176
+      }
+    },
+    "n_samples": 500
+  },
+  "intent": {
+    "backend": "heuristic",
+    "model_path": null,
+    "n_samples": 70,
+    "accuracy": 0.7429,
+    "f1_macro": 0.7646,
+    "latency_ms_p50": 0.018,
+    "latency_total_s": 0.001,
+    "per_class": {
+      "account_update": {
+        "precision": 0.875,
+        "recall": 1.0,
+        "f1": 0.9333,
+        "support": 7
+      },
+      "billing_inquiry": {
+        "precision": 1.0,
+        "recall": 0.8571,
+        "f1": 0.9231,
+        "support": 7
+      },
+      "technical_support": {
+        "precision": 0.625,
+        "recall": 0.7143,
+        "f1": 0.6667,
+        "support": 7
+      },
+      "order_status": {
+        "precision": 1.0,
+        "recall": 0.8571,
+        "f1": 0.9231,
+        "support": 7
+      },
+      "cancellation": {
+        "precision": 0.8,
+        "recall": 0.5714,
+        "f1": 0.6667,
+        "support": 7
+      },
+      "complaint": {
+        "precision": 1.0,
+        "recall": 0.7143,
+        "f1": 0.8333,
+        "support": 7
+      },
+      "information_request": {
+        "precision": 0.6,
+        "recall": 0.4286,
+        "f1": 0.5,
+        "support": 7
+      },
+      "refund_request": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 7
+      },
+      "appointment_booking": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 7
+      },
+      "other": {
+        "precision": 0.1538,
+        "recall": 0.2857,
+        "f1": 0.2,
+        "support": 7
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "account_update",
+        "billing_inquiry",
+        "technical_support",
+        "order_status",
+        "cancellation",
+        "complaint",
+        "information_request",
+        "refund_request",
+        "appointment_booking",
+        "other"
+      ],
+      "matrix": [
+        [
+          7,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          6,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          6,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          5,
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          7,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          7,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          2
+        ]
+      ]
+    }
+  },
+  "emotion": {
+    "fixture": "tests\\fixtures\\analyzer_labeled\\emotion_labeled.jsonl",
+    "accuracy": 0.95,
+    "n_samples": 20
+  },
+  "role": {
+    "fixture": "tests\\fixtures\\analyzer_labeled\\role_labeled.jsonl",
+    "accuracy": 1.0,
+    "n_samples": 20
+  },
+  "compliance": {
+    "fixture": "tests\\fixtures\\analyzer_labeled\\compliance_labeled.jsonl",
+    "accuracy": 0.8333,
+    "n_samples": 12
+  }
+}
