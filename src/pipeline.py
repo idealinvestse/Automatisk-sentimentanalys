@@ -10,8 +10,12 @@ import time
 from typing import Any
 
 from .core.models import CallAnalysisReport, Segment
-from .llm.mistral_analyzer import ConversationMistralAnalyzer
-from .pipeline_steps import apply_early_pii_redaction, run_registry_analyzers
+from .pipeline_steps import (
+    PipelineLLMContext,
+    apply_early_pii_redaction,
+    run_fas4_enrichment,
+    run_registry_analyzers,
+)
 from .transcription import get_transcriber
 from .transcription.factory import resolve_preprocess_mode
 
@@ -130,142 +134,17 @@ class CallAnalysisPipeline:
             },
         }
 
-    def _should_use_mistral_llm(self, segments: list) -> bool:
-        """Decision logic for hybrid path (profile + length + confidence + explicit flags)."""
-        if self.deep_analysis or self.use_mistral_llm:
-            return True
-        # Heuristic for callcenter profile: longer calls or many segments benefit from holistisk view
-        if self.profile in {"callcenter", "call", "customer_service"} and len(segments) >= 6:
-            return True
-        return False
-
-    def _run_mistral_holistic(
-        self,
-        segments: list[Segment] | list[dict[str, Any]],
-        results: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Call the Mistral analyzer (if available) and return enriched result or fallback dict."""
-        try:
-            role_map = results.get("role") or {}
-            # Convert Segment objects if needed for the analyzer
-            seg_dicts: list[dict[str, Any]] = []
-            for s in segments:
-                if isinstance(s, dict):
-                    seg_dicts.append(s)
-                else:
-                    seg_dicts.append(s.to_dict())
-
-            mistral = ConversationMistralAnalyzer(
-                model=self.llm_model,
-                api_key=self.llm_api_key,
-            )
-            llm_out = mistral.analyze_full_conversation(
-                segments=seg_dicts,
-                role_map=role_map if isinstance(role_map, dict) else {},
-                local_results=results,
-                profile_name=self.profile,
-            )
-            if llm_out.get("fallback"):
-                llm_out["meta"] = llm_out.get("meta", {})
-                llm_out["meta"]["llm_used"] = False
-                llm_out["meta"]["llm_fallback_reason"] = llm_out.get("meta", {}).get("fallback_reason", "llm_error_or_disabled")
-            else:
-                llm_out.setdefault("meta", {})
-                llm_out["meta"]["llm_used"] = True
-            return llm_out
-        except Exception as e:
-            logger.warning("Mistral holistic step failed (will use local only): %s", e)
-            return {"llm_used": False, "llm_fallback_reason": str(e), "error": str(e)}
-
-    def _should_use_groq_llm(self, segments: list) -> bool:
-        """Decision logic for Groq hybrid path."""
-        if self.provider != "groq":
-            return False
-        if self.deep_analysis or self.use_mistral_llm:
-            return True
-        if self.profile in {"callcenter", "call", "customer_service"} and len(segments) >= 6:
-            return True
-        return False
-
-    def _run_groq_holistic(
-        self,
-        segments: list[Segment] | list[dict[str, Any]],
-        results: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Call the Groq analyzer (if available) and return enriched result or fallback dict.
-
-        GDPR gate: groq_eu_residency must be True or anonymize_before_llm must be active.
-        """
-        try:
-            from .llm.groq_analyzer import GroqAnalyzer
-
-            role_map = results.get("role") or {}
-            seg_dicts: list[dict[str, Any]] = []
-            for s in segments:
-                if isinstance(s, dict):
-                    seg_dicts.append(s)
-                else:
-                    seg_dicts.append(s.to_dict())
-
-            # GDPR gate: check if PII redaction was applied or eu_residency flag is set
-            pii_redacted = bool(
-                results.get("pii_redaction", {}).get("total_redacted", 0) > 0
-                if isinstance(results.get("pii_redaction"), dict)
-                else False
-            )
-
-            if not self.groq_eu_residency and not pii_redacted:
-                logger.warning(
-                    "GROQ GDPR GATE: groq_eu_residency=OFF and no PII redaction detected. "
-                    "Groq data centers are US/Saudi Arabia (no EU hosting). "
-                    "Falling back to local analysis only."
-                )
-                return {
-                    "llm_used": False,
-                    "meta": {
-                        "llm_used": False,
-                        "llm_fallback_reason": "groq_gdpr_gate",
-                        "provider": "groq",
-                    },
-                }
-
-            groq_analyzer = GroqAnalyzer(
-                model=self.llm_model,
-                api_key=self.llm_api_key,
-                groq_eu_residency=self.groq_eu_residency,
-            )
-            llm_out = groq_analyzer.analyze_full_conversation(
-                segments=seg_dicts,
-                role_map=role_map if isinstance(role_map, dict) else {},
-                local_results=results,
-                profile_name=self.profile,
-                anonymize_before_llm=pii_redacted,
-            )
-            if llm_out.get("fallback"):
-                llm_out["meta"] = llm_out.get("meta", {})
-                llm_out["meta"]["llm_used"] = False
-                llm_out["meta"]["llm_fallback_reason"] = llm_out.get("meta", {}).get(
-                    "fallback_reason", "groq_llm_error_or_disabled"
-                )
-            else:
-                llm_out.setdefault("meta", {})
-                llm_out["meta"]["llm_used"] = True
-                llm_out["meta"]["provider"] = "groq"
-            return llm_out
-        except Exception as e:
-            logger.warning("Groq holistic step failed (will use local only): %s", e)
-            return {
-                "llm_used": False,
-                "llm_fallback_reason": str(e),
-                "error": str(e),
-                "meta": {"provider": "groq"},
-            }
-
-    def _should_use_any_llm(self, segments: list) -> bool:
-        """Unified decision: should we use ANY LLM path based on provider?"""
-        if self.provider == "groq":
-            return self._should_use_groq_llm(segments)
-        return self._should_use_mistral_llm(segments)
+    def _llm_context(self) -> PipelineLLMContext:
+        """Build LLM routing context for Fas-4 pipeline steps."""
+        return PipelineLLMContext(
+            profile=self.profile,
+            provider=self.provider,
+            use_mistral_llm=self.use_mistral_llm,
+            deep_analysis=self.deep_analysis,
+            llm_model=self.llm_model,
+            llm_api_key=self.llm_api_key,
+            groq_eu_residency=self.groq_eu_residency,
+        )
 
     def _run_fas4_enrichment(
         self,
@@ -273,122 +152,7 @@ class CallAnalysisPipeline:
         results: dict[str, Any],
     ) -> dict[str, Any]:
         """Run FAS 4 enrichment steps shared by audio and segment analysis."""
-        role_res = results.get("role") or {}
-        role_map = role_res.get("roles", role_res) if isinstance(role_res, dict) else {}
-
-        try:
-            from .agent_performance import compute_call_agent_performance
-
-            sent_res = results.get("sentiment") or []
-            agent_perf = compute_call_agent_performance(
-                segments=segments or [],
-                role_map=role_map if isinstance(role_map, dict) else {},
-                sentiment_results=sent_res,
-                profile_name=self.profile,
-            )
-            results["agent_performance"] = agent_perf.model_dump()
-            local_assess = {
-                "empathy_score": agent_perf.agent.empathy_score,
-                "compliance_flags": agent_perf.agent.compliance_flags,
-                "strengths": [],
-                "weaknesses": [],
-                "specific_coaching_recommendations": [],
-                "overall_assessment": None,
-                "source": "local_rules_fas4.1",
-                "talk_listen_ratio": agent_perf.agent.talk_listen_ratio,
-                "intervention_count": agent_perf.agent.intervention_count,
-                "evidence_spans": [],
-            }
-            results["agent_assessment_local"] = local_assess
-            results["agent_assessment"] = local_assess
-            results["customer_metrics"] = agent_perf.customer.model_dump()
-            logger.info(
-                "Fas 4.1 agent_performance computed | empathy=%.2f flags=%s talk_ratio=%.2f",
-                agent_perf.agent.empathy_score,
-                agent_perf.agent.compliance_flags,
-                agent_perf.agent.talk_ratio,
-            )
-        except Exception as e:
-            logger.warning("Fas 4.1 agent_performance step failed (non-fatal): %s", e)
-            results["agent_performance"] = {"error": str(e), "fallback": True}
-
-        llm_result: dict[str, Any] = {}
-        if self._should_use_any_llm(segments or []):
-            llm_result = self._run_llm_holistic(segments or [], results)
-            results["llm"] = llm_result
-            if llm_result.get("meta", {}).get("llm_used"):
-                logger.info(
-                    "Pipeline used %s LLM for holistic analysis (model=%s, cached=%s)",
-                    self.provider,
-                    llm_result.get("meta", {}).get("model"),
-                    llm_result.get("meta", {}).get("cached"),
-                )
-
-        llm_assess = (results.get("llm") or {}).get("agent_assessment")
-        if llm_assess and isinstance(llm_assess, dict) and llm_assess.get("empathy_score") is not None:
-            results["agent_assessment"] = llm_assess
-            logger.debug("Merged LLM agent_assessment into results (hybrid coaching available)")
-
-        try:
-            from .compliance_qa import score_call_with_default_scorecard
-
-            use_llm_qa = bool(self.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used"))
-            qa_analyzer = None
-            if use_llm_qa:
-                if self.provider == "groq":
-                    from .llm.groq_analyzer import GroqAnalyzer
-
-                    qa_analyzer = GroqAnalyzer(
-                        model=self.llm_model,
-                        api_key=self.llm_api_key,
-                        groq_eu_residency=self.groq_eu_residency,
-                    )
-                else:
-                    from .llm.mistral_analyzer import ConversationMistralAnalyzer
-
-                    qa_analyzer = ConversationMistralAnalyzer(
-                        model=self.llm_model,
-                        api_key=self.llm_api_key,
-                    )
-            qa_res = score_call_with_default_scorecard(
-                segments=segments or [],
-                role_map=role_map if isinstance(role_map, dict) else {},
-                local_signals={
-                    "agent_performance": results.get("agent_performance"),
-                    "agent_assessment": results.get("agent_assessment"),
-                },
-                profile_name=self.profile,
-                use_llm=use_llm_qa,
-                analyzer=qa_analyzer,
-            )
-            results["qa"] = qa_res
-            results["compliance_qa"] = qa_res
-            if isinstance(qa_res, dict) and qa_res.get("llm_criteria_used"):
-                logger.info(
-                    "Fas 4.2 QA scoring used LLM for criteria=%s (hybrid)",
-                    qa_res.get("llm_criteria_used"),
-                )
-            logger.info(
-                "Fas 4.2 QA complete | score=%.1f passed=%s risk=%s",
-                qa_res.get("overall_qa_score", 0) if isinstance(qa_res, dict) else 0,
-                qa_res.get("passed") if isinstance(qa_res, dict) else False,
-                qa_res.get("risk_level") if isinstance(qa_res, dict) else "?",
-            )
-        except Exception as e:
-            logger.warning("Fas 4.2 QA scoring failed (non-fatal): %s", e)
-            results["qa"] = {"error": str(e), "overall_qa_score": 0.0, "passed": False}
-
-        try:
-            from .alerting import run_alerts_on_results
-
-            alerts = run_alerts_on_results(results)
-            if alerts:
-                results["alerts"] = alerts
-                logger.info("Fas 4.4.2 alerts triggered: %d (highest severity in first)", len(alerts))
-        except Exception as e:
-            logger.warning("Fas 4.4.2 alerting failed (non-fatal): %s", e)
-
-        return llm_result
+        return run_fas4_enrichment(segments, results, self._llm_context())
 
     def _build_report(
         self,
@@ -440,16 +204,6 @@ class CallAnalysisPipeline:
             results["pii_redaction"] = pii_log.model_dump()
 
         return redacted_segments, results, pii_log
-
-    def _run_llm_holistic(
-        self,
-        segments: list[Segment] | list[dict[str, Any]],
-        results: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Route to the correct LLM analyzer based on provider."""
-        if self.provider == "groq":
-            return self._run_groq_holistic(segments, results)
-        return self._run_mistral_holistic(segments, results)
 
     def analyze_audio(
         self,
