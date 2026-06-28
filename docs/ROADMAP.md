@@ -41,7 +41,8 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
 | **Dashboard**               | ✅ Done    | NiceGUI standard (`app/nicegui_dashboard/`); Streamlit avvecklad |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
-| **Fas 4 Backend**           | ✅ Done    | Agent perf, QA, insights, search, alerts, caching (validated) |
+| **HTTP Metrics (OBS-01)**     | ✅ Done    | `http_requests_total`, `http_request_duration_seconds` in `src/api/metrics.py` |
+| **Pipeline Refactoring**      | ✅ Done    | PIPE-01: `pipeline_steps.py`; `pipeline.py` < 550 LOC |
 
 ### Partially / Recently Added
 
@@ -56,16 +57,25 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 - **Privacy by design**: Explicit logging of external LLM calls, PII redaction, no hardcoded secrets.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 
-## Next Priorities (post-Fas 4)
+## Next Priorities (v0.5)
 
-| Priority | Area                        | Description                                                                 |
-|----------|-----------------------------|-----------------------------------------------------------------------------|
-| High     | **Dashboard (Fas 3)**         | NiceGUI-vyer: Agent Performance, QA Scorecard, Hot Topics, Alerts, Search  |
-| High     | **Data & Finetuning (Fas 2)** | Domänanpassning, utökad testkorpus, WER/sentiment-förbättring             |
-| High     | Production                  | GPU Docker, observability, prod rate limiting, secrets management          |
-| Medium   | Pipeline Refactoring        | Reduce complexity in `CallAnalysisPipeline` (more explicit steps)          |
-| Medium   | Observability               | Structured logging, tracing for long calls (metrics endpoint done — see `docs/PRODUCTION_CHECKLIST.md`) |
-| Low      | Fine-tuning UX              | Make `finetune.py` easier to use for domain adaptation on call center data |
+| Priority | Area | Description |
+|----------|------|-------------|
+| High | **PROD-01 Observability** | Structured JSON logging, pipeline/LLM/cache Prometheus metrics, optional OpenTelemetry tracing |
+| High | **DATA-01 Fine-tuning** | CI smoke + nightly eval loop, expanded domain corpus, baseline accuracy gate |
+| High | **INSIGHT-02 LLM consolidation** | Skip heuristik-analyzers superseded by deep path; see `docs/ANALYZER_STRATEGY.md` |
+| High | **EDGE-01 Edge MVP** | Offline local inference CLI (`sentimentanalys edge-analyze`) |
+| Medium | **Model routing** | Cost/quality tiers via `src/llm/routing.py` + `model_catalog` |
+| Medium | **Dashboard polish** | Executive Insights tab, model A/B selector, correlation heatmap (see archived `DASHBOARD_EXCELLENCE_PLAN.md`) |
+| Medium | **Production hardening** | `API_PRODUCTION` guards, `Dockerfile.gpu`, prod checklist completion |
+| Low | **Fine-tuning UX** | Easier domain adaptation workflow for call center data |
+
+### Completed in v0.5 prep (no longer priorities)
+
+- NiceGUI dashboard with Agent Performance, Fas 4 Insights, QA, Search, Alerts, Transcription
+- Pipeline refactoring (PIPE-01)
+- HTTP request metrics middleware
+- Dependency consolidation (DEPS-01)
 
 ## Long-term Vision
 

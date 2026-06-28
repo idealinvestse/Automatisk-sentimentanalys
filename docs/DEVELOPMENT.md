@@ -127,6 +127,34 @@ Common variables:
 - `OPENROUTER_API_KEY` – Required for Mistral LLM features
 - `HF_TOKEN` – Required for pyannote diarization models
 - `SENTIMENT_API_KEY` – Enables API authentication
+- `API_PRODUCTION` / `API_REQUIRE_AUTH` / `API_REQUIRE_MEDIA_ROOT` – Production guards (v0.5)
+- `SENTIMENT_JSON_LOGS=1` – Structured JSON logging
+- `OTEL_ENABLED=true` – Optional OpenTelemetry tracing
+
+## Fine-tuning (DATA-01)
+
+```bash
+pip install -e ".[training,min]"
+python scripts/prepare_callcenter_data.py --target-size 10000
+python scripts/validate_domain_corpus.py data/callcenter_val.csv
+python -m src.finetune --config configs/finetune.yaml
+```
+
+CI runs smoke tests via `configs/finetune.ci.yaml`. Baseline: `reports/finetune_baseline.json`.
+
+When `models/callcenter-sentiment-lora/` exists, `callcenter` profile uses it automatically.
+
+## Importera riktig domändata (GDPR)
+
+Never commit real customer audio or transcripts. See [SECURITY.md](../SECURITY.md).
+
+1. Store raw data outside the repo (encrypted volume / secure bucket)
+2. Anonymize PII before labelling (use pipeline PII redaction as reference)
+3. Export CSV with columns `text,label` (negativ/neutral/positiv)
+4. Validate with `python scripts/validate_domain_corpus.py your_val.csv`
+5. Run `python -m src.evaluate --testset your_val.csv --output reports/domain_eval.json`
+
+Synthetic data from `scripts/prepare_callcenter_data.py` is for development only.
 
 ## Before Committing / Creating a PR
 

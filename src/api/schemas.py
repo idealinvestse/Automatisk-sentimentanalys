@@ -204,7 +204,7 @@ class PipelineRequest(BaseModel):
     deep_analysis: bool = Field(False, description="Force deep LLM path")
     llm_api_key: str | None = Field(
         None,
-        description="Optional explicit API key (overrides env/file). Use with care over HTTP.",
+        description="Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY.",
     )
     provider: str = Field(
         "openrouter",

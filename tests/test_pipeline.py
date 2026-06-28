@@ -107,7 +107,7 @@ class TestCallAnalysisPipeline:
             "meta": {"model": "mistralai/mistral-medium-3.5", "llm_used": True, "cost_usd": 0.001},
         }
 
-        with patch("src.pipeline.ConversationMistralAnalyzer") as mock_analyzer_cls:
+        with patch("src.llm.mistral_analyzer.ConversationMistralAnalyzer") as mock_analyzer_cls:
             mock_inst = MagicMock()
             mock_inst.analyze_full_conversation.return_value = fake_llm_out
             mock_analyzer_cls.return_value = mock_inst

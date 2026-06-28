@@ -1,14 +1,13 @@
 """DialectSensitivityAnalyzer.
 
-Detects regional Swedish dialects, slang and ASR-challenging language (especially relevant for Dalarna, Norrland, etc.).
-Flags segments with potential low ASR accuracy due to dialect and suggests better handling.
-
-Also detects common Swedish informal/slang expressions that may affect sentiment/intent accuracy.
+Detects regional Swedish dialect markers and slang that may affect ASR or analysis accuracy.
+Uses distinctive dialect forms only (not common words like "här", "där", "inte").
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from ..core.models import AnalysisContext
@@ -17,13 +16,20 @@ from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
 
-DIALECT_MARKERS = {
-    "dalarna/norrland": ["här", "där", "int", "inte", "så", "mycke", "mycket", "gör", "göra", "va", "eller hur"],
-    "skåne": ["här", "där", "inte", "mycke", "gör"],
-    "stockholm": ["typ", "liksom", "alltså", "sådär"],
+# Distinctive regional/dialect forms — avoid high-frequency standard Swedish words
+DIALECT_MARKERS: dict[str, list[str]] = {
+    "dalarna/norrland": ["mycke", "nåt", "nä", "dom", "int'e", "förresten", "jö"],
+    "skåne": ["rälig", "ingen fara", "jösses", "mycke"],
+    "gotland": ["dej", "rejs", "nån"],
+    "stockholm_slang": ["sådär", "asså"],
 }
 
-SLANG = ["fet", "sjuk", "ball", "naj", "jätte", "skit", "fan", "helvete"]
+SLANG = ["fet", "sjuk", "ball", "naj", "skit", "fan", "helvete"]
+
+_DIALECT_REGEX = {
+    region: re.compile(r"\b(" + "|".join(re.escape(m) for m in markers) + r")\b", re.IGNORECASE)
+    for region, markers in DIALECT_MARKERS.items()
+}
 
 
 @register_analyzer("dialect_sensitivity")
@@ -41,7 +47,13 @@ class DialectSensitivityAnalyzer(Analyzer):
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         if not ctx.segments:
-            return {"dialect_risk": "low", "flagged_segments": []}
+            return {
+                "dialect_risk_level": "low",
+                "flagged_segments": [],
+                "total_dialect_hits": 0,
+                "slang_count": 0,
+                "recommendation": "Inga större dialekt-problem",
+            }
 
         flagged = []
         dialect_hits = 0
@@ -49,14 +61,14 @@ class DialectSensitivityAnalyzer(Analyzer):
 
         for seg in ctx.segments:
             text = (seg.text or "").lower()
-            hits = []
+            hits: list[str] = []
 
-            for dialect, markers in DIALECT_MARKERS.items():
-                if any(m in text for m in markers):
-                    hits.append(dialect)
+            for region, regex in _DIALECT_REGEX.items():
+                if regex.search(text):
+                    hits.append(region)
                     dialect_hits += 1
 
-            slang_found = [s for s in SLANG if s in text]
+            slang_found = [s for s in SLANG if re.search(rf"\b{re.escape(s)}\b", text)]
             if slang_found:
                 slang_hits += len(slang_found)
                 hits.append("slang")
@@ -80,4 +92,3 @@ class DialectSensitivityAnalyzer(Analyzer):
             "slang_count": slang_hits,
             "recommendation": "Överväg bättre dialekt-anpassad ASR-modell" if risk == "high" else "Inga större dialekt-problem",
         }
-"

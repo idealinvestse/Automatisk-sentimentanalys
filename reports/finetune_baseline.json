@@ -1,0 +1,7 @@
+{
+  "model": "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+  "profile": "callcenter",
+  "accuracy": 0.72,
+  "f1_macro": 0.70,
+  "note": "Baseline reference for finetune-eval CI gate (accuracy >= baseline - 0.02)"
+}

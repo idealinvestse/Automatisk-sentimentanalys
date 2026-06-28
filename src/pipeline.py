@@ -9,12 +9,14 @@ import logging
 import time
 from typing import Any
 
+from .analysis.intent_utils import intents_as_tuples
 from .core.models import CallAnalysisReport, Segment
 from .pipeline_steps import (
     PipelineLLMContext,
     apply_early_pii_redaction,
     run_fas4_enrichment,
     run_registry_analyzers,
+    should_use_any_llm,
 )
 from .transcription import get_transcriber
 from .transcription.factory import resolve_preprocess_mode
@@ -167,7 +169,7 @@ class CallAnalysisPipeline:
         return CallAnalysisReport(
             segments=[s.to_dict() for s in segments],
             sentiment_results=results.get("sentiment", []),
-            intent_results=results.get("intent", []),
+            intent_results=intents_as_tuples(results.get("intent", [])),
             diarization=diarization,
             summary=results.get("summary", {}),
             topics=results.get("topics", {}),
@@ -198,6 +200,9 @@ class CallAnalysisPipeline:
             analyzer_configs=self._build_analyzer_configs(),
             async_mode=self.async_analyzers,
             transcript=transcript,
+            skip_llm_superseded=should_use_any_llm(
+                redacted_segments or [], self._llm_context()
+            ),
         )
 
         if pii_log is not None and pii_log.total_redacted > 0:

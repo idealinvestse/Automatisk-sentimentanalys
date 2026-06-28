@@ -1,0 +1,7 @@
+{
+  "profile": "callcenter",
+  "accuracy": 0.72,
+  "f1_macro": 0.70,
+  "testset": "data/callcenter_val.csv",
+  "note": "Domain baseline for synthetic callcenter val set"
+}

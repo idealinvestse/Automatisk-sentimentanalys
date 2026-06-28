@@ -20,6 +20,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..alerting import AlertEngine
+from ..core.logging_config import configure_logging, set_request_id
+from ..core.tracing import init_tracing
 from ..alerting_state import AlertingStateManager
 from ..caching import AggregateCache
 from ..core.errors import (
@@ -50,7 +52,7 @@ from .routers import (
     transcription,
     ws_transcription,
 )
-from .settings import get_api_settings
+from .settings import get_api_settings, validate_production_settings
 from .transcription_events import TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
 
@@ -80,6 +82,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
+        set_request_id(request_id)
         started = time.perf_counter()
         response = await call_next(request)
         duration = time.perf_counter() - started
@@ -94,6 +97,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     """Application lifespan – shared cache and alert engine."""
     settings = get_api_settings()
+    validate_production_settings(settings)
+    configure_logging()
+    init_tracing(service_name="sentiment-api")
     app.state.cache = AggregateCache(
         use_redis=settings.use_redis_cache,
         redis_url=settings.redis_url,
@@ -127,7 +133,7 @@ def create_app() -> FastAPI:
     settings = get_api_settings()
     app = FastAPI(
         title="Swedish Sentiment API",
-        version="0.4.0",
+        version="0.4.1",
         description=(
             "REST API for Swedish sentiment analysis, ASR transcription, "
             "call-center conversation analysis, and batch processing."

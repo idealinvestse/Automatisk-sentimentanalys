@@ -46,6 +46,37 @@ except Exception:  # fallback if circular/import during very early load (should 
     compute_intervention_count = None
 
 
+AGENT_GREETING_PATTERNS = [
+    "välkommen",
+    "hej och välkommen",
+    "tack för att du ringer",
+    "mitt namn är",
+    "kundtjänst",
+    "hur kan jag hjälpa",
+]
+CUSTOMER_OPENER_PATTERNS = [
+    "jag ringer",
+    "jag har ett problem",
+    "jag behöver hjälp",
+    "min faktura",
+    "jag undrar",
+]
+
+
+def _score_speaker_role(segments: list[Any], speaker: str) -> tuple[int, int]:
+    """Return (agent_score, customer_score) based on phrase heuristics."""
+    agent_score = 0
+    customer_score = 0
+    for seg in segments:
+        sp = getattr(seg, "speaker", None) or (seg.get("speaker") if isinstance(seg, dict) else None)
+        if sp != speaker:
+            continue
+        text = (getattr(seg, "text", None) or (seg.get("text") if isinstance(seg, dict) else "") or "").lower()
+        agent_score += sum(1 for p in AGENT_GREETING_PATTERNS if p in text)
+        customer_score += sum(1 for p in CUSTOMER_OPENER_PATTERNS if p in text)
+    return agent_score, customer_score
+
+
 def _role_from_speaker(sp: str) -> str:
     low = (sp or "").lower()
     if "agent" in low or "handlägg" in low:
@@ -92,9 +123,19 @@ class RoleAnalyzer(Analyzer):
 
         roles: dict[str, str] = {}
         if len(speakers) >= 2:
-            # Heuristic improved: first speaker often agent in inbound callcenter
-            roles[speakers[0]] = "agent"
-            roles[speakers[1]] = "customer"
+            a0, c0 = _score_speaker_role(segments, speakers[0])
+            a1, c1 = _score_speaker_role(segments, speakers[1])
+            agent_score_0 = a0 - c0
+            agent_score_1 = a1 - c1
+            if agent_score_0 > agent_score_1:
+                roles[speakers[0]] = "agent"
+                roles[speakers[1]] = "customer"
+            elif agent_score_1 > agent_score_0:
+                roles[speakers[0]] = "customer"
+                roles[speakers[1]] = "agent"
+            else:
+                roles[speakers[0]] = "agent"
+                roles[speakers[1]] = "customer"
         else:
             for sp in speakers:
                 roles[sp] = _role_from_speaker(sp) or "unknown"

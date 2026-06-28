@@ -57,8 +57,15 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     results = report.get("results") or {}
 
     root = llm.get("root_cause") or {}
-    if isinstance(root, dict) and root.get("summary"):
-        parts.append(f"**Rotorsak:** {root['summary']}")
+    root_text = (
+        root.get("primary_cause") or root.get("summary") if isinstance(root, dict) else None
+    )
+    if root_text:
+        parts.append(f"**Rotorsak:** {root_text}")
+    elif not llm:
+        local_root = results.get("root_cause") or {}
+        if isinstance(local_root, dict) and local_root.get("top_root_cause"):
+            parts.append(f"**Rotorsak (lokal):** {local_root['top_root_cause']}")
 
     traj = llm.get("trajectory") or {}
     if isinstance(traj, dict) and traj.get("summary"):
@@ -69,11 +76,21 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
         problem = actionable.get("problem", "")
         if problem:
             parts.append(f"**Problem:** {problem}")
-        recs = actionable.get("recommendations") or actionable.get("recommended_actions") or []
+        recs = (
+            actionable.get("recommendations_for_qa")
+            or actionable.get("recommendations")
+            or actionable.get("recommended_actions")
+            or []
+        )
         if recs:
             parts.append("**Rekommendationer:**")
             for rec in recs[:5]:
                 parts.append(f"- {rec}")
+
+    if not llm:
+        coaching = results.get("actionable_coaching") or {}
+        if isinstance(coaching, dict) and coaching.get("top_recommendation"):
+            parts.append(f"**Coaching (lokal):** {coaching['top_recommendation']}")
 
     assess = results.get("agent_assessment") or llm.get("agent_assessment") or {}
     if isinstance(assess, dict) and assess:
@@ -208,9 +225,12 @@ def render_call_detail_tab(
                             )
 
         ui.separator()
+        results = report.get("results") or {}
         enriched = enrich_segments_with_sentiment(
             report.get("segments") or [],
             report.get("sentiment_results") or [],
+            emotion_results=results.get("emotion") or report.get("emotion_results"),
+            compliance_risk=results.get("compliance_risk"),
         )
         n_seg = len(enriched)
         if n_seg >= 40:

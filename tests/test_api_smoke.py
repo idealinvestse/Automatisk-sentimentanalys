@@ -125,3 +125,29 @@ def test_request_id_preserved_in_error_body() -> None:
     assert r.status_code == 422
     assert r.headers["X-Request-ID"] == "client-provided-id"
     assert r.json()["request_id"] == "client-provided-id"
+
+
+def test_production_guard_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_REQUIRE_AUTH", "true")
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+    from src.core.errors import ConfigurationError
+
+    from src.api.settings import validate_production_settings
+
+    settings = get_api_settings()
+    with pytest.raises(ConfigurationError, match="SENTIMENT_API_KEY"):
+        validate_production_settings(settings)
+
+
+def test_production_guard_requires_media_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_REQUIRE_MEDIA_ROOT", "true")
+    monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
+    get_api_settings.cache_clear()
+    from src.core.errors import ConfigurationError
+
+    from src.api.settings import validate_production_settings
+
+    settings = get_api_settings()
+    with pytest.raises(ConfigurationError, match="API_MEDIA_ROOT"):
+        validate_production_settings(settings)

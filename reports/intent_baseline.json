@@ -1,0 +1,18 @@
+{
+  "testset": "data\\intent_train.jsonl",
+  "holdout_ratio": 0.2,
+  "seed": 42,
+  "n_test": 160,
+  "backends": {
+    "heuristic": {
+      "backend": "heuristic",
+      "model_path": null,
+      "n_samples": 160,
+      "accuracy": 0.9625,
+      "f1_macro": 0.7033,
+      "latency_ms_p50": 0.006,
+      "latency_total_s": 0.001
+    }
+  },
+  "note": "Holdout benchmark; does not change pipeline default backend."
+}

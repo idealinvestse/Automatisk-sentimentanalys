@@ -39,7 +39,7 @@ class CustomerEffortScoreAnalyzer(Analyzer):
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         if not ctx.segments:
-            return {"overall_ces": 0, "per_segment": [], "tips": []}
+            return {"overall_ces": 0, "scale": "0-100 (högre = mer effort/frustration)", "per_segment": [], "coaching_tips": []}
 
         results = []
         total_effort = 0.0

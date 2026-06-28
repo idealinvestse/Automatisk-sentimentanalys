@@ -121,3 +121,18 @@ pytest --collect-only -q | tail -1
 | Varje PR som ändrar beteende | Uppdatera `docs/ROADMAP.md` stubs-tabell + `CHANGELOG.md` |
 | Veckovis (eller vid release) | `PROJECT_STATUS.md` eller ta bort den |
 | Agent (Cursor/Windsurf) | Läs **endast** `AGENTS.md` → `docs/LLM_AGENT_GUIDE.md` → `docs/ROADMAP.md` |
+
+---
+
+## Fas 5 — v0.5 implementering (2026-06-28)
+
+| # | Åtgärd | Status |
+|---|--------|--------|
+| 5.1 | Root plan archive (Fas5, Synergy, Dashboard Excellence, RECOMMENDED_NEXT_TASKS) | ✅ |
+| 5.2 | ROADMAP v0.5 priorities + ANALYZER_STRATEGY.md | ✅ |
+| 5.3 | API prod-guards + PRODUCTION_CHECKLIST sync | ✅ |
+| 5.4 | PROD-01 observability (JSON logs, metrics, OTEL optional) | ✅ |
+| 5.5 | INSIGHT-02 deep-path analyzer skip | ✅ |
+| 5.6 | DATA-01 fine-tune CI smoke + baseline | ✅ |
+| 5.7 | Dockerfile.gpu | ✅ |
+| 5.8 | Domain corpus validation + routing + Edge MVP | ✅ |

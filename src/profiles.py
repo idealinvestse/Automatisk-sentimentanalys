@@ -153,6 +153,7 @@ PROFILE_SPECS: dict[str, dict] = {
             "enabled": True,  # callcenter gets the deep path by default (selective via length/confidence)
             "default_model": "mistralai/mistral-medium-3.5",
             "fallback_model": "mistralai/mistral-medium-3.5",
+            "routing_tier": "balanced",
             "cost_budget_per_call": 0.08,
             "anonymize_before_llm": False,  # Fas 3.4 hook
         },

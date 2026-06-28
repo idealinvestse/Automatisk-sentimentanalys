@@ -25,12 +25,24 @@ def _load_analyzers() -> None:
 
 class TestEmotionAnalyzer:
     def test_detects_frustration_keyword(self) -> None:
-        ctx = AnalysisContext(segments=[_seg("Jag är jättearg på er service!")])
+        ctx = AnalysisContext(
+            segments=[_seg("Jag är jättearg på er service!")],
+            results={
+                "sentiment": [{"label": "negativ", "score": 0.8}],
+                "negation": [{"has_negation": False, "negation_count": 0}],
+            },
+        )
         out = EmotionAnalyzer().analyze(ctx)
         assert out[0]["primary"] in ("frustration", "ilska")
 
     def test_neutral_when_no_markers(self) -> None:
-        ctx = AnalysisContext(segments=[_seg("Hej där.")])
+        ctx = AnalysisContext(
+            segments=[_seg("Hej där.")],
+            results={
+                "sentiment": [{"label": "neutral", "score": 0.0}],
+                "negation": [{"has_negation": False, "negation_count": 0}],
+            },
+        )
         out = EmotionAnalyzer().analyze(ctx)
         assert out[0]["primary"] == "neutral"
 
@@ -100,8 +112,8 @@ class TestRoleAnalyzer:
             results={"sentiment": [{"label": "neutral"}, {"label": "negativ"}]},
         )
         out = RoleAnalyzer().analyze(ctx)
-        assert out["roles"]["SPEAKER_0"] == "agent"
-        assert out["roles"]["SPEAKER_1"] == "customer"
+        assert out["roles"]["SPEAKER_1"] == "agent"
+        assert out["roles"]["SPEAKER_0"] == "customer"
 
 
 class TestActionableCoachingAnalyzer:

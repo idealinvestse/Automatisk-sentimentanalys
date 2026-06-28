@@ -45,3 +45,23 @@ def test_finetune_config_defaults():
     )
     assert cfg.max_length == 256
     assert cfg.num_train_epochs == 3
+
+
+def test_load_finetune_ci_config():
+    from src.finetune import load_config
+
+    cfg = load_config("configs/finetune.ci.yaml")
+    assert cfg.num_train_epochs == 1
+    assert cfg.per_device_train_batch_size == 4
+
+
+def test_callcenter_val_corpus_size():
+    from pathlib import Path
+
+    from src.finetune import load_labelled_csv
+
+    path = Path("data/callcenter_val.csv")
+    if not path.is_file():
+        pytest.skip("callcenter_val.csv not present")
+    df = load_labelled_csv(str(path))
+    assert len(df) >= 500

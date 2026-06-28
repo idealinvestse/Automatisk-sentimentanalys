@@ -466,6 +466,9 @@ class OpenRouterClient:
                     cost or 0.0,
                     latency,
                 )
+                from ..core.metrics import record_llm_request
+
+                record_llm_request("openrouter", model, "success", latency)
                 return result, meta
 
             except RateLimitError as e:

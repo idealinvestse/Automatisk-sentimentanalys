@@ -66,11 +66,17 @@ async def run_registry_analyzers_async(
     selected_analyzers: list[str] | None,
     analyzer_configs: dict[str, dict[str, Any]],
     transcript: Any | None = None,
+    skip_llm_superseded: bool = False,
 ) -> dict[str, Any]:
     """Async registry execution for FastAPI routes."""
     ctx = AnalysisContext(transcript=transcript, segments=segments)
     resolved = resolve_analyzers_for_profile(profile, explicit_selected=selected_analyzers)
-    return await run_analyzers_async(ctx, selected=resolved, analyzer_configs=analyzer_configs)
+    return await run_analyzers_async(
+        ctx,
+        selected=resolved,
+        analyzer_configs=analyzer_configs,
+        skip_llm_superseded=skip_llm_superseded,
+    )
 
 
 def run_registry_analyzers(
@@ -81,6 +87,7 @@ def run_registry_analyzers(
     analyzer_configs: dict[str, dict[str, Any]],
     async_mode: bool = False,
     transcript: Any | None = None,
+    skip_llm_superseded: bool = False,
 ) -> dict[str, Any]:
     """Run the analyzer registry on segments (sync entry point)."""
     ctx = AnalysisContext(transcript=transcript, segments=segments)
@@ -90,6 +97,7 @@ def run_registry_analyzers(
         selected=resolved,
         analyzer_configs=analyzer_configs,
         async_mode=async_mode,
+        skip_llm_superseded=skip_llm_superseded,
     )
 
 
@@ -137,8 +145,18 @@ def run_mistral_holistic(
 
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
+        model = ctx.llm_model
+        if not model and ctx.provider != "groq":
+            from .llm.routing import RoutingTier, select_model
+
+            tier = RoutingTier.BALANCED
+            model = select_model(
+                tier,
+                segment_count=len(seg_dicts),
+                deep_analysis=ctx.deep_analysis or ctx.use_mistral_llm,
+            )
         mistral = ConversationMistralAnalyzer(
-            model=ctx.llm_model,
+            model=model,
             api_key=ctx.llm_api_key,
         )
         llm_out = mistral.analyze_full_conversation(
@@ -247,6 +265,19 @@ def run_fas4_enrichment(
     ctx: PipelineLLMContext,
 ) -> dict[str, Any]:
     """Run Fas 4 enrichment steps shared by audio and segment analysis."""
+    from .core.metrics import timed_pipeline
+
+    use_llm = should_use_any_llm(segments or [], ctx)
+    with timed_pipeline("fas4_enrichment", ctx.profile, use_llm):
+        return _run_fas4_enrichment_body(segments, results, ctx)
+
+
+def _run_fas4_enrichment_body(
+    segments: list[Segment],
+    results: dict[str, Any],
+    ctx: PipelineLLMContext,
+) -> dict[str, Any]:
+    """Inner Fas 4 enrichment (timed by caller)."""
     role_res = results.get("role") or {}
     role_map = role_res.get("roles", role_res) if isinstance(role_res, dict) else {}
 

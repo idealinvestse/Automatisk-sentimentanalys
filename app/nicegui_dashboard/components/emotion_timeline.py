@@ -28,11 +28,19 @@ def _extract_emotion_series(report: dict[str, Any] | None) -> tuple[list[int], d
     if not segments:
         return [], {}
 
+    emotion_results = (report.get("results") or {}).get("emotion") or report.get("emotion_results") or []
+
     segment_indices: list[int] = []
     emotion_data: dict[str, list[float]] = {}
 
     for idx, seg in enumerate(segments):
         emotions = seg.get("emotion") or {}
+        if (not isinstance(emotions, dict) or not emotions) and idx < len(emotion_results):
+            emo_item = emotion_results[idx]
+            if isinstance(emo_item, dict):
+                emotions = emo_item.get("scores") or {}
+                if not emotions and emo_item.get("primary"):
+                    emotions = {str(emo_item["primary"]): 0.75}
         if not isinstance(emotions, dict) or not emotions:
             continue
 

@@ -7,6 +7,7 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from ..summarizer import CallSummarizer, CallSummary
+from .intent_utils import intents_as_tuples
 from .base import Analyzer
 from .registry import register_analyzer
 
@@ -39,7 +40,7 @@ class SummaryAnalyzer(Analyzer):
 
         segments_dict = [s.to_dict() for s in ctx.segments]
         sentiment_results = ctx.results.get("sentiment")
-        intent_results = ctx.results.get("intent")
+        intent_results = intents_as_tuples(ctx.results.get("intent") or [])
 
         try:
             summarizer = self._get_summarizer()

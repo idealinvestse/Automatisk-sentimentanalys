@@ -333,15 +333,25 @@ def _get_sentiment_score(s: dict) -> float:
 def enrich_segments_with_sentiment(
     segments: list[dict[str, Any]],
     sentiment_results: list[dict[str, Any]],
+    *,
+    emotion_results: list[dict[str, Any]] | None = None,
+    compliance_risk: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Return list of enriched segment dicts for UI rendering (timeline + transcript).
 
-    Adds: turn_idx, sentiment_label, sentiment_score (-1..1), has_evidence flags etc.
+    Adds: turn_idx, sentiment_label, sentiment_score (-1..1), emotion scores, compliance flags.
     Safe if lengths mismatch (pads with neutral).
     """
+    flagged_indices: set[int] = set()
+    if isinstance(compliance_risk, dict):
+        for item in compliance_risk.get("flagged_segments") or []:
+            if isinstance(item, dict) and "segment_index" in item:
+                flagged_indices.add(int(item["segment_index"]))
+
     enriched: list[dict] = []
     n = len(segments)
     sres = sentiment_results or []
+    eres = emotion_results or []
     for i in range(n):
         seg = dict(segments[i])  # shallow copy
         sent = sres[i] if i < len(sres) else {}
@@ -350,7 +360,14 @@ def enrich_segments_with_sentiment(
         seg["sentiment_score"] = _get_sentiment_score(sent)
         # Evidence hints (for highlighting nyckelmoment)
         seg["is_negative_peak"] = seg["sentiment_score"] < -0.5
-        seg["has_compliance_flag"] = False  # populated by caller using qa/alerts
+        seg["has_compliance_flag"] = i in flagged_indices
+
+        emo = eres[i] if i < len(eres) else {}
+        if isinstance(emo, dict) and emo.get("scores"):
+            seg["emotion"] = dict(emo["scores"])
+        elif isinstance(emo, dict) and emo.get("primary"):
+            seg["emotion"] = {str(emo["primary"]): 0.75}
+
         enriched.append(seg)
     return enriched
 

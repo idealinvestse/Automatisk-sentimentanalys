@@ -79,17 +79,47 @@ def _get_sentiment_label_and_conf(result: dict[str, Any]) -> tuple[str, float]:
     return label, conf
 
 
-def _build_judge_prompt(segments: list[Segment], sentiment_results: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _speaker_role_label(speaker: str | None, role_map: dict[str, str]) -> str:
+    if not speaker or not role_map:
+        return "UNKNOWN"
+    role = role_map.get(speaker, "unknown")
+    if role == "agent":
+        return "AGENT"
+    if role == "customer":
+        return "CUSTOMER"
+    return str(role).upper()
+
+
+def _build_judge_prompt(
+    segments: list[Segment],
+    sentiment_results: list[dict[str, Any]],
+    *,
+    segment_indices: list[int] | None = None,
+    role_map: dict[str, str] | None = None,
+    negation_results: list[dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
     """Build a minimal JSON-mode prompt for judging the given low-conf segments."""
     lines: list[str] = []
+    indices = segment_indices or list(range(len(segments)))
     for i, (seg, sent) in enumerate(zip(segments, sentiment_results, strict=False)):
         label, conf = _get_sentiment_label_and_conf(sent)
+        global_idx = indices[i] if i < len(indices) else i
+        speaker = getattr(seg, "speaker", None)
+        role = _speaker_role_label(speaker, role_map or {})
+        neg_flag = False
+        if negation_results and global_idx < len(negation_results):
+            neg_item = negation_results[global_idx]
+            if isinstance(neg_item, dict):
+                neg_flag = bool(neg_item.get("has_negation"))
         lines.append(
-            f"Segment {i}: text=\"{seg.text[:200]}\" original_sentiment={label} confidence={conf:.2f}"
+            f"Segment {i} (tur {global_idx}, {role}): text=\"{seg.text[:200]}\" "
+            f"original_sentiment={label} confidence={conf:.2f} negation={neg_flag}"
         )
 
     user_content = (
-        "Du är en svensk sentiment-judge. Bedöm varje segment nedan och returnera ENDAST en JSON-lista "
+        "Du är en svensk sentiment-judge för callcenter-transkript. "
+        "Ta hänsyn till talarroll (AGENT/CUSTOMER) och negation. "
+        "Bedöm varje segment nedan och returnera ENDAST en JSON-lista "
         "där varje objekt har: segment_index, judge_label (positive/negative/neutral), judge_confidence (0-1), "
         "reasoning (1-2 meningar på svenska).\n\n"
         + "\n".join(lines)
@@ -164,7 +194,7 @@ class LLMJudgeAnalyzer(Analyzer):
 
     @property
     def requires(self) -> list[str]:
-        return ["sentiment"]
+        return ["sentiment", "role", "negation"]
 
     def _get_client(self) -> Any | None:
         """Lazily create the appropriate client or return None if unavailable."""
@@ -207,6 +237,10 @@ class LLMJudgeAnalyzer(Analyzer):
         start_time = time.time()
         sentiment_results: list[dict[str, Any]] = ctx.results.get("sentiment", []) or []
         segments: list[Segment] = ctx.segments or []
+
+        role_result = ctx.results.get("role") or {}
+        role_map = role_result.get("roles", {}) if isinstance(role_result, dict) else {}
+        negation_results: list[dict[str, Any]] = ctx.results.get("negation", []) or []
 
         if not segments or not sentiment_results:
             return LLMJudgeResult(
@@ -281,7 +315,13 @@ class LLMJudgeAnalyzer(Analyzer):
 
             try:
                 # Build prompt
-                messages = _build_judge_prompt(batch_segments, batch_sent)
+                messages = _build_judge_prompt(
+                    batch_segments,
+                    batch_sent,
+                    segment_indices=batch_indices,
+                    role_map=role_map if isinstance(role_map, dict) else {},
+                    negation_results=negation_results,
+                )
 
                 # Log EXTERNAL LLM CALL (mandatory)
                 logger.info(

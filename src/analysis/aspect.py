@@ -85,8 +85,7 @@ class AspectAnalyzer(Analyzer):
 
     @property
     def requires(self) -> list[str]:
-        # We can run independently, but sentiment is useful for the label
-        return []  # We call sentiment internally when needed
+        return ["sentiment"]
 
     def _get_sentiment(self) -> SentimentAnalyzer:
         if self._sentiment is None:
@@ -98,9 +97,9 @@ class AspectAnalyzer(Analyzer):
             return []
 
         results: list[dict[str, Any]] = []
-        sentiment_analyzer = self._get_sentiment()
+        sentiment_results = ctx.results.get("sentiment") or []
 
-        for seg in ctx.segments:
+        for seg_idx, seg in enumerate(ctx.segments):
             text = seg.text or ""
             if not text.strip():
                 continue
@@ -110,14 +109,16 @@ class AspectAnalyzer(Analyzer):
             if not matched_aspects:
                 continue
 
-            # For each matched aspect, get sentiment on the evidence (the segment or a window)
-            # Simple: run sentiment on the full segment text for the aspect
-            try:
-                mini_ctx = AnalysisContext(segments=[seg])
-                sent_list = sentiment_analyzer.analyze(mini_ctx)
-                sent = sent_list[0] if sent_list else {"label": "neutral", "score": 0.0}
-            except Exception:
-                sent = {"label": "neutral", "score": 0.0}
+            sent: dict[str, Any] = {"label": "neutral", "score": 0.0}
+            if seg_idx < len(sentiment_results) and isinstance(sentiment_results[seg_idx], dict):
+                sent = sentiment_results[seg_idx]
+            else:
+                try:
+                    mini_ctx = AnalysisContext(segments=[seg])
+                    sent_list = self._get_sentiment().analyze(mini_ctx)
+                    sent = sent_list[0] if sent_list else sent
+                except Exception:
+                    pass
 
             for aspect in matched_aspects:
                 evidence = self._extract_evidence(text, aspect)

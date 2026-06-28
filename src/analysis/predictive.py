@@ -7,6 +7,7 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from ..predictive import RiskAnalyzer
+from .intent_utils import intents_as_tuples
 from .base import Analyzer
 from .registry import register_analyzer
 
@@ -39,7 +40,7 @@ class PredictiveAnalyzer(Analyzer):
             return RiskAnalyzer().analyze().to_dict()
 
         sentiment_results = ctx.results.get("sentiment")
-        intent_results = ctx.results.get("intent")
+        intent_results = intents_as_tuples(ctx.results.get("intent") or [])
         segments_dict = [s.to_dict() for s in ctx.segments]
 
         try:

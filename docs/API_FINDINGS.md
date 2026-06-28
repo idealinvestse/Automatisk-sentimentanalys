@@ -12,9 +12,9 @@
 | ID | Issue | Location | Status |
 |----|-------|----------|--------|
 | P0-1 | `deep_analysis` wired to `use_mistral_llm` on `/agent_performance` | `pipeline.py:82` | **FIXED** (Fas 1) |
-| P0-2 | No authentication on mutating endpoints | `app.py`, all routers | **PARTIAL** — `SENTIMENT_API_KEY` + `X-API-Key` (Fas 2) |
-| P0-3 | `llm_api_key` accepted in JSON body | `schemas.py` Fas 4 models | **PARTIAL** — header preferred; body needs `API_ALLOW_CLIENT_LLM_KEY` |
-| P0-4 | Server filesystem access via `audio_path` / `directory` | `path_validation.py` | **PARTIAL** — `API_MEDIA_ROOT` sandbox (Fas 2) |
+| P0-2 | No authentication on mutating endpoints | `app.py`, all routers | **FIXED when prod** — set `API_PRODUCTION` or `API_REQUIRE_AUTH` + `SENTIMENT_API_KEY` |
+| P0-3 | `llm_api_key` accepted in JSON body | `schemas.py` Fas 4 models | **FIXED when prod** — body ignored unless `API_ALLOW_CLIENT_LLM_KEY=true`; prefer header |
+| P0-4 | Server filesystem access via `audio_path` / `directory` | `path_validation.py` | **FIXED when prod** — set `API_PRODUCTION` or `API_REQUIRE_MEDIA_ROOT` + `API_MEDIA_ROOT` |
 | P0-5 | `detail=str(e)` leaks internals | routers | **FIXED** — `router_errors.run_route` (Fas 2) |
 | P0-6 | No payload limits (`segments_list`, `segments`) | `schemas.py` | **FIXED** — max 50 calls × 200 segments (Fas 2) |
 | P0-7 | `cached` flag heuristic incorrect | `pipeline.py:87-88` | **FIXED** — `cache_hit` from `precompute_and_cache` (Fas 2) |
@@ -26,7 +26,7 @@
 | ID | Issue | Location |
 |----|-------|----------|
 | P1-1 | No DI; new `CallAnalysisPipeline` + cache per request | `pipeline.py` | **FIXED** — shared cache + `create_pipeline` (Fas 2) |
-| P1-2 | Routers catch `Exception` → bypass `app.py` domain handlers | All routers | **PARTIAL** — pipeline router fixed |
+| P1-2 | Routers catch `Exception` → bypass `app.py` domain handlers | All routers | **FIXED** — `run_route` + `run_route_sync` on alerting (v0.5) |
 | P1-3 | Fas 4 always runs full `analyze_segments` before cache | `pipeline.py` | **FIXED** — `resolve_reports` (Fas 2) |
 | P1-4 | Missing `deep_analysis` / `llm_model` on Fas 4 requests | `schemas.py` | **FIXED** — `Fas4LlmFlags` (Fas 2) |
 | P1-5 | `getattr(req, 'llm_api_key')` redundant | `pipeline.py` | **FIXED** |
@@ -35,7 +35,7 @@
 | P1-8 | Path/body `agent_id` not validated | `pipeline.py:71-72` | **FIXED** — regex validator (Fas 3) |
 | P1-9 | Blocking work in `async def` handlers | All routers | **FIXED** — `asyncio.to_thread` on heavy paths (Fas 1–3) |
 | P1-10 | `LLMError` not registered in `app.py` | `app.py` | **FIXED** (Fas 1) |
-| P1-11 | `AlertsRequest` allows empty inputs | `schemas.py:425-429` |
+| P1-11 | `AlertsRequest` allows empty inputs | `schemas.py:425-429` | **FIXED** — `require_input` validator |
 | P1-12 | mypy errors in `conversation.py`, `pipeline.py` | See baseline |
 
 ---

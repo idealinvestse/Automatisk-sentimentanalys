@@ -14,6 +14,20 @@ logger = logging.getLogger(__name__)
 _ESCALATION_EMOTIONS = frozenset({"frustration", "ilska", "besvikelse", "oro"})
 
 
+def _customer_speakers(role_result: dict[str, Any]) -> set[str]:
+    roles = role_result.get("roles") if isinstance(role_result, dict) else {}
+    if not isinstance(roles, dict):
+        return set()
+    return {sp for sp, role in roles.items() if str(role).lower() == "customer"}
+
+
+def _is_customer_turn(seg: Any, customer_speakers: set[str]) -> bool:
+    if not customer_speakers:
+        return True
+    speaker = getattr(seg, "speaker", None)
+    return speaker in customer_speakers
+
+
 @register_analyzer("trajectory")
 class TrajectoryAnalyzer(Analyzer):
     @property
@@ -22,18 +36,24 @@ class TrajectoryAnalyzer(Analyzer):
 
     @property
     def requires(self) -> list[str]:
-        return ["sentiment", "emotion"]
+        return ["sentiment", "emotion", "role"]
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         sentiment_results = ctx.results.get("sentiment", []) or []
         emotion_results = ctx.results.get("emotion", []) or []
+        role_result = ctx.results.get("role") or {}
+        customer_speakers = _customer_speakers(role_result)
 
         customer_sentiment_trend: list[float] = []
-        escalation_events = 0
+        escalation_event_details: list[dict[str, Any]] = []
         peak_frustration_turn: int | None = None
         peak_frustration_score = -1.0
+        prev_customer_score: float | None = None
 
         for i, seg in enumerate(ctx.segments or []):
+            if not _is_customer_turn(seg, customer_speakers):
+                continue
+
             sent = sentiment_results[i] if i < len(sentiment_results) else {}
             score = float(sent.get("score", 0)) if isinstance(sent, dict) else 0.0
             label = str(sent.get("label", "neutral")).lower() if isinstance(sent, dict) else "neutral"
@@ -48,14 +68,27 @@ class TrajectoryAnalyzer(Analyzer):
             emo_score = 0.0
             if isinstance(emo, dict) and emo.get("scores"):
                 emo_score = float(max(emo["scores"].values()))
+            snippet = (getattr(seg, "text", None) or "")[:80]
+
             if primary in _ESCALATION_EMOTIONS:
-                escalation_events += 1
+                escalation_event_details.append({
+                    "turn": i,
+                    "type": "emotion",
+                    "emotion": primary,
+                    "evidence": snippet,
+                })
                 if emo_score > peak_frustration_score:
                     peak_frustration_score = emo_score
                     peak_frustration_turn = i
 
-            if i > 0 and customer_sentiment_trend[i] < customer_sentiment_trend[i - 1] - 0.3:
-                escalation_events += 1
+            if prev_customer_score is not None and score < prev_customer_score - 0.3:
+                escalation_event_details.append({
+                    "turn": i,
+                    "type": "sentiment_drop",
+                    "delta": round(score - prev_customer_score, 3),
+                    "evidence": snippet,
+                })
+            prev_customer_score = score
 
         slope = 0.0
         if len(customer_sentiment_trend) > 1:
@@ -65,7 +98,8 @@ class TrajectoryAnalyzer(Analyzer):
 
         return {
             "customer_sentiment_slope": round(slope, 3),
-            "escalation_events": escalation_events,
+            "escalation_events": len(escalation_event_details),
+            "escalation_event_details": escalation_event_details,
             "peak_frustration_turn": peak_frustration_turn,
             "sentiment_trend": customer_sentiment_trend,
         }

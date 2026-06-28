@@ -83,6 +83,8 @@ class AggregateCache:
         return self.cache_dir / f"{safe}.json"
 
     def get(self, key: str) -> Optional[dict[str, Any]]:
+        from .core.metrics import record_cache_operation
+
         if self.redis_client:
             data = self.redis_client.get(key)
             if data:
@@ -90,9 +92,11 @@ class AggregateCache:
                     val = json.loads(data)
                     if self._is_valid(val):
                         logger.debug("Aggregate cache HIT (redis): %s", key)
+                        record_cache_operation("get", "hit")
                         return val
                 except Exception:
                     pass
+            record_cache_operation("get", "miss")
             return None
 
         path = self._file_path(key)
@@ -102,9 +106,11 @@ class AggregateCache:
                     val = json.load(f)
                 if self._is_valid(val):
                     logger.debug("Aggregate cache HIT (file): %s", key)
+                    record_cache_operation("get", "hit")
                     return val
             except Exception as e:
                 logger.warning("Bad aggregate cache file %s: %s", path, e)
+        record_cache_operation("get", "miss")
         return None
 
     def _is_valid(self, val: dict) -> bool:
@@ -134,6 +140,9 @@ class AggregateCache:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
             logger.debug("Aggregate cache SET (file): %s", key)
+            from .core.metrics import record_cache_operation
+
+            record_cache_operation("set", "ok")
         except Exception as e:
             logger.error("Failed to write aggregate cache %s: %s", path, e)
 

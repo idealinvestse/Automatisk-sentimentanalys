@@ -1,5 +1,5 @@
-# Profile-driven analyzer activation (merged into profiles.py at load time).
-# explicit selected_analyzers in API/CLI overrides these defaults.
+# Analyzer profiles — see docs/ANALYZER_STRATEGY.md
+# Note: empathy, trajectory, insights, root_cause, actionable_coaching are auto-skipped when LLM deep path runs.
 
 callcenter:
   default_selected:
@@ -7,22 +7,23 @@ callcenter:
     - intent
     - role
     - emotion
-    - trajectory
     - negation
     - customer_effort
-    - empathy
     - compliance_risk
-    - insights
     - active_listening
   optional:
+    - empathy
+    - insights
+    - trajectory
     - llm_judge
     - upsell_opportunity
     - resolution_probability
     - root_cause
     - predictive
     - actionable_coaching
-  disabled:
+    - multi_turn_journey
     - spoken_normalizer
+  disabled: []
 
 call:
   default_selected:

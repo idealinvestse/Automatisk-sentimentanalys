@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Analyzer Strategy** (`docs/ANALYZER_STRATEGY.md`) — core local vs. deep path tiers (INSIGHT-02).
+- **API production guards** — `API_PRODUCTION`, `API_REQUIRE_AUTH`, `API_REQUIRE_MEDIA_ROOT` env vars.
+- **Structured JSON logging** (`src/core/logging_config.py`) — `SENTIMENT_JSON_LOGS=1`.
+- **Extended Prometheus metrics** — pipeline, analyzer, LLM, cache counters/histograms.
+- **Edge AI MVP** — `sentimentanalys edge-analyze`, `src/edge/local_inference.py`, `docs/EDGE_AI.md`.
+- **Model routing** (`src/llm/routing.py`) — FAST/BALANCED/DEEP tiers via `model_catalog`.
+- **Fine-tuning CI** — `configs/finetune.ci.yaml`, smoke job, baseline eval gate.
+- **GPU Docker** — `Dockerfile.gpu` (CUDA 12.1).
+- **Domain corpus tools** — `scripts/validate_domain_corpus.py`, expanded `prepare_callcenter_data.py`.
+
+### Changed
+- **Deep path skip** — LLM-superseded analyzers skipped when `should_use_any_llm()` is true.
+- **callcenter profile** — empathy/insights/trajectory moved to optional defaults.
+- **Documentation v0.5 sync** — ROADMAP priorities, root plan archive, PROPOSED_ANALYZERS → ANALYZER_STRATEGY.
+- **PRODUCTION_CHECKLIST** — checked implemented items; added prod env vars.
+
+### Added (prior)
 - **Production checklist** (`docs/PRODUCTION_CHECKLIST.md`) — observability, secrets, GPU Docker, metrics (DOC-02).
 - **Prometheus `/metrics`** endpoint with alerting circuit-breaker gauges (OBS-01).
 

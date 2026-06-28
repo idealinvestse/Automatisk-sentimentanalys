@@ -30,6 +30,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
+FEW_SHOT_EXAMPLES = """
+**Exempel på bra evidensbaserad analys (följ denna stil):**
+
+Samtal: Kund klagar på felaktig faktura, agent säger "det löser vi" utan att bekräfta frustration.
+Bra root_cause: "Agenten hoppade över validering av kundens upplevelse (CUSTOMER tur 2) och gick direkt till lösning → kunden kände sig inte hörd."
+Bra coaching: "Säg 'Jag hör att det här är frustrerande för dig' direkt efter kundens klagomål på fakturan (CUSTOMER tur 2, AGENT tur 3)."
+"""
+
 SYSTEM_PROMPT = """Du är en senior svensk callcenter-analytiker med 15+ års erfarenhet av kvalitetssäkring, coachning och kundresa-analys.
 
 Ditt enda uppdrag: ge **exakt, evidensbaserad, handlingsbar** helhetsanalys av ett kundtjänstsamtal så att en QA-coach kan använda den direkt för att förbättra agentens nästa samtal.
@@ -112,6 +120,8 @@ def build_user_prompt(
 
     if extras:
         base += "\n\n**Extra fokus för valda uppgifter:**\n" + "\n".join(extras)
+
+    base += "\n\n" + FEW_SHOT_EXAMPLES.strip()
 
     return base
 

@@ -25,3 +25,16 @@ async def run_route(endpoint: str, fn: Callable[[], Awaitable[_T]]) -> _T:
     except Exception as e:
         logger.error("%s failed: %s", endpoint, e, exc_info=True)
         raise HTTPException(status_code=500, detail=PUBLIC_ERROR_DETAIL) from e
+
+
+def run_route_sync(endpoint: str, fn: Callable[[], _T]) -> _T:
+    """Sync variant for non-async router handlers."""
+    try:
+        return fn()
+    except HTTPException:
+        raise
+    except BaseAnalysisError:
+        raise
+    except Exception as e:
+        logger.error("%s failed: %s", endpoint, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_DETAIL) from e

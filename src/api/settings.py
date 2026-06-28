@@ -19,10 +19,29 @@ class APISettings:
     redis_url: str | None
     cache_dir: str
     rate_limit_rpm: int
+    production: bool
+    require_auth: bool
+    require_media_root: bool
 
     @property
     def auth_enabled(self) -> bool:
         return bool(self.api_key)
+
+
+def validate_production_settings(settings: APISettings) -> None:
+    """Fail fast when production guards are enabled but misconfigured."""
+    from ..core.errors import ConfigurationError
+
+    if settings.production or settings.require_auth:
+        if not settings.api_key:
+            raise ConfigurationError(
+                "SENTIMENT_API_KEY is required when API_PRODUCTION or API_REQUIRE_AUTH is set"
+            )
+    if settings.production or settings.require_media_root:
+        if not settings.media_root:
+            raise ConfigurationError(
+                "API_MEDIA_ROOT is required when API_PRODUCTION or API_REQUIRE_MEDIA_ROOT is set"
+            )
 
 
 def _runtime_api_defaults() -> dict[str, object]:
@@ -74,4 +93,7 @@ def get_api_settings() -> APISettings:
         redis_url=os.getenv("REDIS_URL") or defaults.get("redis_url"),
         cache_dir=os.getenv("API_CACHE_DIR", ".cache/aggregates"),
         rate_limit_rpm=rate_limit,
+        production=_env_bool("API_PRODUCTION"),
+        require_auth=_env_bool("API_REQUIRE_AUTH"),
+        require_media_root=_env_bool("API_REQUIRE_MEDIA_ROOT"),
     )

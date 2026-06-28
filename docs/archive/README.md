@@ -18,6 +18,10 @@ Historiska planer och sign-off-dokument. **Ändra inte** — använd som referen
 | `TESTING_STATUS_BACKEND_API.md` | API test sign-off |
 | `REVIEW_MISTRAL_FAS3.md` | Mistral Fas 3 review |
 | `PLAN_BRIEF.md` | Kort planbrief |
-| `RECOMMENDED_NEXT_TASKS.md` | Backlog snapshot 2026-06-28 |
+| `RECOMMENDED_NEXT_TASKS.md` | Backlog snapshot 2026-06-28 (Fas 1) |
+| `RECOMMENDED_NEXT_TASKS_root_2026-06-28.md` | Root backlog snapshot före v0.5-implementering |
+| `UTVECKLINGSPLAN_Fas5_FineTuning.md` | Fas 5 fine-tuning stub |
+| `SYNERGY_ANALYSIS_Fas5.md` | Edge AI synergier (stub) |
+| `DASHBOARD_EXCELLENCE_PLAN.md` | Dashboard polish-outline |
 
-Flyttat hit i Fas 1 dokumentstädning (2026-06-28).
+Flyttat hit i Fas 1 dokumentstädning (2026-06-28) och v0.5 root-städning.

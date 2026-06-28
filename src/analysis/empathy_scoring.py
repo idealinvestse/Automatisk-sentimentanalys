@@ -43,25 +43,36 @@ class EmpathyScoringAnalyzer(Analyzer):
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         if not ctx.segments:
-            return {"overall_empathy": 50, "per_segment": [], "tips": []}
+            return {"overall_empathy": 50, "scale": "0-100 (högre = bättre empati)", "per_segment": [], "coaching_tips": []}
 
         results = []
         total = 0.0
         n = len(ctx.segments)
 
-        for seg in ctx.segments:
+        for idx, seg in enumerate(ctx.segments):
             text = (seg.text or "").lower()
             pos = sum(1 for w in EMPATHY_POSITIVE if w in text)
             neg = sum(1 for w in EMPATHY_NEGATIVE if w in text)
 
-            # Base from sentiment if available
+            # Base from per-segment sentiment when available
             sent = ctx.results.get("sentiment", [])
             base = 50
-            if isinstance(sent, list) and len(sent) > 0:
-                # simplistic: use positive sentiment as proxy
-                base = 60 if any(s.get("label") == "positiv" for s in sent if isinstance(s, dict)) else 40
+            if isinstance(sent, list) and idx < len(sent) and isinstance(sent[idx], dict):
+                label = str(sent[idx].get("label", "neutral")).lower()
+                if label in ("positiv", "positive"):
+                    base = 60
+                elif label in ("negativ", "negative"):
+                    base = 40
 
-            score = min(100, max(0, base + pos * 8 - neg * 15))
+            neg_results = ctx.results.get("negation", [])
+            if isinstance(neg_results, list) and idx < len(neg_results):
+                neg_item = neg_results[idx]
+                if isinstance(neg_item, dict) and neg_item.get("has_negation") and neg > 0:
+                    score = min(100, max(0, base + pos * 8 - neg * 20))
+                else:
+                    score = min(100, max(0, base + pos * 8 - neg * 15))
+            else:
+                score = min(100, max(0, base + pos * 8 - neg * 15))
 
             tips = []
             if score < 45:

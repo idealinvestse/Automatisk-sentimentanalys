@@ -121,6 +121,55 @@ class NegationSegmentResult(BaseModel):
     negation_count: int = Field(ge=0)
 
 
+class SentimentSegmentResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    label: str
+    score: float = 0.0
+
+
+class EmotionSegmentResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    primary: str
+    scores: dict[str, float] = Field(default_factory=dict)
+
+
+class IntentSegmentResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    intent: str
+    confidence: float = Field(ge=0, le=1)
+
+
+class TrajectoryResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    customer_sentiment_slope: float
+    escalation_events: int = Field(ge=0)
+    sentiment_trend: list[float] = Field(default_factory=list)
+
+
+class RoleResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    roles: dict[str, str] = Field(default_factory=dict)
+
+
+def _register_builtin_schemas() -> None:
+    AnalyzerResultRegistry.register("empathy", EmpathyResult)
+    AnalyzerResultRegistry.register("customer_effort", CustomerEffortResult)
+    AnalyzerResultRegistry.register("compliance_risk", ComplianceRiskResult)
+    AnalyzerResultRegistry.register("resolution_probability", ResolutionProbabilityResult)
+    AnalyzerResultRegistry.register("negation", NegationSegmentResult)
+    AnalyzerResultRegistry.register("actionable_coaching", ActionableCoachingResult)
+    AnalyzerResultRegistry.register("sentiment", SentimentSegmentResult)
+    AnalyzerResultRegistry.register("emotion", EmotionSegmentResult)
+    AnalyzerResultRegistry.register("intent", IntentSegmentResult)
+    AnalyzerResultRegistry.register("trajectory", TrajectoryResult)
+    AnalyzerResultRegistry.register("role", RoleResult)
+
+
 def get_typed_result(
     results: dict[str, Any],
     analyzer_name: str,
@@ -137,15 +186,6 @@ def get_typed_result(
         return model.model_validate(raw)
     except ValidationError:
         return None
-
-
-def _register_builtin_schemas() -> None:
-    AnalyzerResultRegistry.register("empathy", EmpathyResult)
-    AnalyzerResultRegistry.register("customer_effort", CustomerEffortResult)
-    AnalyzerResultRegistry.register("compliance_risk", ComplianceRiskResult)
-    AnalyzerResultRegistry.register("resolution_probability", ResolutionProbabilityResult)
-    AnalyzerResultRegistry.register("negation", NegationSegmentResult)
-    AnalyzerResultRegistry.register("actionable_coaching", ActionableCoachingResult)
 
 
 _register_builtin_schemas()

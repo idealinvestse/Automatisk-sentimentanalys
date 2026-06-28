@@ -1,0 +1,17 @@
+model_name: KBLab/bert-base-swedish-cased
+train_file: data/callcenter_train.csv
+eval_file: data/callcenter_val.csv
+output_dir: models/callcenter-sentiment-lora-ci
+text_column: text
+label_column: label
+num_train_epochs: 1
+learning_rate: 0.0002
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 4
+max_length: 128
+early_stopping_patience: 1
+lora:
+  r: 4
+  alpha: 8
+  dropout: 0.05
+  target_modules: [query, value]

@@ -313,11 +313,30 @@ def write_csv(path: str, data: list[dict[str, str]]) -> None:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Generate call center training dataset")
+    parser.add_argument(
+        "--target-size",
+        type=int,
+        default=10000,
+        help="Total examples to generate (default: 10000)",
+    )
+    parser.add_argument(
+        "--val-ratio",
+        type=float,
+        default=0.1,
+        help="Validation split ratio (default: 0.1)",
+    )
+    args = parser.parse_args()
+    val_size = max(100, int(args.target_size * args.val_ratio))
+    n_total = args.target_size
+
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(repo_root, "data")
 
-    print("Generating Swedish call center training dataset...")
-    train, val = generate_dataset(n_total=3500, val_size=500)
+    print(f"Generating Swedish call center training dataset (n={n_total}, val={val_size})...")
+    train, val = generate_dataset(n_total=n_total, val_size=val_size)
 
     # Count distribution
     dist_train: dict[str, int] = {}
