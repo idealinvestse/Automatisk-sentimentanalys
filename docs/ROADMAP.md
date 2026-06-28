@@ -17,8 +17,9 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | `src/analysis/llm_judge.py` | ✅ Implemented | Low-confidence routing with budget guard; enable via analyzer profile / `analyzer_configs`. |
 | `src/alerting.py` webhook | ✅ Implemented | `notify_webhook()` POSTs via `httpx` with retry + circuit breaker (`configs/alerting_config.yaml`). |
 | YouTube ingest (Fas 5) | ❌ Removed | Rolled back in commit `46bc04c` (experimental, not re-introduced in v0.5 scope). |
-| Pipeline size | 🟡 Tech debt | `CallAnalysisPipeline` (~830 lines) — refactor into explicit steps (see `docs/CLEANUP_PLAN.md`). |
-| Analyzer DX | 🟡 Tech debt | 24+ analyzers; no `new-analyzer` CLI template yet (see `docs/CLEANUP_PLAN.md` EXT-01). |
+| Pipeline size | ✅ Refactored | Fas-4/LLM in `pipeline_steps.py` (PIPE-01); `pipeline.py` < 550 LOC |
+| Analyzer DX | ✅ | `sentimentanalys new-analyzer` CLI template |
+| Dependencies | ✅ | `pyproject.toml` only (DEPS-01); no `requirements*.txt` |
 
 ### Completed Features
 
@@ -63,7 +64,7 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | High     | **Data & Finetuning (Fas 2)** | Domänanpassning, utökad testkorpus, WER/sentiment-förbättring             |
 | High     | Production                  | GPU Docker, observability, prod rate limiting, secrets management          |
 | Medium   | Pipeline Refactoring        | Reduce complexity in `CallAnalysisPipeline` (more explicit steps)          |
-| Medium   | Observability               | Structured logging, Prometheus metrics, better tracing for long calls      |
+| Medium   | Observability               | Structured logging, tracing for long calls (metrics endpoint done — see `docs/PRODUCTION_CHECKLIST.md`) |
 | Low      | Fine-tuning UX              | Make `finetune.py` easier to use for domain adaptation on call center data |
 
 ## Long-term Vision

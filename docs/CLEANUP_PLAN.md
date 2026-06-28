@@ -72,13 +72,13 @@
 
 ---
 
-## Fas 3 — Beroenden & CI ✅ (2026-06-28, utom 3.1 legacy-filer)
+## Fas 3 — Beroenden & CI ✅ (2026-06-28 audit)
 
 | # | Åtgärd |
 |---|--------|
-| 3.1 | 🟡 `pyproject.toml` är canonical (`CONTRIBUTING.md`); `requirements*.txt` kvar som legacy — kan tas bort i v0.5 |
-| 3.2 | ✅ Ta bort duplicerad `pytest-asyncio` i `requirements-dev.txt` |
-| 3.3 | ✅ Synka versionsintervall (ruff, black) mellan pyproject och requirements-dev |
+| 3.1 | ✅ `requirements*.txt` borttagna; endast `pyproject.toml` optional-deps (DEPS-01) |
+| 3.2 | ✅ PIPE-01: Fas-4/LLM i `pipeline_steps.py` |
+| 3.3 | ✅ OBS-01: `/metrics` + `docs/PRODUCTION_CHECKLIST.md` |
 | 3.4 | ✅ Dokumentera coverage ärligt: `fail_under=65` + omit-lista i `CONTRIBUTING.md` |
 
 ---

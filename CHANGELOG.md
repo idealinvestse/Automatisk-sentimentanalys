@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Production checklist** (`docs/PRODUCTION_CHECKLIST.md`) — observability, secrets, GPU Docker, metrics (DOC-02).
+- **Prometheus `/metrics`** endpoint with alerting circuit-breaker gauges (OBS-01).
+
 ### Changed
+- **DEPS-01**: Removed all `requirements*.txt`; install via `pip install -e ".[...]"` and `pyproject.toml` optional-deps only.
+- **PIPE-01**: Extracted Fas-4 enrichment and LLM routing to `src/pipeline_steps.py`; `pipeline.py` under 550 LOC.
 - **Documentation cleanup** (2026-06-28): `docs/CLEANUP_PLAN.md`, archive consolidation (`docs/archive/`), canonical `docs/ROADMAP.md`, stub root pointers, removed OpenClaw duplicates and agent build artifacts (`plan.md`, `memory/grok-plans/`).
 - **Streamlit removed**: `app/setup_hub.py` deleted; launcher/config only supports NiceGUI dashboard.
 - **Pipeline refactor**: shared `_run_local_analysis`, `_run_fas4_enrichment`, `_build_report` helpers (~720 lines in `pipeline.py`).
