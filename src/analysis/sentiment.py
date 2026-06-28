@@ -10,6 +10,7 @@ from ..core.models import AnalysisContext
 from ..sentiment import SentimentPipeline
 from .base import Analyzer
 from .registry import register_analyzer
+from .text_utils import segment_analysis_text
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class SentimentAnalyzer(Analyzer):
         if not ctx.segments:
             return []
 
-        texts = [s.text for s in ctx.segments]
+        texts = [segment_analysis_text(ctx, i) for i in range(len(ctx.segments))]
         try:
             pipeline = self._get_pipeline()
             results = pipeline.analyze(

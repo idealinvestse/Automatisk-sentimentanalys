@@ -1,6 +1,8 @@
 """Spoken text normalizer (Task 2.5) – post ASR cleaning for analysis.
 
 Removes fillers, normalizes repetitions etc. Does not mutate the original strict transcript.
+When selected, runs before sentiment/intent; downstream adapters read normalized text via
+``segment_analysis_text`` in ``text_utils``.
 """
 
 from __future__ import annotations

@@ -48,6 +48,8 @@ jobs:
           pip install -e ".[min,cli,asr,install,dev,dashboard-nicegui]"
 
       - name: Run tests
+        env:
+          ANALYZER_VALIDATION_MODE: strict
         run: pytest tests/ -v --cov=src --cov-report=term --cov-fail-under=80
 
       - name: Dashboard tests with coverage
@@ -90,3 +92,25 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t sentiment-api .
+
+  finetune-smoke:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install training deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[training,min,dev]"
+
+      - name: Fine-tune config and corpus tests
+        run: pytest tests/test_finetune.py -q
+
+      - name: Validate domain corpus
+        run: python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500

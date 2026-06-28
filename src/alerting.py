@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -128,30 +129,174 @@ DEFAULT_RULES: list[dict[str, Any]] = [
     },
 ]
 
+def _tokenize_condition(condition: str) -> list[tuple[str, str]]:
+    """Tokenize alert rule conditions without using eval."""
+    pattern = re.compile(
+        r"\s*(?:"
+        r"(?P<AND>\band\b)|"
+        r"(?P<OR>\bor\b)|"
+        r"(?P<IN>\bin\b)|"
+        r"(?P<OP>==|!=|<=|>=|<|>)|"
+        r"(?P<LPAREN>\()|"
+        r"(?P<RPAREN>\))|"
+        r"(?P<LBRACKET>\[)|"
+        r"(?P<RBRACKET>\])|"
+        r"(?P<COMMA>,)|"
+        r"(?P<BOOL>True|False)|"
+        r"(?P<NUMBER>-?\d+(?:\.\d+)?)|"
+        r"(?P<STRING>'[^']*'|\"[^\"]*\")|"
+        r"(?P<IDENT>[a-zA-Z_][a-zA-Z0-9_]*)"
+        r")",
+        re.IGNORECASE,
+    )
+    tokens: list[tuple[str, str]] = []
+    pos = 0
+    while pos < len(condition):
+        match = pattern.match(condition, pos)
+        if not match:
+            raise ValueError(f"Unexpected character at position {pos}: {condition[pos:pos + 8]!r}")
+        for name, value in match.groupdict().items():
+            if value is not None:
+                tokens.append((name, value))
+                break
+        pos = match.end()
+    return tokens
+
+
+def _parse_string_literal(raw: str) -> str:
+    return raw[1:-1].lower()
+
+
+def _parse_list_literal(tokens: list[tuple[str, str]], index: int) -> tuple[list[Any], int]:
+    if index >= len(tokens) or tokens[index][0] != "LBRACKET":
+        raise ValueError("Expected '['")
+    index += 1
+    items: list[Any] = []
+    while index < len(tokens) and tokens[index][0] != "RBRACKET":
+        if tokens[index][0] == "COMMA":
+            index += 1
+            continue
+        value, index = _parse_value(tokens, index)
+        items.append(value)
+    if index >= len(tokens) or tokens[index][0] != "RBRACKET":
+        raise ValueError("Expected ']'")
+    return items, index + 1
+
+
+def _parse_value(tokens: list[tuple[str, str]], index: int) -> tuple[Any, int]:
+    kind, raw = tokens[index]
+    if kind == "NUMBER":
+        return float(raw) if "." in raw else int(raw), index + 1
+    if kind == "BOOL":
+        return raw.lower() == "true", index + 1
+    if kind == "STRING":
+        return _parse_string_literal(raw), index + 1
+    if kind == "IDENT":
+        return ("__ident__", raw), index + 1
+    if kind == "LBRACKET":
+        return _parse_list_literal(tokens, index)
+    raise ValueError(f"Unexpected token {kind}")
+
+
+def _resolve_value(value: Any, signals: dict[str, Any]) -> Any:
+    if isinstance(value, tuple) and len(value) == 2 and value[0] == "__ident__":
+        key = value[1]
+        if key not in signals:
+            raise KeyError(key)
+        return signals[key]
+    return value
+
+
+def _coerce_for_compare(left: Any, right: Any) -> tuple[Any, Any]:
+    if isinstance(left, str) or isinstance(right, str):
+        return str(left).lower(), str(right).lower()
+    if isinstance(left, bool) or isinstance(right, bool):
+        return bool(left), bool(right)
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return float(left), float(right)
+    return left, right
+
+
+def _compare(left: Any, op: str, right: Any) -> bool:
+    if op == "in":
+        if not isinstance(right, list):
+            raise ValueError("'in' requires a list on the right-hand side")
+        left_cmp = str(left).lower() if isinstance(left, str) else left
+        right_cmp = [str(v).lower() if isinstance(v, str) else v for v in right]
+        return left_cmp in right_cmp
+    left, right = _coerce_for_compare(left, right)
+    if op == "==":
+        return left == right
+    if op == "!=":
+        return left != right
+    if op == "<":
+        return left < right
+    if op == ">":
+        return left > right
+    if op == "<=":
+        return left <= right
+    if op == ">=":
+        return left >= right
+    raise ValueError(f"Unknown operator {op}")
+
+
+class _ConditionParser:
+    def __init__(self, tokens: list[tuple[str, str]], signals: dict[str, Any]) -> None:
+        self.tokens = tokens
+        self.signals = signals
+        self.index = 0
+
+    def parse(self) -> bool:
+        result = self._parse_or()
+        if self.index != len(self.tokens):
+            raise ValueError(f"Unexpected trailing tokens at {self.index}")
+        return bool(result)
+
+    def _parse_or(self) -> bool:
+        value = self._parse_and()
+        while self.index < len(self.tokens) and self.tokens[self.index][0] == "OR":
+            self.index += 1
+            rhs = self._parse_and()
+            value = bool(value or rhs)
+        return value
+
+    def _parse_and(self) -> bool:
+        value = self._parse_comparison()
+        while self.index < len(self.tokens) and self.tokens[self.index][0] == "AND":
+            self.index += 1
+            rhs = self._parse_comparison()
+            value = bool(value and rhs)
+        return value
+
+    def _parse_comparison(self) -> bool:
+        if self.index < len(self.tokens) and self.tokens[self.index][0] == "LPAREN":
+            self.index += 1
+            value = self._parse_or()
+            if self.index >= len(self.tokens) or self.tokens[self.index][0] != "RPAREN":
+                raise ValueError("Expected ')'")
+            self.index += 1
+            return value
+
+        left_raw, self.index = _parse_value(self.tokens, self.index)
+        left = _resolve_value(left_raw, self.signals)
+
+        if self.index < len(self.tokens) and self.tokens[self.index][0] in ("OP", "IN"):
+            op = self.tokens[self.index][1].lower()
+            if self.tokens[self.index][0] == "IN":
+                op = "in"
+            self.index += 1
+            right_raw, self.index = _parse_value(self.tokens, self.index)
+            right = _resolve_value(right_raw, self.signals) if not isinstance(right_raw, list) else right_raw
+            return _compare(left, op, right)
+
+        return bool(left)
+
+
 def _safe_eval_condition(condition: str, signals: dict[str, Any]) -> bool:
-    """Very simple and safe-ish condition evaluator for rules.
-    Supports basic < > == and/or/in on numeric/string keys.
-    Not full python eval for security.
-    """
+    """Evaluate alert rule conditions with a small safe parser (no eval/exec)."""
     try:
-        # Normalize
-        expr = condition.lower().replace(" and ", " & ").replace(" or ", " | ")
-        # Replace known keys
-        for k, v in signals.items():
-            if k in expr:
-                val = v
-                if isinstance(val, str):
-                    val = f'"{val.lower()}"'
-                elif val is None:
-                    val = "None"
-                expr = expr.replace(k, str(val))
-        # Simple replacements
-        expr = expr.replace("&", "and").replace("|", "or")
-        # Allowed
-        allowed = {"and": lambda x, y: x and y, "or": lambda x, y: x or y, "in": lambda x, y: x in y}
-        # Use eval with restricted globals (risky but for this internal tool ok; in prod use parser)
-        res = eval(expr, {"__builtins__": {}}, {**allowed, **{k: v for k, v in signals.items()}})
-        return bool(res)
+        tokens = _tokenize_condition(condition)
+        return _ConditionParser(tokens, signals).parse()
     except Exception as e:
         logger.debug("Alert condition eval failed for '%s': %s", condition, e)
         return False

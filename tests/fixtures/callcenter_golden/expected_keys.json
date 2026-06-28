@@ -1,0 +1,14 @@
+{
+  "_comment": "Synthetic anonymized callcenter transcript fixtures for regression tests (GDPR-safe).",
+  "callcenter_default_results_keys": [
+    "sentiment",
+    "intent",
+    "role",
+    "emotion",
+    "negation",
+    "customer_effort",
+    "compliance_risk",
+    "active_listening",
+    "agent_performance"
+  ]
+}

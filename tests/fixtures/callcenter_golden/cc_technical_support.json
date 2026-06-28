@@ -1,0 +1,25 @@
+{
+  "_comment": "Synthetic anonymized technical support scenario.",
+  "segments": [
+    {"start": 0, "end": 3, "text": "Teknisk support, mitt namn är Erik.", "speaker": "SPEAKER_0"},
+    {"start": 3, "end": 8, "text": "Hej, mitt wifi fungerar inte sedan igår kväll.", "speaker": "SPEAKER_1"},
+    {"start": 8, "end": 13, "text": "Okej, har du provat att starta om routern?", "speaker": "SPEAKER_0"},
+    {"start": 13, "end": 17, "text": "Ja, jag har startat om den två gånger utan resultat.", "speaker": "SPEAKER_1"},
+    {"start": 17, "end": 22, "text": "Jag skickar en fjärrdiagnostik till din utrustning nu.", "speaker": "SPEAKER_0"},
+    {"start": 22, "end": 26, "text": "Toppen, jag väntar kvar medan ni kör testet.", "speaker": "SPEAKER_1"}
+  ],
+  "expect": {
+    "results_keys": [
+      "sentiment",
+      "intent",
+      "role",
+      "emotion",
+      "negation",
+      "customer_effort",
+      "compliance_risk",
+      "active_listening",
+      "agent_performance"
+    ],
+    "intent_contains": "technical_support"
+  }
+}

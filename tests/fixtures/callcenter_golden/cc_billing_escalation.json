@@ -1,0 +1,26 @@
+{
+  "_comment": "Synthetic anonymized billing escalation scenario.",
+  "segments": [
+    {"start": 0, "end": 3, "text": "Hej och välkommen till kundtjänst, jag heter Anna.", "speaker": "SPEAKER_0"},
+    {"start": 3, "end": 8, "text": "Hej, jag är frustrerad över min senaste faktura, den är alldeles för hög.", "speaker": "SPEAKER_1"},
+    {"start": 8, "end": 12, "text": "Jag förstår, låt mig titta på ditt ärende.", "speaker": "SPEAKER_0"},
+    {"start": 12, "end": 17, "text": "Det här är oacceptabelt, jag har betalat samma summa i tre månader utan förklaring.", "speaker": "SPEAKER_1"},
+    {"start": 17, "end": 22, "text": "Jag ser en extra avgift som vi kan justera.", "speaker": "SPEAKER_0"},
+    {"start": 22, "end": 27, "text": "Bra, men jag vill ha skriftlig bekräftelse på korrigeringen.", "speaker": "SPEAKER_1"}
+  ],
+  "expect": {
+    "results_keys": [
+      "sentiment",
+      "intent",
+      "role",
+      "emotion",
+      "negation",
+      "customer_effort",
+      "compliance_risk",
+      "active_listening",
+      "agent_performance"
+    ],
+    "intent_contains": "billing_inquiry",
+    "has_negative_sentiment": true
+  }
+}

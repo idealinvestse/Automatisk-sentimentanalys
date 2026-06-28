@@ -1,10 +1,17 @@
-"""Tests for alerting webhook (retry, circuit breaker, config)."""
+"""Tests for alerting webhook (retry, circuit breaker, config) and rule conditions."""
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.alerting import Alert, AlertEngine, EvidenceSpan, load_alerting_config
+from src.alerting import (
+    DEFAULT_RULES,
+    Alert,
+    AlertEngine,
+    EvidenceSpan,
+    _safe_eval_condition,
+    load_alerting_config,
+)
 
 
 @pytest.fixture
@@ -96,3 +103,70 @@ class TestConfigLoading:
         cfg = load_alerting_config(bad)
         assert "webhook" in cfg
         assert cfg["webhook"]["enabled"] is True
+
+
+class TestAlertConditions:
+    """Safe condition parser for DEFAULT_RULES (no eval)."""
+
+    def test_high_escalation_risk_triggers(self):
+        signals = {
+            "customer_sentiment": -0.8,
+            "escalation_risk": 0.7,
+            "qa_risk": "low",
+        }
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "high_escalation_risk")
+        assert _safe_eval_condition(rule["condition"], signals) is True
+
+    def test_high_escalation_risk_via_qa_risk(self):
+        signals = {
+            "customer_sentiment": -0.8,
+            "escalation_risk": 0.2,
+            "qa_risk": "critical",
+        }
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "high_escalation_risk")
+        assert _safe_eval_condition(rule["condition"], signals) is True
+
+    def test_high_escalation_risk_does_not_trigger(self):
+        signals = {
+            "customer_sentiment": -0.5,
+            "escalation_risk": 0.2,
+            "qa_risk": "low",
+        }
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "high_escalation_risk")
+        assert _safe_eval_condition(rule["condition"], signals) is False
+
+    def test_low_agent_empathy_triggers(self):
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "low_agent_empathy")
+        assert _safe_eval_condition(
+            rule["condition"],
+            {"agent_empathy": 0.2, "customer_sentiment": -0.5},
+        )
+
+    def test_qa_failed_high_risk_triggers(self):
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "qa_failed_high_risk")
+        assert _safe_eval_condition(
+            rule["condition"],
+            {"qa_passed": False, "qa_risk": "high"},
+        )
+
+    def test_hot_topic_negative_trend_triggers(self):
+        rule = next(r for r in DEFAULT_RULES if r["id"] == "hot_topic_negative_trend")
+        assert _safe_eval_condition(
+            rule["condition"],
+            {"hot_topic_sentiment": -0.6, "hot_topic_volume": 10},
+        )
+
+    def test_malicious_condition_returns_false(self):
+        malicious = "__import__('os').system('echo pwned')"
+        assert _safe_eval_condition(malicious, {"customer_sentiment": -1}) is False
+
+    def test_engine_check_default_rules(self):
+        engine = AlertEngine()
+        alerts = engine.check(
+            {
+                "customer_sentiment": -0.9,
+                "escalation_risk": 0.9,
+                "qa_risk": "critical",
+            }
+        )
+        assert any(a.rule_id == "high_escalation_risk" for a in alerts)

@@ -1,0 +1,26 @@
+{
+  "_comment": "Synthetic anonymized account update resolved positively.",
+  "segments": [
+    {"start": 0, "end": 3, "text": "Välkommen till supporten, hur kan jag hjälpa dig?", "speaker": "SPEAKER_0"},
+    {"start": 3, "end": 8, "text": "Hej, jag behöver uppdatera min adress i ert system.", "speaker": "SPEAKER_1"},
+    {"start": 8, "end": 12, "text": "Absolut, jag kan hjälpa dig med det direkt.", "speaker": "SPEAKER_0"},
+    {"start": 12, "end": 16, "text": "Min nya adress är Storgatan 12 i Stockholm.", "speaker": "SPEAKER_1"},
+    {"start": 16, "end": 20, "text": "Perfekt, adressen är uppdaterad nu. Tack för att du ringde.", "speaker": "SPEAKER_0"},
+    {"start": 20, "end": 23, "text": "Tack, det var smidigt och bra service.", "speaker": "SPEAKER_1"}
+  ],
+  "expect": {
+    "results_keys": [
+      "sentiment",
+      "intent",
+      "role",
+      "emotion",
+      "negation",
+      "customer_effort",
+      "compliance_risk",
+      "active_listening",
+      "agent_performance"
+    ],
+    "intent_contains": "account_update",
+    "has_positive_sentiment": true
+  }
+}

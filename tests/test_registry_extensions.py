@@ -22,7 +22,7 @@ from src.analysis.registry import (
 )
 from src.analysis.resources import ModelResourcePool, get_pool
 from src.analysis.schemas import AnalyzerResultRegistry, validate_analyzer_result
-from src.core.models import AnalysisContext
+from src.core.models import AnalysisContext, Segment
 
 
 @pytest.fixture(autouse=True)
@@ -202,6 +202,35 @@ def test_strict_validation_env(monkeypatch):
     assert get_validation_mode() == "off"
 
 
+def test_callcenter_profile_strict_validation(monkeypatch):
+    """Callcenter default analyzers must pass registered schema validation in strict mode."""
+    ensure_analyzers_loaded()
+    from src.analysis.intent import IntentAnalyzer
+    from src.analysis.sentiment import SentimentAnalyzer
+
+    monkeypatch.setattr(
+        SentimentAnalyzer,
+        "analyze",
+        lambda self, ctx: [{"label": "neutral", "score": 0.5} for _ in (ctx.segments or [])],
+    )
+    monkeypatch.setattr(
+        IntentAnalyzer,
+        "analyze",
+        lambda self, ctx: [{"intent": "billing_inquiry", "confidence": 0.8} for _ in (ctx.segments or [])],
+    )
+
+    selected = resolve_analyzers_for_profile("callcenter")
+    assert selected is not None
+    segments = [
+        Segment(start=0.0, end=1.0, text="Hej, jag har en fråga om min faktura.", speaker="SPEAKER_0"),
+        Segment(start=1.0, end=2.0, text="Absolut, jag hjälper dig gärna.", speaker="SPEAKER_1"),
+    ]
+    ctx = AnalysisContext(segments=segments)
+    run_analyzers(ctx, selected=selected, validation_mode="strict")
+    for name in selected:
+        assert name in ctx.results
+
+
 def test_yaml_plugin_allowlist_blocks_unknown_module(tmp_path):
     cfg = tmp_path / "analyzers.yaml"
     cfg.write_text(
@@ -230,7 +259,7 @@ def test_graph_snapshot_stable_subset():
     graph = build_dependency_graph(get_analyzer_registry(), selected=set(selected or []))
     mermaid = to_mermaid(graph)
     assert "sentiment" in mermaid
-    assert "trajectory" in mermaid or "empathy" in mermaid
+    assert "compliance_risk" in mermaid or "customer_effort" in mermaid
 
 
 def test_builtin_schemas_validate_empathy_shape():

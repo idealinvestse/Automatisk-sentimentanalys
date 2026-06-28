@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import logging
 import pkgutil
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,6 +15,7 @@ from typing import Any, TypeVar
 import yaml
 
 from ..core.errors import AnalysisError
+from ..core.metrics import record_analyzer_duration
 from ..core.models import AnalysisContext
 from .base import Analyzer
 from .graph import AnalyzerNode, build_dependency_graph, compute_execution_levels, topological_sort
@@ -308,9 +310,13 @@ def _store_result(
 def _run_single_sync(name: str, analyzer: Analyzer, ctx: AnalysisContext, validation_mode: ValidationMode) -> None:
     if not _deps_satisfied(analyzer, ctx):
         return
-    res = analyzer.analyze(ctx)
-    ctx.results[name] = _store_result(name, res, validation_mode)
-    logger.debug("Analyzer '%s' completed successfully", name)
+    started = time.perf_counter()
+    try:
+        res = analyzer.analyze(ctx)
+        ctx.results[name] = _store_result(name, res, validation_mode)
+        logger.debug("Analyzer '%s' completed successfully", name)
+    finally:
+        record_analyzer_duration(name, time.perf_counter() - started)
 
 
 async def _run_single_async(
@@ -360,11 +366,15 @@ def run_analyzers(
     *,
     async_mode: bool = False,
     validation_mode: ValidationMode | None = None,
+    skip_llm_superseded: bool = False,
 ) -> dict[str, Any]:
     """Execute analyzers in topological order, respecting dependencies."""
     ensure_analyzers_loaded()
     effective_validation: ValidationMode = validation_mode or "warn"  # type: ignore[assignment]
 
+    from .deep_path import filter_superseded
+
+    selected = filter_superseded(selected, skip=skip_llm_superseded)
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)
@@ -372,12 +382,22 @@ def run_analyzers(
     execution_order, levels = _build_execution_plan(active_analyzers)
     logger.info("Executing analyzers in order: %s", " -> ".join(execution_order))
 
+    if "spoken_normalizer" in to_run:
+        sn = active_analyzers.get("spoken_normalizer")
+        if sn is not None and "spoken_normalizer" not in ctx.results:
+            try:
+                _run_single_sync("spoken_normalizer", sn, ctx, effective_validation)
+            except Exception as e:
+                logger.error("Analyzer 'spoken_normalizer' failed: %s", e, exc_info=True)
+
     if async_mode:
         return asyncio.run(
             _run_analyzers_async_body(active_analyzers, levels, ctx, effective_validation)
         )
 
     for name in execution_order:
+        if name == "spoken_normalizer" and "spoken_normalizer" in ctx.results:
+            continue
         analyzer = active_analyzers.get(name)
         if analyzer is None:
             continue
@@ -396,15 +416,26 @@ async def run_analyzers_async(
     analyzer_configs: dict[str, dict[str, Any]] | None = None,
     *,
     validation_mode: ValidationMode | None = None,
+    skip_llm_superseded: bool = False,
 ) -> dict[str, Any]:
     """Async execution with parallel levels."""
     ensure_analyzers_loaded()
     effective_validation: ValidationMode = validation_mode or "warn"  # type: ignore[assignment]
 
+    from .deep_path import filter_superseded
+
+    selected = filter_superseded(selected, skip=skip_llm_superseded)
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)
     _, levels = _build_execution_plan(active_analyzers)
+    if "spoken_normalizer" in to_run:
+        sn = active_analyzers.get("spoken_normalizer")
+        if sn is not None and "spoken_normalizer" not in ctx.results:
+            try:
+                await _run_single_async("spoken_normalizer", sn, ctx, effective_validation)
+            except Exception as e:
+                logger.error("Analyzer 'spoken_normalizer' failed: %s", e, exc_info=True)
     return await _run_analyzers_async_body(active_analyzers, levels, ctx, effective_validation)
 
 
@@ -417,6 +448,8 @@ async def _run_analyzers_async_body(
     for level in levels:
         tasks = []
         for name in level:
+            if name == "spoken_normalizer" and "spoken_normalizer" in ctx.results:
+                continue
             analyzer = active_analyzers.get(name)
             if analyzer is None:
                 continue
