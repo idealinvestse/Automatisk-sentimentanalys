@@ -17,9 +17,6 @@ New-Item -ItemType Directory -Path $StageApp -Force | Out-Null
 
 Write-Host "==> Stage application files"
 $copyItems = @("src", "app", "configs", "data", "samples", "docs", "launcher", "launcher.ps1",
-    "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-    "requirements-dashboard-nicegui.txt",
-    "requirements.txt", "requirements-desktop.txt", "requirements-install.txt",
     "pyproject.toml", "README.md")
 foreach ($item in $copyItems) {
     $src = Join-Path $Root $item
@@ -62,28 +59,20 @@ $embedPy = Join-Path $pyDir "python.exe"
 Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile (Join-Path $pyDir "get-pip.py")
 & $embedPy (Join-Path $pyDir "get-pip.py")
 
-Write-Host "==> Create venv and install requirements ($Profile)"
+Write-Host "==> Create venv and install pyproject extras ($Profile)"
 $venv = Join-Path $StageApp ".venv"
 & $embedPy -m venv $venv
 $venvPy = Join-Path $venv "Scripts\python.exe"
 & $venvPy -m pip install -U pip
 
-$reqMap = @{
-    minimal = @("requirements-min.txt", "requirements-install.txt")
-    cli     = @(
-        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-        "requirements-dashboard-nicegui.txt", "requirements-install.txt"
-    )
-    api     = @("requirements-min.txt", "requirements-api.txt", "requirements-install.txt")
-    full    = @(
-        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-        "requirements-dashboard-nicegui.txt",
-        "requirements.txt", "requirements-desktop.txt", "requirements-install.txt"
-    )
+$extrasMap = @{
+    minimal = "min,install"
+    cli     = "min,cli,asr,api,dashboard-nicegui,install"
+    api     = "min,asr,api,install"
+    full    = "min,cli,asr,api,dashboard-nicegui,llm,training,install"
 }
-foreach ($rf in $reqMap[$Profile]) {
-    & $venvPy -m pip install -r (Join-Path $StageApp $rf)
-}
+$extras = $extrasMap[$Profile]
+& $venvPy -m pip install -e ".[$extras]"
 
 # Launcher entry script
 @'

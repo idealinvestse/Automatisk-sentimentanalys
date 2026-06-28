@@ -12,17 +12,18 @@ from src.install.config_schema import InstallProfile, UserConfig
 from src.install.provision import (
     _extract_ffmpeg_binaries,
     ensure_ffmpeg,
+    extras_for_profile,
     install_requirements,
-    requirements_for_profile,
     run_provision,
     venv_python_path,
 )
 
 
-def test_requirements_for_profile_cli_includes_dashboard() -> None:
-    files = requirements_for_profile(InstallProfile.cli)
-    assert "requirements-dashboard-nicegui.txt" in files
-    assert "requirements-api.txt" in files
+def test_extras_for_profile_cli_includes_dashboard() -> None:
+    extras = extras_for_profile(InstallProfile.cli)
+    assert "dashboard-nicegui" in extras
+    assert "api" in extras
+    assert "install" in extras
 
 
 def test_extract_ffmpeg_binaries_from_zip(tmp_path: Path) -> None:
@@ -51,29 +52,39 @@ def test_ensure_ffmpeg_skips_when_already_available(tmp_path: Path, monkeypatch)
     mock_download.assert_not_called()
 
 
-def test_install_requirements_fails_on_missing_files(tmp_path: Path) -> None:
-    for req_file in requirements_for_profile(InstallProfile.cli):
-        if req_file != "requirements-dashboard-nicegui.txt":
-            (tmp_path / req_file).write_text("# empty\n", encoding="utf-8")
+def test_install_requirements_fails_without_pyproject(tmp_path: Path) -> None:
+    with (
+        patch("src.install.provision._run_pip"),
+        pytest.raises(FileNotFoundError, match="pyproject.toml"),
+    ):
+        install_requirements(tmp_path, venv_python_path(tmp_path), InstallProfile.cli)
 
-    with patch("src.install.provision._run_pip"):
-        with pytest.raises(FileNotFoundError, match="requirements-dashboard-nicegui.txt"):
-            install_requirements(tmp_path, venv_python_path(tmp_path), InstallProfile.cli)
+
+def test_install_requirements_uses_editable_extras(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    python = venv_python_path(tmp_path)
+
+    with patch("src.install.provision._run_pip") as mock_pip:
+        installed = install_requirements(tmp_path, python, InstallProfile.minimal)
+
+    assert installed == ["min", "install"]
+    assert mock_pip.call_args_list[-1][0][2] == ["install", "-e", ".[min,install]"]
 
 
 def test_run_provision_reports_pip_failure(tmp_path: Path) -> None:
     (tmp_path / "configs").mkdir()
     (tmp_path / "configs" / "install_defaults.yaml").write_text("version: 1\n", encoding="utf-8")
-    (tmp_path / "requirements-min.txt").write_text("not-a-real-package-name-xyz\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
     cfg = UserConfig(paths={"app_root": str(tmp_path)}, install_profile=InstallProfile.minimal)
 
-    report = run_provision(
-        cfg,
-        InstallProfile.minimal,
-        ensure_virtualenv=False,
-        download_ffmpeg=False,
-        init_config=True,
-    )
+    with patch("src.install.provision._run_pip", side_effect=OSError("pip failed")):
+        report = run_provision(
+            cfg,
+            InstallProfile.minimal,
+            ensure_virtualenv=False,
+            download_ffmpeg=False,
+            init_config=True,
+        )
 
     assert not report.ok
     assert any(step.name == "pip" and not step.ok for step in report.steps)

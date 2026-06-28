@@ -1,2 +1,0 @@
-# NiceGUI dashboard + launcher
-plotly>=5.20.0

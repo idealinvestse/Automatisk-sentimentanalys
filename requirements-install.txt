@@ -1,3 +1,0 @@
-# Launcher / Windows installer config layer
-pyyaml>=6.0.0
-keyring>=25.0.0

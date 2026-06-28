@@ -64,7 +64,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - docs/LLM_AGENT_GUIDE.md — **Most important for agents**: architecture philosophy, patterns, what to do/not do, security rules.
 
 ## 5. How to Work With This Codebase
-- **Setup**: pip install -e "[cli,api,dashboard-nicegui]" then sentimentanalys download-asr . For dev: requirements-dev.txt + pre-commit.
+- **Setup**: pip install -e ".[cli,api,dashboard-nicegui,install]" then sentimentanalys download-asr . For dev: pip install -e ".[dev,diarize]" + pre-commit.
 - **Run**:
   - CLI: sentimentanalys --help or python -m src.cli   (ny: scan-openrouter-models)
   - API: uvicorn src.api:app --reload (or via launcher)

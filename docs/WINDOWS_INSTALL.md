@@ -69,14 +69,14 @@ See the original portable ZIP and Inno Setup installer instructions below (maint
 # Activate environment
 .\ .venv\Scripts\Activate.ps1
 
-# Install dependencies
-pip install -r requirements-min.txt -r requirements-cli.txt
+# Install dependencies (pyproject optional-deps)
+pip install -e ".[cli,asr,install]"
 
 # For diarization (if not using the [diarize] extra above)
-pip install pyannote.audio torchaudio
+pip install -e ".[diarize]"
 
 # Optional: API
-pip install -r requirements-api.txt
+pip install -e ".[api]"
 ```
 
 ### Launcher & GUI

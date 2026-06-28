@@ -27,34 +27,17 @@ if (-not (Test-Path ".venv")) {
 & .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
 
-$reqSets = @{
-    minimal = @("requirements-min.txt")
-    cli     = @(
-        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-        "requirements-dashboard-nicegui.txt", "requirements-install.txt"
-    )
-    api     = @(
-        "requirements-min.txt", "requirements-api.txt", "requirements-install.txt"
-    )
-    full    = @(
-        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-        "requirements-dashboard-nicegui.txt",
-        "requirements.txt", "requirements-desktop.txt", "requirements-install.txt"
-    )
-    dev     = @(
-        "requirements-min.txt", "requirements-cli.txt", "requirements-api.txt",
-        "requirements-dashboard-nicegui.txt",
-        "requirements.txt", "requirements-desktop.txt", "requirements-install.txt",
-        "requirements-dev.txt"
-    )
+$extrasMap = @{
+    minimal = "min,install"
+    cli     = "min,cli,asr,api,dashboard-nicegui,install"
+    api     = "min,asr,api,install"
+    full    = "min,cli,asr,api,dashboard-nicegui,llm,training,install"
+    dev     = "min,cli,asr,api,dashboard-nicegui,llm,training,install,dev,diarize"
 }
 
-foreach ($f in $reqSets[$Profile]) {
-    if (Test-Path $f) {
-        Write-Host "==> pip install -r $f"
-        pip install -r $f
-    }
-}
+$extras = $extrasMap[$Profile]
+Write-Host "==> pip install -e .[$extras]"
+pip install -e ".[$extras]"
 
 if ($Cuda) {
     Write-Host "==> Installing CUDA torch wheel"

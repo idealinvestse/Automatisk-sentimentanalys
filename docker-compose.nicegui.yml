@@ -28,7 +28,7 @@ services:
   dashboard:
     build: .
     command: >
-      bash -c "pip install -q nicegui httpx pandas &&
+      bash -c "pip install -q -e '.[dashboard-nicegui]' &&
       python -m app.nicegui_dashboard.main"
     ports:
       - "8080:8080"

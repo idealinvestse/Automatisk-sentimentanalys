@@ -17,23 +17,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirement files first for better layer caching
-COPY requirements-min.txt requirements-cli.txt requirements-api.txt requirements.txt ./
+# Copy project metadata first for better layer caching (Full pyproject.toml migration – 2026-06-28 audit)
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+COPY launcher/ ./launcher/
+COPY app/ ./app/
 
-# Install Python dependencies
+# Install Python dependencies via optional-deps
 # Note: For GPU support, use a CUDA base image or install torch with CUDA separately.
 # Example GPU image: FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 RUN python -m pip install -U pip && \
-    pip install -r requirements-min.txt -r requirements-api.txt && \
-    pip install -r requirements-cli.txt
+    pip install -e ".[min,asr,api,cli,install]"
 
-# Copy source code and assets
-COPY src/ ./src/
+# Copy remaining assets
 COPY configs/ ./configs/
 COPY data/ ./data/
 COPY samples/ ./samples/
 COPY docs/ ./docs/
-COPY README.md ROADMAP.md ./
+COPY ROADMAP.md ./
 
 # Create necessary directories
 RUN mkdir -p /cache/hf /app/outputs /app/models /app/state

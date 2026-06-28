@@ -47,48 +47,48 @@ class ProvisionReport:
         self.steps.append(ProvisionStep(name=name, ok=ok, message=message, detail=detail))
 
 
-def requirements_for_profile(profile: InstallProfile) -> list[str]:
-    """Requirement files to install for a given profile."""
-    install = "requirements-install.txt"
+def extras_for_profile(profile: InstallProfile) -> list[str]:
+    """Optional dependency extras to install for a given profile (pyproject.toml)."""
     mapping: dict[InstallProfile, list[str]] = {
-        InstallProfile.minimal: ["requirements-min.txt", install],
+        InstallProfile.minimal: ["min", "install"],
         InstallProfile.cli: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-asr.txt",
-            "requirements-api.txt",
-            "requirements-dashboard-nicegui.txt",
-            install,
+            "min",
+            "cli",
+            "asr",
+            "api",
+            "dashboard-nicegui",
+            "install",
         ],
-        InstallProfile.api: [
-            "requirements-min.txt",
-            "requirements-api.txt",
-            "requirements-asr.txt",
-            install,
-        ],
+        InstallProfile.api: ["min", "asr", "api", "install"],
         InstallProfile.full: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-asr.txt",
-            "requirements-api.txt",
-            "requirements-dashboard-nicegui.txt",
-            "requirements.txt",
-            "requirements-desktop.txt",
-            install,
+            "min",
+            "cli",
+            "asr",
+            "api",
+            "dashboard-nicegui",
+            "llm",
+            "training",
+            "install",
         ],
         InstallProfile.dev: [
-            "requirements-min.txt",
-            "requirements-cli.txt",
-            "requirements-asr.txt",
-            "requirements-api.txt",
-            "requirements-dashboard-nicegui.txt",
-            "requirements.txt",
-            "requirements-desktop.txt",
-            install,
-            "requirements-dev.txt",
+            "min",
+            "cli",
+            "asr",
+            "api",
+            "dashboard-nicegui",
+            "llm",
+            "training",
+            "install",
+            "dev",
+            "diarize",
         ],
     }
     return mapping[profile]
+
+
+def requirements_for_profile(profile: InstallProfile) -> list[str]:
+    """Deprecated alias – returns pyproject extra names for backward compatibility."""
+    return extras_for_profile(profile)
 
 
 def venv_python_path(root: Path) -> Path:
@@ -134,22 +134,15 @@ def _run_pip(python: Path, root: Path, args: list[str]) -> None:
 
 
 def install_requirements(root: Path, python: Path, profile: InstallProfile) -> list[str]:
-    """Install pip requirement bundles for profile. Returns installed file names."""
+    """Install optional dependency extras for profile via editable pyproject.toml install."""
+    pyproject = root / "pyproject.toml"
+    if not pyproject.is_file():
+        raise FileNotFoundError(f"Missing pyproject.toml at {pyproject}")
+
+    extras = extras_for_profile(profile)
     _run_pip(python, root, ["install", "-U", "pip", "wheel"])
-    installed: list[str] = []
-    missing: list[str] = []
-    for req_file in requirements_for_profile(profile):
-        path = root / req_file
-        if not path.is_file():
-            missing.append(req_file)
-            continue
-        _run_pip(python, root, ["install", "-r", str(path)])
-        installed.append(req_file)
-    if missing:
-        raise FileNotFoundError(
-            f"Missing requirement files for profile '{profile.value}': {', '.join(missing)}"
-        )
-    return installed
+    _run_pip(python, root, ["install", "-e", f".[{','.join(extras)}]"])
+    return extras
 
 
 def bundled_ffmpeg_path(root: Path) -> Path:
@@ -259,7 +252,7 @@ def run_provision(
         log(f"Installing pip packages for profile '{profile.value}'")
         try:
             installed = install_requirements(root, python, profile)
-            detail = ", ".join(installed) if installed else "no requirement files found"
+            detail = ", ".join(installed) if installed else "no extras configured"
             report.add("pip", True, "Python packages installed", detail)
             cfg.install_profile = profile
             save_user_config(cfg)
