@@ -22,7 +22,15 @@ from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
 
-PROMISE_KEYWORDS = ["jag lovar", "garanterar", "absolut", "definitivt", "100%", "säker på att"]
+PROMISE_KEYWORDS = [
+    "jag lovar",
+    "garanterar",
+    "garanterat",
+    "absolut",
+    "definitivt",
+    "100%",
+    "säker på att",
+]
 DATA_RISK = ["skicka kort", "personnummer", "bankuppgifter", "lösenord", "konto"]
 RECORDING_KEYWORDS = ["inspelat samtal", "inspelning", "bandas", "för kvalitetssäkring"]
 GDPR_KEYWORDS = ["samtycke", "personuppgifter", "gdpr", "dataskydd"]

@@ -18,6 +18,17 @@ from .registry import register_analyzer
 logger = logging.getLogger(__name__)
 
 FILLERS = re.compile(r"\b(eh|hmm|öh|du vet|typ|liksom|asså|alltså)\b", re.IGNORECASE)
+_ORPHAN_COMMA_RUN = re.compile(r"(?:,\s*)+")
+
+
+def normalize_spoken_text(text: str) -> str:
+    """Strip Swedish ASR fillers and collapse punctuation left behind."""
+    clean = FILLERS.sub(" ", text)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    clean = _ORPHAN_COMMA_RUN.sub(", ", clean)
+    clean = re.sub(r"^,\s*", "", clean)
+    clean = re.sub(r"\s*,\s*$", "", clean)
+    return re.sub(r"\s+", " ", clean).strip()
 
 
 @register_analyzer("spoken_normalizer")
@@ -34,7 +45,6 @@ class SpokenNormalizerAnalyzer(Analyzer):
         normalized = []
         for seg in ctx.segments or []:
             text = seg.text or ""
-            clean = FILLERS.sub("", text)
-            clean = re.sub(r"\s+", " ", clean).strip()
+            clean = normalize_spoken_text(text)
             normalized.append({"original": text, "normalized": clean, "speaker": seg.speaker})
         return normalized

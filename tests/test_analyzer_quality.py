@@ -204,8 +204,10 @@ class TestSpokenNormalizer:
         monkeypatch.setattr(SentimentAnalyzer, "analyze", mock_analyze)
         ctx = AnalysisContext(segments=[_seg("Eh, alltså, typ bra service.")])
         run_analyzers(ctx, selected=["spoken_normalizer", "sentiment"])
-        text = captured[0].lower()
+        assert captured, "sentiment analyzer should have received normalized text"
+        text = captured[0][0].lower()
         assert "bra service" in text
+        assert not text.startswith(",")
         assert "eh" not in text.split()
         assert "typ" not in text.split()
         assert "alltså" not in text
