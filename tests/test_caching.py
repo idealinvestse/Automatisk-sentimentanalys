@@ -60,6 +60,60 @@ class TestAggregateCache:
         old = (datetime.now() - timedelta(days=2)).isoformat()
         assert AggregateCache._is_valid(cache, {"computed_at": old, "ttl": 3600}) is False
 
+    def test_get_bad_json_file_returns_none(self, cache, tmp_path):
+        key = "bad-json"
+        path = cache._file_path(key)
+        path.write_text("{not valid", encoding="utf-8")
+        assert cache.get(key) is None
+
+    def test_set_redis_fallback_writes_file_on_failure(self, cache):
+        mock_redis = MagicMock()
+        mock_redis.set.side_effect = RuntimeError("redis down")
+        cache.use_redis = True
+        cache.redis_client = mock_redis
+        cache.set("rk", {"value": 1})
+        path = cache._file_path("rk")
+        assert path.is_file()
+        import json
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["value"] == 1
+
+    def test_redis_cache_hit(self, cache):
+        import json
+
+        mock_redis = MagicMock()
+        payload = {"computed_at": "2099-01-01T00:00:00", "ttl": 999999, "x": 1}
+        mock_redis.get.return_value = json.dumps(payload)
+        cache.use_redis = True
+        cache.redis_client = mock_redis
+        result = cache.get("redis-key")
+        assert result is not None
+        assert result["x"] == 1
+
+    def test_redis_unavailable_falls_back_to_file(self, tmp_path, monkeypatch):
+        mock_redis_mod = MagicMock()
+        mock_client = MagicMock()
+        mock_client.ping.side_effect = ConnectionError("no redis")
+        mock_redis_mod.from_url.return_value = mock_client
+        monkeypatch.setattr("src.caching.redis", mock_redis_mod)
+        monkeypatch.setattr("src.caching.REDIS_AVAILABLE", True)
+        cache = AggregateCache(use_redis=True, cache_dir=str(tmp_path / "agg"))
+        cache.set("k", {"v": 2})
+        assert cache.get("k") is not None
+        assert cache.use_redis is False
+
+    def test_invalidate_redis_and_corrupt_file(self, cache):
+        mock_redis = MagicMock()
+        mock_redis.scan_iter.return_value = ["agent:1"]
+        cache.use_redis = True
+        cache.redis_client = mock_redis
+        bad = cache.cache_dir / "corrupt.json"
+        bad.write_text("x", encoding="utf-8")
+        cache.invalidate("agent:1")
+        mock_redis.delete.assert_called()
+        assert not bad.exists()
+
 
 class TestPrecomputeHelpers:
     def test_precompute_agent_aggregates_without_cache(self):

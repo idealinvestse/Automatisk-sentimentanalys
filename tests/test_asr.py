@@ -46,6 +46,64 @@ class TestModelResolution:
             format_hotwords_for_asr(["fakturering", "återbetalning"]) == "fakturering återbetalning"
         )
 
+    def test_format_hotwords_empty_and_string(self):
+        assert format_hotwords_for_asr(None) is None
+        assert format_hotwords_for_asr("") is None
+        assert format_hotwords_for_asr("  ") is None
+        assert format_hotwords_for_asr("faktura") == "faktura"
+        assert format_hotwords_for_asr(["", "  ", "hej"]) == "hej"
+
+    def test_openai_model_strips_prefix_for_faster(self):
+        assert resolve_model_name_for_backend("openai/whisper-large-v3", "faster") == "large-v3"
+
+    def test_kb_whisper_passthrough_for_whisperx(self):
+        name = "KBLab/kb-whisper-large"
+        assert resolve_model_name_for_backend(name, "whisperx") == name
+
+
+class TestAddDiarization:
+    def _sample_transcript(self):
+        from src.core.models import Segment, Transcript
+
+        return Transcript(
+            model="test",
+            backend="faster",
+            language="sv",
+            duration=1.0,
+            processing_time=0.1,
+            segments=[Segment(start=0.0, end=1.0, text="Hej", speaker=None)],
+        )
+
+    def test_skips_when_disabled(self):
+        from src.transcription.base import add_diarization
+
+        transcript = self._sample_transcript()
+        out = add_diarization(transcript, "/tmp/x.wav", diarize=False, num_speakers=2)
+        assert out is transcript
+
+    def test_adds_speakers_when_enabled(self):
+        from src.transcription.base import add_diarization
+
+        transcript = self._sample_transcript()
+        mock_dp = MagicMock()
+        mock_dp.diarize.return_value = MagicMock(num_speakers=2, to_dict=lambda: {"n": 2})
+        mock_dp.assign_speakers_to_segments.return_value = [
+            {"start": 0.0, "end": 1.0, "text": "Hej", "speaker": "S1"}
+        ]
+        with patch("src.diarization.DiarizationPipeline", return_value=mock_dp):
+            out = add_diarization(transcript, "/tmp/x.wav", diarize=True, num_speakers=2)
+        assert out.segments[0].speaker == "S1"
+        assert out.diarization == {"n": 2}
+
+    def test_diarization_failure_returns_error_metadata(self):
+        from src.transcription.base import add_diarization
+
+        transcript = self._sample_transcript()
+        with patch("src.diarization.DiarizationPipeline", side_effect=RuntimeError("no model")):
+            out = add_diarization(transcript, "/tmp/x.wav", diarize=True, num_speakers=2)
+        assert out.diarization["backend"] == "failed"
+        assert "no model" in out.diarization["error"]
+
 
 class TestDeviceNormalization:
     def test_auto(self):

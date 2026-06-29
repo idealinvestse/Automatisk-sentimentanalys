@@ -121,3 +121,75 @@ def test_run_provision_downloads_ffmpeg_when_missing(tmp_path: Path, monkeypatch
     ffmpeg_step = next(step for step in report.steps if step.name == "ffmpeg")
     assert ffmpeg_step.ok
     assert (tmp_path / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe").is_file()
+
+
+def test_venv_python_path_linux(tmp_path: Path) -> None:
+    assert venv_python_path(tmp_path).name == "python"
+
+
+def test_bundled_ffmpeg_path_linux(tmp_path: Path) -> None:
+    from src.install.provision import bundled_ffmpeg_path
+
+    assert bundled_ffmpeg_path(tmp_path).as_posix().endswith("tools/ffmpeg/bin/ffmpeg")
+
+
+def test_resolve_bootstrap_python_prefers_venv(tmp_path: Path) -> None:
+    from src.install.provision import resolve_bootstrap_python
+
+    venv_py = venv_python_path(tmp_path)
+    venv_py.parent.mkdir(parents=True, exist_ok=True)
+    venv_py.write_text("", encoding="utf-8")
+    assert resolve_bootstrap_python(tmp_path) == venv_py
+
+
+def test_resolve_bootstrap_python_env_override(tmp_path: Path, monkeypatch) -> None:
+    from src.install.provision import resolve_bootstrap_python
+
+    override = tmp_path / "custom-python"
+    override.write_text("", encoding="utf-8")
+    monkeypatch.setenv("SENTIMENT_PYTHON", str(override))
+    assert resolve_bootstrap_python(tmp_path) == override
+
+
+def test_ensure_venv_returns_existing(tmp_path: Path) -> None:
+    from src.install.provision import ensure_venv
+
+    venv_py = venv_python_path(tmp_path)
+    venv_py.parent.mkdir(parents=True, exist_ok=True)
+    venv_py.write_text("", encoding="utf-8")
+    assert ensure_venv(tmp_path) == venv_py
+
+
+def test_ensure_ffmpeg_non_windows_raises(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("FFMPEG_PATH", raising=False)
+    cfg = UserConfig(paths={"app_root": str(tmp_path)})
+
+    with patch("src.install.provision.resolve_ffmpeg", return_value=None):
+        with pytest.raises(RuntimeError, match="ffmpeg not found"):
+            ensure_ffmpeg(tmp_path, cfg)
+
+
+def test_ensure_user_config_sets_app_root(tmp_path: Path, monkeypatch) -> None:
+    from src.install.provision import ensure_user_config
+
+    config_path = tmp_path / "user_config.yaml"
+    monkeypatch.setenv("SENTIMENT_USER_CONFIG", str(config_path))
+    (tmp_path / "configs").mkdir()
+    (tmp_path / "configs" / "install_defaults.yaml").write_text("version: 1\n", encoding="utf-8")
+    cfg = ensure_user_config(tmp_path)
+    assert cfg.paths.app_root == str(tmp_path.resolve())
+
+
+def test_extras_for_profile_dev_includes_diarize() -> None:
+    extras = extras_for_profile(InstallProfile.dev)
+    assert "dev" in extras
+    assert "diarize" in extras
+
+
+def test_provision_report_ok_property() -> None:
+    from src.install.provision import ProvisionReport
+
+    report = ProvisionReport()
+    report.add("step1", True, "ok")
+    report.add("step2", False, "fail")
+    assert report.ok is False
