@@ -80,3 +80,19 @@ See [SECURITY.md](SECURITY.md). Call center data is sensitive — never commit r
 5. Re-run `github-project-status` skill.
 
 **Recommendation:** After any change that affects features or architecture, re-run the github-project-status skill so AGENT_CONTEXT.md and PROJECT_STATUS.md stay fresh for the next agent.
+
+## Cursor Cloud specific instructions
+
+Environment is Python 3.12 on Linux. The startup update script installs the package editable with the `dev,api,dashboard-nicegui,diarize,llm` extras plus `selenium`. `ffmpeg` is already present in the base image.
+
+- **PATH:** console scripts (`sentimentanalys`, `uvicorn`, `pytest`, `ruff`) install to `~/.local/bin`, which is NOT on PATH by default. Either call them via `python3 -m ...` or prepend `export PATH="$HOME/.local/bin:$PATH"`.
+- **`selenium` is a hidden test dependency:** `tests/conftest.py` registers `pytest_plugins = ["nicegui.testing.plugin"]` globally, which imports `selenium` at collection time. Without it, the ENTIRE test suite fails to collect. It is not declared in any `pyproject.toml` extra, so the update script installs it separately.
+- **Run services** (see README/AGENTS quickstart): API = `uvicorn src.api:app --host 0.0.0.0 --port 8000` (health at `/health`, interactive docs at `/docs`); dashboard = `python -m app.nicegui_dashboard.main` (port 8080). The dashboard is a client of the API and degrades to demo data when the API is down.
+- **Models download on first use:** sentiment analysis pulls `cardiffnlp/twitter-xlm-roberta-base-sentiment` from Hugging Face on the first `/analyze` / CLI `sentiment` call, so the first request needs network and is slow. ASR/transcription models require `sentimentanalys download-asr` first (large download; only needed for audio transcription, not text analysis).
+- **LLM/diarization are optional:** `OPENROUTER_API_KEY` / `GROQ_API_KEY` / `HF_TOKEN` are unset by default; the pipeline logs warnings and falls back to local-only analysis. Add them as secrets only if testing LLM holistic analysis or pyannote diarization.
+- **Known pre-existing failures (NOT environment issues; do not try to "fix" via setup):**
+  - The NiceGUI dashboard does not start: `app/nicegui_dashboard/main.py` imports `render_test_lab_tab` from `app/nicegui_dashboard/components/test_lab.py`, but that module only defines `create_llm_model_settings`. This same missing symbol breaks ~12 `tests/test_nicegui_dashboard_ui.py` errors plus `test_launcher_dashboard_deps` and the `cc_cancellation` golden test. A code fix (restoring/renaming the function) is required to run the dashboard.
+  - `tests/test_install_paths.py::test_resolve_ffmpeg_bundled` and `tests/test_provision.py::test_run_provision_downloads_ffmpeg_when_missing` are Windows-specific (expect a bundled `ffmpeg.exe`) and fail on Linux.
+  - `tests/test_analyzer_quality.py::TestSpokenNormalizer::test_normalizer_runs_before_sentiment_when_selected` fails on a test-logic mismatch.
+  - Net: `pytest` reports ~751 passed with these ~21 pre-existing failures/errors on a clean checkout.
+- **Lint version drift:** the installed `ruff` is much newer than the pinned `ruff>=0.11`, so `ruff check .` reports ~275 pre-existing style findings (mostly `W292`/formatting). The command runs fine; the findings are not caused by environment setup.
