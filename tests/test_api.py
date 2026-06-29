@@ -53,7 +53,7 @@ def test_analyze_conversation_validation():
 def test_batch_transcribe_basic_shape(monkeypatch):
     # We can mock resolve + transcribe_helper at high level
     with (
-        patch("src.api.routers.transcription.resolve_audio_paths", return_value=["/tmp/a.wav"]),
+        patch("src.api.routers.transcription.resolve_and_validate_audio_paths", return_value=["/tmp/a.wav"]),
         patch("src.api.routers.transcription.transcribe_helper", return_value={"segments": [], "model": "test"}),
     ):
         r = client.post(

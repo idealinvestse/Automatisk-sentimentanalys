@@ -90,7 +90,31 @@ def test_transcription_state_apply_ws_event() -> None:
 def test_ws_listener_url_builds() -> None:
     client = NiceGUIAPIClient("http://localhost:8000", api_key="k")
     listener = TranscriptionWSListener(client, on_event=lambda _e: None)
-    assert listener._ws_url() == "ws://localhost:8000/ws/transcription?api_key=k"
+    assert listener._ws_url() == "ws://localhost:8000/ws/transcription"
+    assert listener._ws_headers() == {"X-API-Key": "k"}
+
+
+def test_ws_transcription_rejects_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    authed_app = __import__("src.api.app", fromlist=["create_app"]).create_app()
+    authed_client = TestClient(authed_app)
+    with pytest.raises(Exception):
+        with authed_client.websocket_connect("/ws/transcription"):
+            pass
+
+
+def test_ws_transcription_accepts_header_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    authed_app = __import__("src.api.app", fromlist=["create_app"]).create_app()
+    authed_client = TestClient(authed_app)
+    with authed_client.websocket_connect(
+        "/ws/transcription",
+        headers={"X-API-Key": "secret-key"},
+    ) as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "connected"
 
 
 def test_get_hub_on_app() -> None:

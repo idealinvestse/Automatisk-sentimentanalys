@@ -35,7 +35,10 @@ curl -H "X-API-Key: your-secret" http://localhost:8000/analyze \
 | Endpoint | Auth |
 |----------|------|
 | `GET /health` | None |
+| `GET /status/*`, `GET /metrics`, `WS /ws/transcription` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
 | All `POST` routes | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
+
+WebSocket clients must send `X-API-Key` as a header (not a query parameter).
 
 Without `SENTIMENT_API_KEY`, the API accepts requests locally (tests/dev only).
 
@@ -70,6 +73,8 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 | `API_CACHE_DIR` | Aggregate cache directory (default `.cache/aggregates`) |
 | `API_USE_REDIS_CACHE` | `true` to use Redis (`REDIS_URL`) |
 | `API_RATE_LIMIT_RPM` | Requests/minute per client IP (`0` = disabled, default) |
+| `API_TRUSTED_PROXY` | `true` to honor `X-Forwarded-For` for rate limiting (only behind a trusted reverse proxy) |
+| `API_STATE_DIR` | Directory allowed for `/scan_process` `state_file` (defaults to `API_CACHE_DIR`) |
 | `OPENROUTER_API_KEY` | Mistral/OpenRouter for LLM paths |
 
 ---
@@ -78,6 +83,7 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 
 | Limit | Value |
 |-------|-------|
+| Texts in `/analyze` | 1000 |
 | Segments per call | 200 |
 | Calls in `segments_list` | 50 |
 | Semantic `query` length | 500 chars |
@@ -98,7 +104,7 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 
 - `POST /transcribe` — single file ASR
 - `POST /batch_transcribe` — parallel ASR (`audio_paths` or `directory` + `glob`)
-- `WS /ws/transcription` — real-time log/progress stream during transcription (optional `?api_key=` when auth enabled). Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`.
+- `WS /ws/transcription` — real-time log/progress stream during transcription (`X-API-Key` header when auth enabled). Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`.
 
 ### Conversation
 

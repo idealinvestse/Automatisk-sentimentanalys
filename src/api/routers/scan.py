@@ -12,7 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 
 from ...caching import AggregateCache
-from ...core.audio import resolve_audio_paths
+from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..dependencies import get_cache
@@ -68,7 +68,7 @@ def _run_scan_process(
     registry: TranscriptionJobRegistry | None = None,
 ) -> ScanProcessResponse:
     """Synchronous scan body — executed in a worker thread from the async handler."""
-    files = resolve_audio_paths(
+    files = resolve_and_validate_audio_paths(
         audio_paths=None,
         directory=req.directory,
         pattern=req.pattern,

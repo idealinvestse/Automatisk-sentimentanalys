@@ -33,14 +33,20 @@ from ..core.errors import (
     LLMError,
     TranscriptionError,
 )
-from .dependencies import PUBLIC_ERROR_DETAIL, require_api_key
+from .dependencies import require_api_key
 from .error_responses import (
+    ANALYSIS_ERROR_DETAIL,
+    CONFIGURATION_ERROR_DETAIL,
     ERROR_CODE_INTERNAL,
     ERROR_CODE_RATE_LIMITED,
     ERROR_CODE_UNAUTHORIZED,
     ERROR_CODE_VALIDATION,
+    LLM_ERROR_DETAIL,
+    PUBLIC_ERROR_DETAIL,
+    TRANSCRIPTION_ERROR_DETAIL,
     error_code_for,
     error_response,
+    public_detail,
 )
 from .metrics import init_app_info, record_http_request
 from .middleware_rate_limit import RateLimitMiddleware
@@ -91,7 +97,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         started = time.perf_counter()
         response = await call_next(request)
         duration = time.perf_counter() - started
-        record_http_request(request.method, request.url.path, response.status_code, duration)
+        route = request.scope.get("route")
+        metric_path = route.path if route is not None else request.url.path
+        record_http_request(request.method, metric_path, response.status_code, duration)
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -180,7 +188,7 @@ def create_app() -> FastAPI:
             code = ERROR_CODE_UNAUTHORIZED
         elif exc.status_code == 429:
             code = ERROR_CODE_RATE_LIMITED
-        elif exc.status_code == 422 and exc.detail != PUBLIC_ERROR_DETAIL:
+        elif exc.status_code == 422:
             code = ERROR_CODE_VALIDATION
         else:
             code = ERROR_CODE_INTERNAL
@@ -189,22 +197,42 @@ def create_app() -> FastAPI:
     @app.exception_handler(LLMError)
     async def handle_llm_error(request: Request, exc: LLMError) -> JSONResponse:
         logger.error("LLM error: %s", exc)
-        return error_response(request, 502, f"LLM request failed: {exc}", error_code=error_code_for(exc))
+        return error_response(
+            request,
+            502,
+            public_detail(exc, dev_prefix="LLM request failed", public=LLM_ERROR_DETAIL),
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(ConfigurationError)
     async def handle_config_error(request: Request, exc: ConfigurationError) -> JSONResponse:
         logger.warning("Configuration error: %s", exc)
-        return error_response(request, 422, str(exc), error_code=error_code_for(exc))
+        return error_response(
+            request,
+            422,
+            public_detail(exc, dev_prefix="Configuration error", public=CONFIGURATION_ERROR_DETAIL),
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(TranscriptionError)
     async def handle_transcription_error(request: Request, exc: TranscriptionError) -> JSONResponse:
         logger.error("Transcription error: %s", exc)
-        return error_response(request, 500, f"Transcription failed: {exc}", error_code=error_code_for(exc))
+        return error_response(
+            request,
+            500,
+            public_detail(exc, dev_prefix="Transcription failed", public=TRANSCRIPTION_ERROR_DETAIL),
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(AnalysisError)
     async def handle_analysis_error(request: Request, exc: AnalysisError) -> JSONResponse:
         logger.error("Analysis error: %s", exc)
-        return error_response(request, 500, f"Analysis failed: {exc}", error_code=error_code_for(exc))
+        return error_response(
+            request,
+            500,
+            public_detail(exc, dev_prefix="Analysis failed", public=ANALYSIS_ERROR_DETAIL),
+            error_code=error_code_for(exc),
+        )
 
     @app.exception_handler(BaseAnalysisError)
     async def handle_base_error(request: Request, exc: BaseAnalysisError) -> JSONResponse:
@@ -212,7 +240,7 @@ def create_app() -> FastAPI:
         return error_response(
             request,
             500,
-            str(exc),
+            public_detail(exc, public=PUBLIC_ERROR_DETAIL),
             error_code=error_code_for(exc),
             details=getattr(exc, "details", None) or None,
         )
@@ -233,7 +261,7 @@ def create_app() -> FastAPI:
     _auth = [Depends(require_api_key)]
 
     app.include_router(health.router)
-    app.include_router(status.router)
+    app.include_router(status.router, dependencies=_auth)
     app.include_router(text.router, dependencies=_auth)
     app.include_router(transcription.router, dependencies=_auth)
     app.include_router(conversation.router, dependencies=_auth)

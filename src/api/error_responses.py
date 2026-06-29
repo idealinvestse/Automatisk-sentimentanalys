@@ -25,6 +25,12 @@ ERROR_CODE_VALIDATION = "validation_error"
 ERROR_CODE_UNAUTHORIZED = "unauthorized"
 ERROR_CODE_RATE_LIMITED = "rate_limit_exceeded"
 
+PUBLIC_ERROR_DETAIL = "An internal error occurred. Please try again later."
+CONFIGURATION_ERROR_DETAIL = "Invalid configuration."
+LLM_ERROR_DETAIL = "LLM request failed. Please try again later."
+TRANSCRIPTION_ERROR_DETAIL = "Transcription failed. Please try again later."
+ANALYSIS_ERROR_DETAIL = "Analysis failed. Please try again later."
+
 
 def request_id_from(request: Request) -> str | None:
     return getattr(request.state, "request_id", None)
@@ -32,6 +38,15 @@ def request_id_from(request: Request) -> str | None:
 
 def _dev_mode() -> bool:
     return os.getenv("SENTIMENT_DEV", "").lower() in ("1", "true", "yes")
+
+
+def public_detail(exc: BaseException, *, dev_prefix: str | None = None, public: str = PUBLIC_ERROR_DETAIL) -> str:
+    """Return a safe client-facing message; include exception text only in dev mode."""
+    if _dev_mode():
+        if dev_prefix:
+            return f"{dev_prefix}: {exc}"
+        return str(exc)
+    return public
 
 
 def error_code_for(exc: BaseException) -> str:

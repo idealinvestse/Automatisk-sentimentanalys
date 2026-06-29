@@ -113,7 +113,7 @@ class TestAPIE2ESmoke:
     def test_scan_process_analyze_with_pipeline_mock(self, scan_directory):
         with (
             patch(
-                "src.api.routers.scan.resolve_audio_paths",
+                "src.api.routers.scan.resolve_and_validate_audio_paths",
                 return_value=[f"{scan_directory}/a.wav"],
             ),
             patch(

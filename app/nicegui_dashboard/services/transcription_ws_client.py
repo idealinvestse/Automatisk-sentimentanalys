@@ -11,7 +11,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
-from urllib.parse import urlencode, urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 
@@ -63,14 +63,17 @@ class TranscriptionWSListener:
     def _ws_url(self) -> str:
         parsed = urlparse(self._client.base_url)
         scheme = "wss" if parsed.scheme == "https" else "ws"
-        query: dict[str, str] = {}
-        if self._client.api_key:
-            query["api_key"] = self._client.api_key
         netloc = parsed.netloc or parsed.path
         path = (parsed.path.rstrip("/") if parsed.scheme else "") + "/ws/transcription"
         if not path.startswith("/"):
             path = "/" + path
-        return urlunparse((scheme, netloc, path, "", urlencode(query), ""))
+        return urlunparse((scheme, netloc, path, "", "", ""))
+
+    def _ws_headers(self) -> dict[str, str]:
+        headers: dict[str, str] = {}
+        if self._client.api_key:
+            headers["X-API-Key"] = self._client.api_key
+        return headers
 
     async def start(self, job_id: str) -> None:
         """Connect and listen until stop() or max attempts exhausted."""
@@ -123,7 +126,12 @@ class TranscriptionWSListener:
                 self._set_status(WS_DISCONNECTED)
 
             try:
-                async with websockets.connect(url, ping_interval=20, ping_timeout=20) as ws:
+                async with websockets.connect(
+                    url,
+                    ping_interval=20,
+                    ping_timeout=20,
+                    additional_headers=self._ws_headers(),
+                ) as ws:
                     self._set_status(WS_CONNECTED)
                     self._attempt = 0
                     if self.job_id:

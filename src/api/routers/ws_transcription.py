@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..settings import get_api_settings
 from ..transcription_events import TranscriptionEventHub, get_hub
@@ -16,24 +16,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Transcription WebSocket"])
 
 
-def _auth_ok(api_key: str | None) -> bool:
+def _auth_ok(header_key: str | None) -> bool:
     settings = get_api_settings()
     if not settings.auth_enabled:
         return True
-    return bool(api_key and api_key == settings.api_key)
+    return bool(header_key and header_key == settings.api_key)
 
 
 @router.websocket("/ws/transcription")
-async def transcription_ws(
-    websocket: WebSocket,
-    api_key: str | None = Query(default=None),
-) -> None:
+async def transcription_ws(websocket: WebSocket) -> None:
     """Stream transcription log/progress events (JSON).
+
+    Authenticate with ``X-API-Key`` header when ``SENTIMENT_API_KEY`` is set.
 
     Client may send:
         {"type": "ping"}  → server replies {"type": "pong"}
-        {"type": "subscribe", "job_id": "<uuid>"}  → optional filter hint (server still broadcasts all)
+        {"type": "subscribe", "job_id": "<uuid>"}  → filter events to that job
     """
+    api_key = websocket.headers.get("x-api-key")
     if not _auth_ok(api_key):
         await websocket.close(code=1008, reason="Unauthorized")
         return

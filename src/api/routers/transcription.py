@@ -7,7 +7,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from ...core.audio import resolve_audio_paths
+from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..helpers import asr_kwargs_from, transcribe_helper
@@ -111,7 +111,7 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
             hub.done(job_id=job_id, ok=0, failed=0)
             if job_id:
                 registry.complete(job_id, status="cancelled")
-            raise HTTPException(status_code=499, detail="Job cancelled") from None
+            raise HTTPException(status_code=409, detail="Job cancelled") from None
         except Exception as err:
             hub.log(job_id=job_id, level="ERROR", msg=str(err), file=fname)
             hub.done(job_id=job_id, ok=0, failed=1)
@@ -133,7 +133,7 @@ async def batch_transcribe(req: BatchTranscribeRequest, request: Request) -> Bat
     _register_job(request, job_id, "batch_transcribe")
 
     async def _do() -> BatchTranscribeResponse:
-        files = resolve_audio_paths(
+        files = resolve_and_validate_audio_paths(
             audio_paths=req.audio_paths,
             directory=req.directory,
             pattern=req.glob,

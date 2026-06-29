@@ -116,7 +116,7 @@ def test_batch_transcribe_ok_and_worker_error(audio_file):
         raise ValueError("fail b")
 
     with (
-        patch("src.api.routers.transcription.resolve_audio_paths", return_value=[a, b]),
+        patch("src.api.routers.transcription.resolve_and_validate_audio_paths", return_value=[a, b]),
         patch("src.api.routers.transcription.transcribe_helper", side_effect=fake_helper),
     ):
         r = client.post(
@@ -182,7 +182,7 @@ def test_batch_analyze_conversation_mixed(audio_file):
         raise OSError("bad file")
 
     with (
-        patch("src.api.routers.conversation.resolve_audio_paths", return_value=[audio_file, b]),
+        patch("src.api.routers.conversation.resolve_and_validate_audio_paths", return_value=[audio_file, b]),
         patch("src.api.services.conversation.transcribe_helper", side_effect=tx),
         patch(
             "src.api.services.conversation.analyze_smart",
@@ -206,7 +206,7 @@ def test_batch_analyze_conversation_mixed(audio_file):
 def test_scan_process_transcribe_happy(scan_directory):
     with (
         patch(
-            "src.api.routers.scan.resolve_audio_paths",
+            "src.api.routers.scan.resolve_and_validate_audio_paths",
             return_value=[f"{scan_directory}/a.wav", f"{scan_directory}/b.wav"],
         ),
         patch(
@@ -232,7 +232,7 @@ def test_scan_process_transcribe_happy(scan_directory):
 def test_scan_process_analyze_operation(scan_directory):
     with (
         patch(
-            "src.api.routers.scan.resolve_audio_paths",
+            "src.api.routers.scan.resolve_and_validate_audio_paths",
             return_value=[f"{scan_directory}/a.wav"],
         ),
         patch(
@@ -252,9 +252,11 @@ def test_scan_process_analyze_operation(scan_directory):
     assert r.json()["items"][0]["data"]["segment_sentiments"]
 
 
-def test_scan_process_skips_unchanged_and_uses_state(scan_directory, tmp_path):
+def test_scan_process_skips_unchanged_and_uses_state(scan_directory, tmp_path, monkeypatch):
     import os
 
+    monkeypatch.setenv("API_STATE_DIR", str(tmp_path))
+    get_api_settings.cache_clear()
     wav = f"{scan_directory}/a.wav"
     state_file = tmp_path / "st.json"
     mtime = os.path.getmtime(wav)
@@ -263,7 +265,7 @@ def test_scan_process_skips_unchanged_and_uses_state(scan_directory, tmp_path):
         encoding="utf-8",
     )
     with patch(
-        "src.api.routers.scan.resolve_audio_paths",
+        "src.api.routers.scan.resolve_and_validate_audio_paths",
         return_value=[wav, f"{scan_directory}/b.wav"],
     ):
         r = client.post(
@@ -281,7 +283,7 @@ def test_scan_process_skips_unchanged_and_uses_state(scan_directory, tmp_path):
 def test_scan_process_worker_error(scan_directory):
     with (
         patch(
-            "src.api.routers.scan.resolve_audio_paths",
+            "src.api.routers.scan.resolve_and_validate_audio_paths",
             return_value=[f"{scan_directory}/a.wav"],
         ),
         patch("src.api.routers.scan.transcribe_helper", side_effect=RuntimeError("scan fail")),
@@ -325,7 +327,7 @@ def test_analyze_pipeline_analysis_error_propagates():
             json={"segments": [{"text": "x", "start": 0, "end": 1}]},
         )
     assert r.status_code == 500
-    assert "Analysis failed" in r.json()["detail"]
+    assert "Analysis failed" in r.json()["detail"] or "internal error" in r.json()["detail"].lower()
 
 
 def test_qa_score_compliance_qa_fallback():

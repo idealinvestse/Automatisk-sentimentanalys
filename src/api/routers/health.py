@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 
 from ...alerting_state import AlertingStateManager
+from ..dependencies import require_api_key
 from ..metrics import render_metrics, update_alerting_metrics
 
 router = APIRouter(tags=["Health"])
@@ -20,9 +21,9 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/metrics")
+@router.get("/metrics", dependencies=[Depends(require_api_key)])
 async def metrics(request: Request) -> Response:
-    """Prometheus metrics endpoint (no API key — restrict at network level in production)."""
+    """Prometheus metrics endpoint (requires ``X-API-Key`` when auth is enabled)."""
     state = getattr(request.app.state, "alerting_state", None)
     if isinstance(state, AlertingStateManager):
         update_alerting_metrics(state)

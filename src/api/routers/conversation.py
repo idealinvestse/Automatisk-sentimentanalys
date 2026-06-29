@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from ...caching import AggregateCache
-from ...core.audio import resolve_audio_paths
+from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import run_batch
 from ..dependencies import get_cache
@@ -54,7 +54,7 @@ async def batch_analyze_conversation(
     """Analyze sentiment for multiple conversation audio files."""
 
     async def _do() -> BatchAnalyzeConversationResponse:
-        files = resolve_audio_paths(
+        files = resolve_and_validate_audio_paths(
             audio_paths=req.audio_paths,
             directory=req.directory,
             pattern=req.glob,

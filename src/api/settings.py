@@ -18,7 +18,9 @@ class APISettings:
     use_redis_cache: bool
     redis_url: str | None
     cache_dir: str
+    state_dir: str
     rate_limit_rpm: int
+    trusted_proxy: bool
     production: bool
     require_auth: bool
     require_media_root: bool
@@ -92,7 +94,9 @@ def get_api_settings() -> APISettings:
         use_redis_cache=_env_bool("API_USE_REDIS_CACHE", bool(defaults.get("use_redis_cache"))),
         redis_url=os.getenv("REDIS_URL") or defaults.get("redis_url"),
         cache_dir=os.getenv("API_CACHE_DIR", ".cache/aggregates"),
+        state_dir=os.getenv("API_STATE_DIR") or os.getenv("API_CACHE_DIR", ".cache/aggregates"),
         rate_limit_rpm=rate_limit,
+        trusted_proxy=_env_bool("API_TRUSTED_PROXY"),
         production=_env_bool("API_PRODUCTION"),
         require_auth=_env_bool("API_REQUIRE_AUTH"),
         require_media_root=_env_bool("API_REQUIRE_MEDIA_ROOT"),

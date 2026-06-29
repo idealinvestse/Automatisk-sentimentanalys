@@ -12,13 +12,12 @@ from ..alerting import AlertEngine
 from ..caching import AggregateCache
 from ..pipeline import CallAnalysisPipeline
 from .settings import get_api_settings
+from .error_responses import PUBLIC_ERROR_DETAIL
 
 logger = logging.getLogger(__name__)
 
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 _openrouter_header = APIKeyHeader(name="X-OpenRouter-Key", auto_error=False)
-
-PUBLIC_ERROR_DETAIL = "An internal error occurred. Please try again later."
 
 
 async def require_api_key(

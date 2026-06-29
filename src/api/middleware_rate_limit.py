@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .error_responses import ERROR_CODE_RATE_LIMITED, build_error_content
+from .settings import get_api_settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._hits: dict[str, deque[float]] = defaultdict(deque)
 
     def _client_key(self, request: Request) -> str:
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+        settings = get_api_settings()
+        if settings.trusted_proxy:
+            forwarded = request.headers.get("X-Forwarded-For")
+            if forwarded:
+                return forwarded.split(",")[0].strip()
         if request.client:
             return request.client.host
         return "unknown"
