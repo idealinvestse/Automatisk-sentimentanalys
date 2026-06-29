@@ -17,6 +17,7 @@ import yaml
 from ..core.errors import AnalysisError
 from ..core.metrics import record_analyzer_duration
 from ..core.models import AnalysisContext
+from ..core.status import get_status_reporter
 from .base import Analyzer
 from .graph import AnalyzerNode, build_dependency_graph, compute_execution_levels, topological_sort
 from .schemas import ValidationMode, validate_analyzer_result
@@ -307,14 +308,33 @@ def _store_result(
     return validate_analyzer_result(name, raw, mode=validation_mode)
 
 
+def _analyzer_error_result(name: str, exc: Exception) -> dict[str, Any]:
+    return {
+        name: {
+            "error": str(exc),
+            "error_code": "analysis_failed",
+            "fallback": True,
+        }
+    }
+
+
 def _run_single_sync(name: str, analyzer: Analyzer, ctx: AnalysisContext, validation_mode: ValidationMode) -> None:
     if not _deps_satisfied(analyzer, ctx):
         return
+    status = get_status_reporter()
+    status.phase("analyzer", name, f"Startar analyzer '{name}'")
     started = time.perf_counter()
     try:
         res = analyzer.analyze(ctx)
         ctx.results[name] = _store_result(name, res, validation_mode)
-        logger.debug("Analyzer '%s' completed successfully", name)
+        duration = time.perf_counter() - started
+        logger.info("Analyzer '%s' completed in %.2fs", name, duration)
+        status.info("analyzer", name, f"Analyzer '{name}' klar", duration_s=round(duration, 2))
+    except Exception as exc:
+        duration = time.perf_counter() - started
+        logger.error("Analyzer '%s' failed: %s", name, exc, exc_info=True)
+        status.error("analyzer", name, f"Analyzer '{name}' misslyckades: {exc}")
+        ctx.results.update(_analyzer_error_result(name, exc))
     finally:
         record_analyzer_duration(name, time.perf_counter() - started)
 
@@ -327,19 +347,31 @@ async def _run_single_async(
 ) -> None:
     if not _deps_satisfied(analyzer, ctx):
         return
-    analyze_async = getattr(analyzer, "analyze_async", None)
-    if analyze_async is not None and asyncio.iscoroutinefunction(analyze_async):
-        res = await analyze_async(ctx)
-    elif name in IO_BOUND_ANALYZERS:
-        res = await asyncio.to_thread(analyzer.analyze, ctx)
-    else:
-        loop = asyncio.get_event_loop()
-        global _THREAD_POOL
-        if _THREAD_POOL is None:
-            _THREAD_POOL = ThreadPoolExecutor(max_workers=4)
-        res = await loop.run_in_executor(_THREAD_POOL, analyzer.analyze, ctx)
-    ctx.results[name] = _store_result(name, res, validation_mode)
-    logger.debug("Analyzer '%s' completed successfully (async)", name)
+    status = get_status_reporter()
+    status.phase("analyzer", name, f"Startar analyzer '{name}' (async)")
+    started = time.perf_counter()
+    try:
+        analyze_async = getattr(analyzer, "analyze_async", None)
+        if analyze_async is not None and asyncio.iscoroutinefunction(analyze_async):
+            res = await analyze_async(ctx)
+        elif name in IO_BOUND_ANALYZERS:
+            res = await asyncio.to_thread(analyzer.analyze, ctx)
+        else:
+            loop = asyncio.get_event_loop()
+            global _THREAD_POOL
+            if _THREAD_POOL is None:
+                _THREAD_POOL = ThreadPoolExecutor(max_workers=4)
+            res = await loop.run_in_executor(_THREAD_POOL, analyzer.analyze, ctx)
+        ctx.results[name] = _store_result(name, res, validation_mode)
+        duration = time.perf_counter() - started
+        logger.info("Analyzer '%s' completed in %.2fs (async)", name, duration)
+        status.info("analyzer", name, f"Analyzer '{name}' klar", duration_s=round(duration, 2))
+    except Exception as exc:
+        logger.error("Analyzer '%s' failed: %s", name, exc, exc_info=True)
+        status.error("analyzer", name, f"Analyzer '{name}' misslyckades: {exc}")
+        ctx.results.update(_analyzer_error_result(name, exc))
+    finally:
+        record_analyzer_duration(name, time.perf_counter() - started)
 
 
 def _build_execution_plan(
@@ -381,6 +413,13 @@ def run_analyzers(
 
     execution_order, levels = _build_execution_plan(active_analyzers)
     logger.info("Executing analyzers in order: %s", " -> ".join(execution_order))
+    status = get_status_reporter()
+    status.phase(
+        "pipeline",
+        "run_analyzers",
+        f"Kör {len(execution_order)} analyzers",
+        analyzers=execution_order,
+    )
 
     if "spoken_normalizer" in to_run:
         sn = active_analyzers.get("spoken_normalizer")
@@ -389,24 +428,25 @@ def run_analyzers(
                 _run_single_sync("spoken_normalizer", sn, ctx, effective_validation)
             except Exception as e:
                 logger.error("Analyzer 'spoken_normalizer' failed: %s", e, exc_info=True)
+                ctx.results.update(_analyzer_error_result("spoken_normalizer", e))
 
     if async_mode:
         return asyncio.run(
             _run_analyzers_async_body(active_analyzers, levels, ctx, effective_validation)
         )
 
-    for name in execution_order:
+    total = len(execution_order)
+    for index, name in enumerate(execution_order, start=1):
         if name == "spoken_normalizer" and "spoken_normalizer" in ctx.results:
             continue
         analyzer = active_analyzers.get(name)
         if analyzer is None:
             continue
+        status.progress("pipeline", "run_analyzers", index - 1, total, f"Kör {name}")
         logger.debug("Running analyzer: %s", name)
-        try:
-            _run_single_sync(name, analyzer, ctx, effective_validation)
-        except Exception as e:
-            logger.error("Analyzer '%s' failed: %s", name, e, exc_info=True)
+        _run_single_sync(name, analyzer, ctx, effective_validation)
 
+    status.progress("pipeline", "run_analyzers", total, total, "Analyzers klara")
     return ctx.results
 
 
@@ -436,6 +476,7 @@ async def run_analyzers_async(
                 await _run_single_async("spoken_normalizer", sn, ctx, effective_validation)
             except Exception as e:
                 logger.error("Analyzer 'spoken_normalizer' failed: %s", e, exc_info=True)
+                ctx.results.update(_analyzer_error_result("spoken_normalizer", e))
     return await _run_analyzers_async_body(active_analyzers, levels, ctx, effective_validation)
 
 
@@ -445,6 +486,10 @@ async def _run_analyzers_async_body(
     ctx: AnalysisContext,
     validation_mode: ValidationMode,
 ) -> dict[str, Any]:
+    status = get_status_reporter()
+    flat_names = [name for level in levels for name in level]
+    total = max(len(flat_names), 1)
+    completed = 0
     for level in levels:
         tasks = []
         for name in level:
@@ -456,12 +501,11 @@ async def _run_analyzers_async_body(
             logger.debug("Scheduling analyzer (async level): %s", name)
 
             async def _run(n: str = name, a: Analyzer = analyzer) -> None:
-                try:
-                    await _run_single_async(n, a, ctx, validation_mode)
-                except Exception as e:
-                    logger.error("Analyzer '%s' failed: %s", n, e, exc_info=True)
+                await _run_single_async(n, a, ctx, validation_mode)
 
             tasks.append(_run())
         if tasks:
             await asyncio.gather(*tasks)
+            completed += len(tasks)
+            status.progress("pipeline", "run_analyzers", completed, total, "Async analyzers")
     return ctx.results

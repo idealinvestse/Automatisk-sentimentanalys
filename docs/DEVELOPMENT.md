@@ -129,7 +129,31 @@ Common variables:
 - `SENTIMENT_API_KEY` – Enables API authentication
 - `API_PRODUCTION` / `API_REQUIRE_AUTH` / `API_REQUIRE_MEDIA_ROOT` – Production guards (v0.5)
 - `SENTIMENT_JSON_LOGS=1` – Structured JSON logging
+- `LOG_LEVEL` / `SENTIMENT_LOG_LEVEL` – Log verbosity (`DEBUG` in dev via `SENTIMENT_DEV=1`, `INFO` in prod)
+- `SENTIMENT_STATUS_FILE=1` – Append process status events to `.cache/process_events.jsonl`
+- `SENTIMENT_STATUS_RING_SIZE` – In-memory status ring buffer size (default 1000)
 - `OTEL_ENABLED=true` – Optional OpenTelemetry tracing
+
+## Felsökning / observability
+
+1. **Öka verbositet lokalt**: `SENTIMENT_DEV=1` eller `--verbose` / `--log-level DEBUG` på CLI.
+2. **Strukturerade loggar**: `SENTIMENT_JSON_LOGS=1` (API och alla entry points som anropar `configure_logging()`).
+3. **Live status**: läs `.cache/process_events.jsonl` eller `GET /status/processes` (senaste N events).
+4. **Detaljerad health**: `GET /status/health/detail` (registrerade analyzers, ASR-backends, cache).
+5. **Följ ett pipeline-jobb**: filtrera JSONL/API-events på `component=pipeline` och `job_id` (sätts via `log_context(job_id=...)`).
+
+Exempel:
+
+```bash
+# API med DEBUG
+SENTIMENT_DEV=1 uvicorn src.api:app --reload
+
+# Senaste process-events
+curl -s http://localhost:8000/status/processes?limit=20 | jq .
+
+# CLI med verbose
+sentimentanalys --verbose analyze-call samples/audio/sv/ --backend faster
+```
 
 ## Fine-tuning (DATA-01)
 

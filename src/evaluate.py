@@ -22,6 +22,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .benchmarks.audio_cli import audio_app
+from .core.logging_config import configure_logging
+from .core.status import get_status_reporter
 from .lexicon import load_lexicon, scalar_to_dist, score_text
 from .profiles import AVAILABLE_PROFILES
 from .sentiment import analyze_smart
@@ -50,6 +52,18 @@ ASR_BASELINES = [
 
 app = typer.Typer(help="Utvärderingsramverk: kör sentimentanalys mot testset och beräkna metrics")
 console = Console()
+
+
+@app.callback()
+def _evaluate_global_options(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Aktivera DEBUG-loggning"),
+) -> None:
+    configure_logging()
+    if verbose:
+        import logging
+
+        logging.getLogger().setLevel(logging.DEBUG)
+
 
 app.add_typer(audio_app, name="audio")
 
@@ -155,6 +169,8 @@ def run_evaluation(
     y_true = df["label"].tolist()
 
     console.print(f"[cyan]Kör sentimentanalys med profil:[/cyan] {profile}")
+    status = get_status_reporter()
+    status.phase("evaluate", "run", f"Utvärderar {len(texts)} texter", profile=profile)
     t0 = time.time()
 
     if backend == "heuristic":

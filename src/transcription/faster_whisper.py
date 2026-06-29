@@ -355,6 +355,12 @@ class FasterWhisperTranscriber:
                         raw_segments.append(seg)
 
                     pos += step
+                    logger.debug(
+                        "ASR chunk progress | chunk=%d/%d | backend=faster-whisper | model=%s",
+                        chunk_index,
+                        total_chunks,
+                        self.model_name,
+                    )
                     if on_chunk_progress is not None:
                         try:
                             on_chunk_progress(chunk_index, total_chunks)

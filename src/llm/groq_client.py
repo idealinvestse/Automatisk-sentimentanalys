@@ -411,6 +411,12 @@ class GroqClient:
                     "Groq call OK | model=%s | task=%s | cost≈$%.5f | latency=%.2fs | cached=False",
                     model, task_name, cost or 0.0, latency,
                 )
+                try:
+                    from ..core.metrics import record_llm_request
+
+                    record_llm_request("groq", model, "success", latency)
+                except Exception:
+                    logger.debug("Failed to record Groq LLM metrics", exc_info=True)
                 return result, meta
 
             except RateLimitError as e:

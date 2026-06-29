@@ -202,7 +202,13 @@ Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPO
 - **Formatting & Linting**: Run `ruff format` and `ruff check` before committing.
 - **Type hints**: Use them. Run `mypy src`.
 - **Error handling**: Prefer explicit try/except with logging over silent failures (except where graceful degradation is intended).
-- **Logging**: Use `logging.getLogger(__name__)`.
+- **Logging**: Use `logging.getLogger(__name__)` or `get_logger(__name__)` from `src/core/logging_config.py` for context-aware logs.
+- **Observability**: Emit live status via `get_status_reporter()` (`src/core/status.py`) for pipeline phases and progress. Use `log_context()` to bind `job_id`, `component`, and `phase`.
+- **Error handling patterns**:
+  - Fatal step failure → raise a `BaseAnalysisError` subclass with `error_code` and optional `details`.
+  - Graceful degradation → `logger.warning(..., exc_info=True)` + `StatusReporter.warn()` + partial result with `"error"` and `"fallback": true`.
+  - Intentional silent fallback → log at DEBUG with reason (never bare `except: pass`).
+  - Helpers: `log_and_degrade()` in `src/core/error_helpers.py`.
 - **No hardcoded secrets**: Use environment variables or `src/core/config.py`.
 - **Docstrings**: Add Google-style or NumPy-style docstrings on public functions/classes.
 - **Tests**: New features must have tests. Aim for high coverage on `src/api/` and `src/pipeline.py`.

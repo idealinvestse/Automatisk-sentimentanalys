@@ -8,6 +8,7 @@ from typing import Any
 
 from .analysis import resolve_analyzers_for_profile, run_analyzers, run_analyzers_async
 from .core.models import AnalysisContext, Segment
+from .core.status import get_status_reporter
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ def apply_early_pii_redaction(
     profile_name: str,
 ) -> tuple[list[Segment], Any | None]:
     """Fas 4.4.1 early PII redaction before analyzers/LLM."""
+    status = get_status_reporter()
     try:
         from .llm.pii_redactor import redact_segments
 
@@ -52,10 +54,17 @@ def apply_early_pii_redaction(
                 pii_log.total_redacted,
                 pii_log.types_redacted,
             )
+            status.info(
+                "pipeline",
+                "pii_redact",
+                f"PII-redigerade {pii_log.total_redacted} händelser",
+                types=pii_log.types_redacted,
+            )
             segments = [Segment.from_dict(d) for d in redacted_dicts]
         return segments, pii_log
     except Exception as exc:
         logger.debug("Early PII redaction skipped: %s", exc)
+        status.warn("pipeline", "pii_redact", f"PII-redigering hoppades över: {exc}")
         return segments, None
 
 
@@ -266,10 +275,14 @@ def run_fas4_enrichment(
 ) -> dict[str, Any]:
     """Run Fas 4 enrichment steps shared by audio and segment analysis."""
     from .core.metrics import timed_pipeline
+    from .core.tracing import span
 
     use_llm = should_use_any_llm(segments or [], ctx)
+    status = get_status_reporter()
+    status.phase("pipeline", "fas4_enrichment", "Startar Fas 4-enrichment", use_llm=use_llm)
     with timed_pipeline("fas4_enrichment", ctx.profile, use_llm):
-        return _run_fas4_enrichment_body(segments, results, ctx)
+        with span("fas4_enrichment", profile=ctx.profile, use_llm=use_llm):
+            return _run_fas4_enrichment_body(segments, results, ctx)
 
 
 def _run_fas4_enrichment_body(
@@ -278,6 +291,7 @@ def _run_fas4_enrichment_body(
     ctx: PipelineLLMContext,
 ) -> dict[str, Any]:
     """Inner Fas 4 enrichment (timed by caller)."""
+    status = get_status_reporter()
     role_res = results.get("role") or {}
     role_map = role_res.get("roles", role_res) if isinstance(role_res, dict) else {}
 
@@ -315,10 +329,12 @@ def _run_fas4_enrichment_body(
         )
     except Exception as exc:
         logger.warning("Fas 4.1 agent_performance step failed (non-fatal): %s", exc)
+        status.warn("pipeline", "agent_performance", f"Agentprestanda misslyckades: {exc}")
         results["agent_performance"] = {"error": str(exc), "fallback": True}
 
     llm_result: dict[str, Any] = {}
     if should_use_any_llm(segments or [], ctx):
+        status.phase("pipeline", "llm_holistic", f"LLM holistisk analys ({ctx.provider})")
         llm_result = run_llm_holistic(segments or [], results, ctx)
         results["llm"] = llm_result
         if llm_result.get("meta", {}).get("llm_used"):
@@ -383,6 +399,7 @@ def _run_fas4_enrichment_body(
         )
     except Exception as exc:
         logger.warning("Fas 4.2 QA scoring failed (non-fatal): %s", exc)
+        status.warn("pipeline", "qa_scoring", f"QA-scoring misslyckades: {exc}")
         results["qa"] = {"error": str(exc), "overall_qa_score": 0.0, "passed": False}
 
     try:
@@ -391,8 +408,10 @@ def _run_fas4_enrichment_body(
         alerts = run_alerts_on_results(results)
         if alerts:
             results["alerts"] = alerts
+            status.info("pipeline", "alerting", f"{len(alerts)} alerts utlösta")
             logger.info("Fas 4.4.2 alerts triggered: %d (highest severity in first)", len(alerts))
     except Exception as exc:
         logger.warning("Fas 4.4.2 alerting failed (non-fatal): %s", exc)
+        status.warn("pipeline", "alerting", f"Alerting misslyckades: {exc}")
 
     return llm_result

@@ -25,8 +25,24 @@ from .sentiment import analyze_smart
 from .transcription import get_transcriber
 from .transcription.factory import resolve_preprocess_mode
 
+from .core.logging_config import configure_logging
+
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
 console = Console()
+
+
+@app.callback()
+def _cli_global_options(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Aktivera DEBUG-loggning"),
+    log_level: str | None = typer.Option(None, "--log-level", help="Loggnivå: DEBUG|INFO|WARNING|ERROR"),
+) -> None:
+    """Global CLI options."""
+    configure_logging()
+    root = logging.getLogger()
+    if verbose:
+        root.setLevel(logging.DEBUG)
+    elif log_level:
+        root.setLevel(getattr(logging, log_level.upper(), logging.INFO))
 
 
 def ensure_dir(path: str):
@@ -35,12 +51,9 @@ def ensure_dir(path: str):
 
 
 def setup_logging(level: str = "INFO") -> None:
-    lvl = getattr(logging, str(level).upper(), logging.INFO)
-    logging.basicConfig(
-        level=lvl,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    """Configure logging for CLI commands (uses shared configure_logging)."""
+    configure_logging()
+    logging.getLogger().setLevel(getattr(logging, str(level).upper(), logging.INFO))
 
 
 def resolve_audio_paths(inputs: list[str]) -> list[str]:

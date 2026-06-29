@@ -87,7 +87,25 @@ class EventLog:
         if self._log_path is not None:
             line = LogEvent(timestamp=ts_file, level=level, phase=phase, message=message)
             self._append_to_file(line.format_line())
+        self._emit_to_status_reporter(level, phase, message)
         return event
+
+    def _emit_to_status_reporter(self, level: EventLevel, phase: str, message: str) -> None:
+        try:
+            from src.core.status import get_status_reporter
+
+            reporter = get_status_reporter()
+            component = "launcher"
+            if level == "PHASE":
+                reporter.phase(component, phase or "general", message)
+            elif level == "WARN":
+                reporter.warn(component, phase or "general", message)
+            elif level == "ERROR":
+                reporter.error(component, phase or "general", message)
+            else:
+                reporter.info(component, phase or "general", message)
+        except Exception:
+            pass
 
     def _append_to_file(self, line: str) -> None:
         if self._log_path is None:

@@ -52,6 +52,11 @@ def _get_cached_transcriber(backend: str, model_name: str, device: str) -> Trans
     )
 
 
+def list_available_backends() -> list[str]:
+    """Return supported ASR backend identifiers."""
+    return ["faster", "transformers", "whisperx"]
+
+
 def clear_transcriber_cache() -> None:
     """Clear the internal transcriber cache.
 

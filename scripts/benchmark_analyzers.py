@@ -17,6 +17,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts._bootstrap import bootstrap_script
+
 from scripts.benchmark_intent import benchmark_backend, load_intent_jsonl
 from src.analysis.compliance_risk import ComplianceRiskAnalyzer
 from src.analysis.emotion import EmotionAnalyzer
@@ -171,7 +173,9 @@ def main() -> None:
         help="Use heuristic in CI for speed",
     )
     parser.add_argument("--check-thresholds", action="store_true")
+    parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
+    bootstrap_script(verbose=args.verbose)
 
     if not args.config.is_file():
         raise SystemExit(f"Config not found: {args.config}")

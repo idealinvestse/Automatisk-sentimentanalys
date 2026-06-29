@@ -266,7 +266,8 @@ class DiarizationPipeline:
         """
         try:
             audio_dur = self._get_audio_duration(audio_path)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Could not read audio duration for heuristic diarization: %s", exc)
             audio_dur = None
 
         n_speakers = num_speakers or 2

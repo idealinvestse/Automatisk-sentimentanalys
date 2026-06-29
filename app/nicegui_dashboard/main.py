@@ -231,6 +231,9 @@ def _render_tabs(state: DashboardState, refresh_header, reload_ref: dict) -> Non
 
 
 if __name__ in {"__main__", "__mp_main__"}:
+    from src.core.logging_config import configure_logging
+
+    configure_logging()
     ui.run(
         host="0.0.0.0",
         port=int(__import__("os").environ.get("NICEGUI_PORT", "8080")),

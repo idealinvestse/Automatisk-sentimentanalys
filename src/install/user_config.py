@@ -111,6 +111,7 @@ def config_to_env(cfg: UserConfig) -> dict[str, str]:
     env["SENTIMENT_APP_ROOT"] = str(cfg.resolved_app_root())
     env["SENTIMENT_USER_DATA"] = str(cfg.resolved_user_data_dir())
     env["SENTIMENT_LOG_LEVEL"] = cfg.log_level
+    env["LOG_LEVEL"] = cfg.log_level
     if cfg.llm.enabled:
         env["SENTIMENT_LLM_ENABLED"] = "1"
 

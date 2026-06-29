@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..alerting import AlertEngine
 from ..core.logging_config import configure_logging, set_request_id
+from ..core.status import get_status_reporter
 from ..core.tracing import init_tracing
 from ..alerting_state import AlertingStateManager
 from ..caching import AggregateCache
@@ -48,6 +49,7 @@ from .routers import (
     health,
     pipeline,
     scan,
+    status,
     text,
     transcription,
     ws_transcription,
@@ -113,8 +115,11 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     app.state.transcription_events = hub
     app.state.transcription_jobs = TranscriptionJobRegistry()
     init_app_info(version="0.4.1")
+    reporter = get_status_reporter()
+    reporter.phase("api", "startup", "Swedish Sentiment API started", auth=settings.auth_enabled)
     logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
     yield
+    reporter.phase("api", "shutdown", "Swedish Sentiment API shutting down")
     logger.info("Swedish Sentiment API shutting down")
 
 
@@ -201,13 +206,31 @@ def create_app() -> FastAPI:
     @app.exception_handler(BaseAnalysisError)
     async def handle_base_error(request: Request, exc: BaseAnalysisError) -> JSONResponse:
         logger.error("Analysis system error: %s", exc)
-        return error_response(request, 500, str(exc), error_code=error_code_for(exc))
+        return error_response(
+            request,
+            500,
+            str(exc),
+            error_code=error_code_for(exc),
+            details=getattr(exc, "details", None) or None,
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        logger.error("Unhandled exception: %s", exc, exc_info=True)
+        return error_response(
+            request,
+            500,
+            PUBLIC_ERROR_DETAIL,
+            error_code=ERROR_CODE_INTERNAL,
+            details={"type": type(exc).__name__, "message": str(exc)},
+        )
 
     # --- Routers -------------------------------------------------------------
 
     _auth = [Depends(require_api_key)]
 
     app.include_router(health.router)
+    app.include_router(status.router)
     app.include_router(text.router, dependencies=_auth)
     app.include_router(transcription.router, dependencies=_auth)
     app.include_router(conversation.router, dependencies=_auth)

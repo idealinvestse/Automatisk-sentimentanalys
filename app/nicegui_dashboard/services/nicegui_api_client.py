@@ -150,6 +150,10 @@ class NiceGUIAPIClient:
             )
         return response.json()
 
+    async def get_process_events(self, *, limit: int = 100) -> dict[str, Any]:
+        """Fetch recent process status events from ``GET /status/processes``."""
+        return await self._get("/status/processes", params={"limit": limit})
+
     async def _delete(self, path: str) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         try:

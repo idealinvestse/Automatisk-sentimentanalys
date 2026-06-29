@@ -8,7 +8,8 @@
 
 ## 1. Observability
 
-- [ ] **Strukturerad loggning** — JSON/log aggregation (ELK, Loki, CloudWatch) med `request_id` från `X-Request-ID` — sätt `SENTIMENT_JSON_LOGS=1`
+- [x] **Strukturerad loggning** — JSON/log aggregation (ELK, Loki, CloudWatch) med `request_id` från `X-Request-ID` — sätt `SENTIMENT_JSON_LOGS=1`
+- [x] **Process status API** — `GET /status/processes`, `GET /status/health/detail` + `.cache/process_events.jsonl`
 - [x] **Health** — `GET /health` returnerar `{"status":"ok"}` (används av Docker healthcheck)
 - [x] **Metrics** — `GET /metrics` (Prometheus, **ingen API-nyckel** — begränsa via nätverk/firewall)
 - [ ] **Scrape-config** — exempel:

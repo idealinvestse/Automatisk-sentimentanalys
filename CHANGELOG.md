@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Analyzer accuracy program (DATA-01)** — `scripts/prepare_intent_data.py`, `validate_intent_corpus.py`, `benchmark_analyzers.py`, `compare_intent_backends.py`, `eval_sentiment_gate.py`, `evaluate_real_corpus.py`; `configs/analyzer_eval.yaml`; CI `analyzer-accuracy` job; labeled fixtures under `tests/fixtures/analyzer_labeled/`.
+- **Unified observability (PROD-01)** — `StatusReporter` (`src/core/status.py`), context-aware logging (`get_logger`, `log_context`), `GET /status/processes`, `GET /status/health/detail`, script bootstrap (`scripts/_bootstrap.py`), launcher/API/CLI/dashboard integration.
 - **Intent corpus** — deduplicated balanced train/val JSONL; honest macro F1 metrics in `reports/intent_baseline.json`.
 - **Golden pipeline tests** — 6 callcenter scenarios + `@pytest.mark.slow` unmocked billing test.
 - **API production guards** — `API_PRODUCTION`, `API_REQUIRE_AUTH`, `API_REQUIRE_MEDIA_ROOT` env vars.

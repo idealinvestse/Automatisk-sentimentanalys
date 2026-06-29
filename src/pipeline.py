@@ -10,6 +10,8 @@ import time
 from typing import Any
 
 from .analysis.intent_utils import intents_as_tuples
+from .core.status import get_status_reporter
+from .core.tracing import span
 from .core.models import CallAnalysisReport, Segment
 from .pipeline_steps import (
     PipelineLLMContext,
@@ -100,9 +102,8 @@ class CallAnalysisPipeline:
             if self.provider == "groq" and not self.groq_eu_residency:
                 groq_cfg = (spec or {}).get("groq", {}) or {}
                 self.groq_eu_residency = bool(groq_cfg.get("groq_eu_residency", False))
-        except Exception:
-            # Profile system optional for pure LLM usage; non-fatal
-            pass
+        except Exception as exc:
+            logger.debug("Profile resolution skipped (optional): %s", exc)
 
         # Fas 4.5.1: Advanced caching / pre-computation (file by default, Redis optional)
         from .caching import AggregateCache
@@ -188,22 +189,32 @@ class CallAnalysisPipeline:
         transcript: Any | None = None,
     ) -> tuple[list[Segment], dict[str, Any], Any | None]:
         """Run early redaction and registry analyzers on a segment list."""
-        redacted_segments, pii_log = apply_early_pii_redaction(
-            segments,
-            profile_name=self.profile,
-        )
+        status = get_status_reporter()
+        with span("pii_redact", segment_count=len(segments)):
+            status.phase("pipeline", "pii_redact", "PII-redigering", segment_count=len(segments))
+            redacted_segments, pii_log = apply_early_pii_redaction(
+                segments,
+                profile_name=self.profile,
+            )
 
-        results = run_registry_analyzers(
-            redacted_segments,
-            profile=self.profile,
-            selected_analyzers=selected_analyzers,
-            analyzer_configs=self._build_analyzer_configs(),
-            async_mode=self.async_analyzers,
-            transcript=transcript,
-            skip_llm_superseded=should_use_any_llm(
-                redacted_segments or [], self._llm_context()
-            ),
-        )
+        with span("run_analyzers", profile=self.profile):
+            status.phase(
+                "pipeline",
+                "run_analyzers",
+                "Kör analyzer-registry",
+                segment_count=len(redacted_segments),
+            )
+            results = run_registry_analyzers(
+                redacted_segments,
+                profile=self.profile,
+                selected_analyzers=selected_analyzers,
+                analyzer_configs=self._build_analyzer_configs(),
+                async_mode=self.async_analyzers,
+                transcript=transcript,
+                skip_llm_superseded=should_use_any_llm(
+                    redacted_segments or [], self._llm_context()
+                ),
+            )
 
         if pii_log is not None and pii_log.total_redacted > 0:
             results["pii_redaction"] = pii_log.model_dump()
@@ -235,42 +246,64 @@ class CallAnalysisPipeline:
             CallAnalysisReport with full analysis.
         """
         t0 = time.time()
+        status = get_status_reporter()
+        status.phase("pipeline", "load_audio", f"Laddar ljud: {audio_path}")
 
         # 1. Transcribe and optionally diarize
-        try:
-            transcriber = get_transcriber(
+        with span("transcribe", backend=self.asr_backend, model=self.asr_model):
+            status.phase(
+                "pipeline",
+                "transcribe",
+                "Transkriberar ljud",
                 backend=self.asr_backend,
-                model_name=self.asr_model,
-                device=self.device,
-            )
-            resolved_preprocess_mode = resolve_preprocess_mode(
-                preprocess=preprocess,
-                preprocess_mode=preprocess_mode,
-                profile=self.profile,
-            )
-            transcript = transcriber.transcribe(
-                audio_path=audio_path,
-                language=language,
-                diarize=run_diarization,
-                num_speakers=num_speakers,
-                hotwords=hotwords,
-                initial_prompt=initial_prompt,
-                preprocess=preprocess,
-                preprocess_mode=resolved_preprocess_mode,
-            )
-        except Exception as e:
-            logger.error("Transcription or ASR initialization failed for %s: %s", audio_path, e)
-            from .core.models import Transcript
-
-            transcript = Transcript(
                 model=self.asr_model,
-                backend=self.asr_backend,
-                language=language,
-                duration=0.0,
-                processing_time=0.0,
-                segments=[],
-                diarization={"segments": [], "backend": "failed", "error": str(e)},
             )
+            try:
+                transcriber = get_transcriber(
+                    backend=self.asr_backend,
+                    model_name=self.asr_model,
+                    device=self.device,
+                )
+                resolved_preprocess_mode = resolve_preprocess_mode(
+                    preprocess=preprocess,
+                    preprocess_mode=preprocess_mode,
+                    profile=self.profile,
+                )
+                transcript = transcriber.transcribe(
+                    audio_path=audio_path,
+                    language=language,
+                    diarize=run_diarization,
+                    num_speakers=num_speakers,
+                    hotwords=hotwords,
+                    initial_prompt=initial_prompt,
+                    preprocess=preprocess,
+                    preprocess_mode=resolved_preprocess_mode,
+                )
+                status.info(
+                    "pipeline",
+                    "transcribe",
+                    "Transkribering klar",
+                    segment_count=len(transcript.segments),
+                )
+            except Exception as e:
+                logger.error(
+                    "Transcription or ASR initialization failed for %s: %s",
+                    audio_path,
+                    e,
+                    exc_info=True,
+                )
+                status.error("pipeline", "transcribe", f"Transkribering misslyckades: {e}")
+                from .core.models import Transcript
+
+                transcript = Transcript(
+                    model=self.asr_model,
+                    backend=self.asr_backend,
+                    language=language,
+                    duration=0.0,
+                    processing_time=0.0,
+                    segments=[],
+                    diarization={"segments": [], "backend": "failed", "error": str(e)},
+                )
 
         # --- Fas 4.4.1: Early PII Redaction (before ANY local analyzers or LLM) ---
         transcript.segments, results, _pii_log = self._run_local_analysis(
@@ -280,7 +313,10 @@ class CallAnalysisPipeline:
         )
 
         proc_time = round(time.time() - t0, 2)
-        llm_result = self._run_fas4_enrichment(transcript.segments or [], results)
+        with span("fas4_enrichment", profile=self.profile):
+            status.phase("pipeline", "fas4_enrichment", "Fas 4-enrichment")
+            llm_result = self._run_fas4_enrichment(transcript.segments or [], results)
+        status.phase("pipeline", "complete", "Analys klar", processing_time_s=proc_time)
         return self._build_report(
             segments=transcript.segments,
             results=results,
@@ -304,6 +340,8 @@ class CallAnalysisPipeline:
             CallAnalysisReport with full analysis.
         """
         t0 = time.time()
+        status = get_status_reporter()
+        status.phase("pipeline", "analyze_segments", "Analyserar segment", count=len(segments))
 
         # Convert segment dicts to Segment dataclasses
         typed_segments = []
@@ -333,7 +371,10 @@ class CallAnalysisPipeline:
         )
 
         proc_time = round(time.time() - t0, 2)
-        llm_result = self._run_fas4_enrichment(typed_segments, results)
+        with span("fas4_enrichment", profile=self.profile):
+            status.phase("pipeline", "fas4_enrichment", "Fas 4-enrichment")
+            llm_result = self._run_fas4_enrichment(typed_segments, results)
+        status.phase("pipeline", "complete", "Analys klar", processing_time_s=proc_time)
         return self._build_report(
             segments=typed_segments,
             results=results,
@@ -400,8 +441,8 @@ class CallAnalysisPipeline:
                 agg_alerts = eng.check_from_aggregate(agg_dict)
                 if agg_alerts:
                     agg_dict["alerts_from_trends"] = [a.model_dump() if hasattr(a, "model_dump") else a for a in agg_alerts]
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Trend alerts skipped (non-fatal): %s", exc)
 
             return agg_dict
         except Exception as e:

@@ -12,6 +12,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts._bootstrap import bootstrap_script
 from scripts.benchmark_intent import benchmark_backend, load_intent_jsonl
 from scripts.validate_domain_corpus import validate_corpus
 from scripts.validate_intent_corpus import validate_corpus as validate_intent_corpus
@@ -49,7 +50,9 @@ def main() -> None:
     )
     parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
     parser.add_argument("--profile", default="callcenter")
+    parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
+    bootstrap_script(verbose=args.verbose)
 
     if not args.sentiment_csv and not args.intent_jsonl:
         raise SystemExit("Provide --sentiment-csv and/or --intent-jsonl")

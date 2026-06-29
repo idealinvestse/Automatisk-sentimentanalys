@@ -55,6 +55,7 @@ class TranscriptionEventHub:
     def emit(self, event: dict[str, Any]) -> None:
         """Schedule broadcast from sync or async context (e.g. thread pool workers)."""
         event.setdefault("ts", datetime.now().isoformat(timespec="seconds"))
+        self._forward_to_status(event)
         loop = self._loop
         if loop is None:
             try:
@@ -132,6 +133,52 @@ class TranscriptionEventHub:
 
     def done(self, *, job_id: str | None, ok: int = 0, failed: int = 0) -> None:
         self.emit({"type": "done", "job_id": job_id, "ok": ok, "failed": failed})
+
+    def _forward_to_status(self, event: dict[str, Any]) -> None:
+        """Mirror transcription events into the global StatusReporter."""
+        try:
+            from ..core.status import get_status_reporter
+
+            reporter = get_status_reporter()
+            event_type = str(event.get("type", "info"))
+            component = "transcription"
+            phase = event_type
+            job_id = event.get("job_id")
+            if event_type == "log":
+                level = str(event.get("level", "INFO")).upper()
+                message = str(event.get("msg", ""))
+                if level == "ERROR":
+                    reporter.error(component, phase, message, job_id=job_id)
+                elif level == "WARN":
+                    reporter.warn(component, phase, message, job_id=job_id)
+                else:
+                    reporter.info(component, phase, message, job_id=job_id)
+            elif event_type == "progress":
+                reporter.progress(
+                    component,
+                    phase,
+                    int(event.get("processed", 0)),
+                    int(event.get("total", 1)),
+                    message=event.get("current_file"),
+                    job_id=job_id,
+                )
+            elif event_type == "status":
+                running = event.get("is_running", False)
+                reporter.phase(
+                    component,
+                    phase,
+                    "Transkribering pågår" if running else "Transkribering stoppad",
+                    job_id=job_id,
+                )
+            elif event_type == "done":
+                reporter.phase(
+                    component,
+                    phase,
+                    f"Transkribering klar (ok={event.get('ok', 0)}, failed={event.get('failed', 0)})",
+                    job_id=job_id,
+                )
+        except Exception:
+            logger.debug("Status forward failed for transcription event", exc_info=True)
 
 
 def get_hub(app: Any) -> TranscriptionEventHub:
