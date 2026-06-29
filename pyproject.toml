@@ -202,7 +202,7 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "class .*\\bProtocol\\):",
 ]
-fail_under = 65
+fail_under = 85
 
 # API hardening gate (run explicitly):
 #   pytest tests/test_api.py tests/test_api_coverage.py --cov=src/api --cov-fail-under=90

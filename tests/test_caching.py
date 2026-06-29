@@ -75,6 +75,30 @@ class TestPrecomputeHelpers:
         assert result["call_count"] == 1
         assert "averages" in result
 
+    def test_precompute_agent_aggregates_with_cache_hit(self, cache):
+        from src.agent_performance import compute_call_agent_performance
+
+        segments = [
+            {"start": 0, "end": 2, "text": "Hej välkommen.", "speaker": "A"},
+            {"start": 2, "end": 5, "text": "Faktura fel.", "speaker": "C"},
+        ]
+        perf = compute_call_agent_performance(segments, role_map={"A": "agent", "C": "customer"})
+        reports = [{"agent_performance": perf.model_dump()}]
+        r1 = precompute_agent_aggregates(reports, cache=cache, agent_id="Agent-1")
+        r2 = precompute_agent_aggregates(reports, cache=cache, agent_id="Agent-1")
+        assert r1.get("cache_hit") is False
+        assert r2.get("cache_hit") is True
+
+    def test_precompute_hot_topics_with_cache(self, cache, monkeypatch):
+        monkeypatch.setattr(
+            "src.insights_aggregator.InsightsAggregator.aggregate",
+            lambda self, reports: MagicMock(model_dump=lambda: {"topics": []}),
+        )
+        r1 = precompute_hot_topics([], cache=cache)
+        r2 = precompute_hot_topics([], cache=cache)
+        assert r1.get("cache_hit") is False
+        assert r2.get("cache_hit") is True
+
     def test_precompute_hot_topics_without_cache(self, monkeypatch):
         monkeypatch.setattr(
             "src.insights_aggregator.InsightsAggregator.aggregate",
@@ -82,3 +106,77 @@ class TestPrecomputeHelpers:
         )
         result = precompute_hot_topics([{"segments": [{"text": "faktura"}]}])
         assert "hot_topics" in result
+
+
+class TestAggregateCacheEdgeCases:
+    def test_get_returns_none_for_corrupt_file(self, cache):
+        path = cache._file_path("bad-key")
+        path.write_text("{not-json", encoding="utf-8")
+        assert cache.get("bad-key") is None
+
+    def test_make_key_is_deterministic(self, cache):
+        k1 = cache._make_key("prefix", "a", "b")
+        k2 = cache._make_key("prefix", "a", "b")
+        assert k1 == k2
+        assert len(k1) == 16
+
+    def test_is_valid_without_timestamps(self, cache):
+        assert cache._is_valid({"value": 1}) is True
+
+    def test_is_valid_rejects_bad_timestamp(self, cache):
+        assert cache._is_valid({"computed_at": "not-a-date", "ttl": 3600}) is True
+
+    def test_redis_fallback_when_unavailable(self, tmp_path, monkeypatch):
+        fake_redis = MagicMock()
+        fake_redis.from_url.side_effect = ConnectionError("redis down")
+        monkeypatch.setattr("src.caching.REDIS_AVAILABLE", True)
+        monkeypatch.setattr("src.caching.redis", fake_redis)
+        cache = AggregateCache(use_redis=True, cache_dir=str(tmp_path / "agg"))
+        assert cache.use_redis is False
+        cache.set("k", {"x": 1})
+        assert cache.get("k") is not None
+
+    def test_redis_get_hit(self, tmp_path, monkeypatch):
+        import json
+
+        fake_client = MagicMock()
+        fake_client.ping.return_value = True
+        payload = json.dumps(
+            {"value": 99, "computed_at": "2099-01-01T00:00:00", "ttl": 999999}
+        )
+        fake_client.get.return_value = payload
+        fake_redis = MagicMock()
+        fake_redis.from_url.return_value = fake_client
+        monkeypatch.setattr("src.caching.REDIS_AVAILABLE", True)
+        monkeypatch.setattr("src.caching.redis", fake_redis)
+        cache = AggregateCache(use_redis=True, cache_dir=str(tmp_path / "agg"))
+        result = cache.get("redis-key")
+        assert result is not None
+        assert result["value"] == 99
+
+    def test_redis_set_failure_falls_back_to_file(self, tmp_path, monkeypatch):
+        fake_client = MagicMock()
+        fake_client.ping.return_value = True
+        fake_client.set.side_effect = RuntimeError("write failed")
+        fake_redis = MagicMock()
+        fake_redis.from_url.return_value = fake_client
+        monkeypatch.setattr("src.caching.REDIS_AVAILABLE", True)
+        monkeypatch.setattr("src.caching.redis", fake_redis)
+        cache = AggregateCache(use_redis=True, cache_dir=str(tmp_path / "agg"))
+        cache.set("fallback-key", {"marker": "test", "n": 1})
+        assert cache._file_path("fallback-key").is_file()
+
+    def test_invalidate_redis_and_corrupt_files(self, tmp_path, monkeypatch):
+        fake_client = MagicMock()
+        fake_client.ping.return_value = True
+        fake_client.scan_iter.return_value = ["agent:1"]
+        fake_redis = MagicMock()
+        fake_redis.from_url.return_value = fake_client
+        monkeypatch.setattr("src.caching.REDIS_AVAILABLE", True)
+        monkeypatch.setattr("src.caching.redis", fake_redis)
+        cache = AggregateCache(use_redis=True, cache_dir=str(tmp_path / "agg"))
+        bad = cache.cache_dir / "corrupt.json"
+        bad.write_text("x", encoding="utf-8")
+        cache.invalidate("agent:")
+        fake_client.delete.assert_called()
+        assert not bad.exists()
