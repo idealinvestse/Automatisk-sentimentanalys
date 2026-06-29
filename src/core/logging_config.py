@@ -61,15 +61,16 @@ class JSONFormatter(logging.Formatter):
 
 
 class _ContextLoggerAdapter(logging.LoggerAdapter):
-    """Logger adapter that merges bound context into log records."""
+    """Logger adapter that injects live ContextVar values on each log call."""
 
     def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
         extra = dict(kwargs.get("extra") or {})
-        for key in _CONTEXT_FIELDS:
-            if key not in extra:
-                value = self.extra.get(key)
-                if value:
-                    extra[key] = value
+        for key, value in _context_payload().items():
+            extra.setdefault(key, value)
+        adapter_extra = self.extra or {}
+        for key, value in adapter_extra.items():
+            if value is not None:
+                extra[key] = value
         if extra:
             kwargs["extra"] = extra
         return msg, kwargs
@@ -120,6 +121,9 @@ def configure_logging(*, json_logs: bool | None = None, level: int | str | None 
             ContextInjectingFormatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
         )
     root.addHandler(handler)
+    from .observability import attach_observability_filters
+
+    attach_observability_filters(handler)
     if level is None:
         root.setLevel(resolve_log_level())
     elif isinstance(level, str):
@@ -129,8 +133,8 @@ def configure_logging(*, json_logs: bool | None = None, level: int | str | None 
 
 
 def get_logger(name: str) -> logging.LoggerAdapter:
-    """Return a logger that injects current observability context."""
-    return _ContextLoggerAdapter(logging.getLogger(name), _context_payload())
+    """Return a logger that injects current observability context (live, not snapshot)."""
+    return _ContextLoggerAdapter(logging.getLogger(name), {})
 
 
 @contextmanager

@@ -132,6 +132,10 @@ Common variables:
 - `LOG_LEVEL` / `SENTIMENT_LOG_LEVEL` – Log verbosity (`DEBUG` in dev via `SENTIMENT_DEV=1`, `INFO` in prod)
 - `SENTIMENT_STATUS_FILE=1` – Append process status events to `.cache/process_events.jsonl`
 - `SENTIMENT_STATUS_RING_SIZE` – In-memory status ring buffer size (default 1000)
+- `SENTIMENT_STATUS_FILE_MAX_BYTES` – Rotating JSONL max size (default 5MB)
+- `SENTIMENT_STATUS_DEDUP_WINDOW_S` – Dedup identical status events (0=off, e.g. 5 for prod)
+- `SENTIMENT_LOG_SAMPLE` – DEBUG sampling, e.g. `registry=10,asr=5` (keep every Nth)
+- `SENTIMENT_LOG_COMPONENTS` – Per-logger levels, e.g. `src.transcription=DEBUG,src.llm=WARNING`
 - `OTEL_ENABLED=true` – Optional OpenTelemetry tracing
 
 ## Felsökning / observability
@@ -150,6 +154,12 @@ SENTIMENT_DEV=1 uvicorn src.api:app --reload
 
 # Senaste process-events
 curl -s http://localhost:8000/status/processes?limit=20 | jq .
+
+# Filtrera på job_id eller komponent
+curl -s "http://localhost:8000/status/processes?job_id=abc&component=pipeline" | jq .
+
+# Live job-status
+curl -s http://localhost:8000/status/jobs/abc | jq .
 
 # CLI med verbose
 sentimentanalys --verbose analyze-call samples/audio/sv/ --backend faster

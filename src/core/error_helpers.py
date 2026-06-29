@@ -24,7 +24,13 @@ def log_and_degrade(
     full_message = f"{message}: {exc}"
     logger.warning(full_message, exc_info=True)
     reporter = status or get_status_reporter()
-    reporter.warn(component, phase, full_message, error_code=error_code)
+    reporter.warn(
+        component,
+        phase,
+        full_message,
+        error_code=error_code,
+        exc=exc,
+    )
     payload: dict[str, Any] = {
         "error": str(exc),
         "error_code": error_code,

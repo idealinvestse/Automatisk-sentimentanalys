@@ -481,6 +481,16 @@ class OpenRouterClient:
                     wait,
                     e,
                 )
+                from ..core.status import get_status_reporter
+
+                get_status_reporter().warn(
+                    "llm",
+                    "openrouter_retry",
+                    f"Rate limit, retry {attempt + 1}/{self.max_retries}",
+                    attempt=attempt + 1,
+                    wait_s=round(wait, 2),
+                    error_code="llm_rate_limited",
+                )
                 time.sleep(wait)
             except (APITimeoutError, APIError) as e:
                 last_exc = e
@@ -492,6 +502,17 @@ class OpenRouterClient:
                     e,
                     wait,
                 )
+                from ..core.status import get_status_reporter
+
+                get_status_reporter().warn(
+                    "llm",
+                    "openrouter_retry",
+                    f"Transient error, retry {attempt + 1}/{self.max_retries}",
+                    attempt=attempt + 1,
+                    wait_s=round(wait, 2),
+                    error_code="llm_transient_error",
+                    exc=e,
+                )
                 time.sleep(wait)
             except Exception as e:
                 # Non-retryable (auth, bad schema, etc.)
@@ -500,6 +521,17 @@ class OpenRouterClient:
                 break
 
         # All retries exhausted
+        from ..core.status import get_status_reporter
+
+        get_status_reporter().error(
+            "llm",
+            "openrouter",
+            f"OpenRouter failed after {self.max_retries} attempts",
+            exc=last_exc,
+            error_code="llm_request_failed",
+            task=task_name,
+            model=model,
+        )
         raise LLMError(
             f"OpenRouter/Mistral call failed after {self.max_retries} attempts for task={task_name} model={model}. "
             f"Last error: {last_exc}. Caller should fallback to local analysis."

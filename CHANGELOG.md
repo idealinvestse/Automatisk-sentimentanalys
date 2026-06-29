@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Unified observability (PROD-01)** — `StatusReporter` (`src/core/status.py`), context-aware logging (`get_logger`, `log_context`), `GET /status/processes`, `GET /status/health/detail`, script bootstrap (`scripts/_bootstrap.py`), launcher/API/CLI/dashboard integration.
+- **Observability next-level (Fas A+B)** — lazy `get_logger` context, `RotatingFileHandler` JSONL sink, `phase_timer`/`degrading_phase`/`job_scope`, `error_code`/`exception_type` on status events, `sentiment_status_events_total` metric, DEBUG sampling/dedup, `GET /status/jobs/{id}` and filterable `/status/processes`.
 - **Intent corpus** — deduplicated balanced train/val JSONL; honest macro F1 metrics in `reports/intent_baseline.json`.
 - **Golden pipeline tests** — 6 callcenter scenarios + `@pytest.mark.slow` unmocked billing test.
 - **API production guards** — `API_PRODUCTION`, `API_REQUIRE_AUTH`, `API_REQUIRE_MEDIA_ROOT` env vars.

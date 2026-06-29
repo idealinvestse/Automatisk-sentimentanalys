@@ -150,9 +150,30 @@ class NiceGUIAPIClient:
             )
         return response.json()
 
-    async def get_process_events(self, *, limit: int = 100) -> dict[str, Any]:
+    async def get_process_events(
+        self,
+        *,
+        limit: int = 100,
+        job_id: str | None = None,
+        component: str | None = None,
+        level: str | None = None,
+        since: str | None = None,
+    ) -> dict[str, Any]:
         """Fetch recent process status events from ``GET /status/processes``."""
-        return await self._get("/status/processes", params={"limit": limit})
+        params: dict[str, Any] = {"limit": limit}
+        if job_id:
+            params["job_id"] = job_id
+        if component:
+            params["component"] = component
+        if level:
+            params["level"] = level
+        if since:
+            params["since"] = since
+        return await self._get("/status/processes", params=params)
+
+    async def get_job_status(self, job_id: str) -> dict[str, Any]:
+        """Fetch live job summary from ``GET /status/jobs/{job_id}``."""
+        return await self._get(f"/status/jobs/{job_id}")
 
     async def _delete(self, path: str) -> dict[str, Any]:
         url = f"{self.base_url}{path}"

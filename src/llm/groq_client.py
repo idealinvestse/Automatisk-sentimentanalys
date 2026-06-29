@@ -426,6 +426,16 @@ class GroqClient:
                     "Groq rate limit (attempt %d/%d). Sleeping %.1fs before retry. Error: %s",
                     attempt + 1, self.max_retries, wait, e,
                 )
+                from ..core.status import get_status_reporter
+
+                get_status_reporter().warn(
+                    "llm",
+                    "groq_retry",
+                    f"Rate limit, retry {attempt + 1}/{self.max_retries}",
+                    attempt=attempt + 1,
+                    wait_s=round(wait, 2),
+                    error_code="llm_rate_limited",
+                )
                 time.sleep(wait)
             except (APITimeoutError, APIError) as e:
                 last_exc = e
@@ -434,12 +444,34 @@ class GroqClient:
                     "Groq transient error (attempt %d/%d): %s. Backing off %.1fs",
                     attempt + 1, self.max_retries, e, wait,
                 )
+                from ..core.status import get_status_reporter
+
+                get_status_reporter().warn(
+                    "llm",
+                    "groq_retry",
+                    f"Transient error, retry {attempt + 1}/{self.max_retries}",
+                    attempt=attempt + 1,
+                    wait_s=round(wait, 2),
+                    error_code="llm_transient_error",
+                    exc=e,
+                )
                 time.sleep(wait)
             except Exception as e:
                 last_exc = e
                 logger.error("Groq non-retryable failure: %s", e, exc_info=True)
                 break
 
+        from ..core.status import get_status_reporter
+
+        get_status_reporter().error(
+            "llm",
+            "groq",
+            f"Groq failed after {self.max_retries} attempts",
+            exc=last_exc,
+            error_code="llm_request_failed",
+            task=task_name,
+            model=model,
+        )
         raise LLMError(
             f"Groq call failed after {self.max_retries} attempts for task={task_name} model={model}. "
             f"Last error: {last_exc}. Caller should fallback to local analysis."

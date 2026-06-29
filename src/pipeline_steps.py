@@ -8,6 +8,7 @@ from typing import Any
 
 from .analysis import resolve_analyzers_for_profile, run_analyzers, run_analyzers_async
 from .core.models import AnalysisContext, Segment
+from .core.observability import degrading_phase, phase_timer
 from .core.status import get_status_reporter
 
 logger = logging.getLogger(__name__)
@@ -295,7 +296,12 @@ def _run_fas4_enrichment_body(
     role_res = results.get("role") or {}
     role_map = role_res.get("roles", role_res) if isinstance(role_res, dict) else {}
 
-    try:
+    with degrading_phase(
+        "pipeline",
+        "agent_performance",
+        results=results,
+        result_key="agent_performance",
+    ):
         from .agent_performance import compute_call_agent_performance
 
         sent_res = results.get("sentiment") or []
@@ -327,15 +333,11 @@ def _run_fas4_enrichment_body(
             agent_perf.agent.compliance_flags,
             agent_perf.agent.talk_ratio,
         )
-    except Exception as exc:
-        logger.warning("Fas 4.1 agent_performance step failed (non-fatal): %s", exc)
-        status.warn("pipeline", "agent_performance", f"Agentprestanda misslyckades: {exc}")
-        results["agent_performance"] = {"error": str(exc), "fallback": True}
 
     llm_result: dict[str, Any] = {}
     if should_use_any_llm(segments or [], ctx):
-        status.phase("pipeline", "llm_holistic", f"LLM holistisk analys ({ctx.provider})")
-        llm_result = run_llm_holistic(segments or [], results, ctx)
+        with phase_timer("pipeline", "llm_holistic", provider=ctx.provider):
+            llm_result = run_llm_holistic(segments or [], results, ctx)
         results["llm"] = llm_result
         if llm_result.get("meta", {}).get("llm_used"):
             logger.info(
@@ -350,7 +352,7 @@ def _run_fas4_enrichment_body(
         results["agent_assessment"] = llm_assess
         logger.debug("Merged LLM agent_assessment into results (hybrid coaching available)")
 
-    try:
+    with degrading_phase("pipeline", "qa_scoring", results=results, result_key="qa"):
         from .compliance_qa import score_call_with_default_scorecard
 
         use_llm_qa = bool(
@@ -397,12 +399,8 @@ def _run_fas4_enrichment_body(
             qa_res.get("passed") if isinstance(qa_res, dict) else False,
             qa_res.get("risk_level") if isinstance(qa_res, dict) else "?",
         )
-    except Exception as exc:
-        logger.warning("Fas 4.2 QA scoring failed (non-fatal): %s", exc)
-        status.warn("pipeline", "qa_scoring", f"QA-scoring misslyckades: {exc}")
-        results["qa"] = {"error": str(exc), "overall_qa_score": 0.0, "passed": False}
 
-    try:
+    with degrading_phase("pipeline", "alerting", results=results, result_key="alerts"):
         from .alerting import run_alerts_on_results
 
         alerts = run_alerts_on_results(results)
@@ -410,8 +408,5 @@ def _run_fas4_enrichment_body(
             results["alerts"] = alerts
             status.info("pipeline", "alerting", f"{len(alerts)} alerts utlösta")
             logger.info("Fas 4.4.2 alerts triggered: %d (highest severity in first)", len(alerts))
-    except Exception as exc:
-        logger.warning("Fas 4.4.2 alerting failed (non-fatal): %s", exc)
-        status.warn("pipeline", "alerting", f"Alerting misslyckades: {exc}")
 
     return llm_result

@@ -204,6 +204,11 @@ Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPO
 - **Error handling**: Prefer explicit try/except with logging over silent failures (except where graceful degradation is intended).
 - **Logging**: Use `logging.getLogger(__name__)` or `get_logger(__name__)` from `src/core/logging_config.py` for context-aware logs.
 - **Observability**: Emit live status via `get_status_reporter()` (`src/core/status.py`) for pipeline phases and progress. Use `log_context()` to bind `job_id`, `component`, and `phase`.
+- **Preferred helpers** (`src/core/observability.py`):
+  - `phase_timer(component, phase)` — start/complete with duration; ERROR on failure
+  - `degrading_phase(..., results=, result_key=)` — graceful degradation into results dict
+  - `with_error_handling(...)` — decorator variant for standalone functions
+  - `job_scope(job_id)` — bind job context for API/CLI jobs
 - **Error handling patterns**:
   - Fatal step failure → raise a `BaseAnalysisError` subclass with `error_code` and optional `details`.
   - Graceful degradation → `logger.warning(..., exc_info=True)` + `StatusReporter.warn()` + partial result with `"error"` and `"fallback": true`.

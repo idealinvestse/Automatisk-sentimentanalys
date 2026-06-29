@@ -60,6 +60,15 @@ CACHE_OPERATIONS_TOTAL = (
     if Counter is not None
     else None
 )
+STATUS_EVENTS_TOTAL = (
+    Counter(
+        "sentiment_status_events_total",
+        "Process status events emitted",
+        ["level", "component", "error_code"],
+    )
+    if Counter is not None
+    else None
+)
 
 
 def record_analyzer_duration(analyzer: str, duration_s: float) -> None:
@@ -90,6 +99,15 @@ def record_llm_request(
 def record_cache_operation(operation: str, result: str) -> None:
     if CACHE_OPERATIONS_TOTAL is not None:
         CACHE_OPERATIONS_TOTAL.labels(operation=operation, result=result).inc()
+
+
+def record_status_event(level: str, component: str, error_code: str = "") -> None:
+    if STATUS_EVENTS_TOTAL is not None:
+        STATUS_EVENTS_TOTAL.labels(
+            level=level,
+            component=component,
+            error_code=error_code or "none",
+        ).inc()
 
 
 @contextmanager

@@ -20,8 +20,9 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..alerting import AlertEngine
-from ..core.logging_config import configure_logging, set_request_id
+from ..core.logging_config import configure_logging, set_job_id, set_request_id
 from ..core.status import get_status_reporter
+from .transcription_events import JOB_HEADER
 from ..core.tracing import init_tracing
 from ..alerting_state import AlertingStateManager
 from ..caching import AggregateCache
@@ -83,8 +84,10 @@ def _init_app_state(application: FastAPI) -> None:
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        job_id = request.headers.get(JOB_HEADER) or request_id
         request.state.request_id = request_id
         set_request_id(request_id)
+        set_job_id(job_id)
         started = time.perf_counter()
         response = await call_next(request)
         duration = time.perf_counter() - started
