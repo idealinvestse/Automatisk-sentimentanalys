@@ -150,9 +150,9 @@ def test_analyzer_error_isolation():
     ctx = AnalysisContext()
     results = run_analyzers(ctx, selected=["mock_failing", "mock_successful"])
 
-    # mock_failing should NOT have written results because it crashed,
-    # but mock_successful should have run and stored its output safely.
-    assert "mock_failing" not in results
+    # mock_failing stores graceful degradation fallback; mock_successful succeeds.
+    assert results["mock_failing"]["fallback"] is True
+    assert "Something went wrong" in results["mock_failing"]["error"]
     assert results["mock_successful"] == "success"
 
 

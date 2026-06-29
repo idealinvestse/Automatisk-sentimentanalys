@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
 from src.install.config_schema import UserConfig
 from src.install.paths_util import (
+    _ffmpeg_exe_name,
     portable_user_config_path,
     resolve_ffmpeg,
     resolve_user_config_path,
@@ -55,8 +57,9 @@ def test_resolve_ffmpeg_env_override(tmp_path: Path, monkeypatch) -> None:
 
 def test_resolve_ffmpeg_bundled(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
-    bundled = tmp_path / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe"
+    bundled = tmp_path / "tools" / "ffmpeg" / "bin" / _ffmpeg_exe_name()
     bundled.parent.mkdir(parents=True)
     bundled.write_bytes(b"")
     cfg = UserConfig(paths={"app_root": str(tmp_path)})
-    assert resolve_ffmpeg(cfg) == str(bundled)
+    with patch("src.install.paths_util.shutil.which", return_value=None):
+        assert resolve_ffmpeg(cfg) == str(bundled)

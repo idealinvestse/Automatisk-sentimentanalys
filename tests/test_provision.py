@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
@@ -90,6 +91,7 @@ def test_run_provision_reports_pip_failure(tmp_path: Path) -> None:
     assert any(step.name == "pip" and not step.ok for step in report.steps)
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Bundled ffmpeg download is Windows-only")
 def test_run_provision_downloads_ffmpeg_when_missing(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
     (tmp_path / "configs").mkdir()
