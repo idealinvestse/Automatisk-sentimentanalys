@@ -11,7 +11,7 @@ import logging
 import re
 from typing import Any
 
-from ..core.models import AnalysisContext, Segment
+from ..core.models import AnalysisContext
 from .base import Analyzer
 from .registry import register_analyzer
 

@@ -40,7 +40,9 @@ def _dev_mode() -> bool:
     return os.getenv("SENTIMENT_DEV", "").lower() in ("1", "true", "yes")
 
 
-def public_detail(exc: BaseException, *, dev_prefix: str | None = None, public: str = PUBLIC_ERROR_DETAIL) -> str:
+def public_detail(
+    exc: BaseException, *, dev_prefix: str | None = None, public: str = PUBLIC_ERROR_DETAIL
+) -> str:
     """Return a safe client-facing message; include exception text only in dev mode."""
     if _dev_mode():
         if dev_prefix:

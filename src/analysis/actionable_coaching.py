@@ -13,9 +13,21 @@ logger = logging.getLogger(__name__)
 
 _COACHING_RULES: list[tuple[str, str, list[str]]] = [
     ("low_empathy", "Empatin under 50 – träna validerande fraser tidigt i samtalet.", ["empathy"]),
-    ("high_effort", "Hög kundinsats (CES) – förenkla språk och bekräfta förståelse.", ["customer_effort"]),
-    ("compliance_flag", "Compliance-risk flaggad – granska löften och dataförfrågningar.", ["compliance_risk"]),
-    ("negative_trajectory", "Försämrad sentimentkurva – pausa script och validera känslor.", ["trajectory"]),
+    (
+        "high_effort",
+        "Hög kundinsats (CES) – förenkla språk och bekräfta förståelse.",
+        ["customer_effort"],
+    ),
+    (
+        "compliance_flag",
+        "Compliance-risk flaggad – granska löften och dataförfrågningar.",
+        ["compliance_risk"],
+    ),
+    (
+        "negative_trajectory",
+        "Försämrad sentimentkurva – pausa script och validera känslor.",
+        ["trajectory"],
+    ),
 ]
 
 
@@ -47,10 +59,19 @@ class ActionableCoachingAnalyzer(Analyzer):
         if ces > 45:
             insights.append(self._item("high_effort", "medium", ces))
 
-        if isinstance(compliance, dict) and compliance.get("overall_risk_level") in ("medium", "high"):
-            insights.append(self._item("compliance_flag", "high", compliance.get("flagged_segments", [])))
+        if isinstance(compliance, dict) and compliance.get("overall_risk_level") in (
+            "medium",
+            "high",
+        ):
+            insights.append(
+                self._item("compliance_flag", "high", compliance.get("flagged_segments", []))
+            )
 
-        slope = float(trajectory.get("customer_sentiment_slope", 0)) if isinstance(trajectory, dict) else 0
+        slope = (
+            float(trajectory.get("customer_sentiment_slope", 0))
+            if isinstance(trajectory, dict)
+            else 0
+        )
         if slope < -0.05:
             insights.append(self._item("negative_trajectory", "medium", slope))
 
@@ -72,4 +93,9 @@ class ActionableCoachingAnalyzer(Analyzer):
                     "recommendation": rec,
                     "evidence": evidence,
                 }
-        return {"rule_id": rule_id, "priority": priority, "recommendation": rule_id, "evidence": evidence}
+        return {
+            "rule_id": rule_id,
+            "priority": priority,
+            "recommendation": rule_id,
+            "evidence": evidence,
+        }

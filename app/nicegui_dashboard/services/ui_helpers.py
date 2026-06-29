@@ -6,7 +6,7 @@ Fas 4 – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from nicegui import ui
 

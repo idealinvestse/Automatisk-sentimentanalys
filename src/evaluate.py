@@ -134,6 +134,7 @@ def _heuristic_sentiment(
     """Offline deterministic fallback using lexicon+clean+negation (improved baseline)."""
     from .clean import clean_texts
     from .profiles import resolve_profile
+
     try:
         lex = load_lexicon("data/sensaldo_lexicon.csv")
     except Exception:
@@ -146,7 +147,11 @@ def _heuristic_sentiment(
         ln, le, lp = scalar_to_dist(s)
         dist = {"negativ": ln, "neutral": le, "positiv": lp}
         results.append([{"label": label, "score": score} for label, score in dist.items()])
-    return results, {"profile": "heuristic", "model": "lexicon-heuristic-via-score", "max_length": 0}
+    return results, {
+        "profile": "heuristic",
+        "model": "lexicon-heuristic-via-score",
+        "max_length": 0,
+    }
 
 
 def run_evaluation(
@@ -478,6 +483,7 @@ def list_profiles():
 # LLM holistic quality eval (Task 3.3.3)
 # ---------------------------------------------------------------------------
 
+
 def _synthetic_callcenter_samples() -> list[dict[str, Any]]:
     """A few realistic Swedish callcenter-style transcripts for LLM quality smoke tests."""
     return [
@@ -486,7 +492,10 @@ def _synthetic_callcenter_samples() -> list[dict[str, Any]]:
             "segments": [
                 {"speaker": "SPEAKER_0", "text": "Hej, det gäller fakturan jag fick igår."},
                 {"speaker": "SPEAKER_1", "text": "Jag förstår, kan du berätta mer?"},
-                {"speaker": "SPEAKER_0", "text": "Den var dubbelt så hög som vanligt och jag har inte beställt något extra."},
+                {
+                    "speaker": "SPEAKER_0",
+                    "text": "Den var dubbelt så hög som vanligt och jag har inte beställt något extra.",
+                },
                 {"speaker": "SPEAKER_1", "text": "Okej, jag kollar det här åt dig."},
             ],
         },
@@ -494,8 +503,14 @@ def _synthetic_callcenter_samples() -> list[dict[str, Any]]:
             "id": "demo-2",
             "segments": [
                 {"speaker": "SPEAKER_0", "text": "Jag vill säga upp mitt abonnemang."},
-                {"speaker": "SPEAKER_1", "text": "Jag beklagar att höra det. Får jag fråga varför?"},
-                {"speaker": "SPEAKER_0", "text": "För att det bara strular hela tiden och ingen verkar bry sig."},
+                {
+                    "speaker": "SPEAKER_1",
+                    "text": "Jag beklagar att höra det. Får jag fråga varför?",
+                },
+                {
+                    "speaker": "SPEAKER_0",
+                    "text": "För att det bara strular hela tiden och ingen verkar bry sig.",
+                },
             ],
         },
     ]
@@ -624,7 +639,9 @@ def evaluate_llm_quality(
 
 @app.command("llm-human-study")
 def llm_human_preference_template(
-    n_calls: int = typer.Option(30, "--n-calls", help="Antal calls att föreslå för manuell review (20-50 rekommenderat)"),
+    n_calls: int = typer.Option(
+        30, "--n-calls", help="Antal calls att föreslå för manuell review (20-50 rekommenderat)"
+    ),
     output: str | None = typer.Option("reports/llm_human_study_template.md", "--output"),
 ):
     """Generera mall + instruktioner för human preference study på LLM-insikter (Fas 3 follow-up).
@@ -658,28 +675,32 @@ def llm_human_preference_template(
 
     for i in range(min(n_calls, len(samples) * 5)):
         call_id = f"CALL-{i+1:04d}"
-        template_lines.extend([
-            f"### {call_id}",
-            "- **Lokal actionable (kort):** [klistra in från report]",
-            "- **Mistral actionable (kort):** [klistra in från report.llm]",
-            "- **Preferens (forced choice):** [ ] Lokal bättre  [ ] Mistral bättre  [ ] Lika  [ ] Vet ej",
-            "- **Evidence accuracy (1-5):** Lokal __  Mistral __  (5 = alla claims har verifierbara citat i transkript)",
-            "- **Användbarhet för QA (1-5):** Lokal __  Mistral __",
-            "- **Kommentar / exempel på bra/dålig insikt:**",
-            "  > ",
-            "",
-        ])
+        template_lines.extend(
+            [
+                f"### {call_id}",
+                "- **Lokal actionable (kort):** [klistra in från report]",
+                "- **Mistral actionable (kort):** [klistra in från report.llm]",
+                "- **Preferens (forced choice):** [ ] Lokal bättre  [ ] Mistral bättre  [ ] Lika  [ ] Vet ej",
+                "- **Evidence accuracy (1-5):** Lokal __  Mistral __  (5 = alla claims har verifierbara citat i transkript)",
+                "- **Användbarhet för QA (1-5):** Lokal __  Mistral __",
+                "- **Kommentar / exempel på bra/dålig insikt:**",
+                "  > ",
+                "",
+            ]
+        )
 
-    template_lines.extend([
-        "## Slutlig sammanfattning (efter alla calls)",
-        "- Totalt antal calls: ",
-        "- LLM föredras för actionable: X/Y (Z%)",
-        "- Bättre evidence: X/Y",
-        "- Övriga observationer (svenska nyans, kostnad, latens, hallucinationer):",
-        "",
-        "Rekommenderad storlek: 20-50 calls för statistisk känsla. Använd riktiga anonymiserade callcenter-samtal.",
-        "Se också `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` och planens 3.3.3.",
-    ])
+    template_lines.extend(
+        [
+            "## Slutlig sammanfattning (efter alla calls)",
+            "- Totalt antal calls: ",
+            "- LLM föredras för actionable: X/Y (Z%)",
+            "- Bättre evidence: X/Y",
+            "- Övriga observationer (svenska nyans, kostnad, latens, hallucinationer):",
+            "",
+            "Rekommenderad storlek: 20-50 calls för statistisk känsla. Använd riktiga anonymiserade callcenter-samtal.",
+            "Se också `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` och planens 3.3.3.",
+        ]
+    )
 
     content = "\n".join(template_lines)
 
@@ -696,6 +717,7 @@ def llm_human_preference_template(
 # Fas 4 extensions (new metrics for call center features)
 # =============================================================================
 
+
 def compute_qa_score_consistency(qa_results: list[dict[str, Any]]) -> dict[str, float]:
     """Fas 4.2 KPI stub: consistency between rule-based and hybrid/LLM parts of QA.
 
@@ -705,11 +727,15 @@ def compute_qa_score_consistency(qa_results: list[dict[str, Any]]) -> dict[str, 
     if not qa_results:
         return {"agreement": 0.0, "n": 0}
     # Placeholder: fraction of calls where overall > threshold and no high-risk flags
-    consistent = sum(1 for r in qa_results if r.get("passed") and r.get("risk_level") in ("low", "medium"))
+    consistent = sum(
+        1 for r in qa_results if r.get("passed") and r.get("risk_level") in ("low", "medium")
+    )
     return {"agreement": round(consistent / len(qa_results), 3), "n": len(qa_results)}
 
 
-def compute_coaching_precision(coaching_recs: list[dict[str, Any]], human_judged_good: list[bool] | None = None) -> dict[str, float]:
+def compute_coaching_precision(
+    coaching_recs: list[dict[str, Any]], human_judged_good: list[bool] | None = None
+) -> dict[str, float]:
     """Fas 4.1.2 KPI stub: 'precision' on specific_coaching_recommendations.
 
     If human_judged_good provided (bool per rec), compute precision.
@@ -722,15 +748,25 @@ def compute_coaching_precision(coaching_recs: list[dict[str, Any]], human_judged
         return {"precision": round(good / len(coaching_recs), 3), "n": len(coaching_recs)}
     # heuristic: recs that have evidence_spans
     with_ev = sum(1 for r in coaching_recs if r.get("evidence_spans"))
-    return {"precision": round(with_ev / len(coaching_recs), 3), "n": len(coaching_recs), "note": "heuristic: has_evidence"}
+    return {
+        "precision": round(with_ev / len(coaching_recs), 3),
+        "n": len(coaching_recs),
+        "note": "heuristic: has_evidence",
+    }
 
 
-def compute_hot_topic_recall(aggregated: dict[str, Any], expected_topics: list[str]) -> dict[str, float]:
+def compute_hot_topic_recall(
+    aggregated: dict[str, Any], expected_topics: list[str]
+) -> dict[str, float]:
     """Fas 4.3 KPI stub: recall of hot topics identified by the aggregator.
 
     Simple set-overlap between produced hot_topics and a gold list of expected topics.
     """
-    produced = {ht.get("topic", "").lower() for ht in aggregated.get("hot_topics", []) if isinstance(ht, dict)}
+    produced = {
+        ht.get("topic", "").lower()
+        for ht in aggregated.get("hot_topics", [])
+        if isinstance(ht, dict)
+    }
     gold = {t.lower() for t in expected_topics}
     if not gold:
         return {"recall": 0.0, "n_gold": 0}
@@ -738,7 +774,9 @@ def compute_hot_topic_recall(aggregated: dict[str, Any], expected_topics: list[s
     return {"recall": round(hit / len(gold), 3), "n_gold": len(gold), "n_produced": len(produced)}
 
 
-def compute_pii_redaction_coverage(pii_log: dict[str, Any] | None, expected_pii_types: list[str] | None = None) -> dict[str, float]:
+def compute_pii_redaction_coverage(
+    pii_log: dict[str, Any] | None, expected_pii_types: list[str] | None = None
+) -> dict[str, float]:
     """Fas 4.4.1 KPI stub: coverage / recall of PII types redacted.
 
     If expected_pii_types given, measures how many of the expected sensitive types were caught.
@@ -750,7 +788,10 @@ def compute_pii_redaction_coverage(pii_log: dict[str, Any] | None, expected_pii_
         return {"coverage": 1.0 if found_types else 0.0, "n_events": len(pii_log.get("events", []))}
     gold = set(expected_pii_types)
     hit = len(found_types & gold)
-    return {"coverage": round(hit / len(gold), 3) if gold else 0.0, "n_events": len(pii_log.get("events", []))}
+    return {
+        "coverage": round(hit / len(gold), 3) if gold else 0.0,
+        "n_events": len(pii_log.get("events", [])),
+    }
 
 
 def compute_alert_trigger_rate(alerts: list[dict[str, Any]], total_calls: int) -> dict[str, float]:
@@ -841,7 +882,7 @@ def _run_fas4_pipeline_validation() -> dict[str, Any]:
 
         if reports:
             cache_queries += 2
-            m1 = pipe.get_cached_agent_performance("Agent-1", reports)
+            pipe.get_cached_agent_performance("Agent-1", reports)
             m2 = pipe.get_cached_agent_performance("Agent-1", reports)
             if m2.get("cache_hit"):
                 cache_hits += 1
@@ -853,9 +894,7 @@ def _run_fas4_pipeline_validation() -> dict[str, Any]:
         "n_samples": len(samples),
         "n_reports": len(reports),
         "fas4_keys_present": {
-            "agent_performance": all(
-                "agent_performance" in (r.results or {}) for r in reports
-            ),
+            "agent_performance": all("agent_performance" in (r.results or {}) for r in reports),
             "qa_or_compliance": all(
                 ("qa" in (r.results or {})) or ("compliance_qa" in (r.results or {}))
                 for r in reports
@@ -865,15 +904,9 @@ def _run_fas4_pipeline_validation() -> dict[str, Any]:
         "kpis": {
             "qa_consistency": compute_qa_score_consistency(qa_results),
             "coaching_precision": compute_coaching_precision(coaching_recs),
-            "hot_topic_recall": compute_hot_topic_recall(
-                agg, ["faktura", "abonnemang", "support"]
-            ),
-            "pii_coverage": compute_pii_redaction_coverage(
-                pii_logs[0] if pii_logs else None
-            ),
-            "alert_trigger_rate": compute_alert_trigger_rate(
-                all_alerts, total_calls=len(reports)
-            ),
+            "hot_topic_recall": compute_hot_topic_recall(agg, ["faktura", "abonnemang", "support"]),
+            "pii_coverage": compute_pii_redaction_coverage(pii_logs[0] if pii_logs else None),
+            "alert_trigger_rate": compute_alert_trigger_rate(all_alerts, total_calls=len(reports)),
             "cache_hit_rate": compute_cache_hit_rate(cache_hits, cache_queries),
         },
         "semantic_search": {
@@ -937,8 +970,8 @@ def _render_fas4_validation_markdown(payload: dict[str, Any]) -> str:
         [
             "## Coverage gate (Fas 1)",
             "",
-            f"- Target: ≥85% on in-scope `src/` modules",
-            f"- Omitted optional paths: CLI, diarization, ASR backends (see `pyproject.toml`)",
+            "- Target: ≥85% on in-scope `src/` modules",
+            "- Omitted optional paths: CLI, diarization, ASR backends (see `pyproject.toml`)",
             "",
             "## Acceptance summary",
             "",
@@ -1014,9 +1047,7 @@ def fas4_validation(
 
     acceptance = []
     keys_ok = all(pipeline_result["fas4_keys_present"].values())
-    acceptance.append(
-        f"Fas 4 keys in pipeline results: {'PASS' if keys_ok else 'FAIL'}"
-    )
+    acceptance.append(f"Fas 4 keys in pipeline results: {'PASS' if keys_ok else 'FAIL'}")
     acceptance.append(
         f"Semantic search returns hits: {'PASS' if pipeline_result['semantic_search']['has_results'] else 'WARN'}"
     )

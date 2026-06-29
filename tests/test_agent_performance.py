@@ -13,11 +13,15 @@ from src.agent_performance import (
     compute_talk_ratios,
 )
 
-
 SEGMENTS_GOOD = [
     {"start": 0, "end": 3, "text": "Hej och välkommen till kundtjänst.", "speaker": "SPEAKER_1"},
     {"start": 3, "end": 7, "text": "Jag är arg på fakturan!", "speaker": "SPEAKER_0"},
-    {"start": 7, "end": 12, "text": "Jag beklagar verkligen. Jag förstår att det är frustrerande. Jag fixar det.", "speaker": "SPEAKER_1"},
+    {
+        "start": 7,
+        "end": 12,
+        "text": "Jag beklagar verkligen. Jag förstår att det är frustrerande. Jag fixar det.",
+        "speaker": "SPEAKER_1",
+    },
     {"start": 12, "end": 15, "text": "Tack, det var bra.", "speaker": "SPEAKER_0"},
 ]
 
@@ -33,7 +37,9 @@ class TestAgentPerformanceMetrics:
     def test_talk_ratios(self):
         ratios = compute_talk_ratios(SEGMENTS_GOOD, ROLE_MAP)
         assert 0.0 <= ratios["agent_talk_ratio"] <= 1.0
-        assert ratios["customer_talk_ratio"] + ratios["agent_talk_ratio"] == pytest.approx(1.0, abs=0.01)
+        assert ratios["customer_talk_ratio"] + ratios["agent_talk_ratio"] == pytest.approx(
+            1.0, abs=0.01
+        )
 
     def test_empathy_good_agent(self):
         scores = compute_empathy_and_deescalation(SEGMENTS_GOOD, ROLE_MAP)

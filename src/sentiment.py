@@ -48,7 +48,9 @@ def adjust_distribution_for_callcenter(text: str, dist: dict[str, float]) -> dic
     if mult != 1.0:
         for k in ("negativ", "positiv"):
             adjusted[k] = adjusted.get(k, 0.0) * mult
-        adjusted["neutral"] = max(0.0, adjusted.get("neutral", 0.0) * (2 - mult))  # damp neutral a bit
+        adjusted["neutral"] = max(
+            0.0, adjusted.get("neutral", 0.0) * (2 - mult)
+        )  # damp neutral a bit
     total = sum(adjusted.values())
     return {k: v / total for k, v in adjusted.items()} if total > 0 else adjusted
 
@@ -259,6 +261,7 @@ def analyze_smart(
     # Apply lexicon blending if we have a file and positive weight (from profile default or explicit)
     if lexicon_file and lexicon_weight is not None and float(lexicon_weight) > 0.0:
         from .lexicon import blend_results_with_lexicon
+
         # Simple hybrid (prop10): boost lexicon weight if model uncertain on any item
         eff_w = float(lexicon_weight)
         try:

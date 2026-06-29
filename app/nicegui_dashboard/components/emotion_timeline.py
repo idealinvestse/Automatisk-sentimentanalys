@@ -15,7 +15,9 @@ from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.services.analytics_summary import emotion_label_sv, summarize_emotions
 
 
-def _extract_emotion_series(report: dict[str, Any] | None) -> tuple[list[int], dict[str, list[float]]]:
+def _extract_emotion_series(
+    report: dict[str, Any] | None,
+) -> tuple[list[int], dict[str, list[float]]]:
     """Extract segment indices + emotion score dict from report segments.
 
     Returns:
@@ -28,7 +30,9 @@ def _extract_emotion_series(report: dict[str, Any] | None) -> tuple[list[int], d
     if not segments:
         return [], {}
 
-    emotion_results = (report.get("results") or {}).get("emotion") or report.get("emotion_results") or []
+    emotion_results = (
+        (report.get("results") or {}).get("emotion") or report.get("emotion_results") or []
+    )
 
     segment_indices: list[int] = []
     emotion_data: dict[str, list[float]] = {}

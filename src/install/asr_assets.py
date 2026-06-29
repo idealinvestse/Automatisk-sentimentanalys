@@ -147,11 +147,15 @@ def install_asr_packages(
     report = AsrAssetReport()
     interpreter = python or Path(sys.executable)
 
-    missing = [pkg for mod, pkg in (
-        ("faster_whisper", "faster-whisper>=1.0.0"),
-        ("whisperx", "whisperx>=3.1.1"),
-        ("huggingface_hub", "huggingface-hub>=0.23.0"),
-    ) if not is_module_installed(mod)]
+    missing = [
+        pkg
+        for mod, pkg in (
+            ("faster_whisper", "faster-whisper>=1.0.0"),
+            ("whisperx", "whisperx>=3.1.1"),
+            ("huggingface_hub", "huggingface-hub>=0.23.0"),
+        )
+        if not is_module_installed(mod)
+    ]
 
     if not missing:
         report.add("asr_packages", True, "ASR-paket redan installerade")
@@ -184,9 +188,7 @@ def _download_faster_whisper(
 
     load_name = resolve_model_name_for_backend(model_name, "faster")
     dev_kind, cuda_idx = normalize_device_for_asr(device)
-    compute_type = (
-        "float16" if dev_kind == "cuda" else ("int8" if dev_kind == "cpu" else "float32")
-    )
+    compute_type = "float16" if dev_kind == "cuda" else ("int8" if dev_kind == "cpu" else "float32")
     model_kwargs: dict[str, Any] = {
         "device": dev_kind,
         "compute_type": compute_type,
@@ -266,7 +268,9 @@ def download_asr_models(
     report = AsrAssetReport()
     configure_hf_cache(hf_home)
 
-    selected = [b.strip().lower() for b in (backends or list(DEFAULT_PREFETCH_BACKENDS)) if b.strip()]
+    selected = [
+        b.strip().lower() for b in (backends or list(DEFAULT_PREFETCH_BACKENDS)) if b.strip()
+    ]
     if not selected:
         report.add("models", False, "Inga backends angivna")
         return report
@@ -386,14 +390,15 @@ def download_asr_cli(
 
 
 def main() -> None:
-    import typer
     from typing import Annotated
+
+    import typer
 
     def _entry(
         backend: Annotated[
             list[str],
             typer.Option(help="faster | whisperx | transformers"),
-        ] = list(DEFAULT_PREFETCH_BACKENDS),
+        ] = None,
         model: Annotated[str, typer.Option("--model", "-m")] = "kb-whisper-large",
         device: Annotated[str, typer.Option("--device")] = "cpu",
         language: Annotated[str, typer.Option("--language", "-l")] = "sv",
@@ -401,6 +406,8 @@ def main() -> None:
         skip_packages: Annotated[bool, typer.Option("--skip-packages")] = False,
         skip_models: Annotated[bool, typer.Option("--skip-models")] = False,
     ) -> None:
+        if backend is None:
+            backend = list(DEFAULT_PREFETCH_BACKENDS)
         download_asr_cli(
             backend=backend,
             model=model,

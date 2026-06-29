@@ -53,14 +53,20 @@ class RootCauseInsightAnalyzer(Analyzer):
             for cause, keywords in ROOT_CAUSE_KEYWORDS.items():
                 if any(kw in text for kw in keywords):
                     causes[cause] = causes.get(cause, 0) + 1
-                    evidence_list.append({
-                        "cause": cause,
-                        "segment_start": getattr(seg, "start", 0),
-                        "evidence": seg.text[:80] if seg.text else "",
-                    })
+                    evidence_list.append(
+                        {
+                            "cause": cause,
+                            "segment_start": getattr(seg, "start", 0),
+                            "evidence": seg.text[:80] if seg.text else "",
+                        }
+                    )
 
         if not causes:
-            return {"root_causes": [], "overall_risk": "low", "message": "No clear root causes detected"}
+            return {
+                "root_causes": [],
+                "overall_risk": "low",
+                "message": "No clear root causes detected",
+            }
 
         # Sort by frequency
         sorted_causes = sorted(causes.items(), key=lambda x: x[1], reverse=True)

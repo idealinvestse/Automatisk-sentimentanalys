@@ -8,8 +8,8 @@ import pytest  # noqa: F401
 
 from src.caching import (
     AggregateCache,
-    precompute_and_cache,
     precompute_agent_aggregates,
+    precompute_and_cache,
     precompute_hot_topics,
 )
 
@@ -69,9 +69,7 @@ class TestPrecomputeHelpers:
             {"start": 0, "end": 2, "text": "Hej välkommen.", "speaker": "A"},
             {"start": 2, "end": 5, "text": "Faktura fel.", "speaker": "C"},
         ]
-        perf = compute_call_agent_performance(
-            segments, role_map={"A": "agent", "C": "customer"}
-        )
+        perf = compute_call_agent_performance(segments, role_map={"A": "agent", "C": "customer"})
         reports = [{"agent_performance": perf.model_dump()}]
         result = precompute_agent_aggregates(reports, agent_id="Agent-1")
         assert result["call_count"] == 1

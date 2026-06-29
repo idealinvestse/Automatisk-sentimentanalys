@@ -17,11 +17,7 @@ def normalize_transcription_to_report(
     """Convert an ASR transcript payload into a dashboard-compatible report dict."""
     segments = list(transcript_dict.get("segments") or [])
 
-    cid = (
-        call_id
-        or transcript_dict.get("call_id")
-        or transcript_dict.get("id")
-    )
+    cid = call_id or transcript_dict.get("call_id") or transcript_dict.get("id")
     if not cid:
         source = (
             transcript_dict.get("file")
@@ -62,8 +58,7 @@ def normalize_transcription_to_report(
         "topics": dict(transcript_dict.get("topics") or {}),
         "insights": dict(transcript_dict.get("insights") or {}),
         "processing_time_s": (
-            transcript_dict.get("processing_time_s")
-            or transcript_dict.get("processing_time")
+            transcript_dict.get("processing_time_s") or transcript_dict.get("processing_time")
         ),
         "source": "transcription",
     }
@@ -77,11 +72,7 @@ def append_report_to_state(state: DashboardState, report: dict[str, Any]) -> str
         report["call_id"] = cid
 
     existing_idx = next(
-        (
-            i
-            for i, r in enumerate(state.reports)
-            if str(r.get("call_id") or r.get("id", "")) == cid
-        ),
+        (i for i, r in enumerate(state.reports) if str(r.get("call_id") or r.get("id", "")) == cid),
         None,
     )
     if existing_idx is not None:

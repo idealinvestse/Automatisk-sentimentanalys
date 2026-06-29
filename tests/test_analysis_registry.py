@@ -6,7 +6,12 @@ import pytest
 
 from src.analysis.base import Analyzer
 from src.analysis.deep_path import LLM_SUPERSEDED_ANALYZERS, filter_superseded
-from src.analysis.registry import _ANALYZER_REGISTRY, ensure_analyzers_loaded, register_analyzer, run_analyzers
+from src.analysis.registry import (
+    _ANALYZER_REGISTRY,
+    ensure_analyzers_loaded,
+    register_analyzer,
+    run_analyzers,
+)
 from src.core.errors import AnalysisError
 from src.core.models import AnalysisContext
 

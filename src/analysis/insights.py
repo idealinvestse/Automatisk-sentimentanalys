@@ -7,8 +7,8 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from ..insights import InsightsEngine, InsightsReport
-from .intent_utils import intents_as_tuples
 from .base import Analyzer
+from .intent_utils import intents_as_tuples
 from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)

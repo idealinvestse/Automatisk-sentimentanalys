@@ -46,8 +46,7 @@ class IntentAnalyzer(Analyzer):
             classifier = self._get_classifier()
             results = classifier.classify_batch(texts)
             return [
-                {"intent": label, "confidence": round(float(conf), 4)}
-                for label, conf in results
+                {"intent": label, "confidence": round(float(conf), 4)} for label, conf in results
             ]
         except Exception as e:
             logger.error("Intent classification failed in adapter: %s", e)

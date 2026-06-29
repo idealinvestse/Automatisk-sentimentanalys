@@ -68,10 +68,14 @@ def _score_speaker_role(segments: list[Any], speaker: str) -> tuple[int, int]:
     agent_score = 0
     customer_score = 0
     for seg in segments:
-        sp = getattr(seg, "speaker", None) or (seg.get("speaker") if isinstance(seg, dict) else None)
+        sp = getattr(seg, "speaker", None) or (
+            seg.get("speaker") if isinstance(seg, dict) else None
+        )
         if sp != speaker:
             continue
-        text = (getattr(seg, "text", None) or (seg.get("text") if isinstance(seg, dict) else "") or "").lower()
+        text = (
+            getattr(seg, "text", None) or (seg.get("text") if isinstance(seg, dict) else "") or ""
+        ).lower()
         agent_score += sum(1 for p in AGENT_GREETING_PATTERNS if p in text)
         customer_score += sum(1 for p in CUSTOMER_OPENER_PATTERNS if p in text)
     return agent_score, customer_score
@@ -161,7 +165,9 @@ class RoleAnalyzer(Analyzer):
             qdens_a = qdens_c = 0.0
             a_turns = c_turns = 0
 
-        form_score = compute_lexical_formality(segments, roles) if compute_lexical_formality else 0.5
+        form_score = (
+            compute_lexical_formality(segments, roles) if compute_lexical_formality else 0.5
+        )
 
         inter = compute_intervention_count(segments, roles) if compute_intervention_count else 0
 

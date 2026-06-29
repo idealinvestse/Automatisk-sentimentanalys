@@ -109,7 +109,9 @@ class TranscriptionState:
     ws_status: str = "disconnected"  # connected | reconnecting | disconnected
     _worker_task: asyncio.Task | None = field(default=None, repr=False)
     _ws_listener: Any = field(default=None, repr=False)
-    _listeners: list[Callable[[str, dict[str, Any]], None]] = field(default_factory=list, repr=False)
+    _listeners: list[Callable[[str, dict[str, Any]], None]] = field(
+        default_factory=list, repr=False
+    )
     # Ad-hoc single-file transcription (separate from batch queue)
     adhoc_upload_path: Path | None = None
     adhoc_filename: str | None = None
@@ -177,7 +179,9 @@ class TranscriptionState:
                 loaded["active_job_id"] = None
                 self.status.update(loaded)
             if version < 3:
-                from app.nicegui_dashboard.services.transcription_presets import apply_default_preset
+                from app.nicegui_dashboard.services.transcription_presets import (
+                    apply_default_preset,
+                )
 
                 apply_default_preset(self)
         except (OSError, json.JSONDecodeError) as err:
@@ -316,7 +320,9 @@ class TranscriptionState:
                         "name": f.name,
                         "path": str(f),
                         "size_kb": round(stat.st_size / 1024, 1),
-                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(
+                            timespec="seconds"
+                        ),
                     }
                 )
             except OSError:
@@ -463,7 +469,9 @@ class TranscriptionState:
             self.status["active_job_id"] = self.job_id
             self.api_client.set_job_id(self.job_id)
         if self._ws_listener is None:
-            from app.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
+            from app.nicegui_dashboard.services.transcription_ws_client import (
+                TranscriptionWSListener,
+            )
 
             self._ws_listener = TranscriptionWSListener(
                 self.api_client,
@@ -544,6 +552,7 @@ class TranscriptionState:
         if not self._api_logs_via_ws():
             label = "analys" if operation == "analyze_conversation" else "transkribering"
             self.add_log("INFO", f"[API] scan_process ({label}) på {self.pending_folder}")
+
         async def _call() -> dict[str, Any]:
             return await self.api_client.scan_process(
                 self.pending_folder,
@@ -571,7 +580,9 @@ class TranscriptionState:
                     self.add_log("ERROR", f"[scan_process] {item['error']}", file=Path(fname).name)
             skipped = result.get("skipped", 0)
             if skipped:
-                self.add_log("INFO", f"[scan_process] Hoppade över {skipped} redan bearbetade filer")
+                self.add_log(
+                    "INFO", f"[scan_process] Hoppade över {skipped} redan bearbetade filer"
+                )
         else:
             for item in result.get("items") or []:
                 if item.get("ok"):
@@ -591,6 +602,7 @@ class TranscriptionState:
         paths = [str(f) for f in files]
         if not self._api_logs_via_ws():
             self.add_log("INFO", f"[API] batch_transcribe på {len(paths)} filer")
+
         async def _call() -> dict[str, Any]:
             return await self.api_client.batch_transcribe(paths, **self._api_settings())
 
@@ -657,16 +669,17 @@ class TranscriptionState:
         try:
             if use_api:
                 await self._start_ws_listener()
-            if use_api:
-                if not await self._ensure_api_ready():
-                    self.add_log("WARNING", "Faller tillbaka till lokal transkribering")
-                    use_api = False
-                    self.status["use_api"] = False
+            if use_api and not await self._ensure_api_ready():
+                self.add_log("WARNING", "Faller tillbaka till lokal transkribering")
+                use_api = False
+                self.status["use_api"] = False
 
             if use_api and self.api_strategy == "scan_process" and not self.stop:
                 self.status["current_file"] = "scan_process..."
                 processed_paths = await self._run_batch_scan_process()
-                self.status["processed"] = len(processed_paths) if processed_paths else self.status.get("processed", 0)
+                self.status["processed"] = (
+                    len(processed_paths) if processed_paths else self.status.get("processed", 0)
+                )
                 self.status["progress"] = 1.0
                 self.save()
             elif use_api and self.api_strategy == "batch_transcribe" and not self.stop:
@@ -768,7 +781,9 @@ class TranscriptionState:
         """Persist uploaded audio for ad-hoc transcription."""
         suffix = Path(filename).suffix.lower()
         if suffix not in _AUDIO_EXTS:
-            raise ValueError(f"Filtyp {suffix or '(saknas)'} stöds inte. Tillåtna: {', '.join(sorted(_AUDIO_EXTS))}")
+            raise ValueError(
+                f"Filtyp {suffix or '(saknas)'} stöds inte. Tillåtna: {', '.join(sorted(_AUDIO_EXTS))}"
+            )
         validate_upload_bytes(content, filename)
 
         self.ensure_cache_dir()
@@ -857,17 +872,23 @@ class TranscriptionState:
                     self.adhoc_progress = 0.2
                     self._notify_adhoc()
 
-                    from app.nicegui_dashboard.services.test_lab_service import resolve_api_audio_path
+                    from app.nicegui_dashboard.services.test_lab_service import (
+                        resolve_api_audio_path,
+                    )
 
                     api_path, warning = resolve_api_audio_path(str(fpath.resolve()))
                     if warning:
                         self.add_log("WARNING", warning, file=fpath.name)
 
                     async def _call() -> dict[str, Any]:
-                        return await self.api_client.transcribe(str(api_path), **self._api_settings())
+                        return await self.api_client.transcribe(
+                            str(api_path), **self._api_settings()
+                        )
 
                     try:
-                        result = await self._with_retries("[Ad-hoc API]", _call, file_name=fpath.name)
+                        result = await self._with_retries(
+                            "[Ad-hoc API]", _call, file_name=fpath.name
+                        )
                     except Exception as err:
                         if not self.settings.get("api_fallback_local", True):
                             raise

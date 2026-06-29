@@ -156,7 +156,9 @@ def render_qa_scorecard_section(
             ui.button(
                 "Öppna i Samtalsdetalj",
                 on_click=lambda: on_call_select(call_id),
-            ).props("flat").classes("q-mt-sm")
+            ).props(
+                "flat"
+            ).classes("q-mt-sm")
 
         problem_rows = qa_problem_calls(reports)
         if problem_rows:

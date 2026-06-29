@@ -77,7 +77,10 @@ class GroqClient:
         "llama-3.3-70b-versatile": {"input": 0.59 / 1_000_000, "output": 0.79 / 1_000_000},
         "openai/gpt-oss-20b": {"input": 0.075 / 1_000_000, "output": 0.30 / 1_000_000},
         "openai/gpt-oss-120b": {"input": 0.15 / 1_000_000, "output": 0.60 / 1_000_000},
-        "meta-llama/llama-4-scout-17b-16e-instruct": {"input": 0.11 / 1_000_000, "output": 0.34 / 1_000_000},
+        "meta-llama/llama-4-scout-17b-16e-instruct": {
+            "input": 0.11 / 1_000_000,
+            "output": 0.34 / 1_000_000,
+        },
         "qwen/qwen3-32b": {"input": 0.29 / 1_000_000, "output": 0.59 / 1_000_000},
         "qwen/qwen3.6-27b": {"input": 0.60 / 1_000_000, "output": 3.00 / 1_000_000},
         "default": {"input": 0.15 / 1_000_000, "output": 0.60 / 1_000_000},
@@ -402,14 +405,19 @@ class GroqClient:
                 if self.cost_budget and (cost or 0) > self.cost_budget:
                     logger.warning(
                         "Groq LLM cost budget exceeded for task=%s: $%.5f > budget $%.5f",
-                        task_name, cost or 0, self.cost_budget,
+                        task_name,
+                        cost or 0,
+                        self.cost_budget,
                     )
                     meta["budget_exceeded"] = True
                     meta["budget"] = self.cost_budget
 
                 logger.info(
                     "Groq call OK | model=%s | task=%s | cost≈$%.5f | latency=%.2fs | cached=False",
-                    model, task_name, cost or 0.0, latency,
+                    model,
+                    task_name,
+                    cost or 0.0,
+                    latency,
                 )
                 try:
                     from ..core.metrics import record_llm_request
@@ -421,10 +429,13 @@ class GroqClient:
 
             except RateLimitError as e:
                 last_exc = e
-                wait = (2 ** attempt) * 1.2 + 0.5
+                wait = (2**attempt) * 1.2 + 0.5
                 logger.warning(
                     "Groq rate limit (attempt %d/%d). Sleeping %.1fs before retry. Error: %s",
-                    attempt + 1, self.max_retries, wait, e,
+                    attempt + 1,
+                    self.max_retries,
+                    wait,
+                    e,
                 )
                 from ..core.status import get_status_reporter
 
@@ -439,10 +450,13 @@ class GroqClient:
                 time.sleep(wait)
             except (APITimeoutError, APIError) as e:
                 last_exc = e
-                wait = (2 ** attempt) * 0.8
+                wait = (2**attempt) * 0.8
                 logger.warning(
                     "Groq transient error (attempt %d/%d): %s. Backing off %.1fs",
-                    attempt + 1, self.max_retries, e, wait,
+                    attempt + 1,
+                    self.max_retries,
+                    e,
+                    wait,
                 )
                 from ..core.status import get_status_reporter
 
@@ -495,7 +509,9 @@ class GroqClient:
 
         logger.info(
             "EXTERNAL LLM (Groq) plain call | model=%s | groq_eu_residency=%s | anonymize_before_llm=%s",
-            model, self.groq_eu_residency, anonymize_before_llm,
+            model,
+            self.groq_eu_residency,
+            anonymize_before_llm,
         )
         try:
             completion = client.chat.completions.create(
@@ -526,12 +542,16 @@ class GroqClient:
         """
         try:
             from .schemas import GROQ_MODELS
+
             return [{"id": name, **info} for name, info in GROQ_MODELS.items()]
         except ImportError:
             # Minimal fallback from pricing table
             return [
-                {"id": name, "pricing_in": pricing["input"] * 1_000_000,
-                 "pricing_out": pricing["output"] * 1_000_000}
+                {
+                    "id": name,
+                    "pricing_in": pricing["input"] * 1_000_000,
+                    "pricing_out": pricing["output"] * 1_000_000,
+                }
                 for name, pricing in self.PRICING.items()
                 if name != "default"
             ]

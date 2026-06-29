@@ -65,7 +65,7 @@ def augment_path(cfg: UserConfig, base_path: str | None = None) -> str:
         parts.append(str(scripts))
     if base_path:
         parts.append(base_path)
-    elif (existing := os.environ.get("PATH", "")):
+    elif existing := os.environ.get("PATH", ""):
         parts.append(existing)
     return os.pathsep.join(parts)
 

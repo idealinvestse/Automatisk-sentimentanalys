@@ -41,11 +41,13 @@ router = APIRouter(tags=["Pipeline"])
 
 
 def _fas4_pipeline(
-    req: AgentPerformanceRequest
-    | SemanticSearchRequest
-    | HotTopicsRequest
-    | QAScoreRequest
-    | AlertsRequest,
+    req: (
+        AgentPerformanceRequest
+        | SemanticSearchRequest
+        | HotTopicsRequest
+        | QAScoreRequest
+        | AlertsRequest
+    ),
     cache: AggregateCache,
     header_key: str | None,
 ) -> CallAnalysisPipeline:

@@ -66,7 +66,9 @@ class AsrManagerDialog(tk.Toplevel):
             ttk.Checkbutton(backends_frame, text=label, variable=var).pack(anchor=tk.W)
 
         self.progress_var = tk.StringVar(value="")
-        ttk.Label(frame, textvariable=self.progress_var, foreground="#6b7280").pack(anchor=tk.W, **pad)
+        ttk.Label(frame, textvariable=self.progress_var, foreground="#6b7280").pack(
+            anchor=tk.W, **pad
+        )
 
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, **pad)
@@ -149,7 +151,9 @@ class AsrManagerDialog(tk.Toplevel):
                     if report.ok:
                         messagebox.showinfo("ASR", "ASR-uppsättning slutförd.")
                     else:
-                        messagebox.showwarning("ASR", "Vissa steg misslyckades. Se aktivitetsloggen.")
+                        messagebox.showwarning(
+                            "ASR", "Vissa steg misslyckades. Se aktivitetsloggen."
+                        )
                     if self._on_complete:
                         self._on_complete()
 
@@ -168,9 +172,8 @@ class AsrManagerDialog(tk.Toplevel):
         threading.Thread(target=work, daemon=True).start()
 
     def _close(self) -> None:
-        if self._busy:
-            if not messagebox.askyesno("ASR", "Nedladdning pågår. Stäng ändå?"):
-                return
+        if self._busy and not messagebox.askyesno("ASR", "Nedladdning pågår. Stäng ändå?"):
+            return
         self.grab_release()
         self.destroy()
 

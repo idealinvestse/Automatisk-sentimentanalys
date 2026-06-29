@@ -43,10 +43,10 @@ def analyze_segments_offline(
     profile: str = "callcenter",
 ) -> EdgeAnalysisResult:
     """Run offline analysis on pre-transcribed segments."""
-    from ..intent import IntentClassifier
-    from ..sentiment import analyze_smart
-    from ..pipeline_steps import apply_early_pii_redaction
     from ..core.models import Segment
+    from ..intent import IntentClassifier
+    from ..pipeline_steps import apply_early_pii_redaction
+    from ..sentiment import analyze_smart
 
     classifier = IntentClassifier(backend="heuristic")
 

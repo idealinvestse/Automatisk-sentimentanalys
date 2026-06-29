@@ -64,7 +64,9 @@ class EmotionAnalyzer(Analyzer):
                     scores[emotion] = 0.75
 
             sent = sentiment_results[idx] if idx < len(sentiment_results) else {}
-            label = str(sent.get("label", "neutral")).lower() if isinstance(sent, dict) else "neutral"
+            label = (
+                str(sent.get("label", "neutral")).lower() if isinstance(sent, dict) else "neutral"
+            )
             if label in _NEGATIVE_SENTIMENT:
                 for emo in ("frustration", "besvikelse", "oro"):
                     scores[emo] = max(scores.get(emo, 0.0), 0.55)
@@ -81,9 +83,11 @@ class EmotionAnalyzer(Analyzer):
             if not scores:
                 scores = {"neutral": 0.9}
             primary = max(scores, key=scores.get)
-            out.append({
-                "primary": primary,
-                "scores": scores,
-                "speaker": getattr(seg, "speaker", None),
-            })
+            out.append(
+                {
+                    "primary": primary,
+                    "scores": scores,
+                    "speaker": getattr(seg, "speaker", None),
+                }
+            )
         return out

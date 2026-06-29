@@ -83,9 +83,7 @@ def main() -> None:
         }
 
     if args.baseline.is_file():
-        report["domain_baseline_reference"] = json.loads(
-            args.baseline.read_text(encoding="utf-8")
-        )
+        report["domain_baseline_reference"] = json.loads(args.baseline.read_text(encoding="utf-8"))
 
     out_path = args.output_dir / f"real_corpus_eval_{stamp}.json"
     out_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

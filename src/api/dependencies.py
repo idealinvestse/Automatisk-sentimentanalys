@@ -12,7 +12,6 @@ from ..alerting import AlertEngine
 from ..caching import AggregateCache
 from ..pipeline import CallAnalysisPipeline
 from .settings import get_api_settings
-from .error_responses import PUBLIC_ERROR_DETAIL
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +55,9 @@ def resolve_llm_api_key(
     if body_key and settings.allow_client_llm_key_in_body:
         return body_key
     if body_key and not settings.allow_client_llm_key_in_body:
-        logger.warning("Ignoring llm_api_key in request body (set API_ALLOW_CLIENT_LLM_KEY=true to allow)")
+        logger.warning(
+            "Ignoring llm_api_key in request body (set API_ALLOW_CLIENT_LLM_KEY=true to allow)"
+        )
     return None
 
 
@@ -87,5 +88,3 @@ def create_pipeline(
         cache=cache,
         async_analyzers=async_analyzers,
     )
-
-

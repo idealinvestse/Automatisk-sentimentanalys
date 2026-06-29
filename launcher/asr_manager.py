@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 
 from src.install.asr_assets import (
     DEFAULT_PREFETCH_BACKENDS,

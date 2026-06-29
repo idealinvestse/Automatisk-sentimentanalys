@@ -56,7 +56,9 @@ class TrajectoryAnalyzer(Analyzer):
 
             sent = sentiment_results[i] if i < len(sentiment_results) else {}
             score = float(sent.get("score", 0)) if isinstance(sent, dict) else 0.0
-            label = str(sent.get("label", "neutral")).lower() if isinstance(sent, dict) else "neutral"
+            label = (
+                str(sent.get("label", "neutral")).lower() if isinstance(sent, dict) else "neutral"
+            )
             if label in ("negativ", "negative"):
                 score = -abs(score)
             elif label in ("positiv", "positive"):
@@ -71,23 +73,27 @@ class TrajectoryAnalyzer(Analyzer):
             snippet = (getattr(seg, "text", None) or "")[:80]
 
             if primary in _ESCALATION_EMOTIONS:
-                escalation_event_details.append({
-                    "turn": i,
-                    "type": "emotion",
-                    "emotion": primary,
-                    "evidence": snippet,
-                })
+                escalation_event_details.append(
+                    {
+                        "turn": i,
+                        "type": "emotion",
+                        "emotion": primary,
+                        "evidence": snippet,
+                    }
+                )
                 if emo_score > peak_frustration_score:
                     peak_frustration_score = emo_score
                     peak_frustration_turn = i
 
             if prev_customer_score is not None and score < prev_customer_score - 0.3:
-                escalation_event_details.append({
-                    "turn": i,
-                    "type": "sentiment_drop",
-                    "delta": round(score - prev_customer_score, 3),
-                    "evidence": snippet,
-                })
+                escalation_event_details.append(
+                    {
+                        "turn": i,
+                        "type": "sentiment_drop",
+                        "delta": round(score - prev_customer_score, 3),
+                        "evidence": snippet,
+                    }
+                )
             prev_customer_score = score
 
         slope = 0.0

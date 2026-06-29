@@ -43,12 +43,8 @@ class TestIntentBenchmarkThresholds:
         metrics = benchmark_backend(texts, labels, backend="heuristic")
         min_f1 = eval_config["intent"]["min_macro_f1"]
         min_acc = eval_config["intent"]["min_accuracy"]
-        assert metrics["f1_macro"] >= min_f1, (
-            f"macro F1 {metrics['f1_macro']} < {min_f1}"
-        )
-        assert metrics["accuracy"] >= min_acc, (
-            f"accuracy {metrics['accuracy']} < {min_acc}"
-        )
+        assert metrics["f1_macro"] >= min_f1, f"macro F1 {metrics['f1_macro']} < {min_f1}"
+        assert metrics["accuracy"] >= min_acc, f"accuracy {metrics['accuracy']} < {min_acc}"
 
 
 class TestBaselineFiles:

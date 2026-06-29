@@ -9,6 +9,7 @@ from .base import Transcriber
 from .faster_whisper import FasterWhisperTranscriber
 from .preprocess import PreprocessMode, normalize_preprocess_mode
 from .transformers import TransformersTranscriber
+
 # whisperx is imported lazily inside the factory so that the package is only
 # required when the user actually selects backend="whisperx".
 

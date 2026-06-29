@@ -13,8 +13,8 @@ from typing import Any
 
 from nicegui import ui
 
-from app.nicegui_dashboard.components.ui_primitives import metric_card, render_section_title
 from app.nicegui_dashboard.components.transcription_adhoc import render_adhoc_section
+from app.nicegui_dashboard.components.ui_primitives import metric_card, render_section_title
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_presets import (
     DEFAULT_PRESET_ID,
@@ -30,7 +30,6 @@ from app.nicegui_dashboard.services.transcription_runtime import (
 )
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
 from app.nicegui_dashboard.settings import ws_status_label
-
 
 _LOG_LEVEL_SLOT = """
 <q-td :props="props">
@@ -89,7 +88,9 @@ def render_transcription_tab(
     with ui.row().classes("w-full gap-4 q-mb-md flex-wrap"):
         pending_metric = metric_card("Väntande", len(trans_state.queue))
         status_metric = metric_card("Status", "Pågår" if status.get("is_running") else "Vilande")
-        progress_metric = metric_card("Framsteg", f"{status.get('processed', 0)}/{status.get('total', 0)}")
+        progress_metric = metric_card(
+            "Framsteg", f"{status.get('processed', 0)}/{status.get('total', 0)}"
+        )
         api_metric = metric_card("API", "På" if status.get("use_api") else "Av")
         ws_metric = metric_card("WebSocket", ws_status_label(trans_state.ws_status))
         preset_metric = metric_card("Preset", trans_state.active_preset)
@@ -103,8 +104,12 @@ def render_transcription_tab(
     with ui.card().classes("w-full q-mb-sm"):
         last_job_label = ui.label("—").classes("text-body2")
 
-    progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes("w-full q-mb-sm")
-    current_label = ui.label(f"Aktuell fil: {status.get('current_file') or '—'}").classes("text-caption")
+    progress_bar = ui.linear_progress(value=float(status.get("progress", 0))).classes(
+        "w-full q-mb-sm"
+    )
+    current_label = ui.label(f"Aktuell fil: {status.get('current_file') or '—'}").classes(
+        "text-caption"
+    )
     poll_hint = ui.label("").classes("text-caption text-warning")
     api_limit_hint = ui.label("").classes("text-caption text-grey")
 
@@ -187,7 +192,9 @@ def render_transcription_tab(
         ui.button("Pausa", icon="pause", on_click=pause_batch)
         ui.button("Återuppta", icon="play_arrow", on_click=resume_batch)
         ui.button("Stoppa", icon="stop", color="negative", on_click=stop_batch)
-        ui.button("Avbryt jobb", icon="cancel", color="negative", on_click=cancel_batch).props("outline")
+        ui.button("Avbryt jobb", icon="cancel", color="negative", on_click=cancel_batch).props(
+            "outline"
+        )
         ui.button("Återanslut WS", icon="cable", on_click=reconnect_ws).props("outline")
         ui.button("Skanna mapp", icon="folder_open", on_click=scan_folder).props("outline")
 
@@ -273,6 +280,7 @@ def render_transcription_tab(
                 "revision", None if e.value == "standard" else e.value
             ),
         )
+
         def _set_use_api(e) -> None:
             trans_state.status["use_api"] = bool(e.value)
             trans_state.save()
@@ -348,7 +356,9 @@ def render_transcription_tab(
             value=int(settings.get("api_retries", DEFAULT_API_RETRIES)),
             min=1,
             max=5,
-            on_change=lambda e: trans_state.update_setting("api_retries", int(e.value or DEFAULT_API_RETRIES)),
+            on_change=lambda e: trans_state.update_setting(
+                "api_retries", int(e.value or DEFAULT_API_RETRIES)
+            ),
         )
         ui.checkbox(
             "API → lokal fallback",
@@ -386,12 +396,16 @@ def render_transcription_tab(
             value=scan_cfg.get("batch_size", 4),
             min=1,
             max=64,
-            on_change=lambda e: trans_state.update_setting("batch_size", int(e.value or 4), section="scan"),
+            on_change=lambda e: trans_state.update_setting(
+                "batch_size", int(e.value or 4), section="scan"
+            ),
         )
         ui.input(
             "Mönster (glob)",
             value=scan_cfg.get("pattern") or "",
-            on_change=lambda e: trans_state.update_setting("pattern", e.value or None, section="scan"),
+            on_change=lambda e: trans_state.update_setting(
+                "pattern", e.value or None, section="scan"
+            ),
         )
         ui.number(
             "Max filer (scan)",
@@ -468,7 +482,9 @@ def render_transcription_tab(
 
         with ui.row().classes("gap-2 q-mb-sm"):
             ui.button("Ta bort vald", on_click=remove_selected_queue).props("outline")
-            ui.button("Rensa kö", on_click=lambda: (trans_state.clear_queue(), refresh_queue())).props("outline")
+            ui.button(
+                "Rensa kö", on_click=lambda: (trans_state.clear_queue(), refresh_queue())
+            ).props("outline")
             ui.button("Exportera kö", on_click=export_queue).props("outline")
 
     with ui.card().classes("w-full q-mt-md"):
@@ -546,10 +562,14 @@ def render_transcription_tab(
 
         def export_log() -> None:
             data = json.dumps(trans_state.logs, indent=2, ensure_ascii=False)
-            ui.download(data.encode("utf-8"), f"transcription_log_{datetime.now():%Y%m%d_%H%M%S}.json")
+            ui.download(
+                data.encode("utf-8"), f"transcription_log_{datetime.now():%Y%m%d_%H%M%S}.json"
+            )
 
         with ui.row().classes("gap-2 q-mt-sm"):
-            ui.button("Rensa logg", on_click=lambda: (trans_state.clear_logs(), refresh_log())).props("outline")
+            ui.button(
+                "Rensa logg", on_click=lambda: (trans_state.clear_logs(), refresh_log())
+            ).props("outline")
             ui.button("Exportera logg", on_click=export_log).props("outline")
 
     def _sync_ui_from_state() -> None:
@@ -572,10 +592,7 @@ def render_transcription_tab(
         if on_report_ready and event_type == "adhoc":
             result = payload.get("result")
             if result and not payload.get("running"):
-                report_key = (
-                    payload.get("filename")
-                    or str(id(result))
-                )
+                report_key = payload.get("filename") or str(id(result))
                 if last_reported["key"] != report_key:
                     last_reported["key"] = report_key
                     from app.nicegui_dashboard.services.report_ingest import (
@@ -602,4 +619,6 @@ def render_transcription_tab(
         refresh_all()
         ui.notify("Rensat kö och logg")
 
-    ui.button("Rensa allt (kö + logg + status)", on_click=clear_everything).classes("q-mt-md").props("outline")
+    ui.button("Rensa allt (kö + logg + status)", on_click=clear_everything).classes(
+        "q-mt-md"
+    ).props("outline")

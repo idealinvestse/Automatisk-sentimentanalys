@@ -110,7 +110,11 @@ def render_pii_section_in_call_detail(report: dict[str, Any] | None = None) -> N
             "types_redacted": ["personnummer", "email", "phone"],
             "profile": "callcenter",
             "events": [
-                {"type": "personnummer", "original": "19850101-1234", "replacement": "[REDACTED_PNR]"},
+                {
+                    "type": "personnummer",
+                    "original": "19850101-1234",
+                    "replacement": "[REDACTED_PNR]",
+                },
                 {"type": "email", "original": "anna@example.se", "replacement": "[REDACTED_EMAIL]"},
                 {"type": "phone", "original": "070-123 45 67", "replacement": "[REDACTED_PHONE]"},
             ],

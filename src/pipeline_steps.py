@@ -48,7 +48,9 @@ def apply_early_pii_redaction(
         from .llm.pii_redactor import redact_segments
 
         seg_dicts = [s.to_dict() for s in segments]
-        redacted_dicts, pii_log = redact_segments(seg_dicts, profile_name=profile_name, return_log=True)
+        redacted_dicts, pii_log = redact_segments(
+            seg_dicts, profile_name=profile_name, return_log=True
+        )
         if pii_log and pii_log.total_redacted > 0:
             logger.info(
                 "PII redaction (early): %d events, types=%s",
@@ -281,9 +283,11 @@ def run_fas4_enrichment(
     use_llm = should_use_any_llm(segments or [], ctx)
     status = get_status_reporter()
     status.phase("pipeline", "fas4_enrichment", "Startar Fas 4-enrichment", use_llm=use_llm)
-    with timed_pipeline("fas4_enrichment", ctx.profile, use_llm):
-        with span("fas4_enrichment", profile=ctx.profile, use_llm=use_llm):
-            return _run_fas4_enrichment_body(segments, results, ctx)
+    with (
+        timed_pipeline("fas4_enrichment", ctx.profile, use_llm),
+        span("fas4_enrichment", profile=ctx.profile, use_llm=use_llm),
+    ):
+        return _run_fas4_enrichment_body(segments, results, ctx)
 
 
 def _run_fas4_enrichment_body(

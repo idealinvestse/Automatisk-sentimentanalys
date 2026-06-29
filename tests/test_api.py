@@ -53,8 +53,14 @@ def test_analyze_conversation_validation():
 def test_batch_transcribe_basic_shape(monkeypatch):
     # We can mock resolve + transcribe_helper at high level
     with (
-        patch("src.api.routers.transcription.resolve_and_validate_audio_paths", return_value=["/tmp/a.wav"]),
-        patch("src.api.routers.transcription.transcribe_helper", return_value={"segments": [], "model": "test"}),
+        patch(
+            "src.api.routers.transcription.resolve_and_validate_audio_paths",
+            return_value=["/tmp/a.wav"],
+        ),
+        patch(
+            "src.api.routers.transcription.transcribe_helper",
+            return_value={"segments": [], "model": "test"},
+        ),
     ):
         r = client.post(
             "/batch_transcribe",
@@ -108,7 +114,10 @@ def test_agent_performance_endpoint(monkeypatch):
         inst.get_cached_agent_performance.return_value = fake_metrics
         r = client.post(
             "/agent_performance/Agent-1",
-            json={"segments_list": [[{"text": "Hej", "start": 0, "end": 1}]], "agent_id": "Agent-1"},
+            json={
+                "segments_list": [[{"text": "Hej", "start": 0, "end": 1}]],
+                "agent_id": "Agent-1",
+            },
         )
         assert r.status_code == 200
         data = r.json()
@@ -251,6 +260,7 @@ def test_run_batch_sequential_and_timeout_per_task():
     # Parallel with timeout (the per-result path)
     def timeout_prone(p):
         import time
+
         time.sleep(0.01)
         return f"fast-{p}"
 

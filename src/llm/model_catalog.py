@@ -24,9 +24,12 @@ from typing import Any
 try:
     from .openrouter_client import get_openrouter_api_key
 except Exception:  # fallback if circular
+
     def get_openrouter_api_key(override=None):
         import os
+
         return override or os.getenv("OPENROUTER_API_KEY")
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +39,8 @@ def fetch_openrouter_models_catalog(
     api_key: str | None = None,
 ) -> dict[str, Any]:
     """Fetch all models from OpenRouter and save enriched catalog."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     url = "https://openrouter.ai/api/v1/models"
     headers = {}
@@ -64,8 +67,12 @@ def fetch_openrouter_models_catalog(
                 "pricing": {
                     "prompt_per_token_usd": float(pricing.get("prompt", 0.0) or 0.0),
                     "completion_per_token_usd": float(pricing.get("completion", 0.0) or 0.0),
-                    "prompt_per_million_usd": round(float(pricing.get("prompt", 0.0) or 0.0) * 1_000_000, 4),
-                    "completion_per_million_usd": round(float(pricing.get("completion", 0.0) or 0.0) * 1_000_000, 4),
+                    "prompt_per_million_usd": round(
+                        float(pricing.get("prompt", 0.0) or 0.0) * 1_000_000, 4
+                    ),
+                    "completion_per_million_usd": round(
+                        float(pricing.get("completion", 0.0) or 0.0) * 1_000_000, 4
+                    ),
                 },
                 "architecture": m.get("architecture", {}),
                 "top_provider": m.get("top_provider", {}),
@@ -91,7 +98,7 @@ def fetch_openrouter_models_catalog(
     except urllib.error.HTTPError as e:
         logger.error(f"OpenRouter API error {e.code}: {e.reason}")
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Model catalog scan failed")
         raise
 

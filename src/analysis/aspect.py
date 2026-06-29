@@ -24,7 +24,7 @@ import logging
 import re
 from typing import Any
 
-from ..core.models import AnalysisContext, Segment
+from ..core.models import AnalysisContext
 from .base import Analyzer
 from .registry import register_analyzer
 from .sentiment import SentimentAnalyzer  # reuse the existing sentiment logic
@@ -34,32 +34,84 @@ logger = logging.getLogger(__name__)
 # Swedish-focused call center aspect triggers (can be extended via profile later)
 ASPECT_TRIGGERS: dict[str, list[str]] = {
     "fakturering_pris": [
-        "faktura", "fakturering", "betala", "betalning", "pris", "kostar", "kostnad",
-        "pengar", "återbetalning", "kredit", "debiter", "moms", "avgift", "räkning",
-        "fakturadatum", "betalningsvillkor"
+        "faktura",
+        "fakturering",
+        "betala",
+        "betalning",
+        "pris",
+        "kostar",
+        "kostnad",
+        "pengar",
+        "återbetalning",
+        "kredit",
+        "debiter",
+        "moms",
+        "avgift",
+        "räkning",
+        "fakturadatum",
+        "betalningsvillkor",
     ],
     "kundtjänst_kvalitet": [
-        "kundtjänst", "support", "service", "hjälp", "bemötande", "svarstid",
-        "väntetid", "kö", "chatt", "telefonsupport", "ärendehantering"
+        "kundtjänst",
+        "support",
+        "service",
+        "hjälp",
+        "bemötande",
+        "svarstid",
+        "väntetid",
+        "kö",
+        "chatt",
+        "telefonsupport",
+        "ärendehantering",
     ],
     "teknisk_lösning": [
-        "teknisk", "problem", "fel", "bugg", "fungerar inte", "laddar inte",
-        "app", "webb", "login", "lösenord", "uppkoppling", "internet", "bredband"
+        "teknisk",
+        "problem",
+        "fel",
+        "bugg",
+        "fungerar inte",
+        "laddar inte",
+        "app",
+        "webb",
+        "login",
+        "lösenord",
+        "uppkoppling",
+        "internet",
+        "bredband",
     ],
-    "väntetid": [
-        "väntetid", "kö", "vänta", "lång tid", "svarstid", "dröja", "långsam"
-    ],
+    "väntetid": ["väntetid", "kö", "vänta", "lång tid", "svarstid", "dröja", "långsam"],
     "agent_attityd": [
-        "attityd", "bemötande", "snäll", "oförskämd", "hjälpsam", "oartigt",
-        "förstår", "beklagar", "tack", "empati", "lyssnar"
+        "attityd",
+        "bemötande",
+        "snäll",
+        "oförskämd",
+        "hjälpsam",
+        "oartigt",
+        "förstår",
+        "beklagar",
+        "tack",
+        "empati",
+        "lyssnar",
     ],
     "produkt_kvalitet": [
-        "produkt", "kvalitet", "bra", "dålig", "funkar", "inte funkar", "defekt",
-        "retur", "reklamation"
+        "produkt",
+        "kvalitet",
+        "bra",
+        "dålig",
+        "funkar",
+        "inte funkar",
+        "defekt",
+        "retur",
+        "reklamation",
     ],
     "uppföljning": [
-        "uppföljning", "återkoppling", "återkomma", "höra av sig", "kontakta igen",
-        "oppföljning", "follow up"
+        "uppföljning",
+        "återkoppling",
+        "återkomma",
+        "höra av sig",
+        "kontakta igen",
+        "oppföljning",
+        "follow up",
     ],
 }
 
@@ -122,15 +174,17 @@ class AspectAnalyzer(Analyzer):
 
             for aspect in matched_aspects:
                 evidence = self._extract_evidence(text, aspect)
-                results.append({
-                    "aspect": aspect,
-                    "sentiment": sent.get("label", "neutral"),
-                    "score": float(sent.get("score", 0.0)),
-                    "evidence": evidence,
-                    "start": seg.start,
-                    "end": seg.end,
-                    "speaker": getattr(seg, "speaker", None),
-                })
+                results.append(
+                    {
+                        "aspect": aspect,
+                        "sentiment": sent.get("label", "neutral"),
+                        "score": float(sent.get("score", 0.0)),
+                        "evidence": evidence,
+                        "start": seg.start,
+                        "end": seg.end,
+                        "speaker": getattr(seg, "speaker", None),
+                    }
+                )
 
         logger.debug("ABSA found %d aspect mentions", len(results))
         return results

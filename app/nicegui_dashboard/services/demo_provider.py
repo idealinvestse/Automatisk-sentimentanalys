@@ -130,11 +130,7 @@ def reports_to_table_rows(reports: list[dict[str, Any]]) -> list[dict[str, Any]]
         display_score = qa_score if qa_score is not None else "—"
         alerts = (r.get("results") or {}).get("alerts") or []
         alert_count = len(alerts) if isinstance(alerts, list) else 0
-        risk_level = (
-            qa.get("risk_level")
-            or (r.get("risks") or {}).get("risk_level")
-            or "—"
-        )
+        risk_level = qa.get("risk_level") or (r.get("risks") or {}).get("risk_level") or "—"
         rows.append(
             {
                 "call_id": call_id,

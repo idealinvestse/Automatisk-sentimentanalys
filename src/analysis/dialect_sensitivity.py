@@ -74,14 +74,16 @@ class DialectSensitivityAnalyzer(Analyzer):
                 hits.append("slang")
 
             if hits:
-                flagged.append({
-                    "speaker": getattr(seg, "speaker", None),
-                    "start": getattr(seg, "start", 0),
-                    "end": getattr(seg, "end", 0),
-                    "detected": hits,
-                    "confidence_impact": "medium" if len(hits) > 1 else "low",
-                    "text_snippet": seg.text[:70] if seg.text else "",
-                })
+                flagged.append(
+                    {
+                        "speaker": getattr(seg, "speaker", None),
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "detected": hits,
+                        "confidence_impact": "medium" if len(hits) > 1 else "low",
+                        "text_snippet": seg.text[:70] if seg.text else "",
+                    }
+                )
 
         risk = "high" if dialect_hits > 3 or slang_hits > 2 else ("medium" if flagged else "low")
 
@@ -90,5 +92,9 @@ class DialectSensitivityAnalyzer(Analyzer):
             "flagged_segments": flagged,
             "total_dialect_hits": dialect_hits,
             "slang_count": slang_hits,
-            "recommendation": "Överväg bättre dialekt-anpassad ASR-modell" if risk == "high" else "Inga större dialekt-problem",
+            "recommendation": (
+                "Överväg bättre dialekt-anpassad ASR-modell"
+                if risk == "high"
+                else "Inga större dialekt-problem"
+            ),
         }

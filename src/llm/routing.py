@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ DEFAULT_MODELS = {
 }
 
 
-class RoutingTier(str, Enum):
+class RoutingTier(StrEnum):
     FAST = "fast"
     BALANCED = "balanced"
     DEEP = "deep"

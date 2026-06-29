@@ -43,8 +43,7 @@ def filter_segments_with_index(
     return [
         (i, seg)
         for i, seg in enumerate(enriched)
-        if query in str(seg.get("text", "")).lower()
-        or query in str(seg.get("speaker", "")).lower()
+        if query in str(seg.get("text", "")).lower() or query in str(seg.get("speaker", "")).lower()
     ]
 
 

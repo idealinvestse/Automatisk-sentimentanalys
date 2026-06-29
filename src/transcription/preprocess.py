@@ -34,9 +34,10 @@ import logging
 import os
 import subprocess
 import tempfile
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
-from typing import Iterator, Literal
+from typing import Literal
 
 import numpy as np
 
@@ -116,10 +117,8 @@ def _numpy_to_wav(audio: np.ndarray, output_path: str, sr: int = 16000) -> None:
 def _cleanup_paths(paths: list[str], *, exclude: str) -> None:
     for p in paths:
         if p and p != exclude and os.path.exists(p):
-            try:
+            with suppress(OSError):
                 os.unlink(p)
-            except OSError:
-                pass
 
 
 def preprocess_audio(
@@ -175,7 +174,6 @@ def preprocess_audio(
         if noise_reduction:
             try:
                 import noisereduce as nr  # type: ignore
-
                 from faster_whisper.audio import decode_audio  # type: ignore
 
                 audio = decode_audio(current_path)
@@ -269,7 +267,9 @@ def prepare_asr_audio(
         logger.info("Preprocessing enabled | mode=%s | path=%s", mode, handle.path)
         return handle, mode
     except Exception as exc:
-        logger.warning("Preprocessing failed (mode=%s), falling back to original audio: %s", mode, exc)
+        logger.warning(
+            "Preprocessing failed (mode=%s), falling back to original audio: %s", mode, exc
+        )
         return (
             PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path),
             "off",

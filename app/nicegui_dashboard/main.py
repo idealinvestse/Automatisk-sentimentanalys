@@ -26,8 +26,8 @@ from app.nicegui_dashboard.components.overview import render_overview_tab
 from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
 from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, load_reports_from_api
-from app.nicegui_dashboard.services.report_ingest import append_report_to_state
 from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
+from app.nicegui_dashboard.services.report_ingest import append_report_to_state
 from app.nicegui_dashboard.services.transcription_service import create_transcription_state
 from app.nicegui_dashboard.services.ui_helpers import notify_error, notify_success, notify_warning
 from app.nicegui_dashboard.settings import is_dev_mode

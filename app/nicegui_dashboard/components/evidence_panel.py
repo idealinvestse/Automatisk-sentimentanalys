@@ -7,7 +7,6 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.empty_state import render_empty_state
-from app.nicegui_dashboard.components.ui_primitives import render_section_title
 from app.services.data_services import get_evidence_quotes
 
 

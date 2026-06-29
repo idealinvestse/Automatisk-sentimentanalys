@@ -39,7 +39,12 @@ class CustomerEffortScoreAnalyzer(Analyzer):
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         if not ctx.segments:
-            return {"overall_ces": 0, "scale": "0-100 (högre = mer effort/frustration)", "per_segment": [], "coaching_tips": []}
+            return {
+                "overall_ces": 0,
+                "scale": "0-100 (högre = mer effort/frustration)",
+                "per_segment": [],
+                "coaching_tips": [],
+            }
 
         results = []
         total_effort = 0.0
@@ -56,16 +61,18 @@ class CustomerEffortScoreAnalyzer(Analyzer):
             effort = min(100.0, fillers * 7 + clarifs * 12 + reps * 2.5 + max(0, dur - 20) * 0.6)
             total_effort += effort
 
-            results.append({
-                "speaker": getattr(seg, "speaker", None),
-                "start": getattr(seg, "start", 0),
-                "end": getattr(seg, "end", 0),
-                "effort_score": round(effort, 1),
-                "fillers": fillers,
-                "clarifications": clarifs,
-                "repetitions": reps,
-                "duration_s": round(dur, 1),
-            })
+            results.append(
+                {
+                    "speaker": getattr(seg, "speaker", None),
+                    "start": getattr(seg, "start", 0),
+                    "end": getattr(seg, "end", 0),
+                    "effort_score": round(effort, 1),
+                    "fillers": fillers,
+                    "clarifications": clarifs,
+                    "repetitions": reps,
+                    "duration_s": round(dur, 1),
+                }
+            )
 
         overall = round(total_effort / max(1, n), 1)
         tips = []

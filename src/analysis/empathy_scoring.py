@@ -21,9 +21,17 @@ from .registry import register_analyzer
 logger = logging.getLogger(__name__)
 
 EMPATHY_POSITIVE = [
-    "förstår", "beklagar", "tyvärr", "jag hör", "jag förstår", 
-    "det låter", "jag kan tänka mig", "det måste vara", "tack för att du",
-    "jag ska hjälpa", "vi fixar det"
+    "förstår",
+    "beklagar",
+    "tyvärr",
+    "jag hör",
+    "jag förstår",
+    "det låter",
+    "jag kan tänka mig",
+    "det måste vara",
+    "tack för att du",
+    "jag ska hjälpa",
+    "vi fixar det",
 ]
 EMPATHY_NEGATIVE = ["det är ditt fel", "du måste", "jag kan inte", "det går inte"]
 
@@ -43,7 +51,12 @@ class EmpathyScoringAnalyzer(Analyzer):
 
     def analyze(self, ctx: AnalysisContext) -> dict[str, Any]:
         if not ctx.segments:
-            return {"overall_empathy": 50, "scale": "0-100 (högre = bättre empati)", "per_segment": [], "coaching_tips": []}
+            return {
+                "overall_empathy": 50,
+                "scale": "0-100 (högre = bättre empati)",
+                "per_segment": [],
+                "coaching_tips": [],
+            }
 
         results = []
         total = 0.0
@@ -76,24 +89,32 @@ class EmpathyScoringAnalyzer(Analyzer):
 
             tips = []
             if score < 45:
-                tips.append("Använd mer validerande språk: 'Jag förstår att det här är frustrerande'")
+                tips.append(
+                    "Använd mer validerande språk: 'Jag förstår att det här är frustrerande'"
+                )
             if neg > 0:
                 tips.append("Undvik att skylla på kunden")
 
-            results.append({
-                "speaker": getattr(seg, "speaker", None),
-                "start": getattr(seg, "start", 0),
-                "end": getattr(seg, "end", 0),
-                "empathy_score": round(score, 1),
-                "positive_markers": pos,
-                "negative_markers": neg,
-                "evidence": seg.text[:100] if seg.text else "",
-                "tips": tips,
-            })
+            results.append(
+                {
+                    "speaker": getattr(seg, "speaker", None),
+                    "start": getattr(seg, "start", 0),
+                    "end": getattr(seg, "end", 0),
+                    "empathy_score": round(score, 1),
+                    "positive_markers": pos,
+                    "negative_markers": neg,
+                    "evidence": seg.text[:100] if seg.text else "",
+                    "tips": tips,
+                }
+            )
             total += score
 
         overall = round(total / max(1, n), 1)
-        global_tips = ["Träna aktiva lyssnarfraser", "Validera känslor tidigt i samtalet"] if overall < 55 else []
+        global_tips = (
+            ["Träna aktiva lyssnarfraser", "Validera känslor tidigt i samtalet"]
+            if overall < 55
+            else []
+        )
 
         return {
             "overall_empathy": overall,

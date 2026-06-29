@@ -83,9 +83,15 @@ class SearchHit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(..., description="Identifier for the call/document (e.g. filename or index)")
-    score: float = Field(..., ge=0.0, description="Hybrid relevance (0-1 or higher for strong matches)")
-    highlights: list[str] = Field(default_factory=list, description="Snippets/evidence that matched the query")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="topic, sentiment, agent, timestamp etc.")
+    score: float = Field(
+        ..., ge=0.0, description="Hybrid relevance (0-1 or higher for strong matches)"
+    )
+    highlights: list[str] = Field(
+        default_factory=list, description="Snippets/evidence that matched the query"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="topic, sentiment, agent, timestamp etc."
+    )
     evidence_spans: list[EvidenceSpan] = Field(default_factory=list)
 
 
@@ -96,13 +102,15 @@ class SemanticSearchResult(BaseModel):
 
     query: str
     hits: list[SearchHit]
-    meta: dict[str, Any] = Field(default_factory=dict, description="used_vector, used_keyword, num_docs, filters etc.")
+    meta: dict[str, Any] = Field(
+        default_factory=dict, description="used_vector, used_keyword, num_docs, filters etc."
+    )
 
 
 def _cosine_sim(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(x * x for x in b))
     return dot / (na * nb) if na > 0 and nb > 0 else 0.0
@@ -143,7 +151,7 @@ class SemanticSearchEngine:
             return [self._embed_cache[key]] * len(texts)  # simplistic; real would per-text
         try:
             embs = model.encode(texts, show_progress_bar=False, normalize_embeddings=True).tolist()
-            for t, e in zip(texts, embs):
+            for t, e in zip(texts, embs, strict=False):
                 self._embed_cache[_hash_texts([t])] = e
             return embs
         except Exception:
@@ -162,7 +170,9 @@ class SemanticSearchEngine:
             doc = {
                 "id": str(item.get(id_field, len(self.docs))),
                 "text": " ".join(str(item.get(f, "")) for f in text_fields if item.get(f)),
-                "metadata": {k: v for k, v in item.items() if k not in list(text_fields) + [id_field]},
+                "metadata": {
+                    k: v for k, v in item.items() if k not in list(text_fields) + [id_field]
+                },
             }
             self.docs.append(doc)
             texts_for_embed.append(doc["text"][:2000])
@@ -181,7 +191,9 @@ class SemanticSearchEngine:
                 logger.warning("FAISS index build failed, falling back to brute: %s", e)
                 self._faiss_index = None
 
-        logger.info("Semantic index built | docs=%d vector=%s", len(self.docs), bool(self.embeddings))
+        logger.info(
+            "Semantic index built | docs=%d vector=%s", len(self.docs), bool(self.embeddings)
+        )
 
     def search(
         self,
@@ -284,7 +296,9 @@ def _hash_texts(texts: list[str]) -> str:
 
 
 # Pipeline convenience
-def build_semantic_index_from_reports(reports: list[CallAnalysisReport | dict]) -> SemanticSearchEngine:
+def build_semantic_index_from_reports(
+    reports: list[CallAnalysisReport | dict],
+) -> SemanticSearchEngine:
     """Helper to build a search index directly from Fas4 reports (used by pipeline)."""
     engine = SemanticSearchEngine()
     docs = []
@@ -302,14 +316,17 @@ def build_semantic_index_from_reports(reports: list[CallAnalysisReport | dict]) 
             text_parts.append(str(llm["actionable_summary"].get("problem", "")))
         if llm.get("root_cause"):
             text_parts.append(str(llm["root_cause"].get("primary_cause", "")))
-        docs.append({
-            "id": d.get("file") or str(i),
-            "text": " ".join(text_parts),
-            "topics": (d.get("topics") or {}).get("topics", []),
-            "sentiment_summary": (d.get("results") or {}).get("sentiment", []),
-            "agent_performance": (d.get("results") or {}).get("agent_performance"),
-            "qa": (d.get("results") or {}).get("qa") or (d.get("results") or {}).get("compliance_qa"),
-        })
+        docs.append(
+            {
+                "id": d.get("file") or str(i),
+                "text": " ".join(text_parts),
+                "topics": (d.get("topics") or {}).get("topics", []),
+                "sentiment_summary": (d.get("results") or {}).get("sentiment", []),
+                "agent_performance": (d.get("results") or {}).get("agent_performance"),
+                "qa": (d.get("results") or {}).get("qa")
+                or (d.get("results") or {}).get("compliance_qa"),
+            }
+        )
     engine.index(docs)
     return engine
 

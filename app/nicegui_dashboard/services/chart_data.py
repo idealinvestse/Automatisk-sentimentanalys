@@ -342,10 +342,7 @@ def build_escalation_figure(rows: list[dict[str, Any]]) -> go.Figure:
             x=[r["call_id"] for r in rows],
             y=[r.get("escalation", 0) for r in rows],
             marker={"color": colors},
-            customdata=[
-                [r["call_id"], r.get("title", ""), r.get("agent", "")]
-                for r in rows
-            ],
+            customdata=[[r["call_id"], r.get("title", ""), r.get("agent", "")] for r in rows],
             hovertemplate=(
                 "<b>%{customdata[0]}</b><br>"
                 "%{customdata[1]}<br>"
@@ -373,8 +370,10 @@ def compute_sentiment_distribution(reports: list[dict[str, Any]]) -> list[dict[s
     counter: Counter[str] = Counter()
     for report in reports:
         label = get_overall_sentiment(report).get("label", "neutral")
-        display = "Positiv" if "pos" in str(label).lower() else (
-            "Negativ" if "neg" in str(label).lower() else "Neutral"
+        display = (
+            "Positiv"
+            if "pos" in str(label).lower()
+            else ("Negativ" if "neg" in str(label).lower() else "Neutral")
         )
         counter[display] += 1
     total = max(1, len(reports))
@@ -444,7 +443,7 @@ def segment_index_from_trajectory_x(report: dict[str, Any] | None, x_value: floa
 
 def call_id_from_plotly_click(event: dict[str, Any]) -> str | None:
     """Extract call_id from NiceGUI plotly_click event args."""
-    points = (event.get("points") or event.get("data", {}).get("points") or [])
+    points = event.get("points") or event.get("data", {}).get("points") or []
     if not points:
         args = event if isinstance(event, dict) else {}
         if "points" in args:

@@ -61,7 +61,7 @@ from ..core.models import Segment
 from .openrouter_client import OpenRouterClient
 from .pii_redactor import redact_segments
 from .prompts import build_user_prompt, get_system_prompt
-from .schemas import CallLLMOutput, LLM_OUTPUT_JSON_SCHEMA
+from .schemas import LLM_OUTPUT_JSON_SCHEMA, CallLLMOutput
 from .transcript_utils import build_role_labeled_transcript, make_transcript_hash
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class ConversationMistralAnalyzer:
         model: str | None = None,
         temperature: float = 0.15,
         max_tokens: int = 4096,
-        api_key: str | None = None,   # convenience: pass key directly (e.g. from dashboard override)
+        api_key: str | None = None,  # convenience: pass key directly (e.g. from dashboard override)
     ) -> None:
         if client is not None:
             self.client = client
@@ -134,7 +134,9 @@ class ConversationMistralAnalyzer:
 
         # Optional PII redaction before any external LLM call (Fas 3.4 follow-up)
         segments_for_llm = redact_segments(segments, profile_name=profile_name)
-        anonymized = segments_for_llm is not segments  # simple heuristic: if list identity changed or content redacted
+        anonymized = (
+            segments_for_llm is not segments
+        )  # simple heuristic: if list identity changed or content redacted
 
         transcript = _build_role_labeled_transcript(segments_for_llm, role_map)
         transcript_hash = _make_transcript_hash(transcript, role_map)
@@ -144,15 +146,28 @@ class ConversationMistralAnalyzer:
         if local_results:
             # Only forward small, high-value signals
             local_ctx = {
-                "role_inference": (local_results.get("role") or {}).get("roles") if isinstance(local_results.get("role"), dict) else local_results.get("role"),
+                "role_inference": (
+                    (local_results.get("role") or {}).get("roles")
+                    if isinstance(local_results.get("role"), dict)
+                    else local_results.get("role")
+                ),
                 "sentiment_summary": self._summarize_sentiment(local_results.get("sentiment")),
-                "escalation_from_local": local_results.get("trajectory", {}).get("escalation_events"),
+                "escalation_from_local": local_results.get("trajectory", {}).get(
+                    "escalation_events"
+                ),
                 # Fas 4.1.1 + 4.1.2: forward local quantitative metrics so LLM can produce evidence-based coaching merged with numbers
-                "agent_performance_local": local_results.get("agent_performance") or local_results.get("agent_assessment_local"),
+                "agent_performance_local": local_results.get("agent_performance")
+                or local_results.get("agent_assessment_local"),
             }
 
-        local_ctx_str = json.dumps(local_ctx, ensure_ascii=False, indent=2) if local_ctx else "Ingen tidigare analys."
-        user_prompt = build_user_prompt(transcript, local_context={"summary": local_ctx_str}, tasks=tasks)
+        local_ctx_str = (
+            json.dumps(local_ctx, ensure_ascii=False, indent=2)
+            if local_ctx
+            else "Ingen tidigare analys."
+        )
+        user_prompt = build_user_prompt(
+            transcript, local_context={"summary": local_ctx_str}, tasks=tasks
+        )
 
         messages = [
             {"role": "system", "content": get_system_prompt()},
@@ -178,7 +193,13 @@ class ConversationMistralAnalyzer:
 
             # Merge client meta into the model meta
             output = validated.model_dump()
-            output["meta"] = {**validated.meta, **meta, "profile": profile_name, "tasks": tasks, "pii_redacted": bool(anonymized)}
+            output["meta"] = {
+                **validated.meta,
+                **meta,
+                "profile": profile_name,
+                "tasks": tasks,
+                "pii_redacted": bool(anonymized),
+            }
 
             # Ensure we always have the top-level model key for convenience
             if "model" not in output["meta"]:
@@ -209,7 +230,11 @@ class ConversationMistralAnalyzer:
     def _summarize_sentiment(sentiment_results: Any) -> dict[str, Any]:
         if not isinstance(sentiment_results, list):
             return {}
-        neg = sum(1 for s in sentiment_results if isinstance(s, dict) and s.get("label") in ("negativ", "negative"))
+        neg = sum(
+            1
+            for s in sentiment_results
+            if isinstance(s, dict) and s.get("label") in ("negativ", "negative")
+        )
         return {
             "count": len(sentiment_results),
             "negative_count": neg,

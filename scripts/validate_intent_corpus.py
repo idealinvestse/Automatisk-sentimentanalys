@@ -64,9 +64,7 @@ def validate_corpus(
     keys = [(r["text"].lower().strip(), r["intent"]) for r in rows]
     dup_ratio = 1.0 - len(set(keys)) / len(keys)
     if dup_ratio > max_duplicate_ratio:
-        raise ValueError(
-            f"Duplicate ratio {dup_ratio:.2%} exceeds max {max_duplicate_ratio:.0%}"
-        )
+        raise ValueError(f"Duplicate ratio {dup_ratio:.2%} exceeds max {max_duplicate_ratio:.0%}")
 
     return {
         "rows": len(rows),

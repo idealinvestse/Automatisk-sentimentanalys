@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from src.install.asr_assets import (
     AsrAssetReport,
@@ -15,7 +13,6 @@ from src.install.asr_assets import (
     ensure_asr_assets,
     hf_repo_cached,
     install_asr_packages,
-    is_module_installed,
 )
 
 

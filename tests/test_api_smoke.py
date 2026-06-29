@@ -131,9 +131,8 @@ def test_production_guard_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("API_REQUIRE_AUTH", "true")
     monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
     get_api_settings.cache_clear()
-    from src.core.errors import ConfigurationError
-
     from src.api.settings import validate_production_settings
+    from src.core.errors import ConfigurationError
 
     settings = get_api_settings()
     with pytest.raises(ConfigurationError, match="SENTIMENT_API_KEY"):
@@ -144,9 +143,8 @@ def test_production_guard_requires_media_root(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("API_REQUIRE_MEDIA_ROOT", "true")
     monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
     get_api_settings.cache_clear()
-    from src.core.errors import ConfigurationError
-
     from src.api.settings import validate_production_settings
+    from src.core.errors import ConfigurationError
 
     settings = get_api_settings()
     with pytest.raises(ConfigurationError, match="API_MEDIA_ROOT"):

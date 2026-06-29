@@ -67,9 +67,7 @@ def compute_metrics(eval_pred):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Fine-tune Swedish BERT for intent classification"
-    )
+    parser = argparse.ArgumentParser(description="Fine-tune Swedish BERT for intent classification")
     parser.add_argument("--train", required=True, help="Path to training JSONL")
     parser.add_argument("--output", required=True, help="Output directory for model")
     parser.add_argument(

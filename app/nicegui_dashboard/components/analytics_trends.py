@@ -11,10 +11,14 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.call_detail import find_report
-from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.emotion_timeline import render_emotion_timeline
+from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.hot_topic_wordcloud import render_hot_topics_wordcloud
-from app.nicegui_dashboard.components.ui_primitives import metric_card, render_section_title, render_tab_header
+from app.nicegui_dashboard.components.ui_primitives import (
+    metric_card,
+    render_section_title,
+    render_tab_header,
+)
 from app.nicegui_dashboard.services.analytics_summary import (
     build_calls_overview_rows,
     compute_call_snapshot,
@@ -126,7 +130,9 @@ def render_analytics_tab(
             metric_card("Negativa", f"{kpis.get('neg_pct', 0)}%", color="negative", size="compact")
             qa_val = f"{kpis['qa_avg']}/100" if kpis.get("qa_avg") is not None else "—"
             metric_card("QA-snitt", qa_val, color="warning", size="compact")
-            metric_card("Aviseringar", kpis.get("alerts_count", 0), color="negative", size="compact")
+            metric_card(
+                "Aviseringar", kpis.get("alerts_count", 0), color="negative", size="compact"
+            )
             empathy_val = kpis.get("avg_empathy")
             metric_card(
                 "Snitt empati",
@@ -201,14 +207,18 @@ def render_analytics_tab(
         with ui.row().classes("w-full gap-4 flex-wrap"):
             with ui.card().classes("flex-1 min-w-card"):
                 render_section_title("Sentimentfördelning", icon="pie_chart")
-                ui.plotly(build_sentiment_distribution_figure(reports)).classes("w-full chart-container")
+                ui.plotly(build_sentiment_distribution_figure(reports)).classes(
+                    "w-full chart-container"
+                )
 
             with ui.card().classes("flex-1 min-w-card"):
                 render_section_title("Kundsentiment över tid", icon="show_chart")
                 ui.label(
                     "Per segment med glidande medel – negativa toppar markerar eskaleringsrisk."
                 ).classes("text-caption text-grey q-mb-xs")
-                traj_plot = ui.plotly(build_trajectory_figure(report)).classes("w-full chart-container")
+                traj_plot = ui.plotly(build_trajectory_figure(report)).classes(
+                    "w-full chart-container"
+                )
                 traj_plot.on("plotly_click", _handle_plotly_click)
 
             with ui.card().classes("flex-1 min-w-card"):
@@ -216,7 +226,9 @@ def render_analytics_tab(
                 ui.label("Empati och QA per samtal – streckad linje visar snittempati.").classes(
                     "text-caption text-grey q-mb-xs"
                 )
-                agent_plot = ui.plotly(build_agent_trends_figure(trend_rows)).classes("w-full chart-container")
+                agent_plot = ui.plotly(build_agent_trends_figure(trend_rows)).classes(
+                    "w-full chart-container"
+                )
                 agent_plot.on("plotly_click", _handle_plotly_click)
 
         with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
@@ -226,8 +238,12 @@ def render_analytics_tab(
 
             with ui.card().classes("flex-1 min-w-card"):
                 render_section_title("Eskaleringstrender", icon="warning")
-                ui.label("Antal aviseringar och risk per samtal.").classes("text-caption text-grey q-mb-xs")
-                esc_plot = ui.plotly(build_escalation_figure(trend_rows)).classes("w-full chart-container")
+                ui.label("Antal aviseringar och risk per samtal.").classes(
+                    "text-caption text-grey q-mb-xs"
+                )
+                esc_plot = ui.plotly(build_escalation_figure(trend_rows)).classes(
+                    "w-full chart-container"
+                )
                 esc_plot.on("plotly_click", _handle_plotly_click)
 
         with ui.row().classes("w-full gap-4 flex-wrap q-mt-md"):
@@ -257,10 +273,20 @@ def render_analytics_tab(
                     {"name": "call_id", "label": "ID", "field": "call_id", "align": "left"},
                     {"name": "title", "label": "Ämne", "field": "title", "align": "left"},
                     {"name": "agent", "label": "Agent", "field": "agent", "align": "left"},
-                    {"name": "sentiment", "label": "Sentiment", "field": "sentiment", "align": "left"},
+                    {
+                        "name": "sentiment",
+                        "label": "Sentiment",
+                        "field": "sentiment",
+                        "align": "left",
+                    },
                     {"name": "empathy", "label": "Empati", "field": "empathy", "align": "left"},
                     {"name": "qa", "label": "QA", "field": "qa", "align": "left"},
-                    {"name": "escalation", "label": "Aviseringar", "field": "escalation", "align": "left"},
+                    {
+                        "name": "escalation",
+                        "label": "Aviseringar",
+                        "field": "escalation",
+                        "align": "left",
+                    },
                     {"name": "segments", "label": "Segment", "field": "segments", "align": "left"},
                     {"name": "trend", "label": "Trend", "field": "trend", "align": "left"},
                 ],

@@ -51,7 +51,11 @@ def test_sentiment_csv_input(monkeypatch, tmp_path):
 
     result = runner.invoke(app, ["sentiment", "--csv-file", str(csvp), "--text-column", "text"])
     assert result.exit_code == 0
-    assert "positiv" in result.output or "negativ" in result.output or "csv" in (result.output or "").lower()
+    assert (
+        "positiv" in result.output
+        or "negativ" in result.output
+        or "csv" in (result.output or "").lower()
+    )
 
 
 def test_sentiment_with_lexicon_file(monkeypatch, tmp_path):
@@ -64,7 +68,14 @@ def test_sentiment_with_lexicon_file(monkeypatch, tmp_path):
         # Simulate analyze_smart: returns (scores, meta) and records lexicon args as the CLI now passes them through
         called["lex"] = kwargs.get("lexicon_file")
         called["w"] = kwargs.get("lexicon_weight")
-        res = [[{"label": "positiv", "score": 0.6}, {"label": "neutral", "score": 0.3}, {"label": "negativ", "score": 0.1}] for _ in texts]
+        res = [
+            [
+                {"label": "positiv", "score": 0.6},
+                {"label": "neutral", "score": 0.3},
+                {"label": "negativ", "score": 0.1},
+            ]
+            for _ in texts
+        ]
         meta = {
             "profile": kwargs.get("profile") or "forum",
             "model": "fake",

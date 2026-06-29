@@ -34,14 +34,16 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 try:
     import redis  # type: ignore
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -54,7 +56,7 @@ class AggregateCache:
     def __init__(
         self,
         use_redis: bool = False,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         cache_dir: str = ".cache/aggregates",
         default_ttl: int = 3600 * 24,  # 24h
     ):
@@ -63,7 +65,9 @@ class AggregateCache:
         self.redis_client = None
         if self.use_redis:
             try:
-                self.redis_client = redis.from_url(redis_url or "redis://localhost:6379/0", decode_responses=True)
+                self.redis_client = redis.from_url(
+                    redis_url or "redis://localhost:6379/0", decode_responses=True
+                )
                 self.redis_client.ping()
                 logger.info("AggregateCache using Redis")
             except Exception as e:
@@ -82,7 +86,7 @@ class AggregateCache:
         safe = hashlib.md5(key.encode()).hexdigest()
         return self.cache_dir / f"{safe}.json"
 
-    def get(self, key: str) -> Optional[dict[str, Any]]:
+    def get(self, key: str) -> dict[str, Any] | None:
         from .core.metrics import record_cache_operation
 
         if self.redis_client:
@@ -102,7 +106,7 @@ class AggregateCache:
         path = self._file_path(key)
         if path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     val = json.load(f)
                 if self._is_valid(val):
                     logger.debug("Aggregate cache HIT (file): %s", key)
@@ -123,7 +127,7 @@ class AggregateCache:
         except Exception:
             return True
 
-    def set(self, key: str, value: dict[str, Any], ttl: Optional[int] = None):
+    def set(self, key: str, value: dict[str, Any], ttl: int | None = None):
         if ttl is None:
             ttl = self.default_ttl
         payload = {**value, "computed_at": datetime.now().isoformat(), "ttl": ttl}
@@ -173,7 +177,7 @@ def precompute_and_cache(
     cache: AggregateCache,
     key: str,
     compute_fn: Callable[[], dict[str, Any]],
-    ttl: Optional[int] = None,
+    ttl: int | None = None,
 ) -> dict[str, Any]:
     """Generic precompute wrapper with cache + invalidation support.
 
@@ -194,17 +198,18 @@ def precompute_and_cache(
 
 # Concrete precompute helpers (use existing aggregate fns)
 
+
 def precompute_agent_aggregates(
     reports: list[Any],  # list of CallAnalysisReport or dicts
-    cache: Optional[AggregateCache] = None,
-    agent_id: Optional[str] = None,
+    cache: AggregateCache | None = None,
+    agent_id: str | None = None,
     window: str = "7d",
 ) -> dict[str, Any]:
     """Pre-compute agent or team aggregates with caching."""
     from .agent_performance import (
+        CallAgentPerformance,
         aggregate_agent_performance,
         aggregate_team_performance,
-        CallAgentPerformance,
     )
 
     key = f"agent:{agent_id or 'team'}:{window}:{len(reports)}"
@@ -233,11 +238,11 @@ def precompute_agent_aggregates(
 
 def precompute_hot_topics(
     reports: list[Any],
-    cache: Optional[AggregateCache] = None,
+    cache: AggregateCache | None = None,
     window: str = "7d",
 ) -> dict[str, Any]:
     """Pre-compute hot topics (calls aggregator)."""
-    from .insights_aggregator import InsightsAggregator, AggregatedInsights
+    from .insights_aggregator import AggregatedInsights, InsightsAggregator
 
     key = f"hot_topics:{window}:{len(reports)}"
 

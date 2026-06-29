@@ -129,7 +129,11 @@ def parse_sample_metadata(audio_path: Path, pack: SamplePack) -> ParsedMetadata:
             scenario=meta.get("scenario"),
             speakers=meta.get("speakers"),
             notes=meta.get("notes"),
-            extra={k: v for k, v in meta.items() if k not in {"expected_sentiment", "scenario", "speakers", "notes"}},
+            extra={
+                k: v
+                for k, v in meta.items()
+                if k not in {"expected_sentiment", "scenario", "speakers", "notes"}
+            },
         )
     return ParsedMetadata(parser=pack.parser)
 

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, NiceGUIAPIClient
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
 from app.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
 from src.api import app
+from src.api.app import create_app
 from src.api.settings import get_api_settings
 from src.api.transcription_events import TranscriptionEventHub, get_hub
 
@@ -97,18 +99,15 @@ def test_ws_listener_url_builds() -> None:
 def test_ws_transcription_rejects_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
     get_api_settings.cache_clear()
-    authed_app = __import__("src.api.app", fromlist=["create_app"]).create_app()
-    authed_client = TestClient(authed_app)
-    with pytest.raises(Exception):
-        with authed_client.websocket_connect("/ws/transcription"):
-            pass
+    authed_client = TestClient(create_app())
+    with pytest.raises(WebSocketDisconnect), authed_client.websocket_connect("/ws/transcription"):
+        pass
 
 
 def test_ws_transcription_accepts_header_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
     get_api_settings.cache_clear()
-    authed_app = __import__("src.api.app", fromlist=["create_app"]).create_app()
-    authed_client = TestClient(authed_app)
+    authed_client = TestClient(create_app())
     with authed_client.websocket_connect(
         "/ws/transcription",
         headers={"X-API-Key": "secret-key"},

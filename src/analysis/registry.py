@@ -275,9 +275,7 @@ def _resolve_to_run(
         to_run.add(name)
         for req in req_map.get(name, []):
             if req not in registered_names:
-                logger.warning(
-                    "Required analyzer '%s' for '%s' is not registered!", req, name
-                )
+                logger.warning("Required analyzer '%s' for '%s' is not registered!", req, name)
             resolve_deps(req)
 
     for s in selected:
@@ -318,7 +316,9 @@ def _analyzer_error_result(name: str, exc: Exception) -> dict[str, Any]:
     }
 
 
-def _run_single_sync(name: str, analyzer: Analyzer, ctx: AnalysisContext, validation_mode: ValidationMode) -> None:
+def _run_single_sync(
+    name: str, analyzer: Analyzer, ctx: AnalysisContext, validation_mode: ValidationMode
+) -> None:
     if not _deps_satisfied(analyzer, ctx):
         return
     status = get_status_reporter()

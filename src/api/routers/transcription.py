@@ -7,10 +7,10 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..helpers import asr_kwargs_from, transcribe_helper
+from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
 from ..schemas import (
     BatchTranscribeItem,
@@ -125,7 +125,9 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
 
 
 @router.post("/batch_transcribe", response_model=BatchTranscribeResponse)
-async def batch_transcribe(req: BatchTranscribeRequest, request: Request) -> BatchTranscribeResponse:
+async def batch_transcribe(
+    req: BatchTranscribeRequest, request: Request
+) -> BatchTranscribeResponse:
     """Transcribe multiple audio files, optionally in parallel."""
     job_id = _job_id(request)
     hub = get_hub(request.app)
@@ -196,7 +198,11 @@ async def batch_transcribe(req: BatchTranscribeRequest, request: Request) -> Bat
                 items.append(BatchTranscribeItem(file=path, error=str(error)))
                 failed += 1
         cancelled = registry.is_cancelled(job_id)
-        msg = f"Batch avbruten – {ok} ok, {failed} fel" if cancelled else f"Batch slutförd – {ok} ok, {failed} fel"
+        msg = (
+            f"Batch avbruten – {ok} ok, {failed} fel"
+            if cancelled
+            else f"Batch slutförd – {ok} ok, {failed} fel"
+        )
         hub.log(job_id=job_id, level="INFO", msg=msg)
         hub.done(job_id=job_id, ok=ok, failed=failed)
         hub.status(job_id=job_id, is_running=False)

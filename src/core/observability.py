@@ -6,8 +6,9 @@ import functools
 import logging
 import os
 import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, TypeVar
+from typing import Any, TypeVar
 
 from .error_helpers import log_and_degrade
 from .errors import BaseAnalysisError

@@ -49,8 +49,16 @@ class ResolutionProbabilityPredictor(Analyzer):
 
         # Improving sentiment trajectory bonus
         if isinstance(sentiment_results, list) and len(sentiment_results) >= 2:
-            first = sentiment_results[0].get("label", "neutral") if isinstance(sentiment_results[0], dict) else "neutral"
-            last = sentiment_results[-1].get("label", "neutral") if isinstance(sentiment_results[-1], dict) else "neutral"
+            first = (
+                sentiment_results[0].get("label", "neutral")
+                if isinstance(sentiment_results[0], dict)
+                else "neutral"
+            )
+            last = (
+                sentiment_results[-1].get("label", "neutral")
+                if isinstance(sentiment_results[-1], dict)
+                else "neutral"
+            )
             if first == "negativ" and last == "positiv":
                 base += 15
             elif last == "negativ":
@@ -67,9 +75,15 @@ class ResolutionProbabilityPredictor(Analyzer):
         probability = max(10, min(95, round(base, 1)))
         confidence = 65 if len(ctx.segments) > 4 else 45
 
-        action = "Fortsätt med empati och tydliga nästa steg" if probability > 70 else \
-                 "Eskalera eller ge mer tid + validering" if probability < 45 else \
-                 "Sammanfatta och bekräfta lösning"
+        action = (
+            "Fortsätt med empati och tydliga nästa steg"
+            if probability > 70
+            else (
+                "Eskalera eller ge mer tid + validering"
+                if probability < 45
+                else "Sammanfatta och bekräfta lösning"
+            )
+        )
 
         return {
             "resolution_probability": probability,
@@ -79,5 +93,5 @@ class ResolutionProbabilityPredictor(Analyzer):
                 "sentiment_trend": "positive" if probability > 65 else "mixed/negative",
                 "customer_effort_impact": ces,
                 "empathy_impact": emp,
-            }
+            },
         }

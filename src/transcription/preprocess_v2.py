@@ -72,7 +72,6 @@ def preprocess_audio_callcenter(
         if noise_reduction:
             try:
                 import noisereduce as nr  # type: ignore
-
                 from faster_whisper.audio import decode_audio  # type: ignore
 
                 audio = decode_audio(current_path)

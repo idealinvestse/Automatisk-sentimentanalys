@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from src.compliance_qa import QAScorer, load_scorecard
 
-
 SEGMENTS = [
     {"speaker": "SPEAKER_1", "text": "Hej och välkommen till kundtjänst, hur kan jag hjälpa dig?"},
     {"speaker": "SPEAKER_0", "text": "Min faktura är fel, jag är frustrerad."},

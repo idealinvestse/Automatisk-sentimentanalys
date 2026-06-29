@@ -70,6 +70,7 @@ logger = logging.getLogger(__name__)
 # Public helper functions for convenient key loading (dev + dashboard override)
 # =============================================================================
 
+
 def _read_key_file(path: Path) -> str | None:
     """Internal: read a single potential key file, strip BOM and whitespace."""
     try:
@@ -106,13 +107,15 @@ def load_openrouter_key_from_file(
         candidates.append(Path(key_file))
     else:
         # Standard dev locations (must be in .gitignore!)
-        candidates.extend([
-            Path("configs") / "openrouter.key",
-            Path("openrouter.key"),
-            Path("OPENROUTER_API_KEY.txt"),
-            Path(".openrouter_key"),
-            Path("configs") / "openrouter_api_key.txt",
-        ])
+        candidates.extend(
+            [
+                Path("configs") / "openrouter.key",
+                Path("openrouter.key"),
+                Path("OPENROUTER_API_KEY.txt"),
+                Path(".openrouter_key"),
+                Path("configs") / "openrouter_api_key.txt",
+            ]
+        )
 
     key: str | None = None
     used_path: Path | None = None
@@ -183,7 +186,10 @@ class OpenRouterClient:
     # Values are USD per token. Used for approx cost reporting only.
     PRICING: dict[str, dict[str, float]] = {
         "mistralai/mistral-medium-3.5": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},
-        "mistralai/mistral-medium-3-5": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},  # OpenRouter slug variant
+        "mistralai/mistral-medium-3-5": {
+            "input": 1.50 / 1_000_000,
+            "output": 7.50 / 1_000_000,
+        },  # OpenRouter slug variant
         "mistralai/mistral-large-3": {"input": 2.00 / 1_000_000, "output": 6.00 / 1_000_000},
         "mistralai/mistral-large-2512": {"input": 2.00 / 1_000_000, "output": 6.00 / 1_000_000},
         "default": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},
@@ -331,7 +337,9 @@ class OpenRouterClient:
         entry = {
             "cached_at": time.time(),
             "result": result,
-            "meta": {k: v for k, v in meta.items() if k != "cached"},  # don't persist the transient flag
+            "meta": {
+                k: v for k, v in meta.items() if k != "cached"
+            },  # don't persist the transient flag
         }
         try:
             with path.open("w", encoding="utf-8") as f:
@@ -428,7 +436,9 @@ class OpenRouterClient:
                     result: dict[str, Any] = json.loads(content)
                 except json.JSONDecodeError as je:
                     # This should be extremely rare with strict:true; still protect
-                    logger.error("Mistral returned non-JSON despite strict schema: %s", content[:200])
+                    logger.error(
+                        "Mistral returned non-JSON despite strict schema: %s", content[:200]
+                    )
                     raise LLMError(f"Strict JSON parse failed: {je}") from je
 
                 usage = getattr(completion, "usage", None)
@@ -454,7 +464,9 @@ class OpenRouterClient:
                     logger.warning(
                         "LLM cost budget exceeded for task=%s: $%.5f > budget $%.5f. "
                         "Consider stronger caching, shorter context, or cheaper model.",
-                        task_name, cost or 0, self.cost_budget
+                        task_name,
+                        cost or 0,
+                        self.cost_budget,
                     )
                     meta["budget_exceeded"] = True
                     meta["budget"] = self.cost_budget
@@ -473,7 +485,7 @@ class OpenRouterClient:
 
             except RateLimitError as e:
                 last_exc = e
-                wait = (2 ** attempt) * 1.2 + 0.5
+                wait = (2**attempt) * 1.2 + 0.5
                 logger.warning(
                     "OpenRouter rate limit (attempt %d/%d). Sleeping %.1fs before retry. Error: %s",
                     attempt + 1,
@@ -494,7 +506,7 @@ class OpenRouterClient:
                 time.sleep(wait)
             except (APITimeoutError, APIError) as e:
                 last_exc = e
-                wait = (2 ** attempt) * 0.8
+                wait = (2**attempt) * 0.8
                 logger.warning(
                     "OpenRouter transient error (attempt %d/%d): %s. Backing off %.1fs",
                     attempt + 1,

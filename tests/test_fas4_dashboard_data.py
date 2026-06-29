@@ -10,6 +10,8 @@ from app.nicegui_dashboard.services.demo_provider import load_demo_reports
 from app.nicegui_dashboard.services.fas4_data import (
     active_alerts,
     alert_dedup_key,
+    fetch_agent_performance,
+    fetch_semantic_search,
     list_agent_ids,
     local_agent_metrics,
     local_hot_topics_detailed,
@@ -18,8 +20,6 @@ from app.nicegui_dashboard.services.fas4_data import (
     reports_for_agent,
     reports_to_segments_list,
     resolve_call_id_from_hit,
-    fetch_agent_performance,
-    fetch_semantic_search,
 )
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 

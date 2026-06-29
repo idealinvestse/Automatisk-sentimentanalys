@@ -16,6 +16,7 @@ from rich.table import Table
 from .clean import clean_texts
 from .core.audio import resolve_audio_paths as _core_resolve_audio
 from .core.config import DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
+from .core.logging_config import configure_logging
 from .core.serialization import score_dict, utc_now_iso
 from .core.serialization import top_label as top_label_pair
 from .lexicon import blend_results_with_lexicon, load_lexicon
@@ -25,8 +26,6 @@ from .sentiment import analyze_smart
 from .transcription import get_transcriber
 from .transcription.factory import resolve_preprocess_mode
 
-from .core.logging_config import configure_logging
-
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
 console = Console()
 
@@ -34,7 +33,9 @@ console = Console()
 @app.callback()
 def _cli_global_options(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Aktivera DEBUG-loggning"),
-    log_level: str | None = typer.Option(None, "--log-level", help="Loggnivå: DEBUG|INFO|WARNING|ERROR"),
+    log_level: str | None = typer.Option(
+        None, "--log-level", help="Loggnivå: DEBUG|INFO|WARNING|ERROR"
+    ),
 ) -> None:
     """Global CLI options."""
     configure_logging()
@@ -109,15 +110,21 @@ def new_analyzer_cmd(
     if not re.match(r"^[a-z][a-z0-9_]*$", name):
         raise typer.BadParameter("Name must be snake_case (e.g. my_insight)")
 
-    template = Path(__file__).resolve().parent / "analysis" / "templates" / "new_analyzer_template.py"
+    template = (
+        Path(__file__).resolve().parent / "analysis" / "templates" / "new_analyzer_template.py"
+    )
     target = Path(__file__).resolve().parent / "analysis" / f"{name}.py"
     if target.exists() and not force:
         raise typer.Exit(code=1)
     content = template.read_text(encoding="utf-8")
-    content = content.replace("your_analyzer", name).replace("YourAnalyzer", "".join(p.capitalize() for p in name.split("_")) + "Analyzer")
+    content = content.replace("your_analyzer", name).replace(
+        "YourAnalyzer", "".join(p.capitalize() for p in name.split("_")) + "Analyzer"
+    )
     target.write_text(content, encoding="utf-8")
     console.print(f"[green]Created[/green] {target}")
-    console.print("Autodiscovery will register it on next import. Run: python -m src.cli analyzers-graph")
+    console.print(
+        "Autodiscovery will register it on next import. Run: python -m src.cli analyzers-graph"
+    )
 
 
 @app.command("analyzers-graph")
@@ -141,7 +148,11 @@ def analyzers_graph_cmd(
 ) -> None:
     """Show registered analyzer dependency graph (debugging / documentation)."""
     from .analysis.graph import build_dependency_graph, to_json, to_mermaid, to_text_summary
-    from .analysis.registry import ensure_analyzers_loaded, get_analyzer_registry, resolve_analyzers_for_profile
+    from .analysis.registry import (
+        ensure_analyzers_loaded,
+        get_analyzer_registry,
+        resolve_analyzers_for_profile,
+    )
 
     ensure_analyzers_loaded()
     registry = get_analyzer_registry()
@@ -253,7 +264,8 @@ def sentiment_cmd(
             raise typer.Exit(code=1) from e
         if text_column not in df.columns:
             console.print(
-                f"[red]Kolumn '{text_column}' finns inte i CSV. Tillgängliga kolumner: {list(df.columns)}[/red]")
+                f"[red]Kolumn '{text_column}' finns inte i CSV. Tillgängliga kolumner: {list(df.columns)}[/red]"
+            )
             raise typer.Exit(code=1)
         if max_rows is not None:
             df = df.head(max_rows)
@@ -298,13 +310,17 @@ def sentiment_cmd(
     # Lexikon-info (om auto från profil eller explicit)
     use_lex = bool(meta.get("lexicon_file")) or (lexicon_file is not None and lexicon_weight > 0.0)
     if meta.get("lexicon_file"):
-        console.print(f"[green]Lexikon (auto från profil eller explicit):[/green] {meta['lexicon_file']} (vikt={meta.get('lexicon_weight', 0)})")
+        console.print(
+            f"[green]Lexikon (auto från profil eller explicit):[/green] {meta['lexicon_file']} (vikt={meta.get('lexicon_weight', 0)})"
+        )
     elif lexicon_file and use_lex:
         try:
             lex = load_lexicon(lexicon_file)
             console.print(f"[green]Lexikon laddat:[/green] {lexicon_file} ({len(lex)} termer)")
         except Exception as e:
-            console.print(f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan.[/yellow]")
+            console.print(
+                f"[yellow]Varning: kunde inte ladda lexikon '{lexicon_file}': {e}. Fortsätter utan.[/yellow]"
+            )
             use_lex = False
     now_iso = utc_now_iso()
     rows = []
@@ -372,8 +388,12 @@ def download_asr_cmd(
         help="ASR backends whose models should be pre-downloaded",
     ),
     model: str = typer.Option(DEFAULT_ASR_MODEL, "--model", "-m", help="ASR model name or alias"),
-    device: str = typer.Option("cpu", "--device", help="Device used for prefetch (cpu recommended)"),
-    language: str = typer.Option("sv", "--language", "-l", help="Language for WhisperX align model"),
+    device: str = typer.Option(
+        "cpu", "--device", help="Device used for prefetch (cpu recommended)"
+    ),
+    language: str = typer.Option(
+        "sv", "--language", "-l", help="Language for WhisperX align model"
+    ),
     revision: str | None = typer.Option(
         "strict",
         "--revision",
@@ -382,7 +402,9 @@ def download_asr_cmd(
     skip_packages: bool = typer.Option(
         False, "--skip-packages", help="Skip pip install of faster-whisper/whisperx"
     ),
-    skip_models: bool = typer.Option(False, "--skip-models", help="Only install packages, skip model download"),
+    skip_models: bool = typer.Option(
+        False, "--skip-models", help="Only install packages, skip model download"
+    ),
 ) -> None:
     """Install faster-whisper & whisperx and pre-download transcription models."""
     from src.install.asr_assets import ensure_asr_assets
@@ -446,10 +468,14 @@ def transcribe_cmd(
         help="Disable automatic Swedish callcenter hotword loading.",
     ),
     initial_prompt: str | None = typer.Option(
-        None, "--initial-prompt", help="Text prompt to condition the ASR decoder (e.g. expected names or style at start of call)."
+        None,
+        "--initial-prompt",
+        help="Text prompt to condition the ASR decoder (e.g. expected names or style at start of call).",
     ),
     preprocess: bool = typer.Option(
-        False, "--preprocess", help="Enable audio preprocessing (high-pass filter + optional noise reduction) before ASR. Useful for noisy recordings."
+        False,
+        "--preprocess",
+        help="Enable audio preprocessing (high-pass filter + optional noise reduction) before ASR. Useful for noisy recordings.",
     ),
     preprocess_mode: str | None = typer.Option(
         None,
@@ -620,7 +646,9 @@ def analyze_call_cmd(
         None, "--initial-prompt", help="Conditioning prompt for ASR decoder."
     ),
     preprocess: bool = typer.Option(
-        False, "--preprocess", help="Enable audio preprocessing (high-pass + noise reduction) before ASR."
+        False,
+        "--preprocess",
+        help="Enable audio preprocessing (high-pass + noise reduction) before ASR.",
     ),
     preprocess_mode: str | None = typer.Option(
         None,
@@ -654,7 +682,9 @@ def analyze_call_cmd(
         help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3.5). Example: mistralai/mistral-large-3",
     ),
     deep_analysis: bool = typer.Option(
-        False, "--deep-analysis", help="Force the deep LLM path (equivalent to --use-mistral-llm for callcenter use)."
+        False,
+        "--deep-analysis",
+        help="Force the deep LLM path (equivalent to --use-mistral-llm for callcenter use).",
     ),
     provider: str = typer.Option(
         "openrouter",
@@ -699,7 +729,8 @@ def analyze_call_cmd(
             console.print(f"[green]Lexicon loaded:[/green] {lexicon_file} ({len(lex)} terms)")
         except Exception as e:
             console.print(
-                f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]")
+                f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]"
+            )
             use_lex = False
 
     all_rows = []
@@ -915,7 +946,9 @@ def analyze_call_cmd(
 @app.command("edge-analyze")
 def edge_analyze_cmd(
     text: str | None = typer.Option(None, "--text", "-t", help="Text to analyze offline"),
-    audio: str | None = typer.Option(None, "--audio", "-a", help="Audio file (local ASR + offline analysis)"),
+    audio: str | None = typer.Option(
+        None, "--audio", "-a", help="Audio file (local ASR + offline analysis)"
+    ),
     profile: str = typer.Option("callcenter", "--profile", "-p", help="Sentiment profile"),
     log_level: str = typer.Option("INFO", help="Logging level"),
 ) -> None:

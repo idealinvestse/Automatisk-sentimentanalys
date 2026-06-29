@@ -105,13 +105,21 @@ class SettingsDialog(tk.Toplevel):
         return entry
 
     def _labeled_combo(
-        self, parent: tk.Misc, label: str, key: str, values: tuple[str, ...] | list[str], *, row: int
+        self,
+        parent: tk.Misc,
+        label: str,
+        key: str,
+        values: tuple[str, ...] | list[str],
+        *,
+        row: int,
     ) -> ttk.Combobox:
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky=tk.W)
         var = tk.StringVar()
         self._vars[key] = var
         self._add_trace(var)
-        combo = ttk.Combobox(parent, textvariable=var, values=list(values), state="readonly", width=44)
+        combo = ttk.Combobox(
+            parent, textvariable=var, values=list(values), state="readonly", width=44
+        )
         combo.grid(row=row, column=1, sticky=tk.EW, padx=(0, 8), pady=2)
         return combo
 
@@ -151,9 +159,13 @@ class SettingsDialog(tk.Toplevel):
             row=row,
         )
         row += 1
-        self._labeled_check(inner, "Portabelt läge (config i ./user_data)", "portable_mode", row=row)
+        self._labeled_check(
+            inner, "Portabelt läge (config i ./user_data)", "portable_mode", row=row
+        )
         row += 1
-        self._labeled_combo(inner, "Sentimentprofil", "sentiment_profile", _SENTIMENT_PROFILES, row=row)
+        self._labeled_combo(
+            inner, "Sentimentprofil", "sentiment_profile", _SENTIMENT_PROFILES, row=row
+        )
         row += 1
         self._labeled_combo(inner, "Enhet", "device", _DEVICES, row=row)
         row += 1
@@ -182,7 +194,9 @@ class SettingsDialog(tk.Toplevel):
         )
         for i, (key, label) in enumerate(fields):
             self._labeled_entry(inner, label, f"paths.{key}", row=i)
-        ttk.Label(inner, text="App root", foreground="#6b7280").grid(row=len(fields), column=0, sticky=tk.W, pady=(8, 0))
+        ttk.Label(inner, text="App root", foreground="#6b7280").grid(
+            row=len(fields), column=0, sticky=tk.W, pady=(8, 0)
+        )
         ttk.Label(inner, textvariable=tk.StringVar(value=str(self._app_root))).grid(
             row=len(fields), column=1, sticky=tk.W
         )
@@ -198,7 +212,9 @@ class SettingsDialog(tk.Toplevel):
 
     def _build_asr_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
-        self._labeled_combo(inner, "Backend", "asr.backend", ("faster", "transformers", "whisperx"), row=0)
+        self._labeled_combo(
+            inner, "Backend", "asr.backend", ("faster", "transformers", "whisperx"), row=0
+        )
         self._labeled_entry(inner, "Modell", "asr.model", row=1)
         self._labeled_combo(
             inner, "Revision", "asr.revision", ("standard", "strict", "subtitle"), row=2
@@ -290,17 +306,19 @@ class SettingsDialog(tk.Toplevel):
     def _build_api_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
         self._labeled_entry(inner, "API-nyckel (SENTIMENT_API_KEY)", "runtime.api.api_key", row=0)
-        self._labeled_entry(inner, "CORS origins (kommaseparerade)", "runtime.api.cors_origins", row=1)
+        self._labeled_entry(
+            inner, "CORS origins (kommaseparerade)", "runtime.api.cors_origins", row=1
+        )
         self._labeled_entry(inner, "Media root (API_MEDIA_ROOT)", "runtime.api.media_root", row=2)
-        self._labeled_entry(inner, "Rate limit (req/min, 0=av)", "runtime.api.rate_limit_rpm", row=3)
+        self._labeled_entry(
+            inner, "Rate limit (req/min, 0=av)", "runtime.api.rate_limit_rpm", row=3
+        )
         self._labeled_check(inner, "Redis-cache", "runtime.api.use_redis_cache", row=4)
         self._labeled_entry(inner, "Redis URL", "runtime.api.redis_url", row=5)
         self._labeled_check(
             inner, "Tillåt klient-LLM-nyckel i request", "runtime.api.allow_client_llm_key", row=6
         )
-        self._labeled_entry(
-            inner, "Dashboard → API URL", "runtime.dashboard.api_base_url", row=7
-        )
+        self._labeled_entry(inner, "Dashboard → API URL", "runtime.dashboard.api_base_url", row=7)
         self._labeled_check(inner, "Dev-läge (testlabb)", "runtime.dashboard.dev_mode", row=8)
 
     def _build_alerting_tab(self, parent: ttk.Frame) -> None:
@@ -315,9 +333,15 @@ class SettingsDialog(tk.Toplevel):
 
     def _build_advanced_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
-        ttk.Button(inner, text="Exportera config…", command=self._export_config).grid(row=0, column=0, sticky=tk.W, pady=4)
-        ttk.Button(inner, text="Importera config…", command=self._import_config).grid(row=1, column=0, sticky=tk.W, pady=4)
-        ttk.Separator(inner, orient=tk.HORIZONTAL).grid(row=2, column=0, columnspan=2, sticky=tk.EW, pady=8)
+        ttk.Button(inner, text="Exportera config…", command=self._export_config).grid(
+            row=0, column=0, sticky=tk.W, pady=4
+        )
+        ttk.Button(inner, text="Importera config…", command=self._import_config).grid(
+            row=1, column=0, sticky=tk.W, pady=4
+        )
+        ttk.Separator(inner, orient=tk.HORIZONTAL).grid(
+            row=2, column=0, columnspan=2, sticky=tk.EW, pady=8
+        )
         ttk.Button(inner, text="Kör Doctor / hälsokontroll", command=self._run_doctor).grid(
             row=3, column=0, sticky=tk.W, pady=4
         )
@@ -372,7 +396,9 @@ class SettingsDialog(tk.Toplevel):
             "runtime.alerting.webhook_url": d.runtime.alerting.webhook_url,
             "runtime.alerting.timeout_seconds": str(d.runtime.alerting.timeout_seconds),
             "runtime.alerting.max_retries": str(d.runtime.alerting.max_retries),
-            "runtime.alerting.circuit_breaker_threshold": str(d.runtime.alerting.circuit_breaker_threshold),
+            "runtime.alerting.circuit_breaker_threshold": str(
+                d.runtime.alerting.circuit_breaker_threshold
+            ),
         }
         for key, val in mapping.items():
             if key not in self._vars:

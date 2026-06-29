@@ -18,7 +18,9 @@ def _mock_sentiment(self, texts, **kwargs):
     results = []
     for text in texts:
         tl = text.lower()
-        if any(w in tl for w in ("arg", "frustrerad", "oacceptabelt", "missnöjd", "dålig", "klagomål")):
+        if any(
+            w in tl for w in ("arg", "frustrerad", "oacceptabelt", "missnöjd", "dålig", "klagomål")
+        ):
             results.append({"label": "negativ", "score": 0.85})
         elif any(w in tl for w in ("tack", "bra", "perfekt", "smidigt", "toppen")):
             results.append({"label": "positiv", "score": 0.85})

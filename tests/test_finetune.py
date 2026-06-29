@@ -83,7 +83,9 @@ def test_finetune_baseline_file():
 def test_callcenter_profile_uses_lora_when_present(monkeypatch: pytest.MonkeyPatch) -> None:
     from src import profiles
 
-    monkeypatch.setattr(profiles.os.path, "isdir", lambda p: str(p).endswith("callcenter-sentiment-lora"))
+    monkeypatch.setattr(
+        profiles.os.path, "isdir", lambda p: str(p).endswith("callcenter-sentiment-lora")
+    )
     assert "callcenter-sentiment-lora" in profiles._get_callcenter_model()
 
 

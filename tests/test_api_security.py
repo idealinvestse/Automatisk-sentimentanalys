@@ -88,12 +88,15 @@ def test_scan_process_accepts_state_file_under_state_dir(scan_directory, tmp_pat
     monkeypatch.setenv("API_STATE_DIR", str(tmp_path))
     get_api_settings.cache_clear()
     state_file = tmp_path / "state.json"
-    with patch(
-        "src.api.routers.scan.resolve_and_validate_audio_paths",
-        return_value=[f"{scan_directory}/a.wav"],
-    ), patch(
-        "src.api.routers.scan.transcribe_helper",
-        return_value={"segments": [], "model": "m"},
+    with (
+        patch(
+            "src.api.routers.scan.resolve_and_validate_audio_paths",
+            return_value=[f"{scan_directory}/a.wav"],
+        ),
+        patch(
+            "src.api.routers.scan.transcribe_helper",
+            return_value={"segments": [], "model": "m"},
+        ),
     ):
         r = client.post(
             "/scan_process",
@@ -135,7 +138,10 @@ def test_status_endpoints_require_api_key_when_configured(monkeypatch):
     assert authed_client.get("/status/processes").status_code == 401
     assert authed_client.get("/status/health/detail").status_code == 401
     assert authed_client.get("/metrics").status_code == 401
-    assert authed_client.get("/status/processes", headers={"X-API-Key": "secret-key"}).status_code == 200
+    assert (
+        authed_client.get("/status/processes", headers={"X-API-Key": "secret-key"}).status_code
+        == 200
+    )
 
 
 def test_rate_limit_ignores_forwarded_for_without_trusted_proxy(monkeypatch):

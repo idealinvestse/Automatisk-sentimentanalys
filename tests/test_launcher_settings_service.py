@@ -88,7 +88,9 @@ def test_restart_hints_on_profile_change() -> None:
     assert "api" in hints and "dashboard" in hints
 
 
-def test_save_secret_permanent_writes_user_file(config_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_save_secret_permanent_writes_user_file(
+    config_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from src.install.secrets_win import get_secret, user_secret_file
 
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)

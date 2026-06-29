@@ -84,9 +84,7 @@ def render_calls_table(
             ).classes("w-24").props("dense")
 
         if query:
-            ui.label(format_search_hit_label(total_count, query)).classes(
-                "text-subtitle2 q-mb-xs"
-            )
+            ui.label(format_search_hit_label(total_count, query)).classes("text-subtitle2 q-mb-xs")
 
         if total_count == 0:
             if query:
@@ -112,10 +110,25 @@ def render_calls_table(
                     {"name": "title", "label": "Ämne", "field": "title", "align": "left"},
                     {"name": "agent", "label": "Agent", "field": "agent", "align": "left"},
                     {"name": "category", "label": "Kategori", "field": "category", "align": "left"},
-                    {"name": "sentiment", "label": "Sentiment", "field": "sentiment", "align": "left"},
+                    {
+                        "name": "sentiment",
+                        "label": "Sentiment",
+                        "field": "sentiment",
+                        "align": "left",
+                    },
                     {"name": "risk_level", "label": "Risk", "field": "risk_level", "align": "left"},
-                    {"name": "alert_count", "label": "Aviseringar", "field": "alert_count", "align": "left"},
-                    {"name": "qa_status", "label": "QA-status", "field": "qa_status", "align": "left"},
+                    {
+                        "name": "alert_count",
+                        "label": "Aviseringar",
+                        "field": "alert_count",
+                        "align": "left",
+                    },
+                    {
+                        "name": "qa_status",
+                        "label": "QA-status",
+                        "field": "qa_status",
+                        "align": "left",
+                    },
                     {"name": "qa_score", "label": "QA", "field": "qa_score", "align": "left"},
                 ],
                 rows=rows,

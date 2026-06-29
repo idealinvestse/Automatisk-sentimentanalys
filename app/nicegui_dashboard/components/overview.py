@@ -14,13 +14,13 @@ from app.nicegui_dashboard.components.calls_table import render_calls_table
 from app.nicegui_dashboard.components.empty_state import render_empty_state
 from app.nicegui_dashboard.components.kpi_cards import render_kpi_row
 from app.nicegui_dashboard.components.ui_primitives import render_section_title, render_tab_header
-from app.nicegui_dashboard.settings import is_dev_mode
 from app.nicegui_dashboard.services.analytics_summary import (
     build_calls_overview_rows,
     overview_csv_filename,
     overview_rows_to_csv_bytes,
 )
 from app.nicegui_dashboard.services.chart_data import build_sentiment_distribution_figure
+from app.nicegui_dashboard.settings import is_dev_mode
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import filter_reports, get_agent_leaderboard, get_hot_topics
 
@@ -119,9 +119,7 @@ def render_overview_tab(
                     )
 
             with ui.card().classes("flex-1 min-w-card"):
-                with ui.expansion("Agenttopplista", icon="groups", value=False).classes(
-                    "w-full"
-                ):
+                with ui.expansion("Agenttopplista", icon="groups", value=False).classes("w-full"):
                     board = get_agent_leaderboard(reports)
                     board_table = ui.table(
                         columns=[
@@ -181,9 +179,7 @@ def render_overview_tab(
                 label="Agent",
                 value=state.filters.get("agent_filter") or "Alla",
                 on_change=lambda e: (
-                    state.filters.update(
-                        {"agent_filter": None if e.value == "Alla" else e.value}
-                    ),
+                    state.filters.update({"agent_filter": None if e.value == "Alla" else e.value}),
                     apply_filters(),
                 ),
             ).classes("min-w-40")
@@ -192,9 +188,7 @@ def render_overview_tab(
                 label="Min. risk",
                 value=state.filters.get("min_risk") or "all",
                 on_change=lambda e: (
-                    state.filters.update(
-                        {"min_risk": None if e.value == "all" else e.value}
-                    ),
+                    state.filters.update({"min_risk": None if e.value == "all" else e.value}),
                     apply_filters(),
                 ),
             ).classes("min-w-40")
@@ -202,9 +196,7 @@ def render_overview_tab(
                 "Endast QA-underkända",
                 value=state.filters.get("has_qa_fail") is True,
                 on_change=lambda e: (
-                    state.filters.update(
-                        {"has_qa_fail": True if e.value else None}
-                    ),
+                    state.filters.update({"has_qa_fail": True if e.value else None}),
                     apply_filters(),
                 ),
             )

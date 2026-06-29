@@ -343,14 +343,23 @@ class IntentClassifier:
             scores[intent_name] = score
 
         # Boost complaint on strong negative words
-        strong_negative = {"dålig", "usel", "katastrof", "skandal", "oacceptabelt", "värdelös", "arg"}
+        strong_negative = {
+            "dålig",
+            "usel",
+            "katastrof",
+            "skandal",
+            "oacceptabelt",
+            "värdelös",
+            "arg",
+        }
         if any(w in lowered for w in strong_negative):
             scores["complaint"] = scores.get("complaint", 0) + 0.25
 
         # Penalize generic "other" unless nothing else matches
-        if scores.get("other", 0) > 0 and max(
-            (v for k, v in scores.items() if k != "other"), default=0
-        ) > 0.15:
+        if (
+            scores.get("other", 0) > 0
+            and max((v for k, v in scores.items() if k != "other"), default=0) > 0.15
+        ):
             scores["other"] *= 0.3
 
         if not scores or max(scores.values()) == 0:
@@ -363,7 +372,10 @@ class IntentClassifier:
         if any(w in lowered for w in ("avsluta", "säga upp", "uppsägning")):
             scores["cancellation"] = scores.get("cancellation", 0) + 0.3
             scores["appointment_booking"] = scores.get("appointment_booking", 0) * 0.4
-        if any(w in lowered for w in ("faktura", "debiter", "avgift")) and "återbetala" not in lowered:
+        if (
+            any(w in lowered for w in ("faktura", "debiter", "avgift"))
+            and "återbetala" not in lowered
+        ):
             scores["billing_inquiry"] = scores.get("billing_inquiry", 0) + 0.2
         if "återbetala" in lowered or "pengarna tillbaka" in lowered:
             scores["refund_request"] = scores.get("refund_request", 0) + 0.4

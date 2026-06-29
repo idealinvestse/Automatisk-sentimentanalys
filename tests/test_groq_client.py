@@ -16,14 +16,12 @@ These tests must never hit the real network. All OpenAI calls are patched.
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.core.errors import LLMError
-from src.llm.groq_client import GroqClient, _HAS_OPENAI
+from src.llm.groq_client import _HAS_OPENAI, GroqClient
 
 
 @pytest.fixture
@@ -67,13 +65,20 @@ def test_structured_chat_success_and_meta(fake_groq_api_key, tmp_path, monkeypat
     fake_usage = MagicMock()
     fake_usage.prompt_tokens = 500
     fake_usage.completion_tokens = 150
-    fake_usage.model_dump.return_value = {"prompt_tokens": 500, "completion_tokens": 150, "total_tokens": 650}
+    fake_usage.model_dump.return_value = {
+        "prompt_tokens": 500,
+        "completion_tokens": 150,
+        "total_tokens": 650,
+    }
     fake_completion.usage = fake_usage
     fake_choice = MagicMock()
     fake_choice.message.content = json.dumps(
         {
             "trajectory": {"summary": "Kundens frustration ökade efter fakturafrågan."},
-            "actionable_summary": {"problem": "Faktureringsfel", "recommendations_for_qa": ["Coacha agent på empathy"]},
+            "actionable_summary": {
+                "problem": "Faktureringsfel",
+                "recommendations_for_qa": ["Coacha agent på empathy"],
+            },
         }
     )
     fake_completion.choices = [fake_choice]
@@ -191,10 +196,18 @@ def test_caching_works_and_is_free(fake_groq_api_key, tmp_path):
         schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
 
         r1, m1 = client.structured_chat(
-            msgs, json_schema=schema, task_name="test_cache", transcript_hash="gh1", anonymize_before_llm=True,
+            msgs,
+            json_schema=schema,
+            task_name="test_cache",
+            transcript_hash="gh1",
+            anonymize_before_llm=True,
         )
         r2, m2 = client.structured_chat(
-            msgs, json_schema=schema, task_name="test_cache", transcript_hash="gh1", anonymize_before_llm=True,
+            msgs,
+            json_schema=schema,
+            task_name="test_cache",
+            transcript_hash="gh1",
+            anonymize_before_llm=True,
         )
 
     assert r1 == r2
@@ -317,7 +330,9 @@ def test_list_models(fake_groq_api_key):
 
 
 def test_clear_cache(fake_groq_api_key, tmp_path):
-    client = GroqClient(api_key=fake_groq_api_key, cache_dir=tmp_path / "groqclr", enable_cache=True)
+    client = GroqClient(
+        api_key=fake_groq_api_key, cache_dir=tmp_path / "groqclr", enable_cache=True
+    )
     (client.cache_dir).mkdir(parents=True, exist_ok=True)
     (client.cache_dir / "groq_a.json").write_text('{"result": {}, "meta": {}}', encoding="utf-8")
     (client.cache_dir / "groq_b.json").write_text('{"result": {}, "meta": {}}', encoding="utf-8")
@@ -346,7 +361,12 @@ def test_get_groq_api_key_resolution(monkeypatch):
 @pytest.mark.skipif(not _HAS_OPENAI, reason="openai not installed")
 def test_chat_completion_text_mode(fake_groq_api_key, tmp_path):
     """chat_completion returns plain text content + meta."""
-    client = GroqClient(api_key=fake_groq_api_key, cache_dir=tmp_path / "groqchat", enable_cache=False, groq_eu_residency=True)
+    client = GroqClient(
+        api_key=fake_groq_api_key,
+        cache_dir=tmp_path / "groqchat",
+        enable_cache=False,
+        groq_eu_residency=True,
+    )
 
     fake_c = MagicMock()
     fake_c.model = "llama-3.1-8b-instant"

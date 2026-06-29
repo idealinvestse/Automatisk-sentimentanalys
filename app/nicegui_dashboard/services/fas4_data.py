@@ -22,22 +22,13 @@ def reports_to_segments_list(reports: list[dict[str, Any]]) -> list[list[dict[st
 
 def list_agent_ids(reports: list[dict[str, Any]]) -> list[str]:
     """Unique agent names from report meta, sorted."""
-    agents = sorted(
-        {
-            str((r.get("meta") or {}).get("agent") or "Okänd")
-            for r in reports
-        }
-    )
+    agents = sorted({str((r.get("meta") or {}).get("agent") or "Okänd") for r in reports})
     return agents
 
 
 def reports_for_agent(reports: list[dict[str, Any]], agent_id: str) -> list[dict[str, Any]]:
     """Filter reports belonging to one agent."""
-    return [
-        r
-        for r in reports
-        if str((r.get("meta") or {}).get("agent") or "Okänd") == agent_id
-    ]
+    return [r for r in reports if str((r.get("meta") or {}).get("agent") or "Okänd") == agent_id]
 
 
 def local_agent_metrics(agent_id: str, reports: list[dict[str, Any]]) -> dict[str, Any]:
@@ -65,9 +56,11 @@ def local_agent_metrics(agent_id: str, reports: list[dict[str, Any]]) -> dict[st
         if empathy is not None:
             empathy_vals.append(float(empathy))
         else:
-            assess = (r.get("results") or {}).get("agent_assessment") or (
-                (r.get("llm") or {}).get("agent_assessment")
-            ) or {}
+            assess = (
+                (r.get("results") or {}).get("agent_assessment")
+                or ((r.get("llm") or {}).get("agent_assessment"))
+                or {}
+            )
             if isinstance(assess, dict) and assess.get("empathy_score") is not None:
                 empathy_vals.append(float(assess["empathy_score"]))
         if agent_block.get("talk_ratio") is not None:
@@ -104,7 +97,9 @@ def local_agent_metrics(agent_id: str, reports: list[dict[str, Any]]) -> dict[st
     }
 
 
-def local_hot_topics_detailed(reports: list[dict[str, Any]], top_k: int = 10) -> list[dict[str, Any]]:
+def local_hot_topics_detailed(
+    reports: list[dict[str, Any]], top_k: int = 10
+) -> list[dict[str, Any]]:
     """Hot topics with volume; enrich from insights aggregator fields when present."""
     topics: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -150,9 +145,11 @@ def local_qa_from_report(report: dict[str, Any] | None) -> dict[str, Any]:
     """Extract QA scorecard from report.results."""
     if not report:
         return {}
-    qa = (report.get("results") or {}).get("qa") or (report.get("results") or {}).get(
-        "compliance_qa"
-    ) or {}
+    qa = (
+        (report.get("results") or {}).get("qa")
+        or (report.get("results") or {}).get("compliance_qa")
+        or {}
+    )
     return dict(qa) if isinstance(qa, dict) else {}
 
 
@@ -325,7 +322,10 @@ async def fetch_semantic_search(
     if not query.strip():
         return [], "local"
     if not segments_list:
-        return local_semantic_search(query, reports, top_k=top_k, agent_filter=agent_filter), "local"
+        return (
+            local_semantic_search(query, reports, top_k=top_k, agent_filter=agent_filter),
+            "local",
+        )
     try:
         filters = {"agent": agent_filter} if agent_filter else None
         resp = await client.semantic_search(
@@ -343,7 +343,10 @@ async def fetch_semantic_search(
         return hits, "api"
     except Exception as err:
         logger.debug("semantic_search API fallback: %s", err)
-        return local_semantic_search(query, reports, top_k=top_k, agent_filter=agent_filter), "local"
+        return (
+            local_semantic_search(query, reports, top_k=top_k, agent_filter=agent_filter),
+            "local",
+        )
 
 
 def agent_leaderboard_rows(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:

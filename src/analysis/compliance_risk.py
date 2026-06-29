@@ -95,15 +95,21 @@ class ComplianceRiskAnalyzer(Analyzer):
             if risks:
                 if "over_promise" in risks or "data_request" in risks:
                     high_risk_count += 1
-                flagged.append({
-                    "segment_index": idx,
-                    "speaker": speaker,
-                    "start": getattr(seg, "start", 0),
-                    "end": getattr(seg, "end", 0),
-                    "risks": risks,
-                    "evidence": seg.text[:120] if seg.text else "",
-                    "severity": "high" if "over_promise" in risks or "data_request" in risks else "medium",
-                })
+                flagged.append(
+                    {
+                        "segment_index": idx,
+                        "speaker": speaker,
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "risks": risks,
+                        "evidence": seg.text[:120] if seg.text else "",
+                        "severity": (
+                            "high"
+                            if "over_promise" in risks or "data_request" in risks
+                            else "medium"
+                        ),
+                    }
+                )
 
         risk_level = "high" if high_risk_count > 2 else ("medium" if high_risk_count > 0 else "low")
         recommendation = (

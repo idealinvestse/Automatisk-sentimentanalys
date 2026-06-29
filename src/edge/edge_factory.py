@@ -1,2 +1,3 @@
 """Edge backend factory - supports whisper.cpp, ONNX, llama.cpp"""
+
 # Full implementation stub with registry for edge providers + hardware detection...

@@ -55,20 +55,28 @@ class ActiveListeningBehaviorAnalyzer(Analyzer):
             # Backchannels
             if any(bc in text for bc in BACKCHANNELS) and dur < 3:
                 backchannel_count += 1
-                events.append({
-                    "type": "backchannel",
-                    "speaker": speaker,
-                    "time": getattr(seg, "start", 0),
-                    "text": seg.text,
-                })
+                events.append(
+                    {
+                        "type": "backchannel",
+                        "speaker": speaker,
+                        "time": getattr(seg, "start", 0),
+                        "text": seg.text,
+                    }
+                )
 
             # Simple interruption detection (consecutive different speakers with close timing)
-            if prev_speaker and prev_speaker != speaker and (getattr(seg, "start", 0) - prev_end) < 0.3:
-                events.append({
-                    "type": "possible_interruption",
-                    "speaker": speaker,
-                    "time": getattr(seg, "start", 0),
-                })
+            if (
+                prev_speaker
+                and prev_speaker != speaker
+                and (getattr(seg, "start", 0) - prev_end) < 0.3
+            ):
+                events.append(
+                    {
+                        "type": "possible_interruption",
+                        "speaker": speaker,
+                        "time": getattr(seg, "start", 0),
+                    }
+                )
 
             speaker_times[speaker] = speaker_times.get(speaker, 0) + max(0, dur)
             prev_end = getattr(seg, "end", 0)
@@ -84,5 +92,9 @@ class ActiveListeningBehaviorAnalyzer(Analyzer):
             "backchannel_count": backchannel_count,
             "speaker_balance": balance,
             "events": events[:10],  # limit
-            "tips": ["Uppmuntra fler backchannels", "Undvik att avbryta"] if listening_score < 60 else []
+            "tips": (
+                ["Uppmuntra fler backchannels", "Undvik att avbryta"]
+                if listening_score < 60
+                else []
+            ),
         }

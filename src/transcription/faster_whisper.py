@@ -11,7 +11,12 @@ from ..core.config import KB_REVISIONS
 from ..core.device import normalize_device_for_asr
 from ..core.errors import TranscriptionError
 from ..core.models import Segment, Transcript, Word
-from .base import add_diarization, format_hotwords_for_asr, resolve_model_name, resolve_model_name_for_backend
+from .base import (
+    add_diarization,
+    format_hotwords_for_asr,
+    resolve_model_name,
+    resolve_model_name_for_backend,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,7 @@ logger = logging.getLogger(__name__)
 class _SkipChunked(Exception):
     """Internal control-flow exception used to jump out of the chunked branch
     into the already-built fallback segments list."""
+
     pass
 
 
@@ -232,7 +238,9 @@ class FasterWhisperTranscriber:
                     from faster_whisper.audio import decode_audio  # type: ignore
                 except Exception:
                     # Fallback: fall back to non-chunked to avoid hard failure
-                    logger.warning("Could not import decode_audio; falling back to full-file transcription.")
+                    logger.warning(
+                        "Could not import decode_audio; falling back to full-file transcription."
+                    )
                     fallback_kwargs: dict[str, Any] = {
                         "language": language,
                         "beam_size": beam_size,
@@ -259,7 +267,11 @@ class FasterWhisperTranscriber:
                                         prob=float(getattr(w, "probability", 0.0) or 0.0),
                                     )
                                 )
-                        avg_conf = float(sum(w.prob for w in words) / max(1, len(words))) if words else None
+                        avg_conf = (
+                            float(sum(w.prob for w in words) / max(1, len(words)))
+                            if words
+                            else None
+                        )
                         segs.append(
                             Segment(
                                 start=float(getattr(s, "start", 0.0) or 0.0),
@@ -268,7 +280,9 @@ class FasterWhisperTranscriber:
                                 words=words,
                                 avg_confidence=avg_conf,
                                 confidence=avg_conf,
-                                low_confidence=(avg_conf is not None and avg_conf < LOW_CONF_THRESHOLD),
+                                low_confidence=(
+                                    avg_conf is not None and avg_conf < LOW_CONF_THRESHOLD
+                                ),
                             )
                         )
                     # jump to post-processing
@@ -315,7 +329,9 @@ class FasterWhisperTranscriber:
                             chunk_kwargs["vad_parameters"] = vad_parameters
                         segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
                     except Exception as ce:
-                        logger.warning("Chunk %d transcription failed: %s. Skipping chunk.", chunk_index, ce)
+                        logger.warning(
+                            "Chunk %d transcription failed: %s. Skipping chunk.", chunk_index, ce
+                        )
                         pos += step
                         continue
 
@@ -451,7 +467,9 @@ class FasterWhisperTranscriber:
             overlap = min(current.end, nxt.end) - max(current.start, nxt.start)
             short_dur = min(current.end - current.start, nxt.end - nxt.start) or 1.0
             # Be generous with overlap detection for chunked ASR (5s overlap is common)
-            significant_overlap = (overlap > max(1.5, overlap_seconds * 0.6)) or (overlap / short_dur > 0.20)
+            significant_overlap = (overlap > max(1.5, overlap_seconds * 0.6)) or (
+                overlap / short_dur > 0.20
+            )
 
             if significant_overlap:
                 # Prefer the higher-confidence segment for the merged region

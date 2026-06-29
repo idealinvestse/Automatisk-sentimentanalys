@@ -5,12 +5,10 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from src.transcription.factory import resolve_preprocess_mode
 from src.transcription.preprocess import (
-    normalize_preprocess_mode,
     maybe_preprocess_for_mode,
+    normalize_preprocess_mode,
     prepare_asr_audio,
 )
 from src.transcription.preprocess_v2 import preprocess_audio_callcenter
@@ -42,10 +40,7 @@ class TestNormalizePreprocessMode:
 
 class TestResolvePreprocessMode:
     def test_callcenter_profile_upgrades_basic_preprocess(self):
-        assert (
-            resolve_preprocess_mode(preprocess=True, profile="callcenter")
-            == "callcenter"
-        )
+        assert resolve_preprocess_mode(preprocess=True, profile="callcenter") == "callcenter"
 
     def test_explicit_mode_overrides_profile(self):
         assert (
@@ -103,9 +98,7 @@ def test_maybe_preprocess_for_mode_callcenter_delegates(tmp_path):
     audio = tmp_path / "input.wav"
     audio.write_bytes(b"fake")
 
-    with patch(
-        "src.transcription.preprocess_v2.preprocess_audio_callcenter"
-    ) as mock_cc:
+    with patch("src.transcription.preprocess_v2.preprocess_audio_callcenter") as mock_cc:
         mock_cc.return_value = MagicMock(path=str(audio), cleanup=MagicMock())
         handle = maybe_preprocess_for_mode(str(audio), "callcenter")
         mock_cc.assert_called_once_with(str(audio))

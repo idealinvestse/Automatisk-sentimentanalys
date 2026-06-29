@@ -46,13 +46,10 @@ Usage:
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from typing import Any
-
-from pydantic import BaseModel
 
 from .core.models import CallAnalysisReport
 from .llm.schemas import AggregatedInsights, EvidenceSpan, HotTopic
@@ -80,7 +77,6 @@ def _sentiment_trend_label(values: list[float]) -> str:
     if diff < -0.1:
         return "down"
     return "stable"
-
 
 
 # Optional heavy deps for semantic clustering (Fas 4.3)
@@ -174,7 +170,9 @@ class InsightsAggregator:
             AggregatedInsights Pydantic model (ready for .model_dump() and storage/API).
         """
         if not reports:
-            return AggregatedInsights(meta={"num_calls": 0, "generated_at": datetime.now(UTC).isoformat()})
+            return AggregatedInsights(
+                meta={"num_calls": 0, "generated_at": datetime.now(UTC).isoformat()}
+            )
 
         # Normalize to dicts for uniform access (supports both dataclass reports and raw dicts)
         call_dicts: list[dict[str, Any]] = []
@@ -187,7 +185,7 @@ class InsightsAggregator:
                 call_dicts.append({})
 
         n = len(call_dicts)
-        times = timestamps or [datetime.now(UTC) for _ in range(n)]
+        timestamps or [datetime.now(UTC) for _ in range(n)]
 
         # Collect per-call signals (Fas4 + previous)
         topic_sent: dict[str, list[float]] = defaultdict(list)
@@ -198,11 +196,19 @@ class InsightsAggregator:
 
         llm_used_for_desc = False
 
-        for i, cd in enumerate(call_dicts):
+        for _i, cd in enumerate(call_dicts):
             # From new Fas4 results
             ap = (cd.get("results") or {}).get("agent_performance") or {}
-            qa = (cd.get("results") or {}).get("qa") or (cd.get("results") or {}).get("compliance_qa") or {}
-            agent_assess = (cd.get("results") or {}).get("agent_assessment") or (cd.get("llm") or {}).get("agent_assessment") or {}
+            qa = (
+                (cd.get("results") or {}).get("qa")
+                or (cd.get("results") or {}).get("compliance_qa")
+                or {}
+            )
+            agent_assess = (
+                (cd.get("results") or {}).get("agent_assessment")
+                or (cd.get("llm") or {}).get("agent_assessment")
+                or {}
+            )
 
             # Topics / aspects (existing + Fas3 llm refined_aspects)
             topics = cd.get("topics") or {}
@@ -226,7 +232,7 @@ class InsightsAggregator:
 
             # Hot topic candidates from topics + aspects + qa flags + root
             cands: set[str] = set()
-            for t in (topics.get("topics") or []):
+            for t in topics.get("topics") or []:
                 if isinstance(t, dict):
                     cands.add(str(t.get("topic") or t.get("label") or t).lower())
                 else:
@@ -256,17 +262,21 @@ class InsightsAggregator:
             if ap and ap.get("agent"):
                 # simplistic agent id from report if present, else unknown
                 pass
-            flags = agent_assess.get("compliance_flags") or ap.get("agent", {}).get("compliance_flags", [])
+            flags = agent_assess.get("compliance_flags") or ap.get("agent", {}).get(
+                "compliance_flags", []
+            )
             if flags:
                 agent_issues[agent_id].extend(flags)
 
             # Root causes
             if root.get("primary_cause"):
-                root_causes.append({
-                    "cause": root["primary_cause"],
-                    "evidence": [e.get("text", "") for e in root.get("evidence_spans", [])[:2]],
-                    "unresolved": root.get("customer_unresolved", False),
-                })
+                root_causes.append(
+                    {
+                        "cause": root["primary_cause"],
+                        "evidence": [e.get("text", "") for e in root.get("evidence_spans", [])[:2]],
+                        "unresolved": root.get("customer_unresolved", False),
+                    }
+                )
 
         # Build HotTopics (simple freq + sentiment + basic trend)
         hot: list[HotTopic] = []
@@ -294,7 +304,9 @@ class InsightsAggregator:
                     # Use client directly if present
                     client = getattr(self.mistral_analyzer, "client", None)
                     if client:
-                        resp, _meta = client.chat_completion(messages=messages, max_tokens=120, temperature=0.2)
+                        resp, _meta = client.chat_completion(
+                            messages=messages, max_tokens=120, temperature=0.2
+                        )
                         llm_sum = resp.strip()[:300] if isinstance(resp, str) else None
                         llm_used_for_desc = True
                         logger.info("Mistral used for hot topic description: %s", topic)
@@ -330,22 +342,32 @@ class InsightsAggregator:
         if root_causes:
             cause_counter = Counter(rc["cause"] for rc in root_causes)
             for cause, cnt in cause_counter.most_common(5):
-                clusters.append({
-                    "cluster": cause,
-                    "size": cnt,
-                    "examples": [rc for rc in root_causes if rc["cause"] == cause][:2],
-                })
+                clusters.append(
+                    {
+                        "cluster": cause,
+                        "size": cnt,
+                        "examples": [rc for rc in root_causes if rc["cause"] == cause][:2],
+                    }
+                )
 
         # Top agent issues (from Fas4 data)
         agent_summary = []
         for aid, issues in list(agent_issues.items())[:5]:
-            agent_summary.append({"agent": aid, "issue_count": len(issues), "top_issues": list(Counter(issues).most_common(3))})
+            agent_summary.append(
+                {
+                    "agent": aid,
+                    "issue_count": len(issues),
+                    "top_issues": list(Counter(issues).most_common(3)),
+                }
+            )
 
         meta = {
             "num_calls": n,
             "generated_at": datetime.now(UTC).isoformat(),
             "llm_used_for_descriptions": llm_used_for_desc,
-            "embedding_model": "sentence-transformers" if EMBEDDINGS_AVAILABLE else "keyword-fallback",
+            "embedding_model": (
+                "sentence-transformers" if EMBEDDINGS_AVAILABLE else "keyword-fallback"
+            ),
             "clustering": "hdbscan" if HDBSCAN_AVAILABLE else "frequency",
             "min_volume": min_volume,
         }
@@ -362,7 +384,9 @@ class InsightsAggregator:
         )
         logger.info(
             "Insights aggregation complete | calls=%d hot_topics=%d llm_desc=%s",
-            n, len(hot), llm_used_for_desc
+            n,
+            len(hot),
+            llm_used_for_desc,
         )
         return result
 

@@ -129,9 +129,8 @@ def to_mermaid(
     lines = ["flowchart BT"]
     highlight = highlight or set()
     for name, node in sorted(graph.items()):
-        label = name
         if name in highlight:
-            label = f"{name} [highlight]"
+            pass
         for req in node.requires:
             if req in graph:
                 lines.append(f"    {req} --> {name}")
@@ -154,8 +153,7 @@ def to_text_summary(graph: dict[str, AnalyzerNode]) -> str:
 
 def to_json(graph: dict[str, AnalyzerNode]) -> str:
     payload: dict[str, Any] = {
-        name: {"requires": node.requires, "module": node.module}
-        for name, node in graph.items()
+        name: {"requires": node.requires, "module": node.module} for name, node in graph.items()
     }
     payload["_execution_levels"] = compute_execution_levels(graph)
     return json.dumps(payload, indent=2, ensure_ascii=False)

@@ -55,7 +55,10 @@ class TestNegationAnalyzer:
         assert out[0]["negation_count"] >= 1
 
     def test_list_validation_per_item(self) -> None:
-        raw = [{"has_negation": True, "negation_count": 1}, {"has_negation": False, "negation_count": 0}]
+        raw = [
+            {"has_negation": True, "negation_count": 1},
+            {"has_negation": False, "negation_count": 0},
+        ]
         validated = validate_analyzer_result("negation", raw, mode="strict")
         assert isinstance(validated, list)
         assert len(validated) == 2

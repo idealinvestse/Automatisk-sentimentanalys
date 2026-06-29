@@ -10,9 +10,9 @@ import time
 from typing import Any
 
 from .analysis.intent_utils import intents_as_tuples
+from .core.models import CallAnalysisReport, Segment
 from .core.status import get_status_reporter
 from .core.tracing import span
-from .core.models import CallAnalysisReport, Segment
 from .pipeline_steps import (
     PipelineLLMContext,
     apply_early_pii_redaction,
@@ -89,6 +89,7 @@ class CallAnalysisPipeline:
         # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
         try:
             from .profiles import resolve_profile
+
             _, spec = resolve_profile(profile=profile)
             llm_spec = (spec or {}).get("llm", {}) or {}
             if not self.use_mistral_llm and not self.deep_analysis:
@@ -413,19 +414,25 @@ class CallAnalysisPipeline:
             if self.use_mistral_llm or self.deep_analysis:
                 if self.provider == "groq":
                     from .llm.groq_analyzer import GroqAnalyzer
+
                     mistral = GroqAnalyzer(
                         model=self.llm_model,
                         api_key=self.llm_api_key,
                         groq_eu_residency=self.groq_eu_residency,
                     )
-                    logger.info("Fas 4.3 aggregator using Groq for cluster/topic descriptions (selective)")
+                    logger.info(
+                        "Fas 4.3 aggregator using Groq for cluster/topic descriptions (selective)"
+                    )
                 else:
                     from .llm.mistral_analyzer import ConversationMistralAnalyzer
+
                     mistral = ConversationMistralAnalyzer(
                         model=self.llm_model,
                         api_key=self.llm_api_key,
                     )
-                    logger.info("Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)")
+                    logger.info(
+                        "Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)"
+                    )
 
             agg_dict = aggregate_call_reports(reports, mistral_analyzer=mistral)
             logger.info(
@@ -437,10 +444,13 @@ class CallAnalysisPipeline:
             # Also run alerting on aggregator output (per plan 4.4.2: trend-based alerts)
             try:
                 from .alerting import AlertEngine
+
                 eng = AlertEngine()
                 agg_alerts = eng.check_from_aggregate(agg_dict)
                 if agg_alerts:
-                    agg_dict["alerts_from_trends"] = [a.model_dump() if hasattr(a, "model_dump") else a for a in agg_alerts]
+                    agg_dict["alerts_from_trends"] = [
+                        a.model_dump() if hasattr(a, "model_dump") else a for a in agg_alerts
+                    ]
             except Exception as exc:
                 logger.debug("Trend alerts skipped (non-fatal): %s", exc)
 
@@ -499,6 +509,7 @@ class CallAnalysisPipeline:
             # fast even if 10000 calls in reports
         """
         from .caching import precompute_agent_aggregates
+
         return precompute_agent_aggregates(
             reports, cache=self.cache, agent_id=agent_id, window=window
         )
@@ -513,6 +524,7 @@ class CallAnalysisPipeline:
         Smart invalidation strategy documented in src/caching.py.
         """
         from .caching import precompute_hot_topics
+
         return precompute_hot_topics(reports, cache=self.cache, window=window)
 
     def invalidate_aggregate_cache(self, prefix: str):

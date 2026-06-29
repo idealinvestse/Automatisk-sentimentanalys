@@ -7,8 +7,8 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from ..predictive import RiskAnalyzer
-from .intent_utils import intents_as_tuples
 from .base import Analyzer
+from .intent_utils import intents_as_tuples
 from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
@@ -52,9 +52,7 @@ class PredictiveAnalyzer(Analyzer):
             out = assessment.to_dict()
             # Backward-compatible alias used by some dashboards
             out["recommended_action"] = (
-                "Supervisor review"
-                if assessment.risk_level in ("high", "critical")
-                else None
+                "Supervisor review" if assessment.risk_level in ("high", "critical") else None
             )
             return out
         except Exception as exc:

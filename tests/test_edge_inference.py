@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 from src.edge.local_inference import analyze_segments_offline, analyze_text_offline
 
 

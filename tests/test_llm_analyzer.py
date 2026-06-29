@@ -11,7 +11,6 @@ Focus:
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,7 +20,7 @@ from src.llm.mistral_analyzer import (
     ConversationMistralAnalyzer,
     _build_role_labeled_transcript,
 )
-from src.llm.schemas import CallLLMOutput, LLM_OUTPUT_JSON_SCHEMA
+from src.llm.schemas import LLM_OUTPUT_JSON_SCHEMA, CallLLMOutput
 
 
 def test_schemas_produce_strict_compatible_json_schema():
@@ -62,13 +61,17 @@ def test_schema_validation_roundtrip():
             "compliance_flags": ["missade att bekräfta kundens känsla"],
             "strengths": ["Svarade snabbt"],
             "weaknesses": ["Låg empati vid fakturaklagomål"],
-            "evidence_spans": [{"text": "Fakturan var helt fel", "speaker_role": "customer", "turn_index": 0}],
+            "evidence_spans": [
+                {"text": "Fakturan var helt fel", "speaker_role": "customer", "turn_index": 0}
+            ],
             "specific_coaching_recommendations": [
                 {
                     "recommendation": "Säg 'Jag förstår att det är frustrerande' direkt efter kundens klagomål.",
-                    "evidence_spans": [{"text": "Fakturan var helt fel", "speaker_role": "customer"}],
+                    "evidence_spans": [
+                        {"text": "Fakturan var helt fel", "speaker_role": "customer"}
+                    ],
                     "priority": "high",
-                    "category": "empathy"
+                    "category": "empathy",
                 }
             ],
             "overall_assessment": "Agenten behöver träna empati-fraser vid fakturaärenden.",
@@ -176,12 +179,14 @@ def test_analyzer_success_path_validates_and_merges_meta():
 # Prompt quality checks (Task 3.2.1)
 # ---------------------------------------------------------------------------
 
-from src.llm import build_user_prompt, get_system_prompt, LLM_SYSTEM_PROMPT
+from src.llm import LLM_SYSTEM_PROMPT, build_user_prompt, get_system_prompt
 
 
 def test_prompts_contain_key_callcenter_and_evidence_instructions():
     sys_p = get_system_prompt()
-    assert "EVENSSPAN" in sys_p.upper() or "EVIDENSSPAN" in sys_p.upper() or "evidens" in sys_p.lower()
+    assert (
+        "EVENSSPAN" in sys_p.upper() or "EVIDENSSPAN" in sys_p.upper() or "evidens" in sys_p.lower()
+    )
     assert "KUNDEN" in sys_p.upper() or "customer" in sys_p.lower()
     assert "JSON" in sys_p.upper()
 
@@ -211,7 +216,7 @@ from src.llm.schemas import GROQ_DEFAULT_MODEL, GROQ_MODELS
 def test_groq_model_registry_is_complete():
     """GROQ_MODELS contains all 17 expected models with required fields."""
     assert len(GROQ_MODELS) >= 17
-    for model_id, info in GROQ_MODELS.items():
+    for _model_id, info in GROQ_MODELS.items():
         assert "context_window" in info
         assert "owner" in info
         assert "pricing_in" in info
@@ -333,7 +338,12 @@ def test_groq_analyzer_allows_with_eu_residency():
         },
         "meta": {},
     }
-    fake_meta = {"model": "llama-3.3-70b-versatile", "cost_usd": 0.001, "cached": False, "provider": "groq"}
+    fake_meta = {
+        "model": "llama-3.3-70b-versatile",
+        "cost_usd": 0.001,
+        "cached": False,
+        "provider": "groq",
+    }
     fake_client.structured_chat.return_value = (fake_result, fake_meta)
 
     analyzer = GroqAnalyzer(client=fake_client, groq_eu_residency=True)

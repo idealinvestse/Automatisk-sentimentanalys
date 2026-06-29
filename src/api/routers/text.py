@@ -38,7 +38,9 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
             lexicon_file=req.lexicon_file,
             lexicon_weight=req.lexicon_weight,
         )
-        logger.info("Analysis complete – profile=%s model=%s", meta.get("profile"), meta.get("model"))
+        logger.info(
+            "Analysis complete – profile=%s model=%s", meta.get("profile"), meta.get("model")
+        )
         return AnalyzeResponse(meta=meta, timestamp=utc_now_iso(), results=results)
 
     return await run_route("analyze", _do)

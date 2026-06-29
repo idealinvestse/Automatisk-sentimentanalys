@@ -36,7 +36,7 @@ from ..core.models import Segment
 from .groq_client import GroqClient
 from .pii_redactor import redact_segments
 from .prompts import build_user_prompt, get_system_prompt
-from .schemas import CallLLMOutput, GROQ_DEFAULT_MODEL, LLM_OUTPUT_JSON_SCHEMA
+from .schemas import GROQ_DEFAULT_MODEL, LLM_OUTPUT_JSON_SCHEMA, CallLLMOutput
 from .transcript_utils import build_role_labeled_transcript, make_transcript_hash
 
 logger = logging.getLogger(__name__)
@@ -133,17 +133,23 @@ class GroqAnalyzer:
         local_ctx = {}
         if local_results:
             local_ctx = {
-                "role_inference": (local_results.get("role") or {}).get("roles")
-                if isinstance(local_results.get("role"), dict)
-                else local_results.get("role"),
+                "role_inference": (
+                    (local_results.get("role") or {}).get("roles")
+                    if isinstance(local_results.get("role"), dict)
+                    else local_results.get("role")
+                ),
                 "sentiment_summary": self._summarize_sentiment(local_results.get("sentiment")),
-                "escalation_from_local": local_results.get("trajectory", {}).get("escalation_events"),
+                "escalation_from_local": local_results.get("trajectory", {}).get(
+                    "escalation_events"
+                ),
                 "agent_performance_local": local_results.get("agent_performance")
                 or local_results.get("agent_assessment_local"),
             }
 
         local_ctx_str = (
-            json.dumps(local_ctx, ensure_ascii=False, indent=2) if local_ctx else "Ingen tidigare analys."
+            json.dumps(local_ctx, ensure_ascii=False, indent=2)
+            if local_ctx
+            else "Ingen tidigare analys."
         )
         user_prompt = build_user_prompt(
             transcript, local_context={"summary": local_ctx_str}, tasks=tasks
@@ -227,6 +233,7 @@ def _check_profile_anonymize(profile_name: str) -> bool:
     """Check if profile has anonymize_before_llm enabled."""
     try:
         from ..profiles import resolve_profile
+
         _, spec = resolve_profile(profile=profile_name)
         llm_spec = (spec or {}).get("llm", {}) or {}
         return bool(llm_spec.get("anonymize_before_llm", False))

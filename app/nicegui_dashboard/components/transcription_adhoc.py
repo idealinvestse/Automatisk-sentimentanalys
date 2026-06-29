@@ -8,16 +8,16 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
+from app.nicegui_dashboard.services.transcription_presets import (
+    DEFAULT_PRESET_ID,
+    preset_description,
+)
 from app.nicegui_dashboard.services.transcription_result_helpers import (
     segments_table_rows,
     segments_to_csv_bytes,
     transcript_full_text,
     transcript_llm_enhanced,
     transcript_to_json_bytes,
-)
-from app.nicegui_dashboard.services.transcription_presets import (
-    DEFAULT_PRESET_ID,
-    preset_description,
 )
 from app.nicegui_dashboard.services.transcription_runtime import MAX_AUDIO_BYTES
 from app.nicegui_dashboard.services.transcription_service import TranscriptionState
@@ -63,22 +63,29 @@ def render_adhoc_section(
         result_expansion.set_visibility(False)
 
         with result_expansion:
-            meta_row = ui.row().classes("gap-2 flex-wrap q-mb-sm")
+            ui.row().classes("gap-2 flex-wrap q-mb-sm")
             badge_asr = ui.badge("ASR", color="grey").classes("q-mr-xs")
             badge_llm = ui.badge("LLM-förbättrad", color="purple")
             badge_llm.set_visibility(False)
             meta_label = ui.label("").classes("text-caption")
 
-            full_text = ui.textarea(label="Fullständigt transkript", value="").props(
-                "readonly outlined autogrow"
-            ).classes("w-full q-mb-sm")
+            full_text = (
+                ui.textarea(label="Fullständigt transkript", value="")
+                .props("readonly outlined autogrow")
+                .classes("w-full q-mb-sm")
+            )
 
             segment_table = ui.table(
                 columns=[
                     {"name": "time", "label": "Tid", "field": "time", "align": "left"},
                     {"name": "speaker", "label": "Talare", "field": "speaker", "align": "left"},
                     {"name": "text", "label": "Text", "field": "text", "align": "left"},
-                    {"name": "confidence", "label": "Confidence", "field": "confidence", "align": "right"},
+                    {
+                        "name": "confidence",
+                        "label": "Confidence",
+                        "field": "confidence",
+                        "align": "right",
+                    },
                     {"name": "warning", "label": "Varning", "field": "warning", "align": "center"},
                 ],
                 rows=[],
@@ -89,14 +96,13 @@ def render_adhoc_section(
             export_holder: dict[str, Any] = {"transcript": None, "last_error": None}
 
             with ui.row().classes("gap-2 flex-wrap"):
+
                 def copy_transcript() -> None:
                     text = full_text.value or ""
                     if not text:
                         ui.notify("Inget transkript att kopiera", type="warning")
                         return
-                    ui.run_javascript(
-                        f"navigator.clipboard.writeText({json.dumps(text)})"
-                    )
+                    ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(text)})")
                     ui.notify("Transkript kopierat")
 
                 def export_json() -> None:
@@ -129,13 +135,13 @@ def render_adhoc_section(
             elif not trans_state.adhoc_upload_path:
                 file_label.set_text("Ingen fil vald")
 
-            transcribe_btn.set_enabled(
-                not running and bool(trans_state.adhoc_upload_path)
-            )
+            transcribe_btn.set_enabled(not running and bool(trans_state.adhoc_upload_path))
             cancel_btn.set_enabled(running)
             clear_btn.set_enabled(not running)
 
-            if trans_state.adhoc_error and trans_state.adhoc_error != export_holder.get("last_error"):
+            if trans_state.adhoc_error and trans_state.adhoc_error != export_holder.get(
+                "last_error"
+            ):
                 export_holder["last_error"] = trans_state.adhoc_error
                 ui.notify(trans_state.adhoc_error, type="negative")
             if not trans_state.adhoc_error:
@@ -180,7 +186,9 @@ def render_adhoc_section(
             label="Välj fil",
             auto_upload=True,
             on_upload=on_upload,
-        ).props(f'accept="{_AUDIO_ACCEPT}"').classes("w-full")
+        ).props(
+            f'accept="{_AUDIO_ACCEPT}"'
+        ).classes("w-full")
 
         with ui.row().classes("gap-2 q-mt-sm flex-wrap"):
             transcribe_btn = ui.button("Transkribera nu", color="primary")
@@ -190,7 +198,9 @@ def render_adhoc_section(
                     ui.notify("Transkribering startad")
                     _refresh_ui()
                 else:
-                    ui.notify("Välj en fil först eller vänta tills pågående jobb är klart", type="warning")
+                    ui.notify(
+                        "Välj en fil först eller vänta tills pågående jobb är klart", type="warning"
+                    )
 
             transcribe_btn.on_click(start_transcription)
 

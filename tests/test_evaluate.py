@@ -125,7 +125,15 @@ class TestEvaluateCLI:
         runner = CliRunner()
         result = runner.invoke(
             app,
-            ["scenarios", "--testset", str(csv_path), "--output", str(out), "--backend", "heuristic"],
+            [
+                "scenarios",
+                "--testset",
+                str(csv_path),
+                "--output",
+                str(out),
+                "--backend",
+                "heuristic",
+            ],
         )
         assert result.exit_code == 0
         assert out.is_file()
@@ -166,7 +174,15 @@ class TestEvaluateCLI:
         runner = CliRunner()
         result = runner.invoke(
             app,
-            ["negation", "--testset", str(csv_path), "--output", str(out), "--backend", "heuristic"],
+            [
+                "negation",
+                "--testset",
+                str(csv_path),
+                "--output",
+                str(out),
+                "--backend",
+                "heuristic",
+            ],
         )
         assert result.exit_code == 0
         assert out.is_file()

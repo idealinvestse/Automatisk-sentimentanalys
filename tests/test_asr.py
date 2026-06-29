@@ -8,7 +8,11 @@ import pytest
 
 from src.core.config import KB_REVISIONS
 from src.core.device import normalize_device_for_asr
-from src.transcription.base import format_hotwords_for_asr, resolve_model_name, resolve_model_name_for_backend
+from src.transcription.base import (
+    format_hotwords_for_asr,
+    resolve_model_name,
+    resolve_model_name_for_backend,
+)
 from src.transcription.factory import get_transcriber
 from src.transcription.faster_whisper import FasterWhisperTranscriber
 
@@ -33,10 +37,14 @@ class TestModelResolution:
         assert resolve_model_name_for_backend("large-v3", "faster") == "large-v3"
 
     def test_large_v3_maps_to_hf_for_transformers(self):
-        assert resolve_model_name_for_backend("large-v3", "transformers") == "openai/whisper-large-v3"
+        assert (
+            resolve_model_name_for_backend("large-v3", "transformers") == "openai/whisper-large-v3"
+        )
 
     def test_format_hotwords_joins_list(self):
-        assert format_hotwords_for_asr(["fakturering", "återbetalning"]) == "fakturering återbetalning"
+        assert (
+            format_hotwords_for_asr(["fakturering", "återbetalning"]) == "fakturering återbetalning"
+        )
 
 
 class TestDeviceNormalization:
@@ -246,7 +254,9 @@ class TestWhisperXBackendMocked:
             patch("src.transcription.whisperx._HAS_WHISPERX", True),
             patch("src.transcription.whisperx.whisperx", mock_wx),
         ):
-            transcriber = get_transcriber(backend="whisperx", model_name="kb-whisper-large", device="cpu")
+            transcriber = get_transcriber(
+                backend="whisperx", model_name="kb-whisper-large", device="cpu"
+            )
             # The mapping happens in __init__
             assert "large-v3" in transcriber.model_name
 
@@ -271,8 +281,20 @@ class TestFasterWhisperChunkingAndLowConf:
     def test_merge_overlapping_segments_prefers_higher_conf(self):
         """Segments that overlap heavily should keep the higher-confidence version."""
         segs = [
-            Segment(start=0.0, end=32.0, text="Hej hur mår du idag", avg_confidence=0.45, confidence=0.45),
-            Segment(start=28.0, end=61.0, text="hur mår du idag på jobbet", avg_confidence=0.82, confidence=0.82),
+            Segment(
+                start=0.0,
+                end=32.0,
+                text="Hej hur mår du idag",
+                avg_confidence=0.45,
+                confidence=0.45,
+            ),
+            Segment(
+                start=28.0,
+                end=61.0,
+                text="hur mår du idag på jobbet",
+                avg_confidence=0.82,
+                confidence=0.82,
+            ),
         ]
         merged = FasterWhisperTranscriber._merge_overlapping_segments(segs, overlap_seconds=4.0)
         assert len(merged) == 1
@@ -303,7 +325,6 @@ class TestLexiconBoostForLowConf:
 
     def test_low_conf_gets_higher_lexicon_weight(self):
         # Very simple lexicon for the test
-        lex = {"bra": 0.9, "dålig": -0.9, "problem": -0.7}
         # We test the internal boost logic indirectly via the public function
         texts = ["det här är ett problem", "det här är ett bra problem"]
         # Fake model results (neutral-ish)
@@ -349,7 +370,9 @@ class TestHotwordsAndInitialPrompt:
             patch("src.transcription.faster_whisper.WhisperModel", return_value=mock_model),
             patch("src.transcription.faster_whisper._HAS_FASTER", True),
         ):
-            transcriber = get_transcriber(backend="faster", model_name="kb-whisper-large", device="cpu")
+            transcriber = get_transcriber(
+                backend="faster", model_name="kb-whisper-large", device="cpu"
+            )
             result = transcriber.transcribe(
                 audio_path="test.wav",
                 language="sv",
@@ -366,11 +389,13 @@ class TestHotwordsAndInitialPrompt:
 
     def test_params_pass_through_unknown_backend_error_still_works(self):
         # Just ensure signature doesn't break other paths
-        with patch("src.transcription.faster_whisper._HAS_FASTER", False):
-            with pytest.raises(ImportError):
-                get_transcriber(backend="faster").transcribe(
-                    "x.wav", hotwords=["test"], initial_prompt="hej"
-                )
+        with (
+            patch("src.transcription.faster_whisper._HAS_FASTER", False),
+            pytest.raises(ImportError),
+        ):
+            get_transcriber(backend="faster").transcribe(
+                "x.wav", hotwords=["test"], initial_prompt="hej"
+            )
 
 
 class TestPreprocessParam:

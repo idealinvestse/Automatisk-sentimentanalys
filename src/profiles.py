@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
 
+
 def _get_callcenter_model() -> str:
     lora = "models/callcenter-sentiment-lora"
     return lora if os.path.isdir(lora) else DEFAULT_MODEL
+
 
 # Minimal, pragmatic profile specifications
 PROFILE_SPECS: dict[str, dict] = {
@@ -145,8 +147,14 @@ PROFILE_SPECS: dict[str, dict] = {
         "lexicon_weight": 0.25,
         # Task 1.5: aspects enabled by default via AspectAnalyzer registration
         "aspects": [
-            "kundtjänst_kvalitet", "teknisk_lösning", "fakturering_pris", "väntetid",
-            "agent_attityd", "produkt_kvalitet", "uppföljning", "annat"
+            "kundtjänst_kvalitet",
+            "teknisk_lösning",
+            "fakturering_pris",
+            "väntetid",
+            "agent_attityd",
+            "produkt_kvalitet",
+            "uppföljning",
+            "annat",
         ],
         # Task 3.2.3: Mistral/OpenRouter LLM config for holistisk analysis (European-first)
         "llm": {
@@ -175,7 +183,11 @@ PROFILE_SPECS: dict[str, dict] = {
         },
         "lexicon_file": "data/sensaldo_lexicon.csv",
         "lexicon_weight": 0.25,
-        "llm": {"enabled": False, "default_model": "mistralai/mistral-medium-3.5", "cost_budget_per_call": 0.05},
+        "llm": {
+            "enabled": False,
+            "default_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.05,
+        },
     },
     "complaint": {
         "model": _get_callcenter_model(),
@@ -193,7 +205,11 @@ PROFILE_SPECS: dict[str, dict] = {
         },
         "lexicon_file": "data/sensaldo_lexicon.csv",
         "lexicon_weight": 0.25,
-        "llm": {"enabled": True, "default_model": "mistralai/mistral-medium-3.5", "cost_budget_per_call": 0.08},
+        "llm": {
+            "enabled": True,
+            "default_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.08,
+        },
     },
     "support": {
         "model": _get_callcenter_model(),
@@ -211,7 +227,11 @@ PROFILE_SPECS: dict[str, dict] = {
         },
         "lexicon_file": "data/sensaldo_lexicon.csv",
         "lexicon_weight": 0.25,
-        "llm": {"enabled": True, "default_model": "mistralai/mistral-medium-3.5", "cost_budget_per_call": 0.06},
+        "llm": {
+            "enabled": True,
+            "default_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.06,
+        },
     },
     "teknisk_support": {
         "model": DEFAULT_MODEL,
@@ -229,7 +249,11 @@ PROFILE_SPECS: dict[str, dict] = {
         },
         "lexicon_file": "data/sensaldo_lexicon.csv",
         "lexicon_weight": 0.2,
-        "llm": {"enabled": False, "default_model": "mistralai/mistral-medium-3.5", "cost_budget_per_call": 0.05},
+        "llm": {
+            "enabled": False,
+            "default_model": "mistralai/mistral-medium-3.5",
+            "cost_budget_per_call": 0.05,
+        },
     },
 }
 

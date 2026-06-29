@@ -90,9 +90,24 @@ def test_judges_low_confidence_segments(low_conf_ctx: AnalysisContext) -> None:
     mock_client = MagicMock()
     mock_client.structured_chat.return_value = (
         [
-            {"segment_index": 0, "judge_label": "negative", "judge_confidence": 0.71, "reasoning": "Negativ markör 'inte säker'"},
-            {"segment_index": 1, "judge_label": "neutral", "judge_confidence": 0.68, "reasoning": "Tveksam formulering"},
-            {"segment_index": 2, "judge_label": "negative", "judge_confidence": 0.82, "reasoning": "Konstig upplevelse"},
+            {
+                "segment_index": 0,
+                "judge_label": "negative",
+                "judge_confidence": 0.71,
+                "reasoning": "Negativ markör 'inte säker'",
+            },
+            {
+                "segment_index": 1,
+                "judge_label": "neutral",
+                "judge_confidence": 0.68,
+                "reasoning": "Tveksam formulering",
+            },
+            {
+                "segment_index": 2,
+                "judge_label": "negative",
+                "judge_confidence": 0.82,
+                "reasoning": "Konstig upplevelse",
+            },
         ],
         {"cost_usd": 0.0008, "latency_ms": 142},
     )
@@ -115,8 +130,28 @@ def test_respects_max_segments_per_call(mixed_conf_ctx: AnalysisContext) -> None
     mock_client = MagicMock()
     # Two batches → two structured_chat calls
     mock_client.structured_chat.side_effect = [
-        ([{"segment_index": 0, "judge_label": "negative", "judge_confidence": 0.75, "reasoning": "r1"}], {"cost_usd": 0.0004}),
-        ([{"segment_index": 0, "judge_label": "neutral", "judge_confidence": 0.66, "reasoning": "r2"}], {"cost_usd": 0.0004}),
+        (
+            [
+                {
+                    "segment_index": 0,
+                    "judge_label": "negative",
+                    "judge_confidence": 0.75,
+                    "reasoning": "r1",
+                }
+            ],
+            {"cost_usd": 0.0004},
+        ),
+        (
+            [
+                {
+                    "segment_index": 0,
+                    "judge_label": "neutral",
+                    "judge_confidence": 0.66,
+                    "reasoning": "r2",
+                }
+            ],
+            {"cost_usd": 0.0004},
+        ),
     ]
     analyzer._client = mock_client
 
@@ -208,7 +243,9 @@ def test_verdict_schema_validates() -> None:
         )
 
 
-def test_external_llm_call_logged(low_conf_ctx: AnalysisContext, caplog: pytest.LogCaptureFixture) -> None:
+def test_external_llm_call_logged(
+    low_conf_ctx: AnalysisContext, caplog: pytest.LogCaptureFixture
+) -> None:
     """Every LLM egress produces an 'EXTERNAL LLM CALL' log line."""
     analyzer = LLMJudgeAnalyzer(min_confidence=0.6)
     mock_client = MagicMock()

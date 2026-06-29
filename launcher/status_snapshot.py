@@ -142,7 +142,9 @@ def _build_service_snapshot(cfg: UserConfig, name: str) -> ServiceSnapshot:
 
     state = ServiceState.STOPPED
     if port_open and process_alive and (health_ok is not False or name != "api"):
-        state = ServiceState.RUNNING if (name != "api" or health_ok is True) else ServiceState.LISTENING
+        state = (
+            ServiceState.RUNNING if (name != "api" or health_ok is True) else ServiceState.LISTENING
+        )
     elif port_open and (health_ok is True or name != "api"):
         state = ServiceState.RUNNING if health_ok is not False else ServiceState.LISTENING
     elif port_open:

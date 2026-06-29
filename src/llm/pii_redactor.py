@@ -49,28 +49,56 @@ _PHONE_RE = re.compile(
     r"\b07\d{8}\b"
     r")"
 )  # Swedish phone numbers — requires +46 or 0 prefix, not preceded by digit, to avoid false positives on invoice/case IDs
-_PERSONNUMMER_RE = re.compile(r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b")
-_CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")  # 13-16 digits with optional spaces/dashes; filtered by Luhn checksum (see _is_valid_luhn)
+_PERSONNUMMER_RE = re.compile(
+    r"\b(?:19|20)?\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])[-+]?\d{4}\b"
+)
+_CREDIT_CARD_RE = re.compile(
+    r"\b(?:\d[ -]*?){13,16}\b"
+)  # 13-16 digits with optional spaces/dashes; filtered by Luhn checksum (see _is_valid_luhn)
 # Permissive address regex — matches capitalized word(s) followed by number.
 # Suffix validation is done in Python to handle compound Swedish street names
 # (e.g. "Brunkebergstorg" = "Brunkeberg"+"torg", "Vasaplatsen" = "Vasa"+"platsen").
-_ADDRESS_RE = re.compile(
-    r"\b[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+(?:\s+[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+)?\s+\d{1,4}\b"
-)
+_ADDRESS_RE = re.compile(r"\b[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+(?:\s+[A-ZÅÄÖ][A-Za-zÅÄÖåäö]+)?\s+\d{1,4}\b")
 
 # Known Swedish + English street suffixes for address validation (case-insensitive).
 # Used in redact_pii() to verify the permissive match actually looks like a street.
-_ADDRESS_SUFFIXES = frozenset({
-    # Swedish street name endings
-    "gatan", "vägen", "gata", "väg", "torget", "torg", "platsen",
-    "esplanaden", "allén", "avenyn", "aveny", "boulevarden", "stråket",
-    "leden", "backen", "höjden", "kajen", "plan",
-    # English / legacy
-    "avenue", "street", "st", "road", "rd", "allé", "esplanad",
-})
+_ADDRESS_SUFFIXES = frozenset(
+    {
+        # Swedish street name endings
+        "gatan",
+        "vägen",
+        "gata",
+        "väg",
+        "torget",
+        "torg",
+        "platsen",
+        "esplanaden",
+        "allén",
+        "avenyn",
+        "aveny",
+        "boulevarden",
+        "stråket",
+        "leden",
+        "backen",
+        "höjden",
+        "kajen",
+        "plan",
+        # English / legacy
+        "avenue",
+        "street",
+        "st",
+        "road",
+        "rd",
+        "allé",
+        "esplanad",
+    }
+)
 
 # Conservative name heuristic (only after common titles or in specific contexts to avoid over-redaction)
-_NAME_TITLE_RE = re.compile(r"\b(?:herr|fru|fröken|dr|prof|hr|fr)\s+([A-ZÅÄÖ][a-zåäö]+(?:\s+[A-ZÅÄÖ][a-zåäö]+)?)", re.IGNORECASE)
+_NAME_TITLE_RE = re.compile(
+    r"\b(?:herr|fru|fröken|dr|prof|hr|fr)\s+([A-ZÅÄÖ][a-zåäö]+(?:\s+[A-ZÅÄÖ][a-zåäö]+)?)",
+    re.IGNORECASE,
+)
 
 _REPLACEMENTS = {
     "email": "[REDACTED_EMAIL]",
@@ -85,15 +113,81 @@ _REPLACEMENTS = {
 # Used for conservative heuristic redaction (title context or NER). List covers ~80% of common Swedish names.
 _COMMON_SWEDISH_FIRST_NAMES = {
     # Top female (SCB all-ages)
-    "anna", "kristina", "margareta", "birgitta", "elisabeth", "eva", "karin", "lena", "maria",
-    "kerstin", "ingrid", "marianne", "gunilla", "britt", "inger", "susanne", "monica", "annika",
-    "åsa", "helena", "barbro", "majbritt", "ann-marie", "gunvor", "ingegerd", "astrid", "maj",
-    "siv", "berit", "gunnel", "solveig", "ritt", "gun", "ann-charlotte", "ann-britt", "kajsa",
+    "anna",
+    "kristina",
+    "margareta",
+    "birgitta",
+    "elisabeth",
+    "eva",
+    "karin",
+    "lena",
+    "maria",
+    "kerstin",
+    "ingrid",
+    "marianne",
+    "gunilla",
+    "britt",
+    "inger",
+    "susanne",
+    "monica",
+    "annika",
+    "åsa",
+    "helena",
+    "barbro",
+    "majbritt",
+    "ann-marie",
+    "gunvor",
+    "ingegerd",
+    "astrid",
+    "maj",
+    "siv",
+    "berit",
+    "gunnel",
+    "solveig",
+    "ritt",
+    "gun",
+    "ann-charlotte",
+    "ann-britt",
+    "kajsa",
     # Top male (SCB all-ages)
-    "lars", "anders", "johan", "erik", "karl", "nils", "per", "bengt", "bo", "jan",
-    "sven", "gunnar", "hans", "göran", "ingvar", "rolf", "kjell", "leif", "lennart", "olof",
-    "stig", "mats", "peter", "ulf", "christer", "hakan", "magnus", "fredrik", "daniel", "martin",
-    "andreas", "mikael", "joakim", "tomas", "andersson", "johansson", "svensson", "persson",
+    "lars",
+    "anders",
+    "johan",
+    "erik",
+    "karl",
+    "nils",
+    "per",
+    "bengt",
+    "bo",
+    "jan",
+    "sven",
+    "gunnar",
+    "hans",
+    "göran",
+    "ingvar",
+    "rolf",
+    "kjell",
+    "leif",
+    "lennart",
+    "olof",
+    "stig",
+    "mats",
+    "peter",
+    "ulf",
+    "christer",
+    "hakan",
+    "magnus",
+    "fredrik",
+    "daniel",
+    "martin",
+    "andreas",
+    "mikael",
+    "joakim",
+    "tomas",
+    "andersson",
+    "johansson",
+    "svensson",
+    "persson",
 }
 
 
@@ -123,7 +217,9 @@ def _is_valid_luhn(digits: str) -> bool:
     return total % 10 == 0
 
 
-def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[str, list[dict[str, Any]]]:
+def redact_pii(
+    text: str, redaction_map: dict[str, str] | None = None
+) -> tuple[str, list[dict[str, Any]]]:
     """Redact obvious PII from a transcript string (Fas 4.4.1).
 
     Returns: (redacted_text, list_of_events)
@@ -137,27 +233,35 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
     result = text
     events: list[dict[str, Any]] = []
 
-    def _replace_with_log(pattern: re.Pattern, repl: str, pii_type: str, current_text: str) -> tuple[str, list[dict]]:
+    def _replace_with_log(
+        pattern: re.Pattern, repl: str, pii_type: str, current_text: str
+    ) -> tuple[str, list[dict]]:
         local_events = []
         new_text = current_text
         for m in reversed(list(pattern.finditer(current_text))):  # reverse to preserve indices
             orig = m.group(0)
             start, end = m.start(), m.end()
             new_text = new_text[:start] + repl + new_text[end:]
-            local_events.append({
-                "type": pii_type,
-                "original": orig,
-                "replacement": repl,
-                "char_start": start,
-                "char_end": end,
-            })
+            local_events.append(
+                {
+                    "type": pii_type,
+                    "original": orig,
+                    "replacement": repl,
+                    "char_start": start,
+                    "char_end": end,
+                }
+            )
         return new_text, local_events
 
     # Order: personnummer first (more specific)
-    result, ev = _replace_with_log(_PERSONNUMMER_RE, replacements.get("personnummer", "[REDACTED_PNR]"), "personnummer", result)
+    result, ev = _replace_with_log(
+        _PERSONNUMMER_RE, replacements.get("personnummer", "[REDACTED_PNR]"), "personnummer", result
+    )
     events.extend(ev)
 
-    result, ev = _replace_with_log(_EMAIL_RE, replacements.get("email", "[REDACTED_EMAIL]"), "email", result)
+    result, ev = _replace_with_log(
+        _EMAIL_RE, replacements.get("email", "[REDACTED_EMAIL]"), "email", result
+    )
     events.extend(ev)
 
     # Credit card BEFORE phone: filter through Luhn validation to avoid false positives on invoice/case numbers.
@@ -168,20 +272,28 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
         digits = re.sub(r"[\s-]", "", orig)
         if _is_valid_luhn(digits):
             start, end = m.start(), m.end()
-            result = result[:start] + replacements.get("credit_card", "[REDACTED_CC]") + result[end:]
-            cc_events.append({
-                "type": "credit_card",
-                "original": orig,
-                "replacement": replacements.get("credit_card", "[REDACTED_CC]"),
-                "char_start": start,
-                "char_end": end,
-            })
+            result = (
+                result[:start] + replacements.get("credit_card", "[REDACTED_CC]") + result[end:]
+            )
+            cc_events.append(
+                {
+                    "type": "credit_card",
+                    "original": orig,
+                    "replacement": replacements.get("credit_card", "[REDACTED_CC]"),
+                    "char_start": start,
+                    "char_end": end,
+                }
+            )
     events.extend(cc_events)
 
-    result, ev = _replace_with_log(_PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result)
+    result, ev = _replace_with_log(
+        _PHONE_RE, replacements.get("phone", "[REDACTED_PHONE]"), "phone", result
+    )
     events.extend(ev)
 
-    result, ev = _replace_with_log(_ADDRESS_RE, replacements.get("address", "[REDACTED_ADDRESS]"), "address", result)
+    result, ev = _replace_with_log(
+        _ADDRESS_RE, replacements.get("address", "[REDACTED_ADDRESS]"), "address", result
+    )
     events.extend(ev)
     # Address: filter permissive regex matches by known suffix presence
     addr_events: list[dict[str, Any]] = []
@@ -195,20 +307,26 @@ def redact_pii(text: str, redaction_map: dict[str, str] | None = None) -> tuple[
         # Validate that street part contains a known suffix
         if any(suf in street.lower() for suf in _ADDRESS_SUFFIXES):
             start, end = m.start(), m.end()
-            result = result[:start] + replacements.get("address", "[REDACTED_ADDRESS]") + result[end:]
-            addr_events.append({
-                "type": "address",
-                "original": full,
-                "replacement": replacements.get("address", "[REDACTED_ADDRESS]"),
-                "char_start": start,
-                "char_end": end,
-            })
+            result = (
+                result[:start] + replacements.get("address", "[REDACTED_ADDRESS]") + result[end:]
+            )
+            addr_events.append(
+                {
+                    "type": "address",
+                    "original": full,
+                    "replacement": replacements.get("address", "[REDACTED_ADDRESS]"),
+                    "char_start": start,
+                    "char_end": end,
+                }
+            )
     # Replace the events from the permissive regex run with the validated ones
     events = [e for e in events if e["type"] != "address"]
     events.extend(addr_events)
 
     # Name heuristic (title-based only, conservative)
-    result, ev = _replace_with_log(_NAME_TITLE_RE, replacements.get("name", "[REDACTED_NAME]"), "name", result)
+    result, ev = _replace_with_log(
+        _NAME_TITLE_RE, replacements.get("name", "[REDACTED_NAME]"), "name", result
+    )
     events.extend(ev)
 
     return result, events
@@ -234,16 +352,29 @@ def redact_segments(
     applied = False  # noqa: F841 — kept for clarity/logging hooks
     try:
         from ..profiles import resolve_profile
+
         _, spec = resolve_profile(profile=profile_name)
         llm_spec = spec.get("llm", {}) or {}
         if not llm_spec.get("anonymize_before_llm"):
             if return_log:
-                log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
+                log = PiiRedactionLog(
+                    events=[],
+                    total_redacted=0,
+                    types_redacted=[],
+                    applied_to_local=False,
+                    profile=profile_name,
+                )
                 return segments, log
             return segments
     except Exception:
         if return_log:
-            log = PiiRedactionLog(events=[], total_redacted=0, types_redacted=[], applied_to_local=False, profile=profile_name)
+            log = PiiRedactionLog(
+                events=[],
+                total_redacted=0,
+                types_redacted=[],
+                applied_to_local=False,
+                profile=profile_name,
+            )
             return segments, log
         return segments
 
@@ -254,8 +385,11 @@ def redact_segments(
     ner_pipeline = None
     try:
         from transformers import pipeline  # type: ignore
+
         # Small Swedish NER if available in env (non-fatal if missing)
-        ner_pipeline = pipeline("ner", model="KB/bert-base-swedish-cased-ner", aggregation_strategy="simple", device=-1)
+        ner_pipeline = pipeline(
+            "ner", model="KB/bert-base-swedish-cased-ner", aggregation_strategy="simple", device=-1
+        )
         logger.debug("PII redactor: Swedish NER pipeline loaded for names/addresses")
     except Exception:
         ner_pipeline = None  # regex + heuristic only
@@ -282,16 +416,27 @@ def redact_segments(
                             # conservative: only redact high-conf person/location
                             start, end = ent["start"], ent["end"]
                             snippet = original_text[start:end]
-                            if len(snippet) > 2 and snippet.lower() not in _COMMON_SWEDISH_FIRST_NAMES:
-                                repl = "[REDACTED_NAME]" if ent["entity_group"] == "PER" else "[REDACTED_ADDRESS]"
+                            if (
+                                len(snippet) > 2
+                                and snippet.lower() not in _COMMON_SWEDISH_FIRST_NAMES
+                            ):
+                                repl = (
+                                    "[REDACTED_NAME]"
+                                    if ent["entity_group"] == "PER"
+                                    else "[REDACTED_ADDRESS]"
+                                )
                                 redacted_text = redacted_text[:start] + repl + redacted_text[end:]
-                                events.append({
-                                    "type": "name" if ent["entity_group"] == "PER" else "address",
-                                    "original": snippet,
-                                    "replacement": repl,
-                                    "char_start": start,
-                                    "char_end": end,
-                                })
+                                events.append(
+                                    {
+                                        "type": (
+                                            "name" if ent["entity_group"] == "PER" else "address"
+                                        ),
+                                        "original": snippet,
+                                        "replacement": repl,
+                                        "char_start": start,
+                                        "char_end": end,
+                                    }
+                                )
                 except Exception as ner_e:
                     logger.debug("NER pass skipped: %s", ner_e)
 
@@ -314,7 +459,9 @@ def redact_segments(
         if all_events:
             logger.info(
                 "PII redaction (early pipeline, profile=%s): %d events, types=%s. Log attached to results['pii_redaction'].",
-                profile_name, len(all_events), types
+                profile_name,
+                len(all_events),
+                types,
             )
         return redacted_list, log
 

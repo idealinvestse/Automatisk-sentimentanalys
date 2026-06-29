@@ -9,7 +9,6 @@ import pytest
 from src.benchmarks.audio_catalog import (
     AudioCatalog,
     default_audio_root,
-    load_catalog,
     parse_ravdess_filename,
 )
 from src.benchmarks.audio_models import SampleFilter

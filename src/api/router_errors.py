@@ -9,7 +9,7 @@ from typing import TypeVar
 from fastapi import HTTPException
 
 from ..core.errors import BaseAnalysisError
-from .dependencies import PUBLIC_ERROR_DETAIL
+from .error_responses import PUBLIC_ERROR_DETAIL
 
 logger = logging.getLogger(__name__)
 _T = TypeVar("_T")

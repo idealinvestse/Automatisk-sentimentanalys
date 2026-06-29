@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 from src.pipeline import CallAnalysisPipeline, CallAnalysisReport
-from unittest.mock import patch, MagicMock
 
 
 class TestCallAnalysisPipeline:
@@ -112,14 +113,23 @@ class TestCallAnalysisPipeline:
             mock_inst.analyze_full_conversation.return_value = fake_llm_out
             mock_analyzer_cls.return_value = mock_inst
 
-            segments = [{"start": 0, "end": 10, "text": "Hej, jag har problem med fakturan.", "speaker": "SPEAKER_1"}]
+            segments = [
+                {
+                    "start": 0,
+                    "end": 10,
+                    "text": "Hej, jag har problem med fakturan.",
+                    "speaker": "SPEAKER_1",
+                }
+            ]
             # Force the deep path
             report = self.pipe.analyze_segments(
-                segments, 
+                segments,
                 # We pass via the pipeline instance flags instead of analyze_segments signature for now
             )
             # Re-create with flags by using a fresh pipeline configured for LLM
-            pipe_llm = CallAnalysisPipeline(use_mistral_llm=True, llm_model="mistralai/mistral-medium-3.5")
+            pipe_llm = CallAnalysisPipeline(
+                use_mistral_llm=True, llm_model="mistralai/mistral-medium-3.5"
+            )
             # Re-apply the sentiment mock on the new instance's path
             monkeypatch.setattr(
                 "src.analysis.sentiment.SentimentPipeline.analyze",
@@ -136,8 +146,18 @@ class TestCallAnalysisPipeline:
         """Fas 4.1: report.results must contain agent_performance (Pydantic dump), agent_assessment, customer_metrics."""
         self._mock_sentiment(monkeypatch)
         segments = [
-            {"start": 0, "end": 4, "text": "Hej, jag är missnöjd med fakturan.", "speaker": "SPEAKER_0"},
-            {"start": 4, "end": 9, "text": "Jag förstår att det är frustrerande. Jag ska kolla direkt.", "speaker": "SPEAKER_1"},
+            {
+                "start": 0,
+                "end": 4,
+                "text": "Hej, jag är missnöjd med fakturan.",
+                "speaker": "SPEAKER_0",
+            },
+            {
+                "start": 4,
+                "end": 9,
+                "text": "Jag förstår att det är frustrerande. Jag ska kolla direkt.",
+                "speaker": "SPEAKER_1",
+            },
             {"start": 9, "end": 12, "text": "Tack, det låter bra.", "speaker": "SPEAKER_0"},
         ]
         report = self.pipe.analyze_segments(segments)
@@ -172,15 +192,34 @@ class TestCallAnalysisPipeline:
         from src.agent_performance import compute_call_agent_performance
 
         segments = [
-            {"start": 0, "end": 2, "text": "Hej, välkommen till kundtjänst.", "speaker": "SPEAKER_1"},
-            {"start": 2, "end": 5, "text": "Hallå, jag har fått fel faktura igen!", "speaker": "SPEAKER_0"},
-            {"start": 5, "end": 10, "text": "Jag beklagar verkligen det här. Jag förstår att det är frustrerande för dig. Jag fixar det.", "speaker": "SPEAKER_1"},
+            {
+                "start": 0,
+                "end": 2,
+                "text": "Hej, välkommen till kundtjänst.",
+                "speaker": "SPEAKER_1",
+            },
+            {
+                "start": 2,
+                "end": 5,
+                "text": "Hallå, jag har fått fel faktura igen!",
+                "speaker": "SPEAKER_0",
+            },
+            {
+                "start": 5,
+                "end": 10,
+                "text": "Jag beklagar verkligen det här. Jag förstår att det är frustrerande för dig. Jag fixar det.",
+                "speaker": "SPEAKER_1",
+            },
             {"start": 10, "end": 13, "text": "Kan du kolla ordernumret?", "speaker": "SPEAKER_1"},
             {"start": 13, "end": 16, "text": "Ja tack, nu blev det rätt.", "speaker": "SPEAKER_0"},
         ]
-        perf = compute_call_agent_performance(segments, role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"})
+        perf = compute_call_agent_performance(
+            segments, role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"}
+        )
         assert perf is not None
-        assert perf.agent.empathy_score >= 0.4  # detected "beklagar", "förstår", greeting present so no flag
+        assert (
+            perf.agent.empathy_score >= 0.4
+        )  # detected "beklagar", "förstår", greeting present so no flag
         assert isinstance(perf.local_coaching_hints, list)
         # customer_metrics present
         assert perf.customer.talk_ratio >= 0.0
@@ -194,7 +233,12 @@ class TestCallAnalysisPipeline:
         ]
         segments2 = [
             {"start": 0, "end": 2, "text": "Faktura stämmer inte.", "speaker": "C"},
-            {"start": 2, "end": 6, "text": "Jag förstår frustrationen. Vi krediterar.", "speaker": "A"},
+            {
+                "start": 2,
+                "end": 6,
+                "text": "Jag förstår frustrationen. Vi krediterar.",
+                "speaker": "A",
+            },
         ]
         r1 = self.pipe.analyze_segments(segments1)
         r2 = self.pipe.analyze_segments(segments2)
@@ -216,7 +260,12 @@ class TestCallAnalysisPipeline:
         self._mock_sentiment(monkeypatch)
         segs = [
             {"start": 0, "end": 3, "text": "Fakturan är helt fel, jag är arg.", "speaker": "C"},
-            {"start": 3, "end": 8, "text": "Jag beklagar. Jag förstår att det är frustrerande. Jag fixar fakturan.", "speaker": "A"},
+            {
+                "start": 3,
+                "end": 8,
+                "text": "Jag beklagar. Jag förstår att det är frustrerande. Jag fixar fakturan.",
+                "speaker": "A",
+            },
         ]
         r = self.pipe.analyze_segments(segs)
         hits = self.pipe.semantic_search("faktura arg empati", top_k=3, corpus=[r])
@@ -260,10 +309,19 @@ class TestCallAnalysisPipeline:
         """Fas 4.4.1: early redaction (before analyzers) when enabled by profile; structured log + redacted text in report."""
         self._mock_sentiment(monkeypatch)
         with monkeypatch.context() as m:
-            m.setattr("src.profiles.resolve_profile", lambda *a, **k: ("callcenter", {"llm": {"anonymize_before_llm": True}}), raising=False)
+            m.setattr(
+                "src.profiles.resolve_profile",
+                lambda *a, **k: ("callcenter", {"llm": {"anonymize_before_llm": True}}),
+                raising=False,
+            )
             p = CallAnalysisPipeline(profile="callcenter")
             segs = [
-                {"start": 0, "end": 2, "text": "Mitt personnummer är 19850101-1234, mail john@example.com", "speaker": "C"},
+                {
+                    "start": 0,
+                    "end": 2,
+                    "text": "Mitt personnummer är 19850101-1234, mail john@example.com",
+                    "speaker": "C",
+                },
                 {"start": 2, "end": 5, "text": "Tack, jag fixar.", "speaker": "A"},
             ]
             report = p.analyze_segments(segs)
@@ -271,7 +329,9 @@ class TestCallAnalysisPipeline:
             assert "pii_redaction" in report.results
             pl = report.results["pii_redaction"]
             assert pl.get("total_redacted", 0) >= 2
-            assert "personnummer" in pl.get("types_redacted", []) or "email" in pl.get("types_redacted", [])
+            assert "personnummer" in pl.get("types_redacted", []) or "email" in pl.get(
+                "types_redacted", []
+            )
             # segments text should be redacted
             if report.segments:
                 txt = report.segments[0].get("text", "")
@@ -284,9 +344,10 @@ class TestCallAnalysisPipeline:
             {"start": 0, "end": 2, "text": "Jag är extremt arg på fakturan!", "speaker": "C"},
             {"start": 2, "end": 5, "text": "Okej.", "speaker": "A"},  # low empathy
         ]
-        report = self.pipe.analyze_segments(segs)
+        self.pipe.analyze_segments(segs)
         # Force some bad qa/agent via monkey? But since real, check if alerts key appears or run direct
         from src.alerting import run_alerts_on_results
+
         # Simulate bad signals
         fake_results = {
             "llm": {"trajectory": {"customer_sentiment_slope": -0.8, "escalation_events": ["bad"]}},
@@ -308,7 +369,12 @@ class TestCallAnalysisPipeline:
         segments = [
             {"start": 0, "end": 2, "text": "Hej, välkommen.", "speaker": "SPEAKER_1"},
             {"start": 2, "end": 6, "text": "Jag är arg, fakturan är fel!", "speaker": "SPEAKER_0"},
-            {"start": 6, "end": 11, "text": "Jag beklagar. Jag förstår frustrationen. Jag fixar det nu.", "speaker": "SPEAKER_1"},
+            {
+                "start": 6,
+                "end": 11,
+                "text": "Jag beklagar. Jag förstår frustrationen. Jag fixar det nu.",
+                "speaker": "SPEAKER_1",
+            },
             {"start": 11, "end": 14, "text": "Tack, bra.", "speaker": "SPEAKER_0"},
         ]
         report = self.pipe.analyze_segments(segments)

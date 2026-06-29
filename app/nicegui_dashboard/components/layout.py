@@ -52,15 +52,17 @@ def render_header(
                     f"text-caption {cls}"
                 )
                 if on_reload:
-                    ui.button(icon="refresh", on_click=on_reload).props(
-                        "flat round dense"
-                    ).tooltip("Ladda om data från API")
+                    ui.button(icon="refresh", on_click=on_reload).props("flat round dense").tooltip(
+                        "Ladda om data från API"
+                    )
 
             if dark_mode is not None:
                 ui.button(
                     icon="dark_mode",
                     on_click=dark_mode.toggle,
-                ).props("flat round dense").tooltip("Växla ljust/mörkt tema")
+                ).props(
+                    "flat round dense"
+                ).tooltip("Växla ljust/mörkt tema")
 
     def refresh_status() -> None:
         if status_label and state and state.api_client:
@@ -69,8 +71,6 @@ def render_header(
         if alerts_badge and state:
             n_alerts = count_active_alerts(state)
             alerts_badge.set_text(str(n_alerts))
-            alerts_badge.props(
-                f"color={'negative' if n_alerts > 0 else 'grey'}"
-            )
+            alerts_badge.props(f"color={'negative' if n_alerts > 0 else 'grey'}")
 
     return refresh_status if (status_label or alerts_badge) else None

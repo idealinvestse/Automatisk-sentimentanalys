@@ -20,7 +20,10 @@ from app.nicegui_dashboard.components.virtual_transcript import (
     render_transcript_panel,
     scroll_transcript_to_index,
 )
-from app.nicegui_dashboard.services.analytics_summary import compute_call_snapshot, summarize_emotions
+from app.nicegui_dashboard.services.analytics_summary import (
+    compute_call_snapshot,
+    summarize_emotions,
+)
 from app.nicegui_dashboard.services.chart_data import (
     build_trajectory_figure,
     segment_index_from_trajectory_x,
@@ -57,9 +60,7 @@ def _build_insights_markdown(report: dict[str, Any]) -> str:
     results = report.get("results") or {}
 
     root = llm.get("root_cause") or {}
-    root_text = (
-        root.get("primary_cause") or root.get("summary") if isinstance(root, dict) else None
-    )
+    root_text = root.get("primary_cause") or root.get("summary") if isinstance(root, dict) else None
     if root_text:
         parts.append(f"**Rotorsak:** {root_text}")
     elif not llm:
@@ -215,7 +216,9 @@ def render_call_detail_tab(
                         ui.chip(
                             f"Sentiment: {snapshot['trajectory_min']} … {snapshot['trajectory_max']}"
                         )
-                    ui.chip(f"Negativa toppar: {snapshot.get('negative_peaks', 0)}", color="negative")
+                    ui.chip(
+                        f"Negativa toppar: {snapshot.get('negative_peaks', 0)}", color="negative"
+                    )
                 emotions = summarize_emotions(report)
                 if emotions:
                     with ui.row().classes("gap-1 flex-wrap q-mt-xs"):

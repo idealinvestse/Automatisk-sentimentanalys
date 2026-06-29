@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class InstallProfile(str, Enum):
+class InstallProfile(StrEnum):
     """Pip requirement bundle installed in the environment."""
 
     minimal = "minimal"

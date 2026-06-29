@@ -41,7 +41,9 @@ class AsrParamsMixin(BaseModel):
     revision: str | None = Field(None, description="KB-Whisper revision: standard|strict|subtitle")
     diarize: bool = Field(False, description="Run speaker diarization")
     num_speakers: int | None = Field(None, description="Expected number of speakers (None=auto)")
-    hotwords: list[str] | None = Field(None, description="Domain-specific words to boost (callcenter terms etc.)")
+    hotwords: list[str] | None = Field(
+        None, description="Domain-specific words to boost (callcenter terms etc.)"
+    )
     initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR decoder")
 
 
@@ -266,7 +268,10 @@ class PipelineResponse(BaseModel):
     risks: dict[str, Any]
     processing_time_s: float
     timestamp: str
-    llm: dict[str, Any] = Field(default_factory=dict, description="Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)")
+    llm: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)",
+    )
     results: dict[str, Any] = Field(
         default_factory=dict,
         description="Complete analyzer results (Fas4: agent_performance, qa, agent_assessment, customer_metrics, ...). Use this for new call center features.",
@@ -340,7 +345,9 @@ class BatchAnalyzeConversationRequest(AsrParamsMixin):
     # Sentiment
     sentiment_profile: str = Field("callcenter", description="Sentiment profile for light path")
     sentiment_model: str | None = Field(None)
-    sentiment_batch_size: int = Field(16, ge=1, le=128, description="Batch size for sentiment inference")
+    sentiment_batch_size: int = Field(
+        16, ge=1, le=128, description="Batch size for sentiment inference"
+    )
     lexicon_file: str | None = Field(None)
     lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
 
@@ -411,7 +418,9 @@ class ScanProcessRequest(AsrParamsMixin):
         description="When operation=analyze_conversation, use full CallAnalysisPipeline per file",
     )
     # Sentiment (used when operation=analyze_conversation)
-    sentiment_profile: str = Field("callcenter", description="Sentiment profile for light analyze path")
+    sentiment_profile: str = Field(
+        "callcenter", description="Sentiment profile for light analyze path"
+    )
     sentiment_model: str | None = Field(None)
     sentiment_batch_size: int = Field(
         16, ge=1, le=128, description="Batch size for sentiment inference"
@@ -511,7 +520,10 @@ class Fas4LlmFlags(BaseModel):
 
 class AgentPerformanceRequest(Fas4LlmFlags):
     """Request for /agent_performance endpoint. Provide segments for one or more calls."""
-    segments_list: list[list[dict[str, Any]]] = Field(..., description="List of segment lists (one per call)")
+
+    segments_list: list[list[dict[str, Any]]] = Field(
+        ..., description="List of segment lists (one per call)"
+    )
     agent_id: str = Field(..., description="Agent identifier to aggregate for")
     window: str = Field("7d", description="Time window e.g. 7d, 30d")
     profile: str = Field("callcenter")
@@ -544,7 +556,9 @@ class AgentPerformanceResponse(BaseModel):
 
 
 class SemanticSearchRequest(Fas4LlmFlags):
-    segments_list: list[list[dict[str, Any]]] = Field(..., description="List of calls to index/search over")
+    segments_list: list[list[dict[str, Any]]] = Field(
+        ..., description="List of calls to index/search over"
+    )
     query: str = Field(..., min_length=1, max_length=500)
     top_k: int = Field(5, ge=1, le=50)
     filters: dict[str, Any] | None = Field(None)

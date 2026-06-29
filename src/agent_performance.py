@@ -39,12 +39,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import UTC, datetime
 from collections import OrderedDict
-from functools import lru_cache
+from datetime import UTC, datetime
 from typing import Any
-
-from pydantic import BaseModel
 
 from .core.models import Segment
 from .llm.schemas import (
@@ -59,7 +56,7 @@ logger = logging.getLogger(__name__)
 # for pre-computation/smart caching "from the beginning". Invalidation is content-based (new
 # transcript/role/sentiment -> new key). For cross-call agent aggregates use time/agent keys
 # in caller (4.3/4.5). Size limited to avoid memory growth.
-_PERF_CACHE: OrderedDict[str, "CallAgentPerformance"] = OrderedDict()
+_PERF_CACHE: OrderedDict[str, CallAgentPerformance] = OrderedDict()
 _MAX_PERF_CACHE_SIZE = 128
 
 # -----------------------------------------------------------------------------
@@ -67,21 +64,46 @@ _MAX_PERF_CACHE_SIZE = 128
 # -----------------------------------------------------------------------------
 
 GREETING_KEYWORDS = {
-    "hej", "hallå", "god dag", "välkommen", "hej hej", "tack för att du ringer",
-    "hej och välkommen", "godmorgon", "god eftermiddag"
+    "hej",
+    "hallå",
+    "god dag",
+    "välkommen",
+    "hej hej",
+    "tack för att du ringer",
+    "hej och välkommen",
+    "godmorgon",
+    "god eftermiddag",
 }
 
 EMPATHY_MARKERS = {
-    "jag förstår", "det förstår jag", "jag hör att", "det låter", "beklagar",
-    "tyvärr", "jag är ledsen", "vi fixar det här", "jag ska hjälpa dig",
-    "det är frustrerande", "jag kan tänka mig", "vi löser det tillsammans",
-    "jag beklagar besväret", "tack för att du säger till"
+    "jag förstår",
+    "det förstår jag",
+    "jag hör att",
+    "det låter",
+    "beklagar",
+    "tyvärr",
+    "jag är ledsen",
+    "vi fixar det här",
+    "jag ska hjälpa dig",
+    "det är frustrerande",
+    "jag kan tänka mig",
+    "vi löser det tillsammans",
+    "jag beklagar besväret",
+    "tack för att du säger till",
 }
 
 DE_ESCALATION_MARKERS = {
-    "vi ska kolla", "jag ordnar", "låt mig se", "jag tar det här",
-    "vi återkommer", "jag återkopplar", "jag fixar", "det ska vi klara",
-    "ingen fara", "vi kan erbjuda", "jag kan erbjuda"
+    "vi ska kolla",
+    "jag ordnar",
+    "låt mig se",
+    "jag tar det här",
+    "vi återkommer",
+    "jag återkopplar",
+    "jag fixar",
+    "det ska vi klara",
+    "ingen fara",
+    "vi kan erbjuda",
+    "jag kan erbjuda",
 }
 
 COMPLIANCE_ISSUES = {
@@ -91,19 +113,44 @@ COMPLIANCE_ISSUES = {
 }
 
 RESOLUTION_MARKERS = {
-    "tack", "det var bra", "perfekt", "jättebra", "det löste sig", "tack så mycket",
-    "det var hjälpsamt", "bra", "ok då", "då är det klart"
+    "tack",
+    "det var bra",
+    "perfekt",
+    "jättebra",
+    "det löste sig",
+    "tack så mycket",
+    "det var hjälpsamt",
+    "bra",
+    "ok då",
+    "då är det klart",
 }
 
 FORMAL_MARKERS = {
-    "jag förstår", "enligt", "avtal", "enligt våra villkor", "jag kontrollerar",
-    "jag undersöker", "vi kommer att", "jag återkommer inom", "bekräftar",
-    "jag noterar", "för att säkerställa"
+    "jag förstår",
+    "enligt",
+    "avtal",
+    "enligt våra villkor",
+    "jag kontrollerar",
+    "jag undersöker",
+    "vi kommer att",
+    "jag återkommer inom",
+    "bekräftar",
+    "jag noterar",
+    "för att säkerställa",
 }
 
 CASUAL_MARKERS = {
-    "okej", "japp", "fixar", "kollar snabbt", "typ", "ungefär", "kanske",
-    "vet inte", "kan inte säga", "lugnt", "no problem"
+    "okej",
+    "japp",
+    "fixar",
+    "kollar snabbt",
+    "typ",
+    "ungefär",
+    "kanske",
+    "vet inte",
+    "kan inte säga",
+    "lugnt",
+    "no problem",
 }
 
 
@@ -143,7 +190,9 @@ def _normalize_role(speaker: str, role_map: dict[str, str] | None) -> str:
     return "unknown"
 
 
-def _hash_for_cache(segments: list[dict | Segment], role_map: dict | None, sentiment_sig: str | None) -> str:
+def _hash_for_cache(
+    segments: list[dict | Segment], role_map: dict | None, sentiment_sig: str | None
+) -> str:
     """Stable short hash for lru_cache / future redis key."""
     payload_parts: list[str] = []
     for s in segments:
@@ -157,6 +206,7 @@ def _hash_for_cache(segments: list[dict | Segment], role_map: dict | None, senti
 # -----------------------------------------------------------------------------
 # Core metric computers (rule-based, fast, Swedish callcenter tuned)
 # -----------------------------------------------------------------------------
+
 
 def compute_talk_ratios(
     segments: list[dict[str, Any]] | list[Segment],
@@ -197,7 +247,9 @@ def compute_question_density(
     for seg in segments or []:
         text = _get_text(seg).lower()
         role = _normalize_role(_get_speaker(seg), role_map)
-        q_count = text.count("?") + sum(1 for w in ("vad", "hur", "varför", "kan du", "får jag", "skulle du") if w in text)
+        q_count = text.count("?") + sum(
+            1 for w in ("vad", "hur", "varför", "kan du", "får jag", "skulle du") if w in text
+        )
         if role == "agent":
             agent_turns += 1
             agent_qs += q_count
@@ -380,10 +432,12 @@ def compute_compliance_flags(
     )
     has_frustration = False
     for seg in segments:
-        if _normalize_role(_get_speaker(seg), role_map) == "customer":
-            if any(w in _get_text(seg).lower() for w in ("arg", "frustr", "inte bra", "fel", "funkar inte", "vänta")):
-                has_frustration = True
-                break
+        if _normalize_role(_get_speaker(seg), role_map) == "customer" and any(
+            w in _get_text(seg).lower()
+            for w in ("arg", "frustr", "inte bra", "fel", "funkar inte", "vänta")
+        ):
+            has_frustration = True
+            break
     if has_frustration and not has_any_empathy:
         flags.append("no_empathy_on_frustration")
 
@@ -397,6 +451,7 @@ def compute_compliance_flags(
 # -----------------------------------------------------------------------------
 # Public API - main entry for per-call performance
 # -----------------------------------------------------------------------------
+
 
 def compute_call_agent_performance(
     segments: list[dict[str, Any]] | list[Segment],
@@ -427,7 +482,11 @@ def compute_call_agent_performance(
     cache_key = _hash_for_cache(
         segments,
         role_map,
-        json.dumps(sentiment_results or [], default=str, ensure_ascii=False)[:256] if sentiment_results else None,
+        (
+            json.dumps(sentiment_results or [], default=str, ensure_ascii=False)[:256]
+            if sentiment_results
+            else None
+        ),
     )
     if cache_key in _PERF_CACHE:
         _PERF_CACHE.move_to_end(cache_key)
@@ -488,18 +547,26 @@ def compute_call_agent_performance(
         talk_ratio=cust_talk,
         sentiment_slope=slope,
         frustration_peaks=frust,
-        question_count=int(qdens.get("customer_question_density", 0) * qdens.get("num_customer_turns", 1)),
+        question_count=int(
+            qdens.get("customer_question_density", 0) * qdens.get("num_customer_turns", 1)
+        ),
         resolution_indicators=round(res_ind, 2),
     )
 
     # Local actionable hints (evidence light but immediate value)
     hints: list[str] = []
     if "missing_greeting" in flags:
-        hints.append("Agent bör inleda med en tydlig hälsningsfras (t.ex. 'Hej, välkommen till kundtjänst').")
+        hints.append(
+            "Agent bör inleda med en tydlig hälsningsfras (t.ex. 'Hej, välkommen till kundtjänst')."
+        )
     if "no_empathy_on_frustration" in flags:
-        hints.append("Vid tecken på frustration: använd empatifraser som 'Jag förstår att det här är frustrerande' tidigt.")
+        hints.append(
+            "Vid tecken på frustration: använd empatifraser som 'Jag förstår att det här är frustrerande' tidigt."
+        )
     if agent_m.talk_listen_ratio > 2.0:
-        hints.append("Agent dominerar taltiden – ställ fler öppna frågor och låt kunden tala färdigt.")
+        hints.append(
+            "Agent dominerar taltiden – ställ fler öppna frågor och låt kunden tala färdigt."
+        )
     if emp_deesc["empathy_score"] < 0.3 and emp_deesc["empathy_opportunities"] > 0:
         hints.append("Fler empatimarkörer behövs efter kundens negativa yttranden.")
 
@@ -535,6 +602,7 @@ def compute_call_agent_performance(
 # -----------------------------------------------------------------------------
 # Aggregation for agent-level views (trends, benchmarking) - used by 4.3 later
 # -----------------------------------------------------------------------------
+
 
 def aggregate_agent_performance(
     per_call_perfs: list[CallAgentPerformance],

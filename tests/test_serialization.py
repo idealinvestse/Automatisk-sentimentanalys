@@ -138,7 +138,11 @@ class TestMapResultsToSegmentDicts:
     def test_basic_mapping(self):
         texts = ["Bra!", "Dåligt"]
         results = [
-            [{"label": "positiv", "score": 0.9}, {"label": "neutral", "score": 0.1}, {"label": "negativ", "score": 0.0}],
+            [
+                {"label": "positiv", "score": 0.9},
+                {"label": "neutral", "score": 0.1},
+                {"label": "negativ", "score": 0.0},
+            ],
             {"label": "negativ", "score": 0.8},
         ]
         segs = [{"start": 0, "end": 1, "text": "x"}, {"start": 2, "end": 3}]
@@ -152,7 +156,7 @@ class TestMapResultsToSegmentDicts:
 
     def test_length_mismatch_warns_but_continues(self, caplog):
         with caplog.at_level(logging.WARNING):
-            mapped = map_results_to_segment_dicts(["a", "b"], [ {"label":"x"} ], [{"start": 0}])
+            mapped = map_results_to_segment_dicts(["a", "b"], [{"label": "x"}], [{"start": 0}])
         # zip strict=False produces min len items; log is emitted
         assert len(mapped) == 1
         assert "length mismatch" in caplog.text.lower()

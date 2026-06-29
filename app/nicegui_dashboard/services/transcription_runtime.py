@@ -29,13 +29,13 @@ def validate_audio_file(path: Path, *, max_bytes: int = MAX_AUDIO_BYTES) -> None
         )
 
 
-def validate_upload_bytes(content: bytes, filename: str, *, max_bytes: int = MAX_AUDIO_BYTES) -> None:
+def validate_upload_bytes(
+    content: bytes, filename: str, *, max_bytes: int = MAX_AUDIO_BYTES
+) -> None:
     if not content:
         raise ValueError("Uppladdad fil är tom")
     if len(content) > max_bytes:
-        raise ValueError(
-            f"Filen {filename} är för stor (max {max_bytes // (1024 * 1024)} MB)"
-        )
+        raise ValueError(f"Filen {filename} är för stor (max {max_bytes // (1024 * 1024)} MB)")
 
 
 def load_hotwords_from_file(

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from io import StringIO
 
 import pytest
@@ -154,15 +153,14 @@ def test_phase_timer_emits_start_and_complete(tmp_path, monkeypatch):
 def test_phase_timer_emits_error_on_failure(tmp_path, monkeypatch):
     reporter = StatusReporter(events_path=tmp_path / "events.jsonl", file_enabled=False)
     monkeypatch.setattr("src.core.observability.get_status_reporter", lambda: reporter)
-    with pytest.raises(RuntimeError):
-        with phase_timer("pipeline", "fail_phase"):
-            raise RuntimeError("kaboom")
+    with pytest.raises(RuntimeError), phase_timer("pipeline", "fail_phase"):
+        raise RuntimeError("kaboom")
     events = reporter.recent_events(limit=10)
     assert any(e["level"] == "ERROR" for e in events)
 
 
 def test_with_error_handling_degrades(tmp_path):
-    reporter = StatusReporter(events_path=tmp_path / "events.jsonl", file_enabled=False)
+    StatusReporter(events_path=tmp_path / "events.jsonl", file_enabled=False)
 
     @with_error_handling("pipeline", "step_x", result_key="step_x")
     def broken() -> dict:
@@ -182,9 +180,11 @@ def test_job_scope_binds_job_id(tmp_path):
 
 
 def test_degrading_phase_writes_result_on_failure(tmp_path):
-    reporter = StatusReporter(events_path=tmp_path / "events.jsonl", file_enabled=False)
+    StatusReporter(events_path=tmp_path / "events.jsonl", file_enabled=False)
     results: dict = {}
-    with degrading_phase("pipeline", "agent_performance", results=results, result_key="agent_performance"):
+    with degrading_phase(
+        "pipeline", "agent_performance", results=results, result_key="agent_performance"
+    ):
         raise RuntimeError("perf failed")
     assert "agent_performance" in results
     assert results["agent_performance"]["fallback"] is True
@@ -226,16 +226,33 @@ def test_run_analyzers_stores_error_on_failure():
 def test_record_status_event_increments_counter():
     if STATUS_EVENTS_TOTAL is None:
         pytest.skip("prometheus_client not installed")
-    before = STATUS_EVENTS_TOTAL.labels(level="INFO", component="test", error_code="none")._value.get()
+    before = STATUS_EVENTS_TOTAL.labels(
+        level="INFO", component="test", error_code="none"
+    )._value.get()
     record_status_event("INFO", "test", "")
-    after = STATUS_EVENTS_TOTAL.labels(level="INFO", component="test", error_code="none")._value.get()
+    after = STATUS_EVENTS_TOTAL.labels(
+        level="INFO", component="test", error_code="none"
+    )._value.get()
     assert after == before + 1
 
 
 def test_derive_job_status():
     events = [
-        {"job_id": "j1", "phase": "transcribe", "component": "pipeline", "level": "PHASE", "ts": "2026-01-01T00:00:00"},
-        {"job_id": "j1", "phase": "complete", "component": "pipeline", "level": "PHASE", "ts": "2026-01-01T00:01:00", "progress": 1.0},
+        {
+            "job_id": "j1",
+            "phase": "transcribe",
+            "component": "pipeline",
+            "level": "PHASE",
+            "ts": "2026-01-01T00:00:00",
+        },
+        {
+            "job_id": "j1",
+            "phase": "complete",
+            "component": "pipeline",
+            "level": "PHASE",
+            "ts": "2026-01-01T00:01:00",
+            "progress": 1.0,
+        },
     ]
     summary = derive_job_status(events, "j1")
     assert summary["found"] is True

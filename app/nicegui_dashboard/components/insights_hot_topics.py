@@ -36,6 +36,7 @@ def render_insights_section(
     topics_source = {"value": "local"}
     search_source = {"value": "local"}
     topics_cache: dict[str, Any] = {"rows": [], "loaded": False}
+
     def _reports() -> list[dict[str, Any]]:
         return filter_reports(state.reports, state.filters)
 
@@ -60,9 +61,7 @@ def render_insights_section(
                 "topic": t.get("topic", "—"),
                 "volume": t.get("volume", 0),
                 "sentiment": (
-                    f"{t['avg_sentiment']:.2f}"
-                    if t.get("avg_sentiment") is not None
-                    else "—"
+                    f"{t['avg_sentiment']:.2f}" if t.get("avg_sentiment") is not None else "—"
                 ),
                 "trend": t.get("trend", "—"),
                 "evidence": format_evidence_spans(t.get("evidence_spans") or []),
@@ -125,11 +124,15 @@ def render_insights_section(
         agent_filter_val = {"current": None}
 
         with ui.row().classes("w-full gap-3 flex-wrap items-end"):
-            search_input = ui.input(
-                "Sökfråga",
-                value=state.semantic_search_query,
-                placeholder="t.ex. kunder klagade på faktura och låg empati",
-            ).classes("flex-grow").props("dense clearable")
+            search_input = (
+                ui.input(
+                    "Sökfråga",
+                    value=state.semantic_search_query,
+                    placeholder="t.ex. kunder klagade på faktura och låg empati",
+                )
+                .classes("flex-grow")
+                .props("dense clearable")
+            )
             ui.select(
                 options=agents,
                 value="Alla",

@@ -218,7 +218,7 @@ def stratified_split(
         by_intent[ex["intent"]].append(ex)
 
     train, val = [], []
-    for intent, items in sorted(by_intent.items()):
+    for _intent, items in sorted(by_intent.items()):
         random.shuffle(items)
         n_val = max(1, int(round(len(items) * val_ratio)))
         val.extend(items[:n_val])

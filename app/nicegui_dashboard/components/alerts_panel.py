@@ -128,9 +128,9 @@ def render_alerts_panel(
                             "severity": str(alert.get("severity", "info")),
                             "rule_id": str(alert.get("rule_id", "—")),
                             "call_id": str(alert.get("call_id", "—")),
-                            "message": str(
-                                alert.get("message", alert.get("rule_id", "Alert"))
-                            )[:120],
+                            "message": str(alert.get("message", alert.get("rule_id", "Alert")))[
+                                :120
+                            ],
                             "actions": ", ".join(str(a) for a in actions[:3]) or "—",
                         }
                     )
@@ -211,10 +211,16 @@ def render_alerts_panel(
         # Handled alerts section
         handled_keys = state.dismissed_alert_keys
         if handled_keys:
-            with ui.expansion(f"Hanterade alerts ({len(handled_keys)})", icon="done_all").classes("w-full q-mt-md"):
-                ui.label("Alerts du markerat som hanterade i denna session.").classes("text-caption q-mb-sm")
+            with ui.expansion(f"Hanterade alerts ({len(handled_keys)})", icon="done_all").classes(
+                "w-full q-mt-md"
+            ):
+                ui.label("Alerts du markerat som hanterade i denna session.").classes(
+                    "text-caption q-mb-sm"
+                )
                 for key in handled_keys[-10:]:  # show last 10
-                    ui.label(f"✓ {key.split('|')[-1][:60]}").classes("text-caption text-grey q-my-xs")
+                    ui.label(f"✓ {key.split('|')[-1][:60]}").classes(
+                        "text-caption text-grey q-my-xs"
+                    )
 
     def _export_active_alerts(alerts: list[dict[str, Any]]) -> None:
         payload = json.dumps(alerts, indent=2, ensure_ascii=False)

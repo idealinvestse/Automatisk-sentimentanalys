@@ -13,7 +13,10 @@ from tkinter import messagebox, ttk
 from src.install.preflight import run_preflight
 from src.install.user_config import load_user_config
 
-from .env_builder import bootstrap_launcher_env, build_child_env, detect_app_root, resolve_python, working_directory
+from .env_builder import (
+    bootstrap_launcher_env,
+    detect_app_root,
+)
 from .event_log import EventLog
 from .pid_store import launcher_activity_log_path
 from .process_manager import start_api, start_dashboard, stop_service

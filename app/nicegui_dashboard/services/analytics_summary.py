@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import Any
 
 from app.nicegui_dashboard.services.chart_data import (
-    compute_sentiment_distribution,
     extract_agent_trend_rows,
     extract_trajectory_points,
 )
@@ -44,11 +43,7 @@ def filter_reports_by_agent(
     """Optional agent filter used only in analytics tab."""
     if not agent_filter or agent_filter == "Alla":
         return list(reports)
-    return [
-        r
-        for r in reports
-        if (r.get("meta") or {}).get("agent", "Okänd") == agent_filter
-    ]
+    return [r for r in reports if (r.get("meta") or {}).get("agent", "Okänd") == agent_filter]
 
 
 def compute_call_snapshot(report: dict[str, Any] | None) -> dict[str, Any]:
@@ -162,7 +157,9 @@ def build_calls_overview_rows(reports: list[dict[str, Any]]) -> list[dict[str, A
     return rows
 
 
-def compute_portfolio_kpis(reports: list[dict[str, Any]], filters: dict[str, Any] | None = None) -> dict[str, Any]:
+def compute_portfolio_kpis(
+    reports: list[dict[str, Any]], filters: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Extend compute_kpis with agent/topic context for analytics header."""
     base = compute_kpis(reports, filters)
     agents = {(r.get("meta") or {}).get("agent", "Okänd") for r in reports}

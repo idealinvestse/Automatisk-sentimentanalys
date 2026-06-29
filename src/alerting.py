@@ -77,7 +77,9 @@ def load_alerting_config(path: str | Path = "configs/alerting_config.yaml") -> d
             raw = re.sub(r"\$\{([A-Z0-9_]+)(?::-([^}]*))?\}", _sub, raw)
             data = yaml.safe_load(raw) or {}
             if "webhook" in data:
-                config["webhook"].update({k: v for k, v in data["webhook"].items() if v is not None})
+                config["webhook"].update(
+                    {k: v for k, v in data["webhook"].items() if v is not None}
+                )
         except Exception as exc:
             logger.warning("Failed to load alerting config (%s): %s", path, exc)
     # 3. Env vars override everything (highest priority)
@@ -88,10 +90,13 @@ def load_alerting_config(path: str | Path = "configs/alerting_config.yaml") -> d
     if os.getenv("ALERT_WEBHOOK_RETRIES"):
         config["webhook"]["max_retries"] = int(os.getenv("ALERT_WEBHOOK_RETRIES", "3"))
     if os.getenv("ALERT_WEBHOOK_BREAKER"):
-        config["webhook"]["circuit_breaker_threshold"] = int(os.getenv("ALERT_WEBHOOK_BREAKER", "5"))
+        config["webhook"]["circuit_breaker_threshold"] = int(
+            os.getenv("ALERT_WEBHOOK_BREAKER", "5")
+        )
     if os.getenv("ALERT_WEBHOOK_BACKOFF"):
         config["webhook"]["retry_backoff_base"] = float(os.getenv("ALERT_WEBHOOK_BACKOFF", "1.0"))
     return config
+
 
 # Default rules (regelbaserade, matchar planens exempel + mer från Fas4 data)
 DEFAULT_RULES: list[dict[str, Any]] = [
@@ -128,6 +133,7 @@ DEFAULT_RULES: list[dict[str, Any]] = [
         "evidence_keys": ["hot_topic", "hot_topic_sentiment", "hot_topic_volume"],
     },
 ]
+
 
 def _tokenize_condition(condition: str) -> list[tuple[str, str]]:
     """Tokenize alert rule conditions without using eval."""
@@ -286,7 +292,11 @@ class _ConditionParser:
                 op = "in"
             self.index += 1
             right_raw, self.index = _parse_value(self.tokens, self.index)
-            right = _resolve_value(right_raw, self.signals) if not isinstance(right_raw, list) else right_raw
+            right = (
+                _resolve_value(right_raw, self.signals)
+                if not isinstance(right_raw, list)
+                else right_raw
+            )
             return _compare(left, op, right)
 
         return bool(left)
@@ -330,11 +340,9 @@ class AlertEngine:
                         val = signals[key]
                         trig_vals[key] = val
                         # Create pseudo evidence span (in real would come from original segments)
-                        ev_spans.append(EvidenceSpan(
-                            text=f"{key}={val}",
-                            speaker_role=None,
-                            turn_index=None
-                        ))
+                        ev_spans.append(
+                            EvidenceSpan(text=f"{key}={val}", speaker_role=None, turn_index=None)
+                        )
 
                 # Optional LLM for better actions/recommendations (document when used)
                 actions = rule.get("actions", []).copy()
@@ -344,7 +352,9 @@ class AlertEngine:
                         # NOTE: actual prompt construction deferred — see LLM_PROVIDERS.md
                         # for available Mistral/Groq clients. Kept as placeholder for v0.5.
                         actions.append("llm_suggested_coaching")
-                        logger.info("Mistral used for alert action enhancement (rule %s)", rule["id"])
+                        logger.info(
+                            "Mistral used for alert action enhancement (rule %s)", rule["id"]
+                        )
                     except Exception:
                         pass
 
@@ -388,7 +398,9 @@ class AlertEngine:
             "evidence": [e.model_dump() for e in alert.evidence_spans],
         }
 
-    def notify_webhook(self, alert: Alert, url: str | None = None, call_id: str | None = None) -> dict:
+    def notify_webhook(
+        self, alert: Alert, url: str | None = None, call_id: str | None = None
+    ) -> dict:
         """Send webhook notification with retry, backoff, and circuit breaker.
 
         Implements production-grade delivery:
@@ -424,7 +436,10 @@ class AlertEngine:
                 if resp.status_code < 400:
                     logger.info(
                         "Webhook delivered (attempt %d/%d): %s -> %s",
-                        attempt, max_retries, alert.rule_id, resp.status_code
+                        attempt,
+                        max_retries,
+                        alert.rule_id,
+                        resp.status_code,
                     )
                     # Reset failure counter on success
                     self._consecutive_failures = 0
@@ -432,7 +447,9 @@ class AlertEngine:
                 else:
                     logger.warning(
                         "Webhook HTTP %s (attempt %d): %s",
-                        resp.status_code, attempt, resp.text[:200]
+                        resp.status_code,
+                        attempt,
+                        resp.text[:200],
                     )
             except httpx.TimeoutException:
                 logger.warning("Webhook timeout (attempt %d/%d)", attempt, max_retries)
@@ -446,7 +463,7 @@ class AlertEngine:
                 self._webhook_disabled = True
                 logger.error(
                     "Webhook circuit breaker OPEN after %d consecutive failures – disabled",
-                    self._consecutive_failures
+                    self._consecutive_failures,
                 )
                 break
 
@@ -478,7 +495,9 @@ class AlertEngine:
 
 
 # Convenience for pipeline integration
-def run_alerts_on_results(results: dict[str, Any], engine: AlertEngine | None = None) -> list[dict[str, Any]]:
+def run_alerts_on_results(
+    results: dict[str, Any], engine: AlertEngine | None = None
+) -> list[dict[str, Any]]:
     """Explicit helper used from pipeline.py."""
     engine = engine or AlertEngine()
     # Build flat signals from Fas4 results + legacy

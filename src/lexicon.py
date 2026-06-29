@@ -69,9 +69,10 @@ def score_text(text: str, lexicon: dict[str, float]) -> float:
     """
     # Basic sentence split for mixed polarity / long texts (prop8)
     import re
-    sents = [s.strip() for s in re.split(r'[.!?]+', str(text)) if s.strip()]
+
+    sents = [s.strip() for s in re.split(r"[.!?]+", str(text)) if s.strip()]
     if len(sents) > 1:
-        sent_scores = [ _score_single_sent(s, lexicon) for s in sents ]
+        sent_scores = [_score_single_sent(s, lexicon) for s in sents]
         return sum(sent_scores) / len(sent_scores) if sent_scores else 0.0
     return _score_single_sent(text, lexicon)
 
@@ -238,6 +239,7 @@ def blend_results_with_lexicon(
             if abs(eff_weight - lexicon_weight) > 0.01:
                 # Use a temporary blender with boosted lexicon trust for this low-conf segment
                 from .blending import LearnedBlender
+
                 b = LearnedBlender(default_lexicon_weight=eff_weight)
                 scores = b.blend(scores, lex_dist)
             else:
@@ -246,11 +248,13 @@ def blend_results_with_lexicon(
                 scores = blender.blend(scores, lex_dist)
 
             if full_distribution:
-                blended.append([
-                    {"label": "negativ", "score": scores["negativ"]},
-                    {"label": "neutral", "score": scores["neutral"]},
-                    {"label": "positiv", "score": scores["positiv"]},
-                ])
+                blended.append(
+                    [
+                        {"label": "negativ", "score": scores["negativ"]},
+                        {"label": "neutral", "score": scores["neutral"]},
+                        {"label": "positiv", "score": scores["positiv"]},
+                    ]
+                )
             else:
                 best = max(scores.items(), key=lambda kv: kv[1])[0]
                 blended.append({"label": best, "score": float(scores[best])})

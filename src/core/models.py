@@ -160,7 +160,9 @@ class CallAnalysisReport:
     results: dict[str, Any] = field(
         default_factory=dict
     )  # Stores arbitrary model outputs dynamically
-    llm: dict[str, Any] = field(default_factory=dict)  # Mistral/OpenRouter holistic output (Fas 3.2+)
+    llm: dict[str, Any] = field(
+        default_factory=dict
+    )  # Mistral/OpenRouter holistic output (Fas 3.2+)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert report to dictionary, maintaining backward compatibility."""
@@ -187,7 +189,9 @@ class CallAnalysisReport:
         intent_results: list[tuple[str, float]] = []
         for item in raw_intent:
             if isinstance(item, dict):
-                intent_results.append((str(item.get("intent", "")), float(item.get("confidence", 0.0))))
+                intent_results.append(
+                    (str(item.get("intent", "")), float(item.get("confidence", 0.0)))
+                )
             elif isinstance(item, list | tuple) and len(item) >= 2:
                 intent_results.append((str(item[0]), float(item[1])))
         return cls(

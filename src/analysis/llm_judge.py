@@ -112,7 +112,7 @@ def _build_judge_prompt(
             if isinstance(neg_item, dict):
                 neg_flag = bool(neg_item.get("has_negation"))
         lines.append(
-            f"Segment {i} (tur {global_idx}, {role}): text=\"{seg.text[:200]}\" "
+            f'Segment {i} (tur {global_idx}, {role}): text="{seg.text[:200]}" '
             f"original_sentiment={label} confidence={conf:.2f} negation={neg_flag}"
         )
 
@@ -121,8 +121,7 @@ def _build_judge_prompt(
         "Ta hänsyn till talarroll (AGENT/CUSTOMER) och negation. "
         "Bedöm varje segment nedan och returnera ENDAST en JSON-lista "
         "där varje objekt har: segment_index, judge_label (positive/negative/neutral), judge_confidence (0-1), "
-        "reasoning (1-2 meningar på svenska).\n\n"
-        + "\n".join(lines)
+        "reasoning (1-2 meningar på svenska).\n\n" + "\n".join(lines)
     )
 
     return [
@@ -137,7 +136,9 @@ def _build_judge_prompt(
     ]
 
 
-def _mock_judge_response(segments: list[Segment], sentiment_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _mock_judge_response(
+    segments: list[Segment], sentiment_results: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Very small deterministic mock for tests when no real client is available."""
     out: list[dict[str, Any]] = []
     for idx, (_seg, sent) in enumerate(zip(segments, sentiment_results, strict=False)):
@@ -178,9 +179,13 @@ class LLMJudgeAnalyzer(Analyzer):
         model: str | None = None,
         api_key: str | None = None,
     ) -> None:
-        self.min_confidence = min_confidence if min_confidence is not None else DEFAULT_MIN_CONFIDENCE
+        self.min_confidence = (
+            min_confidence if min_confidence is not None else DEFAULT_MIN_CONFIDENCE
+        )
         self.max_segments_per_call = (
-            max_segments_per_call if max_segments_per_call is not None else DEFAULT_MAX_SEGMENTS_PER_CALL
+            max_segments_per_call
+            if max_segments_per_call is not None
+            else DEFAULT_MAX_SEGMENTS_PER_CALL
         )
         self.max_cost_usd = max_cost_usd if max_cost_usd is not None else DEFAULT_MAX_COST_USD
         self.provider = (provider or DEFAULT_PROVIDER).lower()
@@ -213,7 +218,9 @@ class LLMJudgeAnalyzer(Analyzer):
         else:
             # default openrouter
             if not _HAS_OPENROUTER or OpenRouterClient is None:
-                logger.warning("OpenRouter client requested but openrouter_client module unavailable")
+                logger.warning(
+                    "OpenRouter client requested but openrouter_client module unavailable"
+                )
                 return None
             try:
                 self._client = OpenRouterClient(api_key=self.api_key)
@@ -262,7 +269,11 @@ class LLMJudgeAnalyzer(Analyzer):
         skipped = len(segments) - len(low_conf_indices)
 
         if not low_conf_indices:
-            logger.info("LLMJudge: all %d segments above threshold %.2f → skipped", len(segments), self.min_confidence)
+            logger.info(
+                "LLMJudge: all %d segments above threshold %.2f → skipped",
+                len(segments),
+                self.min_confidence,
+            )
             return LLMJudgeResult(
                 verdicts=[],
                 triggered_segments=0,
@@ -357,8 +368,12 @@ class LLMJudgeAnalyzer(Analyzer):
                     try:
                         v = LLMJudgeVerdict(
                             segment_index=batch_indices[item.get("segment_index", 0)],
-                            original_sentiment=_get_sentiment_label_and_conf(batch_sent[item.get("segment_index", 0)])[0],
-                            original_confidence=_get_sentiment_label_and_conf(batch_sent[item.get("segment_index", 0)])[1],
+                            original_sentiment=_get_sentiment_label_and_conf(
+                                batch_sent[item.get("segment_index", 0)]
+                            )[0],
+                            original_confidence=_get_sentiment_label_and_conf(
+                                batch_sent[item.get("segment_index", 0)]
+                            )[1],
                             judge_label=item.get("judge_label", "neutral"),
                             judge_confidence=float(item.get("judge_confidence", 0.7)),
                             reasoning=item.get("reasoning", "Ingen motivering."),
@@ -375,7 +390,9 @@ class LLMJudgeAnalyzer(Analyzer):
                 total_cost += batch_cost
 
             except Exception as e:
-                logger.warning("LLMJudge batch failed: %s → graceful fallback (empty + fallback_used)", e)
+                logger.warning(
+                    "LLMJudge batch failed: %s → graceful fallback (empty + fallback_used)", e
+                )
                 fallback_used = True
                 # do not raise — continue with what we have
 

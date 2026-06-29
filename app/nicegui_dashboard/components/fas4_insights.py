@@ -11,10 +11,10 @@ from nicegui import ui
 
 from app.nicegui_dashboard.components.alerts_panel import render_alerts_panel
 from app.nicegui_dashboard.components.call_detail import find_report
-from app.nicegui_dashboard.components.ui_primitives import metric_card, render_tab_header
 from app.nicegui_dashboard.components.insights_hot_topics import render_insights_section
 from app.nicegui_dashboard.components.pii_audit import render_pii_audit_panel
 from app.nicegui_dashboard.components.qa_scorecard import render_qa_scorecard_section
+from app.nicegui_dashboard.components.ui_primitives import metric_card, render_tab_header
 from app.nicegui_dashboard.services.analytics_summary import total_pii_events
 from app.nicegui_dashboard.state import DashboardState
 from app.services.data_services import compute_kpis, filter_reports
@@ -43,9 +43,7 @@ def render_fas4_insights_tab(
         def kpi_header() -> None:
             reports = filter_reports(state.reports, state.filters)
             kpis = compute_kpis(reports, state.filters)
-            qa_display = (
-                f"{kpis['qa_avg']}/100" if kpis.get("qa_avg") is not None else "—"
-            )
+            qa_display = f"{kpis['qa_avg']}/100" if kpis.get("qa_avg") is not None else "—"
             with ui.row().classes("w-full gap-4 flex-wrap q-mb-sm"):
                 metric_card("Totalt", kpis.get("total_calls", 0), size="compact")
                 metric_card("QA snitt", qa_display, color="warning", size="compact")
@@ -69,9 +67,7 @@ def render_fas4_insights_tab(
         kpi_header()
         refreshers.append(kpi_header.refresh)
 
-        refreshers.append(
-            render_qa_scorecard_section(state, on_call_select=on_call_select)
-        )
+        refreshers.append(render_qa_scorecard_section(state, on_call_select=on_call_select))
 
         def _on_topic_select(topic: str) -> None:
             state.filters["topic_filter"] = topic.lower()

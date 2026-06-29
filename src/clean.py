@@ -30,11 +30,20 @@ def clean_text(text: str, opts: dict) -> str:
     # New: basic emoji to sentiment word mapping (for social/forum/ASR)
     if opts.get("map_emojis", False):
         emoji_map = {
-            "😊": " glad ", "😃": " glad ", "🙂": " glad ", ":)": " glad ", ":-)": " glad ",
-            "😢": " ledsen ", "😭": " ledsen ", ":(": " ledsen ",
-            "👍": " bra ", "👎": " dåligt ",
-            "❤️": " älskar ", "💕": " älskar ",
-            "🔥": " super ", "💯": " perfekt ",
+            "😊": " glad ",
+            "😃": " glad ",
+            "🙂": " glad ",
+            ":)": " glad ",
+            ":-)": " glad ",
+            "😢": " ledsen ",
+            "😭": " ledsen ",
+            ":(": " ledsen ",
+            "👍": " bra ",
+            "👎": " dåligt ",
+            "❤️": " älskar ",
+            "💕": " älskar ",
+            "🔥": " super ",
+            "💯": " perfekt ",
         }
         for em, repl in emoji_map.items():
             t = t.replace(em, repl)

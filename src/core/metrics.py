@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 try:
     from prometheus_client import Counter, Histogram
@@ -76,9 +76,7 @@ def record_analyzer_duration(analyzer: str, duration_s: float) -> None:
         ANALYZER_DURATION_SECONDS.labels(analyzer=analyzer).observe(duration_s)
 
 
-def record_pipeline_duration(
-    endpoint: str, profile: str, has_llm: bool, duration_s: float
-) -> None:
+def record_pipeline_duration(endpoint: str, profile: str, has_llm: bool, duration_s: float) -> None:
     if PIPELINE_DURATION_SECONDS is not None:
         PIPELINE_DURATION_SECONDS.labels(
             endpoint=endpoint,
@@ -87,9 +85,7 @@ def record_pipeline_duration(
         ).observe(duration_s)
 
 
-def record_llm_request(
-    provider: str, model: str, outcome: str, duration_s: float
-) -> None:
+def record_llm_request(provider: str, model: str, outcome: str, duration_s: float) -> None:
     if LLM_REQUESTS_TOTAL is not None:
         LLM_REQUESTS_TOTAL.labels(provider=provider, model=model, outcome=outcome).inc()
     if LLM_REQUEST_DURATION_SECONDS is not None:

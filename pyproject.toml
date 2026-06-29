@@ -134,6 +134,10 @@ ignore = [
 known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
+"app/nicegui_dashboard/**/*.py" = ["SIM117"]
+"tests/test_asr.py" = ["E402"]
+"tests/test_llm_analyzer.py" = ["E402"]
+"src/transcription/faster_whisper.py" = ["N818", "N806", "B904"]
 
 [tool.ruff.format]
 quote-style = "double"

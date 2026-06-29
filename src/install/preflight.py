@@ -112,6 +112,7 @@ def _check_api_deps(report: PreflightReport, cfg: UserConfig) -> None:
         _check_import(report, mod)
     try:
         import src.api  # noqa: F401
+
         report.add("import_src_api", True, "API application importable")
     except Exception as exc:
         report.add(

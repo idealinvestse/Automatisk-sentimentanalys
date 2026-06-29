@@ -81,9 +81,13 @@ def render_timeline(
 
     @ui.refreshable
     def timeline_body() -> None:
-        s, e = (start, end) if not use_virtual else (
-            virt_state.get("timeline_start", 0),
-            virt_state.get("timeline_end", total),
+        s, e = (
+            (start, end)
+            if not use_virtual
+            else (
+                virt_state.get("timeline_start", 0),
+                virt_state.get("timeline_end", total),
+            )
         )
         if use_virtual and s > 0:
             ui.element("div").style(f"height: {s * TIMELINE_ROW_HEIGHT}px; width: 100%;")
@@ -99,9 +103,7 @@ def render_timeline(
                 def make_select(idx: int) -> Callable[[], None]:
                     def _select() -> None:
                         on_select(idx)
-                        caption.set_text(
-                            _timeline_caption_text(idx, total, virtual=use_virtual)
-                        )
+                        caption.set_text(_timeline_caption_text(idx, total, virtual=use_virtual))
                         if use_virtual:
                             ns, ne = window_around_index(idx, total)
                             virt_state["timeline_start"] = ns

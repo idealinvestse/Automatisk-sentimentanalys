@@ -21,8 +21,13 @@ from .registry import register_analyzer
 logger = logging.getLogger(__name__)
 
 BUYING_SIGNALS = [
-    "jag skulle kunna", "kanske bättre", "har ni något", "vad kostar", 
-    "kan man uppgradera", "finns det något bättre", "jag behöver också"
+    "jag skulle kunna",
+    "kanske bättre",
+    "har ni något",
+    "vad kostar",
+    "kan man uppgradera",
+    "finns det något bättre",
+    "jag behöver också",
 ]
 POSITIVE_CONTEXT = ["bra", "funkar", "nöjd", "perfekt", "tack"]
 
@@ -66,18 +71,24 @@ class UpsellOpportunityDetector(Analyzer):
                     score += 20
 
             if score >= 50:
-                opportunities.append({
-                    "speaker": getattr(seg, "speaker", None),
-                    "start": getattr(seg, "start", 0),
-                    "end": getattr(seg, "end", 0),
-                    "confidence": min(95, score),
-                    "signals": signals,
-                    "suggested_action": "Erbjud relevant uppgradering eller tilläggstjänst här",
-                    "evidence": seg.text[:90] if seg.text else "",
-                })
+                opportunities.append(
+                    {
+                        "speaker": getattr(seg, "speaker", None),
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "confidence": min(95, score),
+                        "signals": signals,
+                        "suggested_action": "Erbjud relevant uppgradering eller tilläggstjänst här",
+                        "evidence": seg.text[:90] if seg.text else "",
+                    }
+                )
 
         return {
             "opportunities": opportunities,
             "count": len(opportunities),
-            "recommendation": "Träna agenter att agera på dessa tillfällen" if opportunities else "Inga tydliga tillfällen upptäckta",
+            "recommendation": (
+                "Träna agenter att agera på dessa tillfällen"
+                if opportunities
+                else "Inga tydliga tillfällen upptäckta"
+            ),
         }

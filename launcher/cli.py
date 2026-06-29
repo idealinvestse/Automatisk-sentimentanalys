@@ -12,15 +12,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from src.install.asr_assets import DEFAULT_PREFETCH_BACKENDS
 from src.install.config_schema import InstallProfile, UserConfig
 from src.install.preflight import run_preflight
-from src.install.asr_assets import DEFAULT_PREFETCH_BACKENDS
 from src.install.provision import run_provision
-
-from .asr_manager import asr_status_for_config, format_asr_report_lines, run_asr_setup
 from src.install.secrets_win import delete_secret, set_secret
 from src.install.user_config import load_user_config, save_user_config
 
+from .asr_manager import asr_status_for_config, run_asr_setup
 from .env_builder import bootstrap_launcher_env, resolve_python, working_directory
 from .process_manager import start_api, start_dashboard, stop_service
 from .status_snapshot import collect_snapshot
@@ -141,7 +140,9 @@ def clear_secret_cmd(kind: str = typer.Argument(...)) -> None:
 def start_api_cmd(app_root: Path | None = None) -> None:
     cfg = load_user_config(app_root or _app_root_option())
     info = start_api(cfg)
-    console.print(f"API started pid={info.pid} http://{cfg.services.api_host}:{cfg.services.api_port}")
+    console.print(
+        f"API started pid={info.pid} http://{cfg.services.api_host}:{cfg.services.api_port}"
+    )
 
 
 @app.command("stop-api")
@@ -277,9 +278,9 @@ def open_cli_cmd(app_root: Path | None = None) -> None:
     activate = root / ".venv" / "Scripts" / "Activate.ps1"
     if sys.platform == "win32":
         if activate.is_file():
-            cmd = f'powershell -NoExit -Command "cd \'{root}\'; . \'{activate}\'"'
+            cmd = f"powershell -NoExit -Command \"cd '{root}'; . '{activate}'\""
         else:
-            cmd = f'powershell -NoExit -Command "cd \'{root}\'; $env:PYTHONPATH=\'{root}\'"'
+            cmd = f"powershell -NoExit -Command \"cd '{root}'; $env:PYTHONPATH='{root}'\""
         subprocess.Popen(cmd, shell=True)
     else:
         console.print(f"Run: cd {root} && {py} -m src.cli --help")

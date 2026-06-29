@@ -124,7 +124,9 @@ class WhisperXTranscriber:
             # WhisperX load_model signature: (whisper_arch, device, compute_type, ...)
             # revision is rarely used for the main whisper model; we log and ignore for now
             if revision:
-                logger.debug("WhisperX backend received revision=%s (passed to load if supported)", revision)
+                logger.debug(
+                    "WhisperX backend received revision=%s (passed to load if supported)", revision
+                )
 
             self._model = whisperx.load_model(
                 self.model_name,
@@ -227,7 +229,9 @@ class WhisperXTranscriber:
 
         if revision and revision not in {"standard", "strict", "subtitle"}:
             # We still accept it for interface parity but whisperx rarely uses KB revisions.
-            logger.debug("WhisperX received revision=%s (will be ignored; not a KB model)", revision)
+            logger.debug(
+                "WhisperX received revision=%s (will be ignored; not a KB model)", revision
+            )
 
         logger.info(
             "ASR (whisperx) start | path=%s | model=%s | revision=%s | device=%s | lang=%s | diarize=%s | hotwords=%s | prompt=%s | preprocess=%s | preprocess_mode=%s",
@@ -299,9 +303,13 @@ class WhisperXTranscriber:
                             return_char_alignments=False,
                         )
                     except Exception as ae:
-                        logger.warning("WhisperX align step failed: %s. Using unaligned segments.", ae)
+                        logger.warning(
+                            "WhisperX align step failed: %s. Using unaligned segments.", ae
+                        )
                 else:
-                    logger.debug("No alignment model available; using base transcription timestamps.")
+                    logger.debug(
+                        "No alignment model available; using base transcription timestamps."
+                    )
 
             # Convert WhisperX segments (dicts) into our Segment / Word dataclasses
             segments_raw: list[dict[str, Any]] = result.get("segments", []) or []
@@ -382,10 +390,14 @@ class WhisperXTranscriber:
                                         start=float(w.get("start", 0.0) or 0.0),
                                         end=float(w.get("end", 0.0) or 0.0),
                                         word=str(w.get("word", w.get("text", ""))).strip(),
-                                        prob=float(w.get("score", w.get("probability", 0.0)) or 0.0),
+                                        prob=float(
+                                            w.get("score", w.get("probability", 0.0)) or 0.0
+                                        ),
                                     )
                                 )
-                            avg_conf = sum(w.prob for w in words) / max(1, len(words)) if words else None
+                            avg_conf = (
+                                sum(w.prob for w in words) / max(1, len(words)) if words else None
+                            )
                             low_conf = avg_conf is not None and avg_conf < 0.60
                             segs.append(
                                 Segment(
@@ -433,7 +445,9 @@ class WhisperXTranscriber:
             # fall back to the project's existing add_diarization (heuristic or pyannote).
             # This preserves the exact same behavior and output shape for downstream code.
             if diarize and not used_internal_diar:
-                transcript = add_diarization(transcript, audio_path, diarize=True, num_speakers=num_speakers)
+                transcript = add_diarization(
+                    transcript, audio_path, diarize=True, num_speakers=num_speakers
+                )
 
             return transcript
 

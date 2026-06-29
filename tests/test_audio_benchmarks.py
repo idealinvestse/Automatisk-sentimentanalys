@@ -10,9 +10,9 @@ import pytest
 
 from src.benchmarks.audio_runner import run_scenario
 from tests.fixtures.ravdess_catalog import (
+    REPO_AUDIO_ROOT,
     build_mini_ravdess_catalog,
     full_ravdess_available,
-    REPO_AUDIO_ROOT,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

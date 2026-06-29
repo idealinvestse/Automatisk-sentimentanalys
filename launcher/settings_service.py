@@ -7,6 +7,7 @@ import secrets
 import socket
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from pydantic import ValidationError
 
 from src.install.config_schema import UserConfig
@@ -86,7 +87,9 @@ def load_settings(app_root: Path | None = None) -> SettingsSnapshot:
     cfg = load_user_config(app_root)
     from src.install.user_config import default_user_config_path
 
-    config_path = default_user_config_path(portable=cfg.portable_mode, app_root=cfg.resolved_app_root())
+    config_path = default_user_config_path(
+        portable=cfg.portable_mode, app_root=cfg.resolved_app_root()
+    )
     return SettingsSnapshot(
         config=cfg,
         config_path=config_path,
@@ -123,26 +126,30 @@ def validate_draft(
         return issues
 
     if draft.services.api_port == draft.services.dashboard_port:
-        issues.append(
-            ValidationIssue("services", "API-port och dashboard-port måste vara olika.")
-        )
+        issues.append(ValidationIssue("services", "API-port och dashboard-port måste vara olika."))
 
-    if check_ports and draft.services.api_enabled:
-        if not _port_available(draft.services.api_host, draft.services.api_port):
-            issues.append(
-                ValidationIssue(
-                    "services.api_port",
-                    f"Port {draft.services.api_port} verkar upptagen på {draft.services.api_host}.",
-                )
+    if (
+        check_ports
+        and draft.services.api_enabled
+        and not _port_available(draft.services.api_host, draft.services.api_port)
+    ):
+        issues.append(
+            ValidationIssue(
+                "services.api_port",
+                f"Port {draft.services.api_port} verkar upptagen på {draft.services.api_host}.",
             )
-    if check_ports and draft.services.dashboard_enabled:
-        if not _port_available("127.0.0.1", draft.services.dashboard_port):
-            issues.append(
-                ValidationIssue(
-                    "services.dashboard_port",
-                    f"Port {draft.services.dashboard_port} verkar upptagen.",
-                )
+        )
+    if (
+        check_ports
+        and draft.services.dashboard_enabled
+        and not _port_available("127.0.0.1", draft.services.dashboard_port)
+    ):
+        issues.append(
+            ValidationIssue(
+                "services.dashboard_port",
+                f"Port {draft.services.dashboard_port} verkar upptagen.",
             )
+        )
 
     root = draft.resolved_app_root()
     if draft.llm.enabled:
@@ -150,11 +157,11 @@ def validate_draft(
         has_groq = bool(pending_secrets and pending_secrets.get("groq", "").strip())
         if draft.llm.provider == "openrouter" and not has_or and not get_secret("openrouter", root):
             issues.append(
-                ValidationIssue("llm", "LLM aktiverat med OpenRouter men ingen API-nyckel konfigurerad.")
+                ValidationIssue(
+                    "llm", "LLM aktiverat med OpenRouter men ingen API-nyckel konfigurerad."
+                )
             )
-        if draft.llm.provider == "groq" and not (
-            has_groq or get_secret("groq", root)
-        ):
+        if draft.llm.provider == "groq" and not (has_groq or get_secret("groq", root)):
             issues.append(
                 ValidationIssue("llm", "LLM aktiverat med Groq men ingen API-nyckel konfigurerad.")
             )
@@ -174,7 +181,10 @@ def _ensure_dashboard_secret(draft: UserConfig) -> None:
 
 def restart_hints(before: UserConfig, after: UserConfig) -> list[str]:
     services: list[str] = []
-    if before.services.api_port != after.services.api_port or before.services.api_host != after.services.api_host:
+    if (
+        before.services.api_port != after.services.api_port
+        or before.services.api_host != after.services.api_host
+    ):
         services.append("api")
     if before.services.dashboard_port != after.services.dashboard_port:
         services.append("dashboard")
@@ -242,8 +252,12 @@ def import_bundle(path: Path, app_root: Path) -> UserConfig:
 
 
 def run_doctor(cfg: UserConfig) -> list[tuple[bool, str, str]]:
-    report = run_preflight(cfg, require_openrouter=cfg.llm.enabled and cfg.llm.provider == "openrouter")
-    return [(c.ok, c.name, c.message + (f" — {c.detail}" if c.detail else "")) for c in report.checks]
+    report = run_preflight(
+        cfg, require_openrouter=cfg.llm.enabled and cfg.llm.provider == "openrouter"
+    )
+    return [
+        (c.ok, c.name, c.message + (f" — {c.detail}" if c.detail else "")) for c in report.checks
+    ]
 
 
 def clear_secret(kind: SecretKind, app_root: Path | None = None) -> None:

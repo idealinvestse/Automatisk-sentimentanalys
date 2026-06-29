@@ -34,16 +34,14 @@ def validate_production_settings(settings: APISettings) -> None:
     """Fail fast when production guards are enabled but misconfigured."""
     from ..core.errors import ConfigurationError
 
-    if settings.production or settings.require_auth:
-        if not settings.api_key:
-            raise ConfigurationError(
-                "SENTIMENT_API_KEY is required when API_PRODUCTION or API_REQUIRE_AUTH is set"
-            )
-    if settings.production or settings.require_media_root:
-        if not settings.media_root:
-            raise ConfigurationError(
-                "API_MEDIA_ROOT is required when API_PRODUCTION or API_REQUIRE_MEDIA_ROOT is set"
-            )
+    if (settings.production or settings.require_auth) and not settings.api_key:
+        raise ConfigurationError(
+            "SENTIMENT_API_KEY is required when API_PRODUCTION or API_REQUIRE_AUTH is set"
+        )
+    if (settings.production or settings.require_media_root) and not settings.media_root:
+        raise ConfigurationError(
+            "API_MEDIA_ROOT is required when API_PRODUCTION or API_REQUIRE_MEDIA_ROOT is set"
+        )
 
 
 def _runtime_api_defaults() -> dict[str, object]:

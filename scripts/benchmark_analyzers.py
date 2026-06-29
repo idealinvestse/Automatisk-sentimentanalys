@@ -18,7 +18,6 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts._bootstrap import bootstrap_script
-
 from scripts.benchmark_intent import benchmark_backend, load_intent_jsonl
 from src.analysis.compliance_risk import ComplianceRiskAnalyzer
 from src.analysis.emotion import EmotionAnalyzer
@@ -193,7 +192,9 @@ def main() -> None:
     report["compliance"] = benchmark_compliance(Path(labeled_cfg.get("compliance", "")))
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
     if args.check_thresholds:

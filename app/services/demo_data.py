@@ -22,12 +22,13 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from functools import lru_cache
-from typing import Any
 
 # Ensure project root on path when run from the dashboard launcher
 import sys
+from functools import lru_cache
 from pathlib import Path
+from typing import Any
+
 if str(Path(__file__).resolve().parents[2]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -48,13 +49,31 @@ DEMO_CALLS: list[dict[str, Any]] = [
         "duration_s": 185,
         "agent": "Anna",
         "segments": [
-            {"text": "Hej, jag undrar över min senaste faktura, den verkar för hög.", "speaker": "kund"},
-            {"text": "Hej! Vad roligt att du ringer. Jag heter Anna på kundtjänst. Jag förstår att det kan kännas jobbigt med oväntade kostnader. Kan jag få ditt kundnummer så kollar jag direkt?", "speaker": "agent"},
+            {
+                "text": "Hej, jag undrar över min senaste faktura, den verkar för hög.",
+                "speaker": "kund",
+            },
+            {
+                "text": "Hej! Vad roligt att du ringer. Jag heter Anna på kundtjänst. Jag förstår att det kan kännas jobbigt med oväntade kostnader. Kan jag få ditt kundnummer så kollar jag direkt?",
+                "speaker": "agent",
+            },
             {"text": "Ja, det är 123456.", "speaker": "kund"},
-            {"text": "Tack. Jag ser att du haft ett extra dataabonnemang som aktiverades förra månaden. Det förklarar differensen. Vill du att jag tar bort det nu?", "speaker": "agent"},
-            {"text": "Ja tack, det var det jag misstänkte. Kan du skicka bekräftelse på mail?", "speaker": "kund"},
-            {"text": "Absolut, jag ordnar det med en gång. Du ska ha ett mail inom fem minuter. Är det något annat jag kan hjälpa dig med idag?", "speaker": "agent"},
-            {"text": "Nej, det var allt. Tack för hjälpen, du var snabb och trevlig!", "speaker": "kund"},
+            {
+                "text": "Tack. Jag ser att du haft ett extra dataabonnemang som aktiverades förra månaden. Det förklarar differensen. Vill du att jag tar bort det nu?",
+                "speaker": "agent",
+            },
+            {
+                "text": "Ja tack, det var det jag misstänkte. Kan du skicka bekräftelse på mail?",
+                "speaker": "kund",
+            },
+            {
+                "text": "Absolut, jag ordnar det med en gång. Du ska ha ett mail inom fem minuter. Är det något annat jag kan hjälpa dig med idag?",
+                "speaker": "agent",
+            },
+            {
+                "text": "Nej, det var allt. Tack för hjälpen, du var snabb och trevlig!",
+                "speaker": "kund",
+            },
             {"text": "Tack själv! Ha en bra dag.", "speaker": "agent"},
         ],
     },
@@ -65,12 +84,21 @@ DEMO_CALLS: list[dict[str, Any]] = [
         "duration_s": 620,
         "agent": "Erik",
         "segments": [
-            {"text": "Jag har ringt tre gånger nu, ingenting funkar. Min router är död.", "speaker": "kund"},
+            {
+                "text": "Jag har ringt tre gånger nu, ingenting funkar. Min router är död.",
+                "speaker": "kund",
+            },
             {"text": "Okej, har du testat att starta om den?", "speaker": "agent"},
             {"text": "Ja, jag sa ju det förra gången. Det är inte det.", "speaker": "kund"},
             {"text": "Då får vi göra en felsökning. Kan du logga in på...", "speaker": "agent"},
-            {"text": "Jag är så jävla trött på det här. Ni lovade att det skulle vara fixat igår!", "speaker": "kund"},
-            {"text": "Jag förstår att du är frustrerad men vi måste följa protokollet.", "speaker": "agent"},
+            {
+                "text": "Jag är så jävla trött på det här. Ni lovade att det skulle vara fixat igår!",
+                "speaker": "kund",
+            },
+            {
+                "text": "Jag förstår att du är frustrerad men vi måste följa protokollet.",
+                "speaker": "agent",
+            },
             {"text": "Protokoll? Jag vill ha en ny router nu, inte prata mer!", "speaker": "kund"},
             {"text": "Okej, då bokar jag en tekniker. Det blir om tre dagar.", "speaker": "agent"},
             {"text": "Tre dagar till? Det här är helt oacceptabelt.", "speaker": "kund"},
@@ -84,22 +112,49 @@ DEMO_CALLS: list[dict[str, Any]] = [
         "agent": "Maria",
         "segments": [
             {"text": "Jag vill säga upp mitt abonnemang, det är för dyrt nu.", "speaker": "kund"},
-            {"text": "Hej, jag heter Maria. Jag hör att du funderar på att lämna oss – det är tråkigt att höra. Får jag fråga vad som fått dig att tänka så?", "speaker": "agent"},
-            {"text": "Priset har gått upp och jag får inte den hastighet jag betalar för.", "speaker": "kund"},
-            {"text": "Jag förstår, prisökningar suger. Låt mig kolla ditt avtal och se om det finns ett bättre paket som passar dig bättre, så slipper vi säga upp.", "speaker": "agent"},
+            {
+                "text": "Hej, jag heter Maria. Jag hör att du funderar på att lämna oss – det är tråkigt att höra. Får jag fråga vad som fått dig att tänka så?",
+                "speaker": "agent",
+            },
+            {
+                "text": "Priset har gått upp och jag får inte den hastighet jag betalar för.",
+                "speaker": "kund",
+            },
+            {
+                "text": "Jag förstår, prisökningar suger. Låt mig kolla ditt avtal och se om det finns ett bättre paket som passar dig bättre, så slipper vi säga upp.",
+                "speaker": "agent",
+            },
             {"text": "Okej... vad har ni?", "speaker": "kund"},
-            {"text": "Du ligger på 300 Mbit nu. Vi har just nu ett lojaliteterbjudande på 500 Mbit för samma pris som du har idag plus en månads fri. Skulle det kännas bättre?", "speaker": "agent"},
-            {"text": "Ja, det låter faktiskt rimligt. Tack för att du inte bara försökte behålla mig utan gav ett bra alternativ.", "speaker": "kund"},
-            {"text": "Kul att höra! Jag fixar uppgraderingen nu direkt och skickar bekräftelse. Ring gärna om hastigheten inte förbättras.", "speaker": "agent"},
+            {
+                "text": "Du ligger på 300 Mbit nu. Vi har just nu ett lojaliteterbjudande på 500 Mbit för samma pris som du har idag plus en månads fri. Skulle det kännas bättre?",
+                "speaker": "agent",
+            },
+            {
+                "text": "Ja, det låter faktiskt rimligt. Tack för att du inte bara försökte behålla mig utan gav ett bra alternativ.",
+                "speaker": "kund",
+            },
+            {
+                "text": "Kul att höra! Jag fixar uppgraderingen nu direkt och skickar bekräftelse. Ring gärna om hastigheten inte förbättras.",
+                "speaker": "agent",
+            },
         ],
     },
     {
         "id": "CALL-004",
-        "title": "Klagomål på bemötande + compliance miss (ingen hälsning)", "timestamp": "2026-06-02T11:20:00Z", "duration_s": 240, "agent": "Johan",
+        "title": "Klagomål på bemötande + compliance miss (ingen hälsning)",
+        "timestamp": "2026-06-02T11:20:00Z",
+        "duration_s": 240,
+        "agent": "Johan",
         "segments": [
             {"text": "Är det kundtjänst?", "speaker": "kund"},
-            {"text": "Ja vad gäller det?", "speaker": "agent"},  # Intentional weak greeting for QA demo
-            {"text": "Jag har blivit debiterad för två abonnemang fast jag bara har ett. Ni har tagit 800 kr extra.", "speaker": "kund"},
+            {
+                "text": "Ja vad gäller det?",
+                "speaker": "agent",
+            },  # Intentional weak greeting for QA demo
+            {
+                "text": "Jag har blivit debiterad för två abonnemang fast jag bara har ett. Ni har tagit 800 kr extra.",
+                "speaker": "kund",
+            },
             {"text": "Det kan jag kolla. Vad är personnumret?", "speaker": "agent"},
             {"text": "Personnummer? Är det säkert?", "speaker": "kund"},
             {"text": "Vi måste ha det för att identifiera dig.", "speaker": "agent"},
@@ -114,12 +169,27 @@ DEMO_CALLS: list[dict[str, Any]] = [
         "duration_s": 275,
         "agent": "Sara",
         "segments": [
-            {"text": "Hej, mitt paket skulle ha kommit igår men det är inte här. Jag är jätteirriterad.", "speaker": "kund"},
-            {"text": "Hej, jag heter Sara och jag förstår verkligen din frustration. Att vänta på något man behöver suger. Låt mig spåra det åt dig nu.", "speaker": "agent"},
+            {
+                "text": "Hej, mitt paket skulle ha kommit igår men det är inte här. Jag är jätteirriterad.",
+                "speaker": "kund",
+            },
+            {
+                "text": "Hej, jag heter Sara och jag förstår verkligen din frustration. Att vänta på något man behöver suger. Låt mig spåra det åt dig nu.",
+                "speaker": "agent",
+            },
             {"text": "Tack... det är en present till min mamma.", "speaker": "kund"},
-            {"text": "Jag hör att det är viktigt. Systemet visar att försändelsen fastnat hos transportören i Stockholm. Jag bokar omleverans med express imorgon på vår bekostnad och ger dig 20% rabatt på nästa köp som goodwill.", "speaker": "agent"},
-            {"text": "Wow, det var mer än jag hoppades på. Tack, du har räddat dagen.", "speaker": "kund"},
-            {"text": "Det är jag glad för. Jag skickar tracking nu. Om det inte är framme imorgon ringer du mig direkt på det här numret.", "speaker": "agent"},
+            {
+                "text": "Jag hör att det är viktigt. Systemet visar att försändelsen fastnat hos transportören i Stockholm. Jag bokar omleverans med express imorgon på vår bekostnad och ger dig 20% rabatt på nästa köp som goodwill.",
+                "speaker": "agent",
+            },
+            {
+                "text": "Wow, det var mer än jag hoppades på. Tack, du har räddat dagen.",
+                "speaker": "kund",
+            },
+            {
+                "text": "Det är jag glad för. Jag skickar tracking nu. Om det inte är framme imorgon ringer du mig direkt på det här numret.",
+                "speaker": "agent",
+            },
         ],
     },
 ]
@@ -132,7 +202,9 @@ def _hash_segments(segments: list[dict[str, Any]]) -> str:
 
 
 @lru_cache(maxsize=8)
-def get_demo_reports(use_llm: bool = False, profile: str = "callcenter") -> tuple[dict[str, Any], ...]:
+def get_demo_reports(
+    use_llm: bool = False, profile: str = "callcenter"
+) -> tuple[dict[str, Any], ...]:
     """Generate (or retrieve cached) full CallAnalysisReport dicts for the demo calls.
 
     Runs the *real* CallAnalysisPipeline so that results contain:
@@ -153,7 +225,7 @@ def get_demo_reports(use_llm: bool = False, profile: str = "callcenter") -> tupl
     reports: list[dict[str, Any]] = []
     for call in DEMO_CALLS:
         segs = call["segments"]
-        cache_key = f"{call['id']}:{_hash_segments(segs)}:{use_llm}:{profile}"
+        f"{call['id']}:{_hash_segments(segs)}:{use_llm}:{profile}"
 
         # We still wrap the per-call run; the outer @st.cache_data caches the whole list
         try:
@@ -210,12 +282,17 @@ def get_call_summary(report: dict[str, Any]) -> dict[str, Any]:
     labels = [s.get("label", "neutral") for s in sent_list if isinstance(s, dict)]
     if labels:
         from collections import Counter
+
         overall = Counter(labels).most_common(1)[0][0]
     else:
         overall = "neutral"
 
     # QA
-    qa = (report.get("results") or {}).get("qa") or (report.get("results") or {}).get("compliance_qa") or {}
+    qa = (
+        (report.get("results") or {}).get("qa")
+        or (report.get("results") or {}).get("compliance_qa")
+        or {}
+    )
     qa_score = qa.get("overall_qa_score") if isinstance(qa, dict) else None
     qa_passed = qa.get("passed") if isinstance(qa, dict) else None
 
@@ -252,11 +329,16 @@ def get_call_summary(report: dict[str, Any]) -> dict[str, Any]:
         "risk_level": risk,
         "empathy_score": round(emp, 2) if emp else None,
         "num_alerts": len(alerts),
-        "has_llm": bool((report.get("llm") or {}).get("meta", {}).get("llm_used") or report.get("llm", {}).get("actionable_summary")),
+        "has_llm": bool(
+            (report.get("llm") or {}).get("meta", {}).get("llm_used")
+            or report.get("llm", {}).get("actionable_summary")
+        ),
     }
 
 
-def compute_dashboard_kpis(reports: list[dict[str, Any]], filters: dict[str, Any] | None = None) -> dict[str, Any]:
+def compute_dashboard_kpis(
+    reports: list[dict[str, Any]], filters: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Compute the 6-8 top KPIs for the main dashboard from (filtered) reports."""
     if filters is None:
         filters = {}
@@ -309,17 +391,30 @@ def compute_dashboard_kpis(reports: list[dict[str, Any]], filters: dict[str, Any
         "total_alerts": alert_count,
         "avg_empathy": round(avg_emp, 2) if avg_emp is not None else None,
         "top_hot_topics": top_hot,
-        "escalated_or_high_risk": sum(1 for r in filtered if get_call_summary(r)["risk_level"] in ("high", "critical")),
+        "escalated_or_high_risk": sum(
+            1 for r in filtered if get_call_summary(r)["risk_level"] in ("high", "critical")
+        ),
     }
 
 
 # Convenience for ad-hoc single call analysis (used by "Live-analys" and detail paste)
-def analyze_single_segments(segments: list[dict[str, Any]], use_llm: bool = False, profile: str = "callcenter", llm_api_key: str | None = None) -> dict[str, Any]:
+def analyze_single_segments(
+    segments: list[dict[str, Any]],
+    use_llm: bool = False,
+    profile: str = "callcenter",
+    llm_api_key: str | None = None,
+) -> dict[str, Any]:
     """Run pipeline on arbitrary segments and return to_dict() + demo-like meta."""
     from src.pipeline import CallAnalysisPipeline
 
-    pipe = CallAnalysisPipeline(profile=profile, use_mistral_llm=use_llm, deep_analysis=use_llm, llm_api_key=llm_api_key)
+    pipe = CallAnalysisPipeline(
+        profile=profile, use_mistral_llm=use_llm, deep_analysis=use_llm, llm_api_key=llm_api_key
+    )
     report = pipe.analyze_segments(segments)
     d = report.to_dict()
-    d["_demo_meta"] = {"id": "LIVE-" + hashlib.sha256(str(segments).encode()).hexdigest()[:8], "title": "Live-analys", "agent": "Live"}
+    d["_demo_meta"] = {
+        "id": "LIVE-" + hashlib.sha256(str(segments).encode()).hexdigest()[:8],
+        "title": "Live-analys",
+        "agent": "Live",
+    }
     return d

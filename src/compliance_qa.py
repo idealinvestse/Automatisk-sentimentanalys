@@ -24,10 +24,8 @@ See UTVECKLINGSPLAN_Fas4 v1.1 Task 4.2.1 + 4.2.2.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -53,10 +51,17 @@ class QACriterionResult(BaseModel):
     id: str
     description: str
     weight: float
-    score: float = Field(..., ge=0.0, le=1.0, description="Normalized 0-1 for this criterion (weighted into overall).")
+    score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Normalized 0-1 for this criterion (weighted into overall).",
+    )
     passed: bool
     detection_method: str  # rule-based | llm | hybrid
-    evidence: list[str] = Field(default_factory=list, description="Human readable evidence snippets.")
+    evidence: list[str] = Field(
+        default_factory=list, description="Human readable evidence snippets."
+    )
     evidence_spans: list[EvidenceSpan] = Field(default_factory=list)
     llm_used: bool = False
 
@@ -68,15 +73,22 @@ class QAScoreResult(BaseModel):
 
     scorecard_name: str
     scorecard_version: str
-    overall_qa_score: float = Field(..., ge=0.0, le=100.0, description="Weighted total score 0-100.")
+    overall_qa_score: float = Field(
+        ..., ge=0.0, le=100.0, description="Weighted total score 0-100."
+    )
     passed: bool
     passed_criteria: list[str] = Field(default_factory=list)
     failed_criteria: list[str] = Field(default_factory=list)
-    risk_level: str = Field("medium", description="low | medium | high | critical (based on failed high-weight + compliance).")
+    risk_level: str = Field(
+        "medium",
+        description="low | medium | high | critical (based on failed high-weight + compliance).",
+    )
     compliance_flags: list[str] = Field(default_factory=list)
     criteria_results: list[QACriterionResult]
     evidence_summary: str | None = None
-    llm_criteria_used: list[str] = Field(default_factory=list, description="Which criteria required an LLM call (for audit/cost).")
+    llm_criteria_used: list[str] = Field(
+        default_factory=list, description="Which criteria required an LLM call (for audit/cost)."
+    )
     computed_at: str
 
     @property
@@ -94,8 +106,10 @@ def load_scorecard(name_or_path: str = "standard_support_v1") -> dict[str, Any]:
         # fallback try .yml
         p = p.with_suffix(".yml")
     if not p.exists():
-        raise FileNotFoundError(f"Scorecard not found: {name_or_path} (looked in {QA_SCORECARDS_DIR})")
-    with open(p, "r", encoding="utf-8") as f:
+        raise FileNotFoundError(
+            f"Scorecard not found: {name_or_path} (looked in {QA_SCORECARDS_DIR})"
+        )
+    with open(p, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     data["_path"] = str(p)
     return data
@@ -176,7 +190,9 @@ def _compute_rule_based(
     spans: list[EvidenceSpan] = []
     for i, seg in enumerate(segments):
         txt = seg.get("text", "") if isinstance(seg, dict) else getattr(seg, "text", "")
-        sp = (seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", None)) or "UNKNOWN"
+        sp = (
+            seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", None)
+        ) or "UNKNOWN"
         role = role_map.get(sp, sp) if role_map else sp
         if _text_has_any(txt, kw):
             hits.append(f"[{role}] {txt[:80]}")
@@ -189,9 +205,17 @@ def _compute_rule_based(
     if criterion.get("id") == "greeting":
         first_agent = ""
         for seg in segments:
-            r = role_map.get(seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", ""), "") if role_map else ""
+            r = (
+                role_map.get(
+                    seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", ""), ""
+                )
+                if role_map
+                else ""
+            )
             if "agent" in str(r).lower():
-                first_agent = seg.get("text", "") if isinstance(seg, dict) else getattr(seg, "text", "")
+                first_agent = (
+                    seg.get("text", "") if isinstance(seg, dict) else getattr(seg, "text", "")
+                )
                 break
         passed = _text_has_any(first_agent, kw)
         sc = 1.0 if passed else 0.0
@@ -226,7 +250,7 @@ def _score_with_llm_if_needed(
 
     # hybrid: rule first, LLM only for borderline or high-weight nuanced cases (per plan 4.2.1)
     if method == "hybrid":
-        is_borderline = (rule_sc > 0.2 and rule_sc < 0.85)
+        is_borderline = rule_sc > 0.2 and rule_sc < 0.85
         high_weight = float(criterion.get("weight", 0)) >= 15
         if not (is_borderline or high_weight) or analyzer is None:
             return rule_sc, rule_pas, rule_ev, rule_sp, False
@@ -264,20 +288,32 @@ Transkript (roll-märkt):
 Returnera exakt:
 {{"score": 0.0-1.0, "passed": true/false, "evidence": ["kort citat 1", "citat 2"], "reason": "kort"}}
 """
-            messages = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": user}]
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user},
+            ]
             # We use non-strict text for robustness; in prod use json_schema
             # chat_completion returns (content: str, meta: dict)
             try:
-                content, meta = client.chat_completion(messages=messages, model=None, temperature=0.1, max_tokens=300)
+                content, meta = client.chat_completion(
+                    messages=messages, model=None, temperature=0.1, max_tokens=300
+                )
                 txt = content or "{}"
                 meta = {"used": "chat_completion", **(meta or {})}
             except Exception:
-                raw, meta = client.structured_chat(messages=messages, model=None, temperature=0.1, max_tokens=300, task_name="qa_criterion_judge")
-                txt = (raw.get("content", "{}") if isinstance(raw, dict) else str(raw))
+                raw, meta = client.structured_chat(
+                    messages=messages,
+                    model=None,
+                    temperature=0.1,
+                    max_tokens=300,
+                    task_name="qa_criterion_judge",
+                )
+                txt = raw.get("content", "{}") if isinstance(raw, dict) else str(raw)
             data = {}
             try:
                 # extract json
                 import re
+
                 m = re.search(r"\{.*\}", txt, re.DOTALL)
                 if m:
                     data = json.loads(m.group(0))
@@ -287,10 +323,16 @@ Returnera exakt:
             pas = bool(data.get("passed", sc >= 0.6))
             ev = data.get("evidence", [])[:3] or [txt[:100]]
             spans = [_make_evidence_span(e, None, None) for e in ev]
-            logger.info("LLM used for QA criterion id=%s (cost meta=%s)", criterion.get("id"), meta.get("cost_usd"))
+            logger.info(
+                "LLM used for QA criterion id=%s (cost meta=%s)",
+                criterion.get("id"),
+                meta.get("cost_usd"),
+            )
             return sc, pas, ev, spans, True
         except Exception as e:
-            logger.warning("LLM QA scoring failed for %s, falling back to rule: %s", criterion.get("id"), e)
+            logger.warning(
+                "LLM QA scoring failed for %s, falling back to rule: %s", criterion.get("id"), e
+            )
 
     # Fallback: pure rule even for llm/hybrid (or stub)
     sc, pas, ev, sp = _compute_rule_based(criterion, segments, role_map)
@@ -411,7 +453,12 @@ class QAScorer:
         )
         logger.info(
             "QA scoring complete | scorecard=%s v%s score=%.1f passed=%s risk=%s llm_criteria=%s",
-            self.name, self.version, overall, passed, risk, llm_used_list or "-",
+            self.name,
+            self.version,
+            overall,
+            passed,
+            risk,
+            llm_used_list or "-",
         )
         return res
 
@@ -427,8 +474,12 @@ def score_call_with_default_scorecard(
 ) -> dict[str, Any]:
     """Quick entry: load default + optional analyzer, return dict."""
     try:
-        scorer = QAScorer(scorecard_path="standard_support_v1", analyzer=analyzer if use_llm else None)
-        result = scorer.score_conversation(segments, role_map=role_map, local_signals=local_signals, profile_name=profile_name)
+        scorer = QAScorer(
+            scorecard_path="standard_support_v1", analyzer=analyzer if use_llm else None
+        )
+        result = scorer.score_conversation(
+            segments, role_map=role_map, local_signals=local_signals, profile_name=profile_name
+        )
         return result.model_dump()
     except Exception as e:
         logger.error("QA scoring failed: %s", e)

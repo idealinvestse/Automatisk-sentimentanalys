@@ -90,7 +90,9 @@ class TestConfigLoading:
     def test_env_override_priority(self, tmp_path, monkeypatch):
         """Env vars override YAML values."""
         cfg_file = tmp_path / "alerting_config.yaml"
-        cfg_file.write_text("webhook:\n  url: https://from-yaml.example.com\n  timeout_seconds: 5\n")
+        cfg_file.write_text(
+            "webhook:\n  url: https://from-yaml.example.com\n  timeout_seconds: 5\n"
+        )
         monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://from-env.example.com")
         cfg = load_alerting_config(cfg_file)
         assert cfg["webhook"]["url"] == "https://from-env.example.com"

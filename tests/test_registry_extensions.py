@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import os
-from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
 
-from src.analysis.graph import build_dependency_graph, compute_execution_levels, detect_cycles, to_mermaid
+from src.analysis.graph import (
+    build_dependency_graph,
+    compute_execution_levels,
+    detect_cycles,
+    to_mermaid,
+)
 from src.analysis.registry import (
     _ANALYZER_REGISTRY,
     ensure_analyzers_loaded,
@@ -20,7 +23,7 @@ from src.analysis.registry import (
     run_analyzers,
     run_analyzers_async,
 )
-from src.analysis.resources import ModelResourcePool, get_pool
+from src.analysis.resources import ModelResourcePool
 from src.analysis.schemas import AnalyzerResultRegistry, validate_analyzer_result
 from src.core.models import AnalysisContext, Segment
 
@@ -72,7 +75,9 @@ def test_execution_levels_no_cycle():
 
 def test_mermaid_export():
     ensure_analyzers_loaded()
-    graph = build_dependency_graph(get_analyzer_registry(), selected={"trajectory", "sentiment", "emotion"})
+    graph = build_dependency_graph(
+        get_analyzer_registry(), selected={"trajectory", "sentiment", "emotion"}
+    )
     mermaid = to_mermaid(graph)
     assert "flowchart BT" in mermaid
     assert "sentiment --> trajectory" in mermaid or "emotion --> trajectory" in mermaid
@@ -113,8 +118,6 @@ def test_result_validation_warn_mode():
 
 def test_result_validation_strict_mode():
     from pydantic import ValidationError
-
-    from src.analysis.schemas import EmpathyResult
 
     with pytest.raises(ValidationError):
         validate_analyzer_result("empathy", {"overall_empathy": "bad"}, mode="strict")
@@ -216,13 +219,17 @@ def test_callcenter_profile_strict_validation(monkeypatch):
     monkeypatch.setattr(
         IntentAnalyzer,
         "analyze",
-        lambda self, ctx: [{"intent": "billing_inquiry", "confidence": 0.8} for _ in (ctx.segments or [])],
+        lambda self, ctx: [
+            {"intent": "billing_inquiry", "confidence": 0.8} for _ in (ctx.segments or [])
+        ],
     )
 
     selected = resolve_analyzers_for_profile("callcenter")
     assert selected is not None
     segments = [
-        Segment(start=0.0, end=1.0, text="Hej, jag har en fråga om min faktura.", speaker="SPEAKER_0"),
+        Segment(
+            start=0.0, end=1.0, text="Hej, jag har en fråga om min faktura.", speaker="SPEAKER_0"
+        ),
         Segment(start=1.0, end=2.0, text="Absolut, jag hjälper dig gärna.", speaker="SPEAKER_1"),
     ]
     ctx = AnalysisContext(segments=segments)

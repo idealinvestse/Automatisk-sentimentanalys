@@ -5,8 +5,6 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-import pytest
-
 from launcher.event_log import EventLog, _parse_log_line
 from launcher.pid_store import launcher_activity_log_path
 from src.install.config_schema import UserConfig

@@ -7,7 +7,11 @@ from pathlib import Path
 import yaml
 
 from src.install.config_schema import UserConfig
-from src.install.paths_util import portable_user_config_path, resolve_ffmpeg, resolve_user_config_path
+from src.install.paths_util import (
+    portable_user_config_path,
+    resolve_ffmpeg,
+    resolve_user_config_path,
+)
 from src.install.user_config import load_user_config, save_user_config
 
 

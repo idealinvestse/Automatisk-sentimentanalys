@@ -21,8 +21,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="A/B intent backends on val set")
     parser.add_argument("--val-file", type=Path, default=Path("data/intent_val.jsonl"))
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--model-path", default=os.getenv("INTENT_MODEL_PATH", "models/intent_classifier"))
-    parser.add_argument("--output", type=Path, default=Path("reports/intent_backend_comparison.json"))
+    parser.add_argument(
+        "--model-path", default=os.getenv("INTENT_MODEL_PATH", "models/intent_classifier")
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("reports/intent_backend_comparison.json")
+    )
     args = parser.parse_args()
 
     with args.config.open(encoding="utf-8") as fh:
@@ -35,9 +39,7 @@ def main() -> None:
     report: dict = {"heuristic": heur, "model": None, "recommendation": "heuristic"}
 
     if Path(args.model_path).is_dir():
-        model = benchmark_backend(
-            texts, labels, backend="model", model_path=args.model_path
-        )
+        model = benchmark_backend(texts, labels, backend="model", model_path=args.model_path)
         report["model"] = model
         gain = model["f1_macro"] - heur["f1_macro"]
         report["f1_macro_gain"] = round(gain, 4)
@@ -50,7 +52,9 @@ def main() -> None:
         print(f"Model path missing ({args.model_path}); heuristic-only comparison")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 

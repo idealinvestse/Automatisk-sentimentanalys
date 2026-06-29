@@ -9,10 +9,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from ...caching import AggregateCache
-from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import run_batch
 from ..dependencies import get_cache
+from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
 from ..schemas import (
     AnalyzeConversationRequest,

@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from datetime import UTC, datetime
-from typing import Any, Iterator
+from typing import Any
 
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 job_id_var: ContextVar[str | None] = ContextVar("job_id", default=None)

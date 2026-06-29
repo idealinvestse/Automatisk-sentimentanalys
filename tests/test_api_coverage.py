@@ -116,7 +116,9 @@ def test_batch_transcribe_ok_and_worker_error(audio_file):
         raise ValueError("fail b")
 
     with (
-        patch("src.api.routers.transcription.resolve_and_validate_audio_paths", return_value=[a, b]),
+        patch(
+            "src.api.routers.transcription.resolve_and_validate_audio_paths", return_value=[a, b]
+        ),
         patch("src.api.routers.transcription.transcribe_helper", side_effect=fake_helper),
     ):
         r = client.post(
@@ -182,7 +184,10 @@ def test_batch_analyze_conversation_mixed(audio_file):
         raise OSError("bad file")
 
     with (
-        patch("src.api.routers.conversation.resolve_and_validate_audio_paths", return_value=[audio_file, b]),
+        patch(
+            "src.api.routers.conversation.resolve_and_validate_audio_paths",
+            return_value=[audio_file, b],
+        ),
         patch("src.api.services.conversation.transcribe_helper", side_effect=tx),
         patch(
             "src.api.services.conversation.analyze_smart",
@@ -343,7 +348,9 @@ def test_qa_score_compliance_qa_fallback():
 def test_alerts_aggregate_branch():
     fake_alert = MagicMock()
     fake_alert.model_dump.return_value = {"rule_id": "trend", "severity": "medium"}
-    with patch.object(default_app.state.alert_engine, "check_from_aggregate", return_value=[fake_alert]):
+    with patch.object(
+        default_app.state.alert_engine, "check_from_aggregate", return_value=[fake_alert]
+    ):
         r = client.post("/alerts", json={"aggregate": {"team_avg": 0.5}})
     assert r.status_code == 200
     assert r.json()["alerts"][0]["rule_id"] == "trend"
@@ -377,7 +384,6 @@ def test_analyze_text_500():
 
 
 def test_media_root_rejects_path_outside_sandbox(audio_file, monkeypatch, tmp_path):
-    import os
     from pathlib import Path
 
     media = Path(audio_file).parent
@@ -411,7 +417,9 @@ def test_run_batch_sequential_worker_raises():
 
 
 def test_run_batch_parallel_worker_raises():
-    res = run_batch(["f1"], lambda _p: (_ for _ in ()).throw(RuntimeError("par")), workers=2, worker_timeout=2.0)
+    res = run_batch(
+        ["f1"], lambda _p: (_ for _ in ()).throw(RuntimeError("par")), workers=2, worker_timeout=2.0
+    )
     assert len(res) == 1
     assert res[0][2] is not None
 

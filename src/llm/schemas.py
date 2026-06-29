@@ -57,9 +57,18 @@ class EmotionTrajectoryPoint(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     turn: int = Field(..., ge=0, description="Turn index (customer or overall turns).")
-    sentiment: float = Field(..., ge=-1.0, le=1.0, description="Aggregated sentiment score at this turn (-1=very negative ... +1).")
-    primary_emotion: str | None = Field(None, description="Dominant emotion label at this turn (frustration, ilska, etc).")
-    score: float = Field(0.0, ge=0.0, le=1.0, description="Confidence or intensity of the primary emotion.")
+    sentiment: float = Field(
+        ...,
+        ge=-1.0,
+        le=1.0,
+        description="Aggregated sentiment score at this turn (-1=very negative ... +1).",
+    )
+    primary_emotion: str | None = Field(
+        None, description="Dominant emotion label at this turn (frustration, ilska, etc)."
+    )
+    score: float = Field(
+        0.0, ge=0.0, le=1.0, description="Confidence or intensity of the primary emotion."
+    )
 
 
 class Trajectory(BaseModel):
@@ -88,7 +97,8 @@ class AspectItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     aspect: str = Field(
-        ..., description="One of the callcenter aspects or a discovered sub-aspect, e.g. fakturering_pris, agent_attityd."
+        ...,
+        description="One of the callcenter aspects or a discovered sub-aspect, e.g. fakturering_pris, agent_attityd.",
     )
     sentiment: str = Field(..., description="negativ | neutral | positiv (after full context).")
     score: float = Field(0.7, ge=0.0, le=1.0)
@@ -96,7 +106,8 @@ class AspectItem(BaseModel):
         default_factory=list, description="Concrete quotes that support this aspect judgment."
     )
     related_to: list[str] = Field(
-        default_factory=list, description="Other aspects this one is causally or emotionally linked to."
+        default_factory=list,
+        description="Other aspects this one is causally or emotionally linked to.",
     )
 
 
@@ -133,7 +144,9 @@ class ActionableSummary(BaseModel):
         default_factory=list,
         description="Concrete, actionable coaching points for the agent or process (e.g. 'Använd empatifraser tidigare').",
     )
-    risk_level: str = Field("medium", description="low | medium | high (escalation/compliance risk).")
+    risk_level: str = Field(
+        "medium", description="low | medium | high (escalation/compliance risk)."
+    )
 
 
 class AgentAssessment(BaseModel):
@@ -146,17 +159,24 @@ class AgentAssessment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     empathy_score: float = Field(
-        ..., ge=0.0, le=1.0, description="How well the agent showed understanding and de-escalated (0-1)."
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="How well the agent showed understanding and de-escalated (0-1).",
     )
     compliance_flags: list[str] = Field(
-        default_factory=list, description="Script/process violations or missed opportunities detected."
+        default_factory=list,
+        description="Script/process violations or missed opportunities detected.",
     )
-    strengths: list[str] = Field(default_factory=list, description="Positive behaviours worth reinforcing.")
+    strengths: list[str] = Field(
+        default_factory=list, description="Positive behaviours worth reinforcing."
+    )
     weaknesses: list[str] = Field(
         default_factory=list, description="Areas for improvement (specific, not generic)."
     )
     evidence_spans: list[EvidenceSpan] = Field(
-        default_factory=list, description="Exact turns/phrases that justify the empathy score and flags."
+        default_factory=list,
+        description="Exact turns/phrases that justify the empathy score and flags.",
     )
     specific_coaching_recommendations: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -438,6 +458,7 @@ GROQ_PROD_MODELS = {
 # Fas 4.1+ : Agent / Customer metrics (local + hybrid) - Pydantic for merging into CallAnalysisReport
 # =============================================================================
 
+
 class AgentMetrics(BaseModel):
     """Quantitative agent performance signals derived locally (Fas 4.1.1).
 
@@ -451,25 +472,62 @@ class AgentMetrics(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    talk_ratio: float = Field(..., ge=0.0, le=1.0, description="Agent's share of total speaking time in call (0-1).")
-    talk_listen_ratio: float = Field(..., ge=0.0, description="Agent talk time divided by customer talk time (>1 = agent dominates airtime).")
-    question_density: float = Field(0.0, ge=0.0, description="Approx questions asked by agent per agent turn.")
-    lexical_formality: float = Field(0.5, ge=0.0, le=1.0, description="Heuristic score for professional Swedish service language (higher = more formal/polite).")
-    sentiment_variance: float = Field(0.0, ge=0.0, description="Variance in agent's sentiment tone across their turns (high = inconsistent).")
-    intervention_count: int = Field(0, ge=0, description="Approx number of times agent 'intervened' (speaker switches into customer flow).")
-    empathy_score: float = Field(0.0, ge=0.0, le=1.0, description="Local rule-based empathy signal (0-1). Combined with LLM later.")
-    de_escalation_effectiveness: float = Field(0.0, ge=0.0, le=1.0, description="Local measure of recovery in customer sentiment after negative moments.")
+    talk_ratio: float = Field(
+        ..., ge=0.0, le=1.0, description="Agent's share of total speaking time in call (0-1)."
+    )
+    talk_listen_ratio: float = Field(
+        ...,
+        ge=0.0,
+        description="Agent talk time divided by customer talk time (>1 = agent dominates airtime).",
+    )
+    question_density: float = Field(
+        0.0, ge=0.0, description="Approx questions asked by agent per agent turn."
+    )
+    lexical_formality: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description="Heuristic score for professional Swedish service language (higher = more formal/polite).",
+    )
+    sentiment_variance: float = Field(
+        0.0,
+        ge=0.0,
+        description="Variance in agent's sentiment tone across their turns (high = inconsistent).",
+    )
+    intervention_count: int = Field(
+        0,
+        ge=0,
+        description="Approx number of times agent 'intervened' (speaker switches into customer flow).",
+    )
+    empathy_score: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Local rule-based empathy signal (0-1). Combined with LLM later.",
+    )
+    de_escalation_effectiveness: float = Field(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Local measure of recovery in customer sentiment after negative moments.",
+    )
     compliance_flags: list[str] = Field(
-        default_factory=list, description="Rule-detected issues e.g. 'missing_greeting', 'no_empathy_on_frustration'."
+        default_factory=list,
+        description="Rule-detected issues e.g. 'missing_greeting', 'no_empathy_on_frustration'.",
     )
     num_agent_turns: int = Field(0, ge=0)
     num_customer_turns: int = Field(0, ge=0)
-    total_talk_time_s: float = Field(0.0, ge=0.0, description="Total duration of all segments (agent+customer) as proxy for call length.")
+    total_talk_time_s: float = Field(
+        0.0,
+        ge=0.0,
+        description="Total duration of all segments (agent+customer) as proxy for call length.",
+    )
 
 
 # =============================================================================
 # Fas 4.3: Aggregated insights models (Pydantic, mergable into report or separate aggregate output)
 # =============================================================================
+
 
 class HotTopic(BaseModel):
     """A hot topic aggregated across multiple calls (Fas 4.3.1)."""
@@ -494,15 +552,20 @@ class AggregatedInsights(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    hot_topics: list[HotTopic] = Field(default_factory=list, description="Top hot topics with volume, sentiment, trend, evidence")
+    hot_topics: list[HotTopic] = Field(
+        default_factory=list, description="Top hot topics with volume, sentiment, trend, evidence"
+    )
     sentiment_trends: dict[str, Any] = Field(
-        default_factory=dict, description="Overall sentiment slope, buckets over time, per topic trends"
+        default_factory=dict,
+        description="Overall sentiment slope, buckets over time, per topic trends",
     )
     root_cause_clusters: list[dict[str, Any]] = Field(
-        default_factory=list, description="Clustered root causes (with size, representative evidence)"
+        default_factory=list,
+        description="Clustered root causes (with size, representative evidence)",
     )
     top_agent_issues: list[dict[str, Any]] = Field(
-        default_factory=list, description="Issues per agent or team (from agent_performance + assessments)"
+        default_factory=list,
+        description="Issues per agent or team (from agent_performance + assessments)",
     )
     meta: dict[str, Any] = Field(
         default_factory=dict,
@@ -514,12 +577,15 @@ class AggregatedInsights(BaseModel):
 # Fas 4.4.1: PII Redaction Log (structured, evidence-based, for audit + results merge)
 # =============================================================================
 
+
 class PiiRedactionEvent(BaseModel):
     """A single PII redaction event (for logging and audit)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    type: str = Field(..., description="personnummer | email | phone | credit_card | address | name | other")
+    type: str = Field(
+        ..., description="personnummer | email | phone | credit_card | address | name | other"
+    )
     original: str = Field(..., description="The original matched text (truncated for log safety).")
     replacement: str = Field(..., description="The token used, e.g. [REDACTED_PNR]")
     segment_index: int | None = Field(None, description="Index in the segment list.")
@@ -538,33 +604,46 @@ class PiiRedactionLog(BaseModel):
 
     events: list[PiiRedactionEvent] = Field(default_factory=list)
     total_redacted: int = Field(0, description="Total number of PII items redacted.")
-    types_redacted: list[str] = Field(default_factory=list, description="Unique types found (e.g. ['personnummer', 'email']).")
-    applied_to_local: bool = Field(True, description="Whether redaction affected local analyzers (sentiment, role, etc) and not only LLM.")
+    types_redacted: list[str] = Field(
+        default_factory=list, description="Unique types found (e.g. ['personnummer', 'email'])."
+    )
+    applied_to_local: bool = Field(
+        True,
+        description="Whether redaction affected local analyzers (sentiment, role, etc) and not only LLM.",
+    )
     profile: str = "default"
-    timestamp: str = Field(default_factory=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: __import__("datetime")
+        .datetime.now(__import__("datetime").timezone.utc)
+        .isoformat()
+    )
 
 
 # =============================================================================
 # Fas 4.4.2: Alerting models (Pydantic, evidence-based, mergable into results["alerts"])
 # =============================================================================
 
+
 class Alert(BaseModel):
     """A triggered alert (Fas 4.4.2). Actionable with evidence."""
 
     model_config = ConfigDict(extra="forbid")
 
-    rule_id: str = Field(..., description="Identifier for the rule that triggered, e.g. 'high_escalation_risk'")
+    rule_id: str = Field(
+        ..., description="Identifier for the rule that triggered, e.g. 'high_escalation_risk'"
+    )
     severity: str = Field("medium", description="low | medium | high | critical")
     message: str = Field(..., description="Human readable Swedish description of the alert.")
     evidence_spans: list[EvidenceSpan] = Field(
         default_factory=list, description="Concrete transcript parts that caused the alert."
     )
     triggered_values: dict[str, Any] = Field(
-        default_factory=dict, description="The values that matched the rule, e.g. {'customer_sentiment': -0.8, 'escalation_risk': 0.7}"
+        default_factory=dict,
+        description="The values that matched the rule, e.g. {'customer_sentiment': -0.8, 'escalation_risk': 0.7}",
     )
     recommended_actions: list[str] = Field(
         default_factory=list,
-        description="Actionable next steps, e.g. ['flag_supervisor', 'create_coaching_task:empathy', 'notify_webhook']"
+        description="Actionable next steps, e.g. ['flag_supervisor', 'create_coaching_task:empathy', 'notify_webhook']",
     )
     source: str = Field("per_call", description="per_call | aggregator_trend | batch")
 
@@ -585,12 +664,21 @@ class CustomerMetrics(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    talk_ratio: float = Field(..., ge=0.0, le=1.0, description="Customer's share of total speaking time.")
-    sentiment_slope: float = Field(0.0, description="Rough delta: end sentiment - start sentiment for customer (-1 to +1).")
-    frustration_peaks: int = Field(0, ge=0, description="Number of high-negativity spikes detected.")
+    talk_ratio: float = Field(
+        ..., ge=0.0, le=1.0, description="Customer's share of total speaking time."
+    )
+    sentiment_slope: float = Field(
+        0.0, description="Rough delta: end sentiment - start sentiment for customer (-1 to +1)."
+    )
+    frustration_peaks: int = Field(
+        0, ge=0, description="Number of high-negativity spikes detected."
+    )
     question_count: int = Field(0, ge=0)
     resolution_indicators: float = Field(
-        0.0, ge=0.0, le=1.0, description="Signals of resolution (thanks, 'det var bra', resolved language at end)."
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Signals of resolution (thanks, 'det var bra', resolved language at end).",
     )
 
 
@@ -608,9 +696,12 @@ class CallAgentPerformance(BaseModel):
     customer: CustomerMetrics
     # Lightweight local (rule) hints before/without LLM
     local_coaching_hints: list[str] = Field(
-        default_factory=list, description="Immediate rule-based suggestions (e.g. 'Agent bör hälsa tidigare')."
+        default_factory=list,
+        description="Immediate rule-based suggestions (e.g. 'Agent bör hälsa tidigare').",
     )
-    evidence_summary: str | None = Field(None, description="Short Swedish summary of key metric drivers.")
+    evidence_summary: str | None = Field(
+        None, description="Short Swedish summary of key metric drivers."
+    )
 
 
 # =============================================================================
@@ -624,11 +715,17 @@ class LLMJudgeVerdict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     segment_index: int = Field(..., ge=0, description="Index of the segment in the conversation.")
-    original_sentiment: str = Field(..., description="positive/negative/neutral from local sentiment")
-    original_confidence: float = Field(..., ge=0.0, le=1.0, description="Original confidence score (0-1)")
+    original_sentiment: str = Field(
+        ..., description="positive/negative/neutral from local sentiment"
+    )
+    original_confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Original confidence score (0-1)"
+    )
     judge_label: str = Field(..., description="positive/negative/neutral from LLM judge")
     judge_confidence: float = Field(..., ge=0.0, le=1.0, description="LLM judge confidence (0-1)")
-    reasoning: str = Field(..., min_length=1, description="1-2 sentences in Swedish explaining the judgment")
+    reasoning: str = Field(
+        ..., min_length=1, description="1-2 sentences in Swedish explaining the judgment"
+    )
     model: str = Field(..., description="Model identifier e.g. llama-3.1-8b-instant")
     cost_usd: float = Field(0.0, ge=0.0, description="Cost in USD for this judgment")
     latency_ms: int = Field(0, ge=0, description="Latency in milliseconds for the LLM call")
@@ -639,9 +736,17 @@ class LLMJudgeResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    verdicts: list[LLMJudgeVerdict] = Field(default_factory=list, description="Individual verdicts for low-confidence segments")
+    verdicts: list[LLMJudgeVerdict] = Field(
+        default_factory=list, description="Individual verdicts for low-confidence segments"
+    )
     triggered_segments: int = Field(0, ge=0, description="How many segments were sent to LLM judge")
-    skipped_segments: int = Field(0, ge=0, description="How many segments were above confidence threshold")
+    skipped_segments: int = Field(
+        0, ge=0, description="How many segments were above confidence threshold"
+    )
     total_cost_usd: float = Field(0.0, ge=0.0, description="Total cost across all judgments")
-    budget_exceeded: bool = Field(False, description="True if budget limit stopped further LLM calls")
-    fallback_used: bool = Field(False, description="True if LLM failed and local heuristic fallback was used")
+    budget_exceeded: bool = Field(
+        False, description="True if budget limit stopped further LLM calls"
+    )
+    fallback_used: bool = Field(
+        False, description="True if LLM failed and local heuristic fallback was used"
+    )

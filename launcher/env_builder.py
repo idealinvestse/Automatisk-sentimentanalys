@@ -41,9 +41,10 @@ def bootstrap_launcher_env(app_root: Path | None = None) -> Path:
     os.environ["SENTIMENT_APP_ROOT"] = str(root)
     os.environ["PYTHONPATH"] = str(root)
 
-    if not os.environ.get("FFMPEG_PATH", "").strip():
-        if persisted := _windows_user_env_var("FFMPEG_PATH"):
-            os.environ["FFMPEG_PATH"] = persisted
+    if not os.environ.get("FFMPEG_PATH", "").strip() and (
+        persisted := _windows_user_env_var("FFMPEG_PATH")
+    ):
+        os.environ["FFMPEG_PATH"] = persisted
 
     cfg = load_user_config(root)
     os.environ["PATH"] = augment_path(cfg, os.environ.get("PATH", ""))

@@ -7,13 +7,13 @@ import logging
 import logging.handlers
 import os
 import threading
-import time
 import traceback
 from collections import deque
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from .logging_config import get_logger, job_id_var, log_context
 from .metrics import record_status_event
@@ -108,7 +108,9 @@ def derive_job_status(events: list[dict[str, Any]], job_id: str) -> dict[str, An
 
     current_phase = job_events[-1].get("phase")
     current_component = job_events[-1].get("component")
-    progress = next((e.get("progress") for e in reversed(job_events) if e.get("progress") is not None), None)
+    progress = next(
+        (e.get("progress") for e in reversed(job_events) if e.get("progress") is not None), None
+    )
     last_error = next(
         (e for e in reversed(job_events) if e.get("level") == "ERROR"),
         None,
@@ -239,9 +241,7 @@ class StatusReporter:
             try:
                 listener(event)
             except Exception:
-                logging.getLogger(__name__).debug(
-                    "Status listener failed", exc_info=True
-                )
+                logging.getLogger(__name__).debug("Status listener failed", exc_info=True)
 
     def _build_event(
         self,
@@ -260,7 +260,7 @@ class StatusReporter:
         if exc is not None:
             exception_type = type(exc).__name__
             if error_code is None and hasattr(exc, "error_code"):
-                error_code = str(getattr(exc, "error_code"))
+                error_code = str(exc.error_code)
             tb = traceback.format_exc()
             if tb and tb.strip() != "NoneType: None":
                 extra.setdefault("traceback_tail", tb[-500:])

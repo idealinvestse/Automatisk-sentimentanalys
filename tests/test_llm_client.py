@@ -15,14 +15,12 @@ These tests must never hit the real network. All OpenAI calls are patched.
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.core.errors import LLMError
-from src.llm.openrouter_client import OpenRouterClient, _HAS_OPENAI
+from src.llm.openrouter_client import _HAS_OPENAI, OpenRouterClient
 
 
 @pytest.fixture
@@ -63,13 +61,20 @@ def test_structured_chat_success_and_meta(fake_api_key, tmp_path, monkeypatch):
     fake_usage = MagicMock()
     fake_usage.prompt_tokens = 1240
     fake_usage.completion_tokens = 380
-    fake_usage.model_dump.return_value = {"prompt_tokens": 1240, "completion_tokens": 380, "total_tokens": 1620}
+    fake_usage.model_dump.return_value = {
+        "prompt_tokens": 1240,
+        "completion_tokens": 380,
+        "total_tokens": 1620,
+    }
     fake_completion.usage = fake_usage
     fake_choice = MagicMock()
     fake_choice.message.content = json.dumps(
         {
             "trajectory": {"summary": "Kundens frustration ökade efter fakturafrågan."},
-            "actionable_summary": {"problem": "Faktureringsfel", "recommendations_for_qa": ["Coacha agent på empathy"]},
+            "actionable_summary": {
+                "problem": "Faktureringsfel",
+                "recommendations_for_qa": ["Coacha agent på empathy"],
+            },
         }
     )
     fake_completion.choices = [fake_choice]
@@ -139,8 +144,12 @@ def test_caching_works_and_is_free(fake_api_key, tmp_path):
         msgs = [{"role": "user", "content": "Test transcript for cache key"}]
         schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
 
-        r1, m1 = client.structured_chat(msgs, json_schema=schema, task_name="test_cache", transcript_hash="h1")
-        r2, m2 = client.structured_chat(msgs, json_schema=schema, task_name="test_cache", transcript_hash="h1")
+        r1, m1 = client.structured_chat(
+            msgs, json_schema=schema, task_name="test_cache", transcript_hash="h1"
+        )
+        r2, m2 = client.structured_chat(
+            msgs, json_schema=schema, task_name="test_cache", transcript_hash="h1"
+        )
 
     assert r1 == r2
     assert m1["cached"] is False

@@ -11,7 +11,11 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.services.nicegui_api_client import APIError
-from app.nicegui_dashboard.services.ui_helpers import notify_api_error, notify_success, notify_warning
+from app.nicegui_dashboard.services.ui_helpers import (
+    notify_api_error,
+    notify_success,
+    notify_warning,
+)
 from app.nicegui_dashboard.state import DashboardState
 
 
@@ -51,9 +55,12 @@ def render_text_pipeline_section(state: DashboardState) -> None:
         groq_gdpr_notice.set_visibility(e.value == "groq" and bool(use_llm.value))
 
     provider_dropdown.on("update:model-value", _on_provider_change)
-    use_llm.on("update:model-value", lambda e: groq_gdpr_notice.set_visibility(
-        provider_dropdown.value == "groq" and bool(e.value)
-    ))
+    use_llm.on(
+        "update:model-value",
+        lambda e: groq_gdpr_notice.set_visibility(
+            provider_dropdown.value == "groq" and bool(e.value)
+        ),
+    )
     result_container = ui.column().classes("w-full q-mt-md")
 
     async def run_analysis() -> None:
@@ -97,7 +104,9 @@ def render_text_pipeline_section(state: DashboardState) -> None:
                 sent = report.get("sentiment_results") or []
                 if sent:
                     labels = [str(s.get("label", "?")) for s in sent[:5]]
-                    ui.label(f"Sentiment (första segment): {', '.join(labels)}").classes("text-body2")
+                    ui.label(f"Sentiment (första segment): {', '.join(labels)}").classes(
+                        "text-body2"
+                    )
 
                 qa = (report.get("results") or {}).get("qa") or {}
                 if qa.get("overall_qa_score") is not None:

@@ -12,11 +12,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 
 from ...caching import AggregateCache
-from ..path_validation import resolve_and_validate_audio_paths
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..dependencies import get_cache
 from ..helpers import asr_kwargs_from, transcribe_helper
+from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
 from ..schemas import ScanItem, ScanProcessRequest, ScanProcessResponse
 from ..services.conversation import run_batch_analyze_file
@@ -128,6 +128,7 @@ def _run_scan_process(
             cancelled = True
             hub.log(job_id=job_id, level="WARNING", msg="scan_process avbruten mellan batchar")
             break
+
         def _on_complete(
             path: str,
             result: dict[str, Any] | None,
@@ -147,7 +148,9 @@ def _run_scan_process(
                 progress=progress,
             )
             if error is None:
-                hub.log(job_id=job_id, level="INFO", msg=f"[scan_process] Klart: {fname}", file=fname)
+                hub.log(
+                    job_id=job_id, level="INFO", msg=f"[scan_process] Klart: {fname}", file=fname
+                )
             else:
                 hub.log(job_id=job_id, level="ERROR", msg=str(error), file=fname)
 
@@ -171,14 +174,14 @@ def _run_scan_process(
                     }
             else:
                 logger.error("scan_process failed for %s: %s", path, error, exc_info=True)
-                items.append(
-                    ScanItem(file=path, ok=False, error=str(error), batch_index=bidx)
-                )
+                items.append(ScanItem(file=path, ok=False, error=str(error), batch_index=bidx))
                 failed += 1
 
         state["processed"] = processed
         _save_state(req.state_file, state)
-        logger.debug("scan_process: batch %d/%d done (ok=%d failed=%d)", bidx + 1, len(batches), ok, failed)
+        logger.debug(
+            "scan_process: batch %d/%d done (ok=%d failed=%d)", bidx + 1, len(batches), ok, failed
+        )
 
     if skipped:
         hub.log(job_id=job_id, level="INFO", msg=f"Hoppade över {skipped} redan bearbetade filer")
@@ -230,7 +233,12 @@ async def scan_process(
     Returns:
         Per-file results, counts, and a UTC timestamp.
     """
-    logger.info("scan_process: directory=%s pattern=%s operation=%s", req.directory, req.pattern, req.operation)
+    logger.info(
+        "scan_process: directory=%s pattern=%s operation=%s",
+        req.directory,
+        req.pattern,
+        req.operation,
+    )
     job_id = request.headers.get(JOB_HEADER)
     hub = get_hub(request.app)
     registry = get_job_registry(request.app)

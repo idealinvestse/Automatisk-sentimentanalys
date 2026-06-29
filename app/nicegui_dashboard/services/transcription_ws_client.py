@@ -7,6 +7,7 @@ Exponential backoff, max attempts, status callbacks.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -87,10 +88,8 @@ class TranscriptionWSListener:
         self._stop.set()
         if self._task and not self._task.done():
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
         self._task = None
         self.connected = False
         self._set_status(WS_DISCONNECTED)
@@ -143,7 +142,7 @@ class TranscriptionWSListener:
                             break
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=1.0)
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             continue
                         except Exception:
                             break
@@ -175,7 +174,7 @@ class TranscriptionWSListener:
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=delay)
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
 
         self.connected = False

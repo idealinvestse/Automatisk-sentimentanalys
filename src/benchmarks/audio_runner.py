@@ -64,7 +64,9 @@ def _run_pipeline_on_sample(
     from ..pipeline import CallAnalysisPipeline
 
     pipeline = CallAnalysisPipeline(device=device, asr_backend=backend)
-    report = pipeline.analyze_audio(audio_path=sample_path, language=language, run_diarization=False)
+    report = pipeline.analyze_audio(
+        audio_path=sample_path, language=language, run_diarization=False
+    )
     segments = report.segments or []
     texts: list[str] = []
     for seg in segments:
@@ -282,7 +284,9 @@ def run_scenario(
     if scenario in {"smoke", "asr", "sentiment_chain", "language_sanity"}:
         summary["asr_success_rate"] = round(asr_ok / len(samples), 4) if samples else 0.0
     if scenario == "pipeline":
-        summary["pipeline_success_rate"] = round(pipeline_ok_count / len(samples), 4) if samples else 0.0
+        summary["pipeline_success_rate"] = (
+            round(pipeline_ok_count / len(samples), 4) if samples else 0.0
+        )
 
     comparable = [(exp, pred) for exp, pred in sentiment_pairs if exp and pred]
     if comparable:

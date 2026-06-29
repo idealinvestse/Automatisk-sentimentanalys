@@ -6,7 +6,6 @@ UI/E2E tests optional – NiceGUI runtime not required here.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,16 +13,9 @@ import pytest
 
 from app.nicegui_dashboard.components.call_detail import (
     _build_insights_markdown,
-    find_report,
     _format_duration,
+    find_report,
 )
-from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER
-from app.nicegui_dashboard.services.calls_filter import (
-    format_search_hit_label,
-    paginate_items,
-    search_table_reports,
-)
-from app.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
 from app.nicegui_dashboard.services.analytics_summary import (
     build_calls_overview_rows,
     compute_call_snapshot,
@@ -31,9 +23,10 @@ from app.nicegui_dashboard.services.analytics_summary import (
     overview_rows_to_csv_bytes,
     summarize_emotions,
 )
-from app.nicegui_dashboard.services.report_ingest import (
-    append_report_to_state,
-    normalize_transcription_to_report,
+from app.nicegui_dashboard.services.calls_filter import (
+    format_search_hit_label,
+    paginate_items,
+    search_table_reports,
 )
 from app.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
@@ -49,6 +42,12 @@ from app.nicegui_dashboard.services.chart_data import (
     segment_index_from_trajectory_x,
 )
 from app.nicegui_dashboard.services.demo_provider import load_demo_reports, reports_to_table_rows
+from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, APIError, NiceGUIAPIClient
+from app.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
+from app.nicegui_dashboard.services.report_ingest import (
+    append_report_to_state,
+    normalize_transcription_to_report,
+)
 from app.nicegui_dashboard.services.transcript_virtualizer import (
     VIRTUALIZE_THRESHOLD,
     compute_visible_range,
@@ -58,6 +57,10 @@ from app.nicegui_dashboard.services.transcript_virtualizer import (
     should_virtualize,
     window_around_index,
 )
+from app.nicegui_dashboard.services.transcription_service import (
+    TranscriptionState,
+    create_transcription_state,
+)
 from app.nicegui_dashboard.services.transcription_ws_client import (
     WS_CONNECTED,
     WS_DISCONNECTED,
@@ -66,11 +69,6 @@ from app.nicegui_dashboard.services.transcription_ws_client import (
 )
 from app.nicegui_dashboard.settings import is_dev_mode, ws_status_label
 from app.nicegui_dashboard.state import DashboardState
-from app.nicegui_dashboard.services.nicegui_api_client import APIError, NiceGUIAPIClient
-from app.nicegui_dashboard.services.transcription_service import (
-    TranscriptionState,
-    create_transcription_state,
-)
 
 
 class TestNiceGUIAPIClient:
@@ -212,6 +210,7 @@ class TestNiceGUIAPIClient:
         call_json = mock_http.post.call_args.kwargs["json"]
         assert call_json["audio_path"] == "samples/audio/test.wav"
         assert call_json["use_full_pipeline"] is True
+
 
 class TestDashboardSettings:
     def test_is_dev_mode_false_by_default(self, monkeypatch):
@@ -395,12 +394,9 @@ class TestChartData:
             "call_id": "CALL-X",
             "title": "Test",
             "segments": [
-                {"start": i * 10, "text": f"seg {i}", "speaker": "Kund"}
-                for i in range(5)
+                {"start": i * 10, "text": f"seg {i}", "speaker": "Kund"} for i in range(5)
             ],
-            "sentiment_results": [
-                {"label": "neutral", "score": 0.5 - i * 0.1} for i in range(5)
-            ],
+            "sentiment_results": [{"label": "neutral", "score": 0.5 - i * 0.1} for i in range(5)],
         }
         fig = build_trajectory_figure(report)
         assert len(fig.data) >= 2

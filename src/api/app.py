@@ -20,10 +20,6 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..alerting import AlertEngine
-from ..core.logging_config import configure_logging, set_job_id, set_request_id
-from ..core.status import get_status_reporter
-from .transcription_events import JOB_HEADER
-from ..core.tracing import init_tracing
 from ..alerting_state import AlertingStateManager
 from ..caching import AggregateCache
 from ..core.errors import (
@@ -33,6 +29,9 @@ from ..core.errors import (
     LLMError,
     TranscriptionError,
 )
+from ..core.logging_config import configure_logging, set_job_id, set_request_id
+from ..core.status import get_status_reporter
+from ..core.tracing import init_tracing
 from .dependencies import require_api_key
 from .error_responses import (
     ANALYSIS_ERROR_DETAIL,
@@ -62,7 +61,7 @@ from .routers import (
     ws_transcription,
 )
 from .settings import get_api_settings, validate_production_settings
-from .transcription_events import TranscriptionEventHub
+from .transcription_events import JOB_HEADER, TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
 
 logger = logging.getLogger(__name__)
@@ -220,7 +219,9 @@ def create_app() -> FastAPI:
         return error_response(
             request,
             500,
-            public_detail(exc, dev_prefix="Transcription failed", public=TRANSCRIPTION_ERROR_DETAIL),
+            public_detail(
+                exc, dev_prefix="Transcription failed", public=TRANSCRIPTION_ERROR_DETAIL
+            ),
             error_code=error_code_for(exc),
         )
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 from launcher.api_deps import check_api_dependencies, missing_api_modules

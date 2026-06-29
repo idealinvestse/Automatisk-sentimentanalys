@@ -104,7 +104,9 @@ def benchmark_backend(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark intent classification backends")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA, help="Train file for random split")
+    parser.add_argument(
+        "--data", type=Path, default=DEFAULT_DATA, help="Train file for random split"
+    )
     parser.add_argument(
         "--val-file",
         type=Path,
@@ -175,17 +177,22 @@ def main() -> None:
             device=args.device,
         )
         results["backends"][backend] = metrics
-        if args.min_macro_f1 is not None and backend == "heuristic":
-            if metrics["f1_macro"] < args.min_macro_f1:
-                logger.error(
-                    "Heuristic macro F1 %.4f below threshold %.4f",
-                    metrics["f1_macro"],
-                    args.min_macro_f1,
-                )
-                exit_code = 1
+        if (
+            args.min_macro_f1 is not None
+            and backend == "heuristic"
+            and metrics["f1_macro"] < args.min_macro_f1
+        ):
+            logger.error(
+                "Heuristic macro F1 %.4f below threshold %.4f",
+                metrics["f1_macro"],
+                args.min_macro_f1,
+            )
+            exit_code = 1
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(results, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(results, indent=2, ensure_ascii=False))
     raise SystemExit(exit_code)
 

@@ -95,7 +95,14 @@ def build_user_prompt(
 ) -> str:
     """Build the user message for the LLM."""
     if tasks is None:
-        tasks = ["trajectory", "refined_aspects", "root_cause", "actionable_summary", "agent_assessment", "agent_assessment_detailed"]
+        tasks = [
+            "trajectory",
+            "refined_aspects",
+            "root_cause",
+            "actionable_summary",
+            "agent_assessment",
+            "agent_assessment_detailed",
+        ]
 
     tasks_str = ", ".join(tasks)
 

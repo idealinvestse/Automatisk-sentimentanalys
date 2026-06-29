@@ -11,7 +11,11 @@ from typing import Any
 from nicegui import ui
 
 from app.nicegui_dashboard.components.empty_state import render_empty_state
-from app.nicegui_dashboard.components.ui_primitives import metric_card, render_section_title, render_tab_header
+from app.nicegui_dashboard.components.ui_primitives import (
+    metric_card,
+    render_section_title,
+    render_tab_header,
+)
 from app.nicegui_dashboard.services.analytics_summary import (
     aggregate_agent_stats,
     build_calls_overview_rows,
@@ -43,18 +47,17 @@ def _collect_coaching_recommendations(agent_reports: list[dict[str, Any]]) -> li
     recs: list[dict[str, str]] = []
     for report in agent_reports:
         call_id = str(report.get("call_id") or report.get("id", "?"))
-        assess = (report.get("results") or {}).get("agent_assessment") or (
-            (report.get("llm") or {}).get("agent_assessment")
-        ) or {}
+        assess = (
+            (report.get("results") or {}).get("agent_assessment")
+            or ((report.get("llm") or {}).get("agent_assessment"))
+            or {}
+        )
         if not isinstance(assess, dict):
             continue
         for item in assess.get("specific_coaching_recommendations") or []:
             if isinstance(item, dict):
                 text = (
-                    item.get("recommendation")
-                    or item.get("text")
-                    or item.get("title")
-                    or str(item)
+                    item.get("recommendation") or item.get("text") or item.get("title") or str(item)
                 )
             else:
                 text = str(item)
@@ -164,7 +167,9 @@ def render_agent_performance_tab(
 
         agents = list_agent_ids(reports)
         agent_reports = reports_for_agent(reports, agent_id)
-        trend_rows = [r for r in extract_agent_trend_rows(agent_reports) if r.get("agent") == agent_id]
+        trend_rows = [
+            r for r in extract_agent_trend_rows(agent_reports) if r.get("agent") == agent_id
+        ]
         metrics = metrics_holder["data"] or local_agent_metrics(agent_id, reports)
         agent_stats = aggregate_agent_stats(reports, agent_id)
         customer_metrics = _aggregate_customer_metrics(agent_reports)
@@ -189,13 +194,17 @@ def render_agent_performance_tab(
             ui.button(
                 icon="refresh",
                 on_click=_refresh_metrics_for_current,
-            ).props("flat round dense").tooltip("Uppdatera agent-metrics")
+            ).props(
+                "flat round dense"
+            ).tooltip("Uppdatera agent-metrics")
 
         with ui.card().classes("w-full q-mb-md"):
             render_section_title(f"Sammanfattning – {agent_id}", icon="insights")
             with ui.row().classes("w-full gap-3 flex-wrap"):
                 metric_card("Samtal", agent_stats.get("call_count", 0), size="compact")
-                metric_card("Snitt empati", _metric_value(agent_stats.get("avg_empathy")), size="compact")
+                metric_card(
+                    "Snitt empati", _metric_value(agent_stats.get("avg_empathy")), size="compact"
+                )
                 qa_avg = agent_stats.get("avg_qa")
                 metric_card(
                     "Snitt QA",
@@ -203,7 +212,12 @@ def render_agent_performance_tab(
                     size="compact",
                     color="warning",
                 )
-                metric_card("Aviseringar", agent_stats.get("alert_count", 0), size="compact", color="negative")
+                metric_card(
+                    "Aviseringar",
+                    agent_stats.get("alert_count", 0),
+                    size="compact",
+                    color="negative",
+                )
 
         avgs = metrics.get("averages") or {}
         with ui.row().classes("w-full gap-3 flex-wrap"):
@@ -288,7 +302,9 @@ def render_agent_performance_tab(
                 rows=[
                     {
                         **row,
-                        "avg_empathy": row["avg_empathy"] if row.get("avg_empathy") is not None else "—",
+                        "avg_empathy": (
+                            row["avg_empathy"] if row.get("avg_empathy") is not None else "—"
+                        ),
                         "avg_qa": row["avg_qa"] if row.get("avg_qa") is not None else "—",
                     }
                     for row in board
