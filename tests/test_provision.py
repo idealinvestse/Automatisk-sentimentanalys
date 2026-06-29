@@ -25,6 +25,17 @@ def test_extras_for_profile_cli_includes_dashboard() -> None:
     assert "dashboard-nicegui" in extras
     assert "api" in extras
     assert "install" in extras
+    assert "semantic" not in extras
+
+
+def test_extras_for_profile_full_includes_semantic() -> None:
+    extras = extras_for_profile(InstallProfile.full)
+    assert "semantic" in extras
+
+
+def test_extras_for_profile_dev_includes_semantic() -> None:
+    extras = extras_for_profile(InstallProfile.dev)
+    assert "semantic" in extras
 
 
 def test_extract_ffmpeg_binaries_from_zip(tmp_path: Path) -> None:

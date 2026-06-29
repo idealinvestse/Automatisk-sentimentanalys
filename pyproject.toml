@@ -99,6 +99,12 @@ diarize = [
     "pyannote.audio>=3.1.0",
     "torchaudio>=2.2.0",
 ]
+semantic = [
+    "sentence-transformers>=3.0.0",
+    "faiss-cpu>=1.7.4",
+    "hdbscan>=0.8.33",
+    "numpy>=1.26.0",
+]
 dashboard-nicegui = [
     "nicegui>=2.0.0",
     "httpx>=0.27.0",

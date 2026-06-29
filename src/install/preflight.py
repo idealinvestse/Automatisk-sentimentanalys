@@ -105,6 +105,18 @@ def _check_writable(report: PreflightReport, path: Path, label: str) -> None:
         report.add(f"writable_{label}", False, f"Not writable: {path}", str(e))
 
 
+def _check_semantic_deps(report: PreflightReport) -> None:
+    """Report vector-search optional deps (informational — keyword fallback still works)."""
+    for mod in ("sentence_transformers", "faiss", "hdbscan"):
+        ok = importlib.util.find_spec(mod) is not None
+        report.add(
+            f"semantic_{mod}",
+            True,
+            f"Semantic dep {mod} installed" if ok else f"Semantic dep {mod} missing (keyword fallback)",
+            "" if ok else "pip install -e '.[semantic]' for vector search",
+        )
+
+
 def _check_api_deps(report: PreflightReport, cfg: UserConfig) -> None:
     if not cfg.services.api_enabled:
         return
@@ -160,6 +172,7 @@ def run_preflight(
     if cfg.install_profile != InstallProfile.minimal:
         _check_import(report, "faster_whisper")
         _check_import(report, "whisperx")
+        _check_semantic_deps(report)
     _check_ffmpeg(report, cfg)
     if require_torch:
         _check_torch_cuda(report)
