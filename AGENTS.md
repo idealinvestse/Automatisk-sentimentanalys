@@ -16,6 +16,7 @@ This guide is the single source of truth and contains:
 **Also read:**
 - `docs/ROADMAP.md` – Current maturity and completed features (Fas 1–4)
 - `docs/CLEANUP_PLAN.md` – Documentation debt and consolidation plan
+- `docs/WEBUI_MODERNIZATION_PLAN.md` – Plan + progress for the new Next.js dashboard (`webui/`) replacing the NiceGUI UI
 - `README.md` – Quickstart and overview
 - `SECURITY.md` – Important privacy and security considerations for call center data
 
@@ -43,7 +44,8 @@ python -m app.nicegui_dashboard.main
 - `Makefile` — Common tasks (lint, test, format).
 - `src/pipeline.py` + `src/analysis/registry.py` — Core orchestration. New analysis steps go here.
 - `src/llm/` — LLM clients & analyzers (add new provider here).
-- `app/nicegui_dashboard/` — Dashboard components & services. Use `nicegui_api_client.py` for backend data.
+- `app/nicegui_dashboard/` — Legacy NiceGUI dashboard components & services. Use `nicegui_api_client.py` for backend data.
+- `webui/` — New Next.js/TypeScript dashboard replacing the NiceGUI UI (see `docs/WEBUI_MODERNIZATION_PLAN.md`). Talks to the same `src/api` backend.
 - `launcher/` — Windows PowerShell launcher & ASR management.
 - `tests/` — 500+ tests. Run with `pytest`.
 
