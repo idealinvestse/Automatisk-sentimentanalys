@@ -51,7 +51,7 @@ export default function AgentsPage() {
                 <span className="text-xs text-muted-foreground">QA-poäng</span>
                 <span
                   className={`text-lg font-semibold ${
-                    agent.avgQaScore >= 75 ? "text-success" : "text-warning"
+                    agent.avgQaScore >= 75 ? "text-success" : "text-warning-text"
                   }`}
                 >
                   {Math.round(agent.avgQaScore)}/100

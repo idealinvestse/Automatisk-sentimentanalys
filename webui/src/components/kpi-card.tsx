@@ -14,7 +14,7 @@ interface KpiCardProps {
 const TONE_CLASSES: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   default: "text-primary bg-primary/10",
   success: "text-success bg-success/15",
-  warning: "text-warning bg-warning/15",
+  warning: "text-warning-text bg-warning/15",
   destructive: "text-destructive bg-destructive/15",
 };
 

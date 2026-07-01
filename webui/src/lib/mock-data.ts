@@ -200,3 +200,158 @@ function average(values: number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
+
+// ---------------------------------------------------------------------------
+// Call detail (Fas 2): transcript, QA scorecard, evidence, emotion timeline.
+// Mirrors qa_scorecard.py / evidence_panel.py / emotion_timeline.py shapes.
+// Only a subset of MOCK_CALLS has detail data, to also exercise the
+// EmptyState path for calls without a deep-dive report.
+// ---------------------------------------------------------------------------
+
+export interface TranscriptTurn {
+  speaker: "Agent" | "Kund";
+  text: string;
+  start: number;
+}
+
+export interface QaCriterion {
+  criterion: string;
+  passed: boolean;
+  score: number;
+  evidence: string;
+}
+
+export interface CallQa {
+  score: number;
+  passed: boolean;
+  riskLevel: RiskLevel;
+  complianceFlags: string[];
+  criteria: QaCriterion[];
+}
+
+export interface EmotionPoint {
+  t: number;
+  score: number;
+}
+
+export interface CallDetail {
+  callId: string;
+  transcript: TranscriptTurn[];
+  qa: CallQa;
+  evidenceQuotes: string[];
+  emotionTimeline: EmotionPoint[];
+}
+
+export const MOCK_CALL_DETAILS: Record<string, CallDetail> = {
+  "CALL-001": {
+    callId: "CALL-001",
+    transcript: [
+      { speaker: "Agent", start: 0, text: "Hej, jag heter Anna på kundtjänst, hur kan jag hjälpa dig idag?" },
+      { speaker: "Kund", start: 8, text: "Hej Anna, jag har fått en faktura på 890 kr som jag inte förstår." },
+      { speaker: "Agent", start: 18, text: "Tack för att du ringer in. Kan jag få ditt kundnummer så kollar jag upp det direkt?" },
+      { speaker: "Kund", start: 32, text: "Ja, det är 19851203-1234. Jag har aldrig ringt utomlands." },
+      { speaker: "Agent", start: 42, text: "Jag ser felet nu — det var en systembugg. Jag krediterar beloppet direkt." },
+      { speaker: "Kund", start: 55, text: "Åh, tack så mycket! Det var snabbt löst." },
+    ],
+    qa: {
+      score: 94,
+      passed: true,
+      riskLevel: "low",
+      complianceFlags: [],
+      criteria: [
+        { criterion: "Hälsningsfras", passed: true, score: 100, evidence: "\"Hej, jag heter Anna...\"" },
+        { criterion: "Verifierade kundidentitet", passed: true, score: 100, evidence: "\"kundnummer... 19851203-1234\"" },
+        { criterion: "Löste ärendet", passed: true, score: 90, evidence: "\"Jag krediterar beloppet direkt.\"" },
+        { criterion: "Avslutsfras", passed: true, score: 85, evidence: "\"Tack så mycket!\"" },
+      ],
+    },
+    evidenceQuotes: [
+      "\"Jag förstår att det känns frustrerande.\"",
+      "\"Jag ser felet nu — det var en systembugg.\"",
+    ],
+    emotionTimeline: [
+      { t: 0, score: 0.5 },
+      { t: 15, score: 0.35 },
+      { t: 30, score: 0.4 },
+      { t: 45, score: 0.75 },
+      { t: 60, score: 0.9 },
+    ],
+  },
+  "CALL-002": {
+    callId: "CALL-002",
+    transcript: [
+      { speaker: "Kund", start: 0, text: "Min leverans är fem dagar sen och ingen har hört av sig!" },
+      { speaker: "Agent", start: 10, text: "Jag beklagar det verkligen. Låt mig kolla spårningen." },
+      { speaker: "Kund", start: 20, text: "Det här är tredje gången jag ringer om samma paket." },
+      { speaker: "Agent", start: 30, text: "Jag ser det, och det är inte okej. Jag eskalerar till logistikteamet nu." },
+      { speaker: "Kund", start: 45, text: "Jag vill ha kompensation för besväret." },
+    ],
+    qa: {
+      score: 58,
+      passed: false,
+      riskLevel: "high",
+      complianceFlags: ["Ingen kompensation erbjuden", "Lång väntetid innan eskalering"],
+      criteria: [
+        { criterion: "Hälsningsfras", passed: true, score: 80, evidence: "Standardhälsning användes." },
+        { criterion: "Empati vid klagomål", passed: true, score: 70, evidence: "\"Jag beklagar det verkligen.\"" },
+        { criterion: "Erbjöd kompensation", passed: false, score: 20, evidence: "Ingen kompensation nämndes i samtalet." },
+        { criterion: "Löste ärendet inom samtalet", passed: false, score: 30, evidence: "Eskalerades utan löst datum." },
+      ],
+    },
+    evidenceQuotes: [
+      "\"Det här är tredje gången jag ringer om samma paket.\"",
+      "\"Jag vill ha kompensation för besväret.\"",
+    ],
+    emotionTimeline: [
+      { t: 0, score: 0.15 },
+      { t: 15, score: 0.2 },
+      { t: 30, score: 0.1 },
+      { t: 45, score: 0.05 },
+    ],
+  },
+  "CALL-008": {
+    callId: "CALL-008",
+    transcript: [
+      { speaker: "Kund", start: 0, text: "Jag vill veta varför ni delat mina uppgifter med tredje part utan samtycke." },
+      { speaker: "Agent", start: 12, text: "Det ska absolut inte ha skett. Kan du berätta mer om vad du sett?" },
+      { speaker: "Kund", start: 25, text: "Jag fick reklam från ett företag jag aldrig varit i kontakt med." },
+      { speaker: "Agent", start: 40, text: "Jag loggar detta som ett GDPR-ärende och eskalerar direkt till dataskyddsombudet." },
+    ],
+    qa: {
+      score: 41,
+      passed: false,
+      riskLevel: "critical",
+      complianceFlags: ["Möjlig GDPR-överträdelse", "Kräver DPO-eskalering", "Ej löst inom SLA"],
+      criteria: [
+        { criterion: "Korrekt eskaleringsväg", passed: true, score: 90, evidence: "\"eskalerar direkt till dataskyddsombudet.\"" },
+        { criterion: "Undvek att lova utfall", passed: false, score: 10, evidence: "Inga tydliga nästa-steg kommunicerades till kund." },
+        { criterion: "Dokumenterade ärendet korrekt", passed: false, score: 25, evidence: "Ofullständig ärendenotering." },
+      ],
+    },
+    evidenceQuotes: [
+      "\"Jag vill veta varför ni delat mina uppgifter med tredje part utan samtycke.\"",
+      "\"Jag loggar detta som ett GDPR-ärende...\"",
+    ],
+    emotionTimeline: [
+      { t: 0, score: 0.1 },
+      { t: 15, score: 0.08 },
+      { t: 30, score: 0.12 },
+      { t: 45, score: 0.15 },
+    ],
+  },
+};
+
+export interface HotTopic {
+  topic: string;
+  mentions: number;
+  avgSentiment: number;
+  trend: "up" | "down" | "flat";
+}
+
+export const MOCK_HOT_TOPICS: HotTopic[] = [
+  { topic: "Leveransförsening", mentions: 24, avgSentiment: 0.22, trend: "up" },
+  { topic: "Fakturafel", mentions: 18, avgSentiment: 0.55, trend: "flat" },
+  { topic: "GDPR / dataskydd", mentions: 6, avgSentiment: 0.15, trend: "up" },
+  { topic: "Kontoåterställning", mentions: 15, avgSentiment: 0.61, trend: "down" },
+  { topic: "Produktfrågor", mentions: 31, avgSentiment: 0.7, trend: "flat" },
+];

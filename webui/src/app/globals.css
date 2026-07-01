@@ -21,11 +21,17 @@
   --accent: oklch(0.95 0.03 260);
   --accent-foreground: oklch(0.2 0.01 260);
 
-  --success: oklch(0.6 0.16 145);
+  --success: oklch(0.45 0.14 145);
   --success-foreground: oklch(0.98 0 0);
   --warning: oklch(0.75 0.15 80);
   --warning-foreground: oklch(0.2 0.05 80);
-  --destructive: oklch(0.58 0.22 25);
+  /* Standalone text/icon color (e.g. KPI icons, inline warning counts).
+     `--warning` itself is tuned as a *light* badge fill (with dark
+     `--warning-foreground` text on top), so it is too washed out for use
+     as its own foreground color against the page background - see
+     docs/WEBUI_MODERNIZATION_PLAN.md contrast checklist. */
+  --warning-text: oklch(0.48 0.15 70);
+  --destructive: oklch(0.5 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
 
   --border: oklch(0.9 0.005 260);
@@ -54,6 +60,8 @@
   --success-foreground: oklch(0.14 0.02 145);
   --warning: oklch(0.8 0.15 85);
   --warning-foreground: oklch(0.2 0.05 85);
+  /* Light amber reads fine directly on the dark surface, unlike light mode. */
+  --warning-text: oklch(0.8 0.15 85);
   --destructive: oklch(0.68 0.2 25);
   --destructive-foreground: oklch(0.14 0.02 25);
 
@@ -86,6 +94,7 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-warning-text: var(--warning-text);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);

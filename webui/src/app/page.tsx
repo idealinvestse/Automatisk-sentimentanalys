@@ -1,7 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { PhoneCall, Smile, ShieldCheck, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { useHealth } from "@/hooks/use-health";
 import { MOCK_CALLS, summarizeKpis } from "@/lib/mock-data";
 
 export default function OverviewPage() {
+  const router = useRouter();
   const { data: connected } = useHealth();
   const kpis = summarizeKpis(MOCK_CALLS);
 
@@ -60,9 +61,7 @@ export default function OverviewPage() {
         <CardContent>
           <CallsTable
             data={MOCK_CALLS}
-            onSelectCall={(callId) =>
-              toast.info(`Samtalsdetalj för ${callId} kommer i Fas 2`)
-            }
+            onSelectCall={(callId) => router.push(`/calls/${callId}`)}
           />
         </CardContent>
       </Card>

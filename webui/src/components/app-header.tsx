@@ -6,10 +6,15 @@ import { Moon, Sun, PhoneCall, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useHealth } from "@/hooks/use-health";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 
 export function AppHeader() {
   const { resolvedTheme, setTheme } = useTheme();
   const { data: connected, isFetching, refetch } = useHealth();
+  // next-themes only knows the real theme after mount (it reads from
+  // localStorage/system on the client) - render a stable icon until then
+  // to avoid a server/client hydration mismatch.
+  const mounted = useIsMounted();
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/60 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/40">
@@ -42,7 +47,11 @@ export function AppHeader() {
           aria-label="Växla ljust/mörkt tema"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
-          {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {mounted && resolvedTheme === "dark" ? (
+            <Sun className="size-4" />
+          ) : (
+            <Moon className="size-4" />
+          )}
         </Button>
       </div>
     </header>

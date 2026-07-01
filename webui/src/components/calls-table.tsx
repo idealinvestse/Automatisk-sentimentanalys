@@ -64,7 +64,7 @@ const columns: ColumnDef<CallRow>[] = [
       <div className="flex items-center gap-1.5">
         <RiskBadge value={row.original.riskLevel} />
         {row.original.alertCount > 0 ? (
-          <span className="inline-flex items-center gap-0.5 text-xs text-warning">
+          <span className="inline-flex items-center gap-0.5 text-xs text-warning-text">
             <AlertTriangle className="size-3.5" />
             {row.original.alertCount}
           </span>
