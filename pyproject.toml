@@ -94,6 +94,11 @@ dev = [
     "httpx>=0.27.0",
     "websockets>=12.0",
     "plotly>=5.22.0",
+    # Required to load the XLM-RoBERTa sentiment model's tokenizer
+    # (src/sentiment.py); without it, sentiment analysis silently falls
+    # back to a constant "neutral" label and callcenter golden tests fail.
+    "sentencepiece>=0.1.99",
+    "protobuf>=3.20.0",
 ]
 diarize = [
     "pyannote.audio>=3.1.0",

@@ -59,8 +59,27 @@ def _mock_intent_batch(self, texts):
     return results
 
 
+class _FakeSentimentPipeline:
+    """Stand-in for SentimentPipeline that never touches real model loading."""
+
+    def analyze(self, texts, **kwargs):
+        return _mock_sentiment(self, texts, **kwargs)
+
+
 @pytest.fixture
 def mock_heavy_backends(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Patch SentimentAnalyzer._get_pipeline (not just SentimentPipeline.analyze)
+    # so the test stays isolated from real model loading. SentimentPipeline()
+    # eagerly loads a HuggingFace model in __init__; if that construction
+    # fails (e.g. missing optional `sentencepiece`/`protobuf` deps),
+    # SentimentAnalyzer silently falls back to a constant "neutral" label
+    # *before* SentimentPipeline.analyze is ever called, which would make a
+    # class-level-only patch a no-op and cause confusing assertion failures
+    # unrelated to sentiment/intent logic (see docs/PROJECT_ASSESSMENT_2026-07.md).
+    monkeypatch.setattr(
+        "src.analysis.sentiment.SentimentAnalyzer._get_pipeline",
+        lambda self: _FakeSentimentPipeline(),
+    )
     monkeypatch.setattr(
         "src.analysis.sentiment.SentimentPipeline.analyze",
         _mock_sentiment,
