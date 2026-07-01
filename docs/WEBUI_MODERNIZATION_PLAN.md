@@ -97,23 +97,51 @@ Fas 0 – resten läggs till i samband med att respektive vy migreras.
       övriga visar en tydlig "migreras enligt plan"-vy (`ComingSoon`).
 - [x] `npm run lint` och `npm run build` gröna.
 
-### Fas 1 – Kärnvyer (högst trafik)
-- [ ] `/` Översikt: KPI-kort kopplade till riktig data (kräver ett `/reports`-
-      eller motsvarande endpoint, se `demo_provider.py`/`report_ingest.py` för
-      datamodell), samtalstabell (`calls_table.py` → `DataTable`/TanStack Table),
-      onboarding-banner.
-- [ ] `/analytics`: trenddiagram (recharts) motsvarande `analytics_trends.py`,
-      `chart_data.py`.
-- [ ] `/agents`: agentprestanda-kort/tabell motsvarande `agent_performance.py`.
-- [ ] Delad `DataTable`-komponent (sortering, filter, paginering) som ersätter
-      `calls_table.py`.
+### Fas 1 – Kärnvyer (högst trafik) — klar (mockdata)
+- [x] `/` Översikt: KPI-kort, sorterbar samtalstabell (`CallsTable`,
+      `@tanstack/react-table`), onboarding-text. Datan kommer från
+      `src/lib/mock-data.ts` i väntan på beslut om datakälla (riktig
+      `/reports`-endpoint vs. klientside `/analyze_pipeline`, se §6) — formen
+      speglar `reports_to_table_rows()` i `demo_provider.py` för enkel
+      drop-in senare.
+- [x] `/analytics`: sentiment- och volymdiagram per kategori (recharts).
+- [x] `/agents`: agentprestandakort motsvarande `agent_performance.py`.
+- [x] Delad `CallsTable`-komponent (sortering) som ersätter `calls_table.py`;
+      filter/paginering läggs till när datamängden är större än demo-datat.
+- [ ] Byt mockdata mot riktig datakälla när beslutet är taget.
 
-### Fas 2 – Djupdykningsvyer
-- [ ] `/insights` (Fas 4 Insikter): hot topics, wordcloud, advanced insights.
-- [ ] `/calls/[id]` Samtalsdetalj: QA-scorecard, evidence panel, emotion
-      timeline, virtuell transkriptvy (`virtual_transcript.py` → `react-window`
-      eller `@tanstack/react-virtual`), LLM judge panel/breakdown.
+### Fas 2 – Djupdykningsvyer — klar (mockdata)
+- [x] `/insights` (Fas 4 Insikter): hot topics-lista med volym/trend/sentiment.
+      Wordcloud och "advanced insights" (`hot_topic_wordcloud.py`,
+      `advanced_insights.py`) är inte migrerade än.
+- [x] `/calls/[id]` Samtalsdetalj: transkript, känslotidslinje (recharts),
+      QA & Compliance-scorecard (kriterier, progress, compliance-flaggor),
+      beviscitat. `EmptyState` för samtal utan djupdykningsdata i mockdatat,
+      404 för okänt call-id.
+- [ ] Virtuell transkriptvy för långa samtal (`virtual_transcript.py` →
+      `@tanstack/react-virtual`) — nuvarande transkript-lista är inte
+      virtualiserad (ok för demo-datats korta samtal).
+- [ ] LLM judge panel/breakdown (`llm_judge_panel.py`, `llm_judge_breakdown.py`).
 - [ ] Larmpanel (`alerts_panel.py`, `call_alerts_section.py`) i header + egen vy.
+
+**QA-process etablerad i Fas 1/2 (återanvänd för alla kommande faser):**
+Playwright MCP mot lokal `npm run dev`-server, per migrerad sida:
+1. `browser_navigate` + läs accessibility-snapshotten (`.yml`) för att
+   bekräfta att all text/rubriker/tabeller renderas med korrekt innehåll.
+2. `browser_console_messages` (nivå `error`/`warning`) — fångade och
+   fixade en hydration-mismatch i dark-mode-togglen.
+3. `browser_evaluate` med en canvas-baserad kontrastkontroll (WCAG AA
+   4.5:1) över alla textnoder, körd i både `dark` och `light` (via
+   `localStorage.theme` + reload, inte genom att toggla `.dark`-klassen
+   manuellt — next-themes återställer den asynkront) — fångade och fixade
+   otillräcklig kontrast för `--success`/`--destructive`-badgetext och för
+   `--warning` felaktigt återanvänd som fristående textfärg (ny
+   `--warning-text`-token infördes, se `globals.css`).
+4. Skärmdumpar (`browser_take_screenshot`) kunde tyvärr inte visas i denna
+   sessions bildläsare (`read`-verktyget gav "Internal error" på alla PNG,
+   oavsett storlek) — accessibility-snapshot + konsol + programmatisk
+   kontrastkontroll användes som substitut. Om bildvisning fungerar i en
+   framtida session, komplettera med faktisk visuell diff mot NiceGUI.
 
 ### Fas 3 – Live/interaktiva funktioner
 - [ ] `/transcription`: WS-klient mot `/ws/transcription` (ersätter
