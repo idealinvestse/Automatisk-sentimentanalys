@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
 from src.api import app as default_app
 from src.api.settings import get_api_settings
-
 
 client = TestClient(default_app, raise_server_exceptions=False)
 

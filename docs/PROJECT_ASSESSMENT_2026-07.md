@@ -90,11 +90,13 @@ Mycket produktionsorienterad infrastruktur finns (Prometheus `/metrics`, OpenTel
 
 Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolidera** (minska duplicerad yta) → **Väx** (nya kundvärden) → **Härda** (produktionsverklighet). Varje spår har kommentar om varför, risk om ignorerat, och ungefärlig arbetsordning (traversering).
 
-### Spår A — Stabilisera (gör före allt annat)
-1. ~~Triagera de 5 failande golden-pipeline-testerna.~~ **✅ Klart, se §7.** Kvarstående uppföljning: säkerställ att CI-miljön alltid installerar `sentencepiece`/`protobuf` (nu tillagt i `dev`-extras i `pyproject.toml`) och överväg samma härdning (mocka på rätt abstraktionsnivå, inte bara yttersta klassmetoden) för andra golden-/integrationstester som rör tunga ML-beroenden (t.ex. emotion-, aspect-analyzers om de har liknande eager-load-mönster).
-2. **Lägg till plattforms-marker/skip för `test_provision.py`:s Linux-specifika tester** (`test_venv_python_path_linux` m.fl.) så Windows-utvecklare inte ser falska fails som brus runt riktiga fails. *(Kvarstår — 3 sådana fails observerades även efter fixen ovan.)*
-3. **Kör `ruff check --fix`** för de 5 auto-fixbara felen, granska resten manuellt (import-ordning, nested-with). Litet jobb, hög läsbarhetsvinst.
-4. **Etablera en lättviktig "definition of done" som inkluderar full testkörning** (inte bara `-x`/delmängd) innan commits till `main` som rör analysheuristik eller beroenden — se §7 för ett konkret exempel på hur ett smalt mock-scope + en saknad optional-dependency kan se ut som en kärnregression om man bara läser testnamn/antal utan att gräva i loggarna.
+### Spår A — Stabilisera (gör före allt annat) — ✅ **Alla fyra punkter klara (2026-07-01)**
+1. ~~Triagera de 5 failande golden-pipeline-testerna.~~ **✅ Klart, se §7.** `sentencepiece`/`protobuf` tillagt i `dev`-extras; testmockningen härdad att patcha `SentimentAnalyzer._get_pipeline`.
+2. ~~Lägg till plattforms-marker/skip för `test_provision.py`:s Linux-specifika tester.~~ **✅ Klart.** Istället för att skippa testerna på Windows (vilket tappar täckning) monkeypatchades `sys.platform`/`os.name` explicit i de tre berörda testerna (`test_venv_python_path_linux`, `test_bundled_ffmpeg_path_linux`, `test_ensure_ffmpeg_non_windows_raises`) så de verifierar Linux-grenen oavsett värd-OS. Alla 16 tester i filen är gröna på Windows nu.
+3. ~~Kör `ruff check --fix`.~~ **✅ Klart.** 5 auto-fixbara + 13 `--unsafe-fixes` (isinstance-tupler → `X | Y`, säkra att tillämpa) + 2 manuellt omskrivna `SIM117`-fall (`tests/test_model_catalog.py`). `ruff check src tests app` ger nu **"All checks passed!"**.
+4. ~~Etablera en lättviktig "definition of done".~~ **✅ Klart.** Ny sektion i `CONTRIBUTING.md` ("Definition of Done") med konkreta lärdomar från §7-triagen: kör full testsvit innan commits mot analysheuristik, skilj miljöfel från logikregression, mocka på rätt abstraktionsnivå, monkeypatcha plattform explicit i plattforms-specifika tester.
+
+**Resultat av Spår A:** Full testsvit gick från **8 failande/874 gröna → 0 failande/882 gröna** (2 skippade, oförändrat) av 884 samlade tester. `ruff check` gick från 21 fel → 0 fel.
 
 ### Spår B — Konsolidera (minska dubbel yta, störst DX-vinst)
 1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** Byt mockdata mot riktig `/reports`- eller `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights` (redan identifierat i egen plan, §6/Fas 1). Detta är den enda blockeraren för att kunna säga "webui är primär" på riktigt.
@@ -106,7 +108,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 1. **Model routing (kostnad/kvalitet)**: `src/llm/routing.py` + `model_catalog` är påbörjat (FAST/BALANCED/DEEP-tiers) — bra ROI om det kopplas till en enkel policy i dashboarden ("spara pengar"-läge vs "max kvalitet"-läge), vilket är ett konkret säljbart värde mot kunder.
 2. **Executive Insights-flik + modell-A/B-jämförelse** i webui — redan planerat, naturlig fortsättning efter att insights-vyn har riktig data (se Spår B.1).
 3. **Edge AI-MVP-utbyggnad**: `sentimentanalys edge-analyze` finns som CLI; om affärsmålet är on-prem/offline-kunder (t.ex. myndigheter med extra höga datakrav) är detta en differentiator värd att bygga ut mot en tunn UI/rapport-export, snarare än bara CLI.
-4. **Multi-språk/marknadsexpansion (DK)** nämns i AGENT_CONTEXT som planerat — bör inte påbörjas förrän svensk kärnheuristik är stabil igen (se Spår A.1), annars dupliceras samma regressionsrisk över fler språk.
+4. **Multi-språk/marknadsexpansion (DK)** nämns i AGENT_CONTEXT som planerat. Spår A är nu klart (svensk kärnheuristik verifierad grön, se §7), så detta är inte längre blockerat av en misstänkt regression — men bör ändå vänta tills webui:s riktiga datakälla (Spår B.1) är på plats, så att samma dashboard-arbete inte görs två gånger för två marknader.
 
 ### Spår D — Härda (produktionsverklighet, gör i lagom takt — inte allt på en gång)
 1. **Skaffa/skapa en verklig (GDPR-säker) annoterad samtalskorpus** innan mer finjusteringsinfrastruktur byggs ut. Just nu riskerar DATA-01-arbetet att optimera mot syntetisk data som inte representerar verkliga samtalsmönster — det är den högst hävstångsinvestering som återstår enligt egen ROADMAP.
@@ -119,14 +121,13 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 ## 5. Traversering — rekommenderad ordning
 
 ```
-A.1 (triagera golden-test-regression)
-  → A.2, A.3, A.4 (städa CI-brus, parallellt, lågt jobb)
-    → B.1 (riktig data i webui) ──┬─→ B.2 (larm/LLM-judge-paneler)
-                                   └─→ C.2 (Executive Insights ovanpå riktig data)
-      → B.3 (arkivbeslut NiceGUI) → B.4 (virtualiserad transkriptvy)
-        → D.1 (verklig korpus) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
-          → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
-            → C.4 (marknadsexpansion DK)
+[✅ Spår A klart 2026-07-01: 0 failande tester (882 gröna/2 skippade av 884), ruff 0 fel]
+  → B.1 (riktig data i webui) ──┬─→ B.2 (larm/LLM-judge-paneler)
+                                 └─→ C.2 (Executive Insights ovanpå riktig data)
+    → B.3 (arkivbeslut NiceGUI) → B.4 (virtualiserad transkriptvy)
+      → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
+        → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
+          → C.4 (marknadsexpansion DK)
 ```
 
 **Kärnprincip för prioritering:** Skydda det som redan fungerar (A) innan du minskar duplicerad yta (B), innan du bygger nytt ovanpå en stabil grund (C), innan du hävdar produktionsmognad utåt (D). Att bygga vidare på C eller D-spår medan A är obekräftat riskerar att förstärka en dold regression över fler ytor (fler språk, fler kunder, fler dashboards som visar fel siffror med hög säkerhet).

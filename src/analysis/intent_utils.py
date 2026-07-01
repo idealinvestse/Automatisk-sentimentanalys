@@ -9,7 +9,7 @@ def intent_label(item: Any) -> str:
     """Extract intent label from dict or legacy tuple output."""
     if isinstance(item, dict):
         return str(item.get("intent", "other"))
-    if isinstance(item, (list, tuple)) and item:
+    if isinstance(item, list | tuple) and item:
         return str(item[0])
     return "other"
 
@@ -18,7 +18,7 @@ def intent_confidence(item: Any) -> float:
     """Extract confidence from dict or legacy tuple output."""
     if isinstance(item, dict):
         return float(item.get("confidence", 0.0))
-    if isinstance(item, (list, tuple)) and len(item) > 1:
+    if isinstance(item, list | tuple) and len(item) > 1:
         return float(item[1])
     return 0.0
 

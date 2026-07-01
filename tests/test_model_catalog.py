@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import io
 import json
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import urllib.error
 
 from src.llm.model_catalog import fetch_openrouter_models_catalog, load_catalog
 
@@ -78,14 +78,18 @@ class TestFetchOpenRouterModelsCatalog:
             hdrs=None,
             fp=io.BytesIO(b"denied"),
         )
-        with patch("urllib.request.urlopen", side_effect=err):
-            with pytest.raises(urllib.error.HTTPError):
-                fetch_openrouter_models_catalog(tmp_path / "catalog.json")
+        with (
+            patch("urllib.request.urlopen", side_effect=err),
+            pytest.raises(urllib.error.HTTPError),
+        ):
+            fetch_openrouter_models_catalog(tmp_path / "catalog.json")
 
     def test_fetch_generic_error_propagates(self, tmp_path: Path) -> None:
-        with patch("urllib.request.urlopen", side_effect=OSError("network down")):
-            with pytest.raises(OSError, match="network down"):
-                fetch_openrouter_models_catalog(tmp_path / "catalog.json")
+        with (
+            patch("urllib.request.urlopen", side_effect=OSError("network down")),
+            pytest.raises(OSError, match="network down"),
+        ):
+            fetch_openrouter_models_catalog(tmp_path / "catalog.json")
 
 
 class TestLoadCatalog:

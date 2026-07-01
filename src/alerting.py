@@ -220,7 +220,7 @@ def _coerce_for_compare(left: Any, right: Any) -> tuple[Any, Any]:
         return str(left).lower(), str(right).lower()
     if isinstance(left, bool) or isinstance(right, bool):
         return bool(left), bool(right)
-    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+    if isinstance(left, int | float) and isinstance(right, int | float):
         return float(left), float(right)
     return left, right
 

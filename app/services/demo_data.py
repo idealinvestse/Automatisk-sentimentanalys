@@ -373,7 +373,7 @@ def compute_dashboard_kpis(
     hot = {}
     for r in filtered:
         for intent_item in r.get("intent_results", []) or []:
-            if isinstance(intent_item, (list, tuple)) and intent_item:
+            if isinstance(intent_item, list | tuple) and intent_item:
                 key = intent_item[0]
             elif isinstance(intent_item, dict):
                 key = intent_item.get("intent") or intent_item.get("label")

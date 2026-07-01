@@ -123,13 +123,20 @@ def test_run_provision_downloads_ffmpeg_when_missing(tmp_path: Path, monkeypatch
     assert (tmp_path / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe").is_file()
 
 
-def test_venv_python_path_linux(tmp_path: Path) -> None:
+def test_venv_python_path_linux(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # venv_python_path branches on sys.platform, not the host OS running the
+    # test, so the Linux layout must be simulated explicitly to be verified
+    # on any platform (e.g. Windows dev machines / CI runners).
+    monkeypatch.setattr("src.install.provision.sys.platform", "linux")
     assert venv_python_path(tmp_path).name == "python"
 
 
-def test_bundled_ffmpeg_path_linux(tmp_path: Path) -> None:
+def test_bundled_ffmpeg_path_linux(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from src.install.provision import bundled_ffmpeg_path
 
+    # bundled_ffmpeg_path branches on os.name, not the host OS running the
+    # test; simulate POSIX explicitly so this assertion holds on Windows too.
+    monkeypatch.setattr("src.install.provision.os.name", "posix")
     assert bundled_ffmpeg_path(tmp_path).as_posix().endswith("tools/ffmpeg/bin/ffmpeg")
 
 
@@ -162,11 +169,17 @@ def test_ensure_venv_returns_existing(tmp_path: Path) -> None:
 
 def test_ensure_ffmpeg_non_windows_raises(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
+    # ensure_ffmpeg branches on sys.platform, not the host OS running the
+    # test; simulate non-Windows explicitly so this assertion holds when the
+    # suite is run on Windows too.
+    monkeypatch.setattr("src.install.provision.sys.platform", "linux")
     cfg = UserConfig(paths={"app_root": str(tmp_path)})
 
-    with patch("src.install.provision.resolve_ffmpeg", return_value=None):
-        with pytest.raises(RuntimeError, match="ffmpeg not found"):
-            ensure_ffmpeg(tmp_path, cfg)
+    with (
+        patch("src.install.provision.resolve_ffmpeg", return_value=None),
+        pytest.raises(RuntimeError, match="ffmpeg not found"),
+    ):
+        ensure_ffmpeg(tmp_path, cfg)
 
 
 def test_ensure_user_config_sets_app_root(tmp_path: Path, monkeypatch) -> None:

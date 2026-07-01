@@ -26,7 +26,7 @@ _NEGATIVE_SENTIMENTS = {"negativ", "negative", "negative sentiment"}
 
 
 def _label_from_result(item: Any, *keys: str) -> str:
-    if isinstance(item, (list, tuple)) and item:
+    if isinstance(item, list | tuple) and item:
         return str(item[0]).lower()
     if not isinstance(item, dict):
         return ""

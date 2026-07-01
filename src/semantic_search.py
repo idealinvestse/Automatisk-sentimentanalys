@@ -275,15 +275,15 @@ class SemanticSearchEngine:
             mv = meta.get(k)
             if mv is None:
                 continue
-            if isinstance(v, (list, tuple, set)):
+            if isinstance(v, list | tuple | set):
                 if mv not in v:
                     return False
             elif mv != v:
                 # numeric range support e.g. min_sentiment
-                if k.startswith("min_") and isinstance(mv, (int, float)):
+                if k.startswith("min_") and isinstance(mv, int | float):
                     if mv < float(v):
                         return False
-                elif k.startswith("max_") and isinstance(mv, (int, float)):
+                elif k.startswith("max_") and isinstance(mv, int | float):
                     if mv > float(v):
                         return False
                 else:

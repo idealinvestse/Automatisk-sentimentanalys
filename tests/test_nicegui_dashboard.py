@@ -41,8 +41,15 @@ from app.archive.nicegui_dashboard.services.chart_data import (
     list_call_options,
     segment_index_from_trajectory_x,
 )
-from app.archive.nicegui_dashboard.services.demo_provider import load_demo_reports, reports_to_table_rows
-from app.archive.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, APIError, NiceGUIAPIClient
+from app.archive.nicegui_dashboard.services.demo_provider import (
+    load_demo_reports,
+    reports_to_table_rows,
+)
+from app.archive.nicegui_dashboard.services.nicegui_api_client import (
+    JOB_HEADER,
+    APIError,
+    NiceGUIAPIClient,
+)
 from app.archive.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
 from app.archive.nicegui_dashboard.services.report_ingest import (
     append_report_to_state,

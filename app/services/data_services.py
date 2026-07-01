@@ -561,7 +561,7 @@ def _get_sentiment_score(s: dict) -> float:
     """Normalize various sentiment result shapes to [-1,1] float."""
     if not isinstance(s, dict):
         return 0.0
-    if "score" in s and isinstance(s["score"], (int, float)):
+    if "score" in s and isinstance(s["score"], int | float):
         sc = float(s["score"])
         # if already -1..1 keep, if 0-1 assume positive lean or use label
         if -1.0 <= sc <= 1.0:
@@ -644,7 +644,7 @@ def compute_kpis(
             or {}
         )
         sc = qa.get("overall_qa_score")
-        if isinstance(sc, (int, float)):
+        if isinstance(sc, int | float):
             qa_scores.append(float(sc))
     qa_avg = round(sum(qa_scores) / len(qa_scores), 1) if qa_scores else None
 
@@ -867,7 +867,7 @@ def ingest_uploaded_report(uploaded: Any) -> list[dict]:
     """
     if uploaded is None:
         return []
-    if isinstance(uploaded, (bytes, bytearray)):
+    if isinstance(uploaded, bytes | bytearray):
         try:
             data = json.loads(uploaded.decode("utf-8"))
         except Exception:
@@ -904,7 +904,7 @@ def make_serializable(obj: Any) -> Any:
         return obj.model_dump()
     if hasattr(obj, "to_dict"):
         return obj.to_dict()
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [make_serializable(x) for x in obj]
     if isinstance(obj, dict):
         return {k: make_serializable(v) for k, v in obj.items()}

@@ -33,6 +33,14 @@ Agents should follow the patterns described in `LLM_AGENT_GUIDE.md` (especially 
 5. **Commit** your changes with clear messages.
 6. **Open a Pull Request** against the `main` branch.
 
+## Definition of Done (before committing to `main`)
+
+- Run the **full** `pytest` suite (not just `-x`/a subset) at least once before committing changes that touch analysis heuristics (`src/analysis/`, `src/sentiment.py`, `src/intent.py`, `src/blending.py`) or shared dependencies. A partial run can hide unrelated failures.
+- If a test fails, check whether it's a genuine logic regression or an **environment/dependency gap** before assuming the code is broken — e.g. a missing optional dependency can make a real ML model fail to load and silently trigger a fallback path, which looks like a business-logic assertion failure rather than an import error. See `docs/PROJECT_ASSESSMENT_2026-07.md` §7 for a worked example (missing `sentencepiece` masquerading as a sentiment/intent regression in `tests/test_callcenter_golden.py`).
+- When mocking a class that wraps a heavy/eager-loading resource (e.g. a HuggingFace pipeline constructed in `__init__`), patch the accessor (e.g. `_get_pipeline`) rather than only the downstream method (e.g. `.analyze`), so the test stays isolated from real model loading regardless of the environment it runs in.
+- Don't assert on platform-specific code paths (`sys.platform`, `os.name`) without also monkeypatching that platform value — otherwise the test only passes on the OS it happened to be written on.
+- CHANGELOG/ROADMAP claims about test counts or pass rates should reflect an actual, current green run — not a historical snapshot.
+
 ## Code Style
 
 - We use **Ruff** for linting and formatting (configured in `pyproject.toml`).
