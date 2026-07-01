@@ -34,9 +34,32 @@ sentimentanalys download-asr
 # 3. Run tests to verify
 pytest --tb=no -q
 
-# 4. Start dashboard for interactive development
-python -m app.nicegui_dashboard.main
+# 4a. Start backend API
+uvicorn src.api:app --reload
+
+# 4b. Start web UI (primary dashboard – Next.js)
+cd webui && npm install && npm run dev   # → http://localhost:3000
+
+# 4c. Legacy NiceGUI dashboard (still available)
+python -m app.archive.nicegui_dashboard.main
 ```
+
+## Frontend (web UI)
+
+The primary frontend lives in `webui/` (Next.js 16 + React 19 + TypeScript +
+Tailwind v4 + shadcn/ui patterns). It talks to the existing FastAPI backend
+in `src/api/` without backend changes.
+
+- `webui/src/app/` – App Router pages (Översikt, Analys & Trender,
+  Agentprestanda, Fas 4 Insikter, Transkribering, Testlabb, Call Detail).
+- `webui/src/lib/api/client.ts` – typed API client (`ApiClient`, `ApiError`).
+- `webui/src/hooks/` – React Query hooks + WebSocket transcription client.
+- `webui/src/components/` – UI primitives (shadcn-style) + feature components.
+- `webui/e2e/` – Playwright smoke tests (one per route).
+- `webui/Dockerfile` + `docker-compose.webui.yml` – standalone Next.js build.
+
+See [docs/WEBUI_MODERNIZATION_PLAN.md](docs/WEBUI_MODERNIZATION_PLAN.md) for
+the full migration status. `app/archive/nicegui_dashboard/` is the archived legacy.
 
 ## Key Files & Commands
 
@@ -44,8 +67,8 @@ python -m app.nicegui_dashboard.main
 - `Makefile` — Common tasks (lint, test, format).
 - `src/pipeline.py` + `src/analysis/registry.py` — Core orchestration. New analysis steps go here.
 - `src/llm/` — LLM clients & analyzers (add new provider here).
-- `app/nicegui_dashboard/` — Legacy NiceGUI dashboard components & services. Use `nicegui_api_client.py` for backend data.
-- `webui/` — New Next.js/TypeScript dashboard replacing the NiceGUI UI (see `docs/WEBUI_MODERNIZATION_PLAN.md`). Talks to the same `src/api` backend.
+- `app/archive/nicegui_dashboard/` — Archived legacy NiceGUI dashboard (deprecated; use `webui/`).
+- `webui/` — Primary frontend (Next.js 16 + React 19 + TS + Tailwind v4). `npm run dev` / `lint` / `build` / `test:e2e`. See `docs/WEBUI_MODERNIZATION_PLAN.md`.
 - `launcher/` — Windows PowerShell launcher & ASR management.
 - `tests/` — 500+ tests. Run with `pytest`.
 

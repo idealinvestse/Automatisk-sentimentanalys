@@ -8,22 +8,22 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from app.nicegui_dashboard.components.agent_performance import render_agent_performance_tab
-from app.nicegui_dashboard.components.analytics_trends import render_analytics_tab
-from app.nicegui_dashboard.components.call_detail import render_call_detail_tab
-from app.nicegui_dashboard.components.fas4_insights import render_fas4_insights_tab
-from app.nicegui_dashboard.components.llm_judge_panel import (
+from app.archive.nicegui_dashboard.components.agent_performance import render_agent_performance_tab
+from app.archive.nicegui_dashboard.components.analytics_trends import render_analytics_tab
+from app.archive.nicegui_dashboard.components.call_detail import render_call_detail_tab
+from app.archive.nicegui_dashboard.components.fas4_insights import render_fas4_insights_tab
+from app.archive.nicegui_dashboard.components.llm_judge_panel import (
     render_llm_judge_panel,
     render_llm_judge_summary,
 )
-from app.nicegui_dashboard.components.onboarding import render_onboarding_banner
-from app.nicegui_dashboard.components.overview import render_overview_tab
-from app.nicegui_dashboard.components.test_lab import render_test_lab_tab
-from app.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
-from app.nicegui_dashboard.services.demo_provider import load_demo_reports
-from app.nicegui_dashboard.services.transcript_virtualizer import make_synthetic_segments
-from app.nicegui_dashboard.services.transcription_service import TranscriptionState
-from app.nicegui_dashboard.state import DashboardState
+from app.archive.nicegui_dashboard.components.onboarding import render_onboarding_banner
+from app.archive.nicegui_dashboard.components.overview import render_overview_tab
+from app.archive.nicegui_dashboard.components.test_lab import render_test_lab_tab
+from app.archive.nicegui_dashboard.components.transcription_monitor import render_transcription_tab
+from app.archive.nicegui_dashboard.services.demo_provider import load_demo_reports
+from app.archive.nicegui_dashboard.services.transcript_virtualizer import make_synthetic_segments
+from app.archive.nicegui_dashboard.services.transcription_service import TranscriptionState
+from app.archive.nicegui_dashboard.state import DashboardState
 
 _REPORTS = list(load_demo_reports())
 

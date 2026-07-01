@@ -40,7 +40,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Analysis** (src/analysis/, src/sentiment.py, src/intent.py, src/llm_judge.py etc.): Modular, each returns structured dict/Pydantic. LLM judge for advanced QA/evidence.
 - **LLM** (src/llm/): Clients + Analyzers per provider. groq_client.py, mistral_analyzer.py, openrouter_client.py (nu med dynamic pricing från catalog). Schemas define output strictly. Prompts in prompts.py. PII redaction before LLM calls where configured.
 - **API** (src/api/app.py, routers/, services/): Dependency injection, rate limit, error responses, transcription_jobs, pipeline_cache. WS for streaming transcription events.
-- **Dashboard** (app/nicegui_dashboard/): Components in components/, services in services/ (nicegui_api_client.py for backend calls, fas4_data.py for local, chart_data.py). State management, theme, layout. **Ny**: test_lab med create_llm_model_settings() för catalog refresh.
+- **Dashboard** (app/archive/nicegui_dashboard/): Components in components/, services in services/ (nicegui_api_client.py for backend calls, fas4_data.py for local, chart_data.py). State management, theme, layout. **Ny**: test_lab med create_llm_model_settings() för catalog refresh.
 - **Launcher** (launcher/): Process manager, ASR dialog, status panel, env builder, pid store. PowerShell entry for desktop users. **Ny**: Valbar mapp för modeller.
 - **Data Layer**: Local CSV/JSONL + in-memory/demo providers. Caching for expensive aggregations.
 - **Key Invariants**: Always PII-safe (redact before LLM if flag set), graceful degradation (missing optional deps don't crash core), Swedish-first (lexicon, prompts, data), structured output everywhere (Pydantic), tests cover happy + edge paths. **Ny**: Model catalog pricing är live och uppdateras via CLI/Dashboard.
@@ -55,7 +55,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - src/llm/schemas.py + src/llm/prompts.py — LLM output contracts and prompt engineering.
 - src/llm/openrouter_client.py + src/llm/model_catalog.py — **Ny viktig**: Dynamic pricing + full model scan. Använd refresh_pricing_from_catalog() och load_catalog().
 - src/api/routers/pipeline.py + src/api/schemas.py — API contract for analysis requests.
-- app/nicegui_dashboard/main.py + app/nicegui_dashboard/services/nicegui_api_client.py — Dashboard entry + data fetching. **Ny**: test_lab.py har LLM catalog UI.
+- app/archive/nicegui_dashboard/main.py + app/archive/nicegui_dashboard/services/nicegui_api_client.py — Dashboard entry + data fetching. **Ny**: test_lab.py har LLM catalog UI.
 - launcher/main.py + launcher/process_manager.py — Desktop launcher logic. **Ny**: Storage path settings.
 - pyproject.toml — Dependencies, optional groups (cli, api, dashboard-nicegui, diarize), scripts.
 - configs/ — llm_config.yaml, alerting_config.yaml, qa_scorecards/*.yaml, install_defaults.
@@ -68,7 +68,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Run**:
   - CLI: sentimentanalys --help or python -m src.cli   (ny: scan-openrouter-models)
   - API: uvicorn src.api:app --reload (or via launcher)
-  - Dashboard: python -m app.nicegui_dashboard.main   (Test Lab har nu LLM catalog knapp)
+  - Dashboard: python -m app.archive.nicegui_dashboard.main   (Test Lab har nu LLM catalog knapp)
   - Windows: .\launcher.ps1 or Sentimentanalys.bat   (ny: valbar modeller-mapp)
   - Tests: pytest (or specific pytest tests/test_pipeline.py -q )
   - Evaluate: python -m src.evaluate fas4-validation

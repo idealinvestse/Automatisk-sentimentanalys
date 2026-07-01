@@ -215,7 +215,7 @@ class TestSpokenNormalizer:
 
 class TestCallDetailMarkdown:
     def test_build_insights_reads_llm_fields(self) -> None:
-        from app.nicegui_dashboard.components.call_detail import _build_insights_markdown
+        from app.archive.nicegui_dashboard.components.call_detail import _build_insights_markdown
 
         report = {
             "llm": {

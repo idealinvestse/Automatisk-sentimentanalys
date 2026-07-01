@@ -160,7 +160,9 @@ def _tokenize_condition(condition: str) -> list[tuple[str, str]]:
     while pos < len(condition):
         match = pattern.match(condition, pos)
         if not match:
-            raise ValueError(f"Unexpected character at position {pos}: {condition[pos:pos + 8]!r}")
+            raise ValueError(
+                f"Unexpected character at position {pos}: {condition[pos : pos + 8]!r}"
+            )
         for name, value in match.groupdict().items():
             if value is not None:
                 tokens.append((name, value))

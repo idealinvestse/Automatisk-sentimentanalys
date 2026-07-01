@@ -8,19 +8,19 @@ from __future__ import annotations
 from typing import Any
 
 # --- emotion_timeline helpers ---
-from app.nicegui_dashboard.components.emotion_timeline import (
+from app.archive.nicegui_dashboard.components.emotion_timeline import (
     _extract_emotion_series,
     build_emotion_timeline_figure,
 )
 
 # --- hot_topic_wordcloud helpers ---
-from app.nicegui_dashboard.components.hot_topic_wordcloud import (
+from app.archive.nicegui_dashboard.components.hot_topic_wordcloud import (
     _extract_topics,
     build_hot_topics_treemap,
 )
 
 # --- llm_judge_breakdown helpers ---
-from app.nicegui_dashboard.components.llm_judge_breakdown import (
+from app.archive.nicegui_dashboard.components.llm_judge_breakdown import (
     _extract_llm_judge_verdicts,
     _get_confidence_color,
 )

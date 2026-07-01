@@ -11,24 +11,24 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.nicegui_dashboard.components.call_detail import (
+from app.archive.nicegui_dashboard.components.call_detail import (
     _build_insights_markdown,
     _format_duration,
     find_report,
 )
-from app.nicegui_dashboard.services.analytics_summary import (
+from app.archive.nicegui_dashboard.services.analytics_summary import (
     build_calls_overview_rows,
     compute_call_snapshot,
     compute_portfolio_kpis,
     overview_rows_to_csv_bytes,
     summarize_emotions,
 )
-from app.nicegui_dashboard.services.calls_filter import (
+from app.archive.nicegui_dashboard.services.calls_filter import (
     format_search_hit_label,
     paginate_items,
     search_table_reports,
 )
-from app.nicegui_dashboard.services.chart_data import (
+from app.archive.nicegui_dashboard.services.chart_data import (
     build_agent_trends_figure,
     build_escalation_figure,
     build_hot_topics_figure,
@@ -41,14 +41,14 @@ from app.nicegui_dashboard.services.chart_data import (
     list_call_options,
     segment_index_from_trajectory_x,
 )
-from app.nicegui_dashboard.services.demo_provider import load_demo_reports, reports_to_table_rows
-from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, APIError, NiceGUIAPIClient
-from app.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
-from app.nicegui_dashboard.services.report_ingest import (
+from app.archive.nicegui_dashboard.services.demo_provider import load_demo_reports, reports_to_table_rows
+from app.archive.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, APIError, NiceGUIAPIClient
+from app.archive.nicegui_dashboard.services.qa_display import qa_score_css_class, qa_score_tier
+from app.archive.nicegui_dashboard.services.report_ingest import (
     append_report_to_state,
     normalize_transcription_to_report,
 )
-from app.nicegui_dashboard.services.transcript_virtualizer import (
+from app.archive.nicegui_dashboard.services.transcript_virtualizer import (
     VIRTUALIZE_THRESHOLD,
     compute_visible_range,
     filter_segments_with_index,
@@ -57,18 +57,18 @@ from app.nicegui_dashboard.services.transcript_virtualizer import (
     should_virtualize,
     window_around_index,
 )
-from app.nicegui_dashboard.services.transcription_service import (
+from app.archive.nicegui_dashboard.services.transcription_service import (
     TranscriptionState,
     create_transcription_state,
 )
-from app.nicegui_dashboard.services.transcription_ws_client import (
+from app.archive.nicegui_dashboard.services.transcription_ws_client import (
     WS_CONNECTED,
     WS_DISCONNECTED,
     WS_RECONNECTING,
     TranscriptionWSListener,
 )
-from app.nicegui_dashboard.settings import is_dev_mode, ws_status_label
-from app.nicegui_dashboard.state import DashboardState
+from app.archive.nicegui_dashboard.settings import is_dev_mode, ws_status_label
+from app.archive.nicegui_dashboard.state import DashboardState
 
 
 class TestNiceGUIAPIClient:
@@ -448,7 +448,7 @@ class TestAnalyticsSummary:
         assert text.count("\n") >= len(rows)
 
     def test_qa_problem_calls(self):
-        from app.nicegui_dashboard.services.analytics_summary import qa_problem_calls
+        from app.archive.nicegui_dashboard.services.analytics_summary import qa_problem_calls
 
         reports = [
             {
@@ -474,7 +474,7 @@ class TestReportIngest:
         assert len(report["segments"]) == 1
 
     def test_append_report_to_state(self):
-        from app.nicegui_dashboard.state import DashboardState
+        from app.archive.nicegui_dashboard.state import DashboardState
 
         state = DashboardState(reports=[])
         cid = append_report_to_state(state, {"call_id": "NEW-1", "title": "Ny"})
@@ -621,11 +621,11 @@ class TestCallDetailHelpers:
 class TestTranscriptionState:
     def test_save_and_load_queue(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+            "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
             tmp_path,
         )
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+            "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
             tmp_path / "transcription_queue.json",
         )
         state = TranscriptionState()
@@ -646,11 +646,11 @@ class TestTranscriptionState:
 
     def test_create_transcription_state(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+            "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
             tmp_path,
         )
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+            "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
             tmp_path / "transcription_queue.json",
         )
         state = create_transcription_state()
@@ -687,11 +687,11 @@ class TestTranscriptionState:
 
     def test_save_load_v2_settings(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+            "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
             tmp_path,
         )
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+            "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
             tmp_path / "transcription_queue.json",
         )
         state = TranscriptionState()

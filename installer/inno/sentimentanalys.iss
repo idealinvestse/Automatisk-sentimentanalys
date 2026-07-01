@@ -1,8 +1,8 @@
 ; Inno Setup script for Automatisk-sentimentanalys
-; Build: ISCC.exe sentimentanalys.iss /DMyAppVersion=0.3.0 /DInstallProfile=full
+; Build: ISCC.exe sentimentanalys.iss /DMyAppVersion=0.4.1 /DInstallProfile=full
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.3.0"
+  #define MyAppVersion "0.4.1"
 #endif
 #ifndef InstallProfile
   #define InstallProfile "full"
@@ -43,12 +43,10 @@ Source: "..\..\build\portable-staging\Sentimentanalys\*"; DestDir: "{app}"; Flag
 
 [Icons]
 Name: "{group}\{#MyAppName} Launcher"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{group}\Setup Hub"; Filename: "{app}\.venv\Scripts\streamlit.exe"; Parameters: "run app\setup_hub.py"; WorkingDir: "{app}"
 Name: "{group}\Doctor"; Filename: "{app}\.venv\Scripts\python.exe"; Parameters: "-m launcher.cli doctor"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\.venv\Scripts\streamlit.exe"; Parameters: "run app\setup_hub.py"; Description: "Open Setup Hub (recommended)"; Flags: postinstall nowait skipifsilent
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: postinstall nowait skipifsilent
 
 [UninstallDelete]

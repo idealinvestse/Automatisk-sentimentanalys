@@ -20,8 +20,14 @@ sentimentanalys download-asr
 # Verifiera
 pytest --tb=no -q
 
-# Starta dashboard
-python -m app.nicegui_dashboard.main
+# Starta backend-API
+uvicorn src.api:app --reload
+
+# Starta web UI (Next.js, primär dashboard)
+cd webui && npm install && npm run dev   # → http://localhost:3000
+
+# Legacy NiceGUI-dashboard (fortfarande tillgänglig)
+python -m app.archive.nicegui_dashboard.main
 ```
 
 Läs [AGENTS.md](AGENTS.md) först – den pekar till `docs/LLM_AGENT_GUIDE.md` som är den kompletta guiden för agenter.
@@ -41,15 +47,23 @@ sentimentanalys --help
 # API
 uvicorn src.api:app --reload
 
-# Dashboard
-python -m app.nicegui_dashboard.main
+# Web UI (primär dashboard – Next.js + React + Tailwind)
+cd webui && npm install && npm run dev   # → http://localhost:3000
+
+# Legacy NiceGUI-dashboard
+python -m app.archive.nicegui_dashboard.main
 ```
 
-### Snabb transkribering (dashboard)
+> **Frontend-status:** `webui/` (Next.js) är den primära frontenden från Fas 4.
+> `app/archive/nicegui_dashboard/` är kvar som legacy men rekommenderas inte för nytt
+> arbete. Se [docs/WEBUI_MODERNIZATION_PLAN.md](docs/WEBUI_MODERNIZATION_PLAN.md)
+> för migreringsstatus. Docker: `docker compose -f docker-compose.webui.yml up --build`.
 
-Fliken **Transkribering** har en sektion **Snabb transkribering** högst upp: ladda upp en ljudfil (`.wav`, `.mp3`, `.m4a`, …), klicka **Transkribera nu** och se segment med tidsstämplar, confidence och talare direkt i UI. Exportera till JSON/CSV eller kopiera hela transkriptet.
+### Snabb transkribering (web UI)
 
-Vid **Använd Backend API**: sätt `API_MEDIA_ROOT` till projektroten så uppladdade filer kan nås via `POST /transcribe`.
+Fliken **Transkribering** i web UI visar live-loggar och jobbstatus från
+backendens WebSocket (`/ws/transcription`). För ad-hoc pipeline-tester, använd
+fliken **Testlabb** som kör `/analyze_pipeline` direkt på JSON-segment.
 
 ### Windows-launcher (ASR)
 

@@ -267,7 +267,7 @@ def _score_with_llm_if_needed(
         segments_for_qa_llm = segments
     # Build tiny transcript slice (first + last + any frustration area) to save tokens
     transcript = "\n".join(
-        f"[{role_map.get(s.get('speaker',''), s.get('speaker','')) if role_map else s.get('speaker','')}] { (s.get('text','') if isinstance(s,dict) else getattr(s,'text',''))[:120] }"
+        f"[{role_map.get(s.get('speaker', ''), s.get('speaker', '')) if role_map else s.get('speaker', '')}] {(s.get('text', '') if isinstance(s, dict) else getattr(s, 'text', ''))[:120]}"
         for s in segments_for_qa_llm[:12]  # limit
     )
 
@@ -279,7 +279,7 @@ def _score_with_llm_if_needed(
 
             client = getattr(analyzer, "client", None) or OpenRouterClient()
             sys_prompt = "Du är en strikt QA-granskare för svensk kundtjänst. Svara ENDAST med exakt giltig JSON, ingen annan text eller markdown."
-            user = f"""Bedöm kriteriet: {criterion['description']}
+            user = f"""Bedöm kriteriet: {criterion["description"]}
 Prompt hint: {prompt_hint}
 
 Transkript (roll-märkt):

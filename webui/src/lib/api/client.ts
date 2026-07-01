@@ -8,6 +8,20 @@
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
+/** Loose shape of a CallAnalysisReport dict returned by /analyze_pipeline. */
+export interface PipelineReport {
+  sentiment_results?: { label?: string; score?: number }[];
+  results?: {
+    qa?: { overall_qa_score?: number | null; [key: string]: unknown };
+    [key: string]: unknown;
+  };
+  llm?: {
+    actionable_summary?: { problem?: string; [key: string]: unknown };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -103,8 +117,11 @@ export class ApiClient {
     }
   }
 
-  analyzePipeline(segments: unknown[], options: Record<string, unknown> = {}) {
-    return this.post("/analyze_pipeline", { segments, profile: "callcenter", ...options });
+  analyzePipeline<T = PipelineReport>(
+    segments: unknown[],
+    options: Record<string, unknown> = {},
+  ) {
+    return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options });
   }
 
   getAlertingStatus<T = unknown>() {
@@ -117,6 +134,27 @@ export class ApiClient {
 
   getJobStatus<T = unknown>(jobId: string) {
     return this.get<T>(`/status/jobs/${jobId}`);
+  }
+
+  listTranscriptionJobs<T = unknown>(limit = 20) {
+    return this.get<T>("/transcription/jobs", { limit });
+  }
+
+  getTranscriptionJob<T = unknown>(jobId: string) {
+    return this.get<T>(`/transcription/jobs/${jobId}`);
+  }
+
+  cancelTranscriptionJob<T = unknown>(jobId: string) {
+    return this.post<T>(`/transcription/jobs/${jobId}/cancel`, {});
+  }
+
+  /** ws:// or wss:// URL for the live transcription event stream. */
+  wsUrl(path = "/ws/transcription"): string {
+    const url = new URL(this.baseUrl);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.pathname = path;
+    url.search = "";
+    return url.toString();
   }
 }
 

@@ -21,10 +21,10 @@ def check_dashboard_import(
     env: dict[str, str] | None = None,
     cwd: Path | str | None = None,
 ) -> str | None:
-    """Verify that ``app.nicegui_dashboard.main`` can be imported in the target interpreter."""
+    """Verify that ``app.archive.nicegui_dashboard.main`` can be imported in the target interpreter."""
     py = python or Path(sys.executable)
     result = subprocess.run(
-        [str(py), "-c", "import app.nicegui_dashboard.main"],
+        [str(py), "-c", "import app.archive.nicegui_dashboard.main"],
         capture_output=True,
         text=True,
         env=env,

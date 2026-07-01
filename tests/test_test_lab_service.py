@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from app.nicegui_dashboard.services.test_lab_service import (
+from app.archive.nicegui_dashboard.services.test_lab_service import (
     list_audio_reports,
     list_sample_rows,
     load_examples_txt,
@@ -70,7 +70,7 @@ class TestListAudioReports:
         payload = {"scenario": "smoke", "n_files": 3, "summary": {"n_success": 3}}
         (reports / "audio_smoke_test.json").write_text(json.dumps(payload), encoding="utf-8")
         monkeypatch.setattr(
-            "app.nicegui_dashboard.services.test_lab_service.reports_dir",
+            "app.archive.nicegui_dashboard.services.test_lab_service.reports_dir",
             lambda: reports,
         )
         rows = list_audio_reports(limit=5)

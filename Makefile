@@ -60,8 +60,11 @@ pre-commit:  ## Run pre-commit on all files
 run-api:  ## Start the FastAPI server (development)
 	uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
 
-run-dashboard:  ## Start Streamlit dashboard
-	streamlit run app/dashboard.py
+run-dashboard:  ## Start archived NiceGUI dashboard (legacy; use webui/ instead)
+	python -m app.archive.nicegui_dashboard.main
+
+run-webui:  ## Start Next.js web UI (primary dashboard)
+	cd webui && npm run dev
 
 run-cli-help:  ## Show CLI help
 	python -m src.cli --help

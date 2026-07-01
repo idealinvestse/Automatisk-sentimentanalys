@@ -6,6 +6,7 @@ import asyncio
 import importlib
 import logging
 import pkgutil
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +30,7 @@ T = TypeVar("T", bound=type[Analyzer])
 _ANALYZER_REGISTRY: dict[str, type[Analyzer] | Callable[[], Analyzer]] = {}
 _LOADED = False
 _THREAD_POOL: ThreadPoolExecutor | None = None
+_THREAD_POOL_LOCK = threading.Lock()
 
 # Analyzers that perform external I/O (LLM calls) — safe to parallelize within a level.
 IO_BOUND_ANALYZERS: frozenset[str] = frozenset({"llm_judge"})
@@ -358,9 +360,11 @@ async def _run_single_async(
             res = await asyncio.to_thread(analyzer.analyze, ctx)
         else:
             loop = asyncio.get_event_loop()
-            global _THREAD_POOL
+            global _THREAD_POOL, _THREAD_POOL_LOCK
             if _THREAD_POOL is None:
-                _THREAD_POOL = ThreadPoolExecutor(max_workers=4)
+                with _THREAD_POOL_LOCK:
+                    if _THREAD_POOL is None:
+                        _THREAD_POOL = ThreadPoolExecutor(max_workers=4)
             res = await loop.run_in_executor(_THREAD_POOL, analyzer.analyze, ctx)
         ctx.results[name] = _store_result(name, res, validation_mode)
         duration = time.perf_counter() - started

@@ -16,6 +16,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Install dev dependencies
         run: |
@@ -41,6 +42,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -52,13 +54,13 @@ jobs:
           ANALYZER_VALIDATION_MODE: strict
         run: pytest tests/ -v --cov=src --cov-report=term --cov-fail-under=80
 
-      - name: Dashboard tests with coverage
+      - name: Dashboard tests with coverage (archived NiceGUI)
         run: |
           pytest tests/test_nicegui_dashboard.py tests/test_nicegui_dashboard_ui.py \
             tests/test_test_lab_service.py tests/test_transcription_websocket.py \
             tests/test_dashboard.py -v \
-            --cov=app/nicegui_dashboard/services --cov=app/nicegui_dashboard/settings \
-            --cov=app/nicegui_dashboard/state --cov-report=term-missing --cov-fail-under=55
+            --cov=app/archive/nicegui_dashboard/services --cov=app/archive/nicegui_dashboard/settings \
+            --cov=app/archive/nicegui_dashboard/state --cov-report=term-missing --cov-fail-under=55
 
   api-test:
     needs: lint
@@ -70,6 +72,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Install API test dependencies
         run: |
@@ -93,6 +96,37 @@ jobs:
       - name: Build Docker image
         run: docker build -t sentiment-api .
 
+  webui:
+    needs: lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: webui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: npm run test:e2e
+
   finetune-smoke:
     needs: lint
     runs-on: ubuntu-latest
@@ -103,6 +137,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Install training deps
         run: |
@@ -128,6 +163,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: 'pip'
 
       - name: Install dependencies
         run: |

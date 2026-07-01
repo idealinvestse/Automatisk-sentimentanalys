@@ -238,10 +238,17 @@ def redact_pii(
     ) -> tuple[str, list[dict]]:
         local_events = []
         new_text = current_text
+        # Track redacted intervals to avoid overlapping/nested replacements
+        redacted_intervals: list[tuple[int, int]] = []
+
         for m in reversed(list(pattern.finditer(current_text))):  # reverse to preserve indices
-            orig = m.group(0)
             start, end = m.start(), m.end()
+            # Skip if this interval overlaps with a previous redaction
+            if any(s < end and e > start for s, e in redacted_intervals):
+                continue
+            orig = m.group(0)
             new_text = new_text[:start] + repl + new_text[end:]
+            redacted_intervals.append((start, end))
             local_events.append(
                 {
                     "type": pii_type,

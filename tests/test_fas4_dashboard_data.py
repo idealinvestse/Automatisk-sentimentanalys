@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.nicegui_dashboard.services.demo_provider import load_demo_reports
-from app.nicegui_dashboard.services.fas4_data import (
+from app.archive.nicegui_dashboard.services.demo_provider import load_demo_reports
+from app.archive.nicegui_dashboard.services.fas4_data import (
     active_alerts,
     alert_dedup_key,
     fetch_agent_performance,
@@ -21,7 +21,7 @@ from app.nicegui_dashboard.services.fas4_data import (
     reports_to_segments_list,
     resolve_call_id_from_hit,
 )
-from app.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
+from app.archive.nicegui_dashboard.services.nicegui_api_client import NiceGUIAPIClient
 
 
 @pytest.fixture

@@ -269,6 +269,15 @@ def _print_asr_report(report) -> None:
     console.print(table)
 
 
+def _validate_safe_path(path: Path) -> None:
+    """Validate that a path is safe for shell injection (no shell metacharacters)."""
+    path_str = str(path.resolve())
+    # Block common shell metacharacters
+    dangerous_chars = ['"', "'", "$", "`", ";", "&", "|", "\n", "\r"]
+    if any(char in path_str for char in dangerous_chars):
+        raise ValueError(f"Path contains unsafe characters: {path_str}")
+
+
 @app.command("open-cli")
 def open_cli_cmd(app_root: Path | None = None) -> None:
     """Open PowerShell with venv activated (Windows)."""
@@ -277,7 +286,9 @@ def open_cli_cmd(app_root: Path | None = None) -> None:
     py = resolve_python(cfg)
     activate = root / ".venv" / "Scripts" / "Activate.ps1"
     if sys.platform == "win32":
+        _validate_safe_path(root)
         if activate.is_file():
+            _validate_safe_path(activate)
             cmd = f"powershell -NoExit -Command \"cd '{root}'; . '{activate}'\""
         else:
             cmd = f"powershell -NoExit -Command \"cd '{root}'; $env:PYTHONPATH='{root}'\""

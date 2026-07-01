@@ -39,7 +39,7 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 | **PII Protection**          | ✅ Done    | Early redaction in pipeline for `callcenter` profile |
 | **REST API (v0.4.1)**       | ✅ Done    | Full FastAPI + 5 Fas 4 endpoints, auth, rate limit, caching |
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
-| **Dashboard**               | ✅ Done    | NiceGUI standard (`app/nicegui_dashboard/`); Streamlit avvecklad |
+| **Dashboard**               | ✅ Done    | NiceGUI standard (`app/archive/nicegui_dashboard/`); Streamlit avvecklad |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
 | **HTTP Metrics (OBS-01)**     | ✅ Done    | `http_requests_total`, `http_request_duration_seconds` in `src/api/metrics.py` |
 | **Pipeline Refactoring**      | ✅ Done    | PIPE-01: `pipeline_steps.py`; `pipeline.py` < 550 LOC |

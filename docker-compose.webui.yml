@@ -1,0 +1,39 @@
+# Fas 4 – Next.js web UI + FastAPI backend
+# docs/WEBUI_MODERNIZATION_PLAN.md
+#
+# Usage:
+#   docker compose -f docker-compose.webui.yml up --build
+#   Web UI:     http://localhost:3000
+#   API docs:   http://localhost:8000/docs
+
+services:
+  api:
+    build: .
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/cache/hf
+      - app_outputs:/app/outputs
+    environment:
+      - HF_HOME=/cache/hf
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  webui:
+    build: ./webui
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  hf_cache:
+  app_outputs:

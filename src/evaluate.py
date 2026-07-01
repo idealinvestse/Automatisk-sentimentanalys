@@ -674,7 +674,7 @@ def llm_human_preference_template(
     ]
 
     for i in range(min(n_calls, len(samples) * 5)):
-        call_id = f"CALL-{i+1:04d}"
+        call_id = f"CALL-{i + 1:04d}"
         template_lines.extend(
             [
                 f"### {call_id}",

@@ -39,6 +39,11 @@ COPY ROADMAP.md ./
 # Create necessary directories
 RUN mkdir -p /cache/hf /app/outputs /app/models /app/state
 
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app /cache/hf
+USER appuser
+
 VOLUME ["/cache/hf", "/app/outputs", "/app/state"]
 
 EXPOSE 8000

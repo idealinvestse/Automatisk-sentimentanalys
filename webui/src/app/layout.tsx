@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
 
 import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,7 +42,7 @@ export default function RootLayout({
               <AppSidebar />
               <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
             </div>
-            <Toaster richColors position="top-right" theme="system" />
+            <Toaster />
           </QueryProvider>
         </ThemeProvider>
       </body>

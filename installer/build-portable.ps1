@@ -1,6 +1,6 @@
 # Build portable Windows ZIP with bundled Python embed + venv + app
 param(
-    [string]$Version = "0.3.0",
+    [string]$Version = "0.4.1",
     [ValidateSet("minimal", "cli", "api", "full")]
     [string]$Profile = "full",
     [string]$OutDir = "dist",

@@ -1,6 +1,6 @@
 # Build full Inno Setup installer (requires Inno Setup 6 on PATH as ISCC.exe)
 param(
-    [string]$Version = "0.3.0",
+    [string]$Version = "0.4.1",
     [ValidateSet("minimal", "cli", "api", "full")]
     [string]$Profile = "full"
 )

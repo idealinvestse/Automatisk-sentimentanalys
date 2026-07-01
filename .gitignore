@@ -177,3 +177,4 @@ OPENROUTER_API_KEY.txt
 **/*anthropic*.key
 **/*together*.key
 **/*groq*.key
+.playwright-mcp/

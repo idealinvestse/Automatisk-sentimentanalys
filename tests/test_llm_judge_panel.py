@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 # We import the helpers directly (they are pure and easy to test)
-from app.nicegui_dashboard.components.llm_judge_panel import (
+from app.archive.nicegui_dashboard.components.llm_judge_panel import (
     _get_verdicts,
     _is_changed,
     render_llm_judge_summary,

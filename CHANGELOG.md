@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Swedish address pattern expansion (suffix-based + Python validation for compound words)
   - Phone regex requires +46/0 prefix with `(?<!\d)` lookbehind (avoids matching 13-16 digit IDs)
   - CC checked before phone (priority order)
-  - New `app/nicegui_dashboard/components/pii_audit.py` for PII event visibility
+  - New `app/archive/nicegui_dashboard/components/pii_audit.py` for PII event visibility
 - **Alerting webhook production-grade** (PR #17):
   - `httpx.AsyncClient` with 10s timeout + 3 retries + exponential backoff
   - Circuit breaker: webhook disabled after 5 consecutive failures

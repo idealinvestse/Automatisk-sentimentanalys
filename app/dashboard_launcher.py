@@ -29,7 +29,7 @@ def main() -> None:
         print(f"Okänt DASHBOARD_UI={ui!r}. Giltiga värden: nicegui", file=sys.stderr)
         raise SystemExit(2)
 
-    runpy.run_module("app.nicegui_dashboard.main", run_name="__main__")
+    runpy.run_module("app.archive.nicegui_dashboard.main", run_name="__main__")
 
 
 if __name__ == "__main__":

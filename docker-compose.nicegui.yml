@@ -1,6 +1,10 @@
 # Fas 5 – NiceGUI Dashboard + FastAPI backend (Streamlit dashboard avvecklad)
 # docs/archive/MIGRATION_TO_NICEGUI_PLAN.md
 #
+# NOTE: The NiceGUI dashboard has been archived to app/archive/nicegui_dashboard/.
+# Use docker-compose.webui.yml for the current Next.js web UI instead.
+# This compose file is kept for legacy reference only.
+#
 # Usage:
 #   docker compose -f docker-compose.nicegui.yml up --build
 #   Dashboard: http://localhost:8080
@@ -29,7 +33,7 @@ services:
     build: .
     command: >
       bash -c "pip install -q -e '.[dashboard-nicegui]' &&
-      python -m app.nicegui_dashboard.main"
+      python -m app.archive.nicegui_dashboard.main"
     ports:
       - "8080:8080"
     volumes:

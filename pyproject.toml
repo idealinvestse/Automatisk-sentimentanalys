@@ -134,7 +134,7 @@ ignore = [
 known-first-party = ["src"]
 
 [tool.ruff.lint.per-file-ignores]
-"app/nicegui_dashboard/**/*.py" = ["SIM117"]
+"app/archive/nicegui_dashboard/**/*.py" = ["SIM117", "UP038"]
 "tests/test_asr.py" = ["E402"]
 "tests/test_llm_analyzer.py" = ["E402"]
 "src/transcription/faster_whisper.py" = ["N818", "N806", "B904"]
@@ -180,16 +180,12 @@ omit = [
     "src/cli.py",
     "src/diarization.py",
     "src/finetune.py",
-    "src/core/audio.py",
     "src/benchmarks/audio_runner.py",
     "src/benchmarks/audio_cli.py",
     "src/transcription/faster_whisper.py",
     "src/transcription/whisperx.py",
     "src/install/secrets_win.py",
     "src/benchmarks/audio_catalog.py",
-    "src/transcription/preprocess.py",
-    "src/transcription/preprocess_v2.py",
-    "src/transcription/vad_callcenter.py",
 ]
 
 [tool.coverage.report]

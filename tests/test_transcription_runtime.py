@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.nicegui_dashboard.services.transcription_runtime import (
+from app.archive.nicegui_dashboard.services.transcription_runtime import (
     DEFAULT_API_RETRIES,
     DEFAULT_LOCAL_TIMEOUT_S,
     api_retry_count,

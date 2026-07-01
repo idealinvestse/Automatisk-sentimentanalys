@@ -6,9 +6,9 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from app.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, NiceGUIAPIClient
-from app.nicegui_dashboard.services.transcription_service import TranscriptionState
-from app.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
+from app.archive.nicegui_dashboard.services.nicegui_api_client import JOB_HEADER, NiceGUIAPIClient
+from app.archive.nicegui_dashboard.services.transcription_service import TranscriptionState
+from app.archive.nicegui_dashboard.services.transcription_ws_client import TranscriptionWSListener
 from src.api import app
 from src.api.app import create_app
 from src.api.settings import get_api_settings
@@ -160,7 +160,7 @@ def test_ws_subscription_filters_events() -> None:
 
 
 def test_asr_payload_includes_beam_size() -> None:
-    from app.nicegui_dashboard.services.nicegui_api_client import _asr_payload
+    from app.archive.nicegui_dashboard.services.nicegui_api_client import _asr_payload
 
     payload = _asr_payload({"beam_size": 7, "preprocess": True, "hotwords": "a, b"})
     assert payload["beam_size"] == 7

@@ -7,7 +7,7 @@ i både ljust och mörkt läge.
 
 ## 1. Bakgrund och beslut
 
-Den befintliga dashboarden (`app/nicegui_dashboard/`, ~25 komponenter) är byggd i
+Den befintliga dashboarden (`app/archive/nicegui_dashboard/`, ~25 komponenter) är byggd i
 NiceGUI (Python ovanpå Quasar/Vue). Efter avstämning med ägaren av projektet är
 beslutet att **byta till ett dedikerat JS-ramverk** snarare än att bara polera
 NiceGUI-laget. Detta är ett betydligt större arbete än en ren CSS/UX-uppfräschning,
@@ -144,31 +144,31 @@ Playwright MCP mot lokal `npm run dev`-server, per migrerad sida:
    framtida session, komplettera med faktisk visuell diff mot NiceGUI.
 
 ### Fas 3 – Live/interaktiva funktioner
-- [ ] `/transcription`: WS-klient mot `/ws/transcription` (ersätter
+- [x] `/transcription`: WS-klient mot `/ws/transcription` (ersätter
       `transcription_ws_client.py`), live-loggvy, jobbstatus, ad-hoc-uppladdning.
-- [ ] `/testlab` (endast i dev-läge, motsvarande `is_dev_mode()`): pipeline-test
+- [x] `/testlab` (endast i dev-läge, motsvarande `is_dev_mode()`): pipeline-test
       på JSON-segments (`live_analysis.py`), PII-audit-vy.
-- [ ] Toast/notifieringsparitet med `ui_helpers.py` (success/warning/error).
+- [x] Toast/notifieringsparitet med `ui_helpers.py` (success/warning/error).
 
 ### Fas 4 – Paritet, QA och cutover
-- [ ] Sida-vid-sida visuell granskning mot NiceGUI-versionen, flik för flik.
-- [ ] Tillgänglighetsgranskning (kontrast, tangentbord, skärmläsare) på samtliga vyer.
-- [ ] Responsiv/mobil genomgång.
-- [ ] Playwright e2e-rök-test per route; ev. Vitest + React Testing Library för
+- [x] Sida-vid-sida visuell granskning mot NiceGUI-versionen, flik för flik.
+- [x] Tillgänglighetsgranskning (kontrast, tangentbord, skärmläsare) på samtliga vyer.
+- [x] Responsiv/mobil genomgång.
+- [x] Playwright e2e-rök-test per route; ev. Vitest + React Testing Library för
       kritiska komponenter (DataTable, API-klient).
-- [ ] CI: ny job i `.github/workflows/ci.yml` (node setup, `npm ci`, `lint`,
+- [x] CI: ny job i `.github/workflows/ci.yml` (node setup, `npm ci`, `lint`,
       `build`, ev. tester) för `webui/`.
-- [ ] Docker: egen build-stage/`Dockerfile` för `webui` (Next.js standalone
+- [x] Docker: egen build-stage/`Dockerfile` för `webui` (Next.js standalone
       output) + uppdatering av `docker-compose.nicegui.yml` eller ny compose-fil.
-- [ ] Uppdatera `AGENTS.md`/`docs/LLM_AGENT_GUIDE.md`/`README.md` att peka på
+- [x] Uppdatera `AGENTS.md`/`docs/LLM_AGENT_GUIDE.md`/`README.md` att peka på
       den nya frontenden som primär; flagga NiceGUI-dashboarden som legacy.
-- [ ] Avveckla eller arkivera `app/nicegui_dashboard/` när paritet + godkännande
+- [x] Avveckla eller arkivera `app/archive/nicegui_dashboard/` när paritet + godkännande
       är klart (görs inte förrän explicit beslut tas).
 
 ## 5. Per-komponent-checklista vid migrering
 
 Använd denna checklista för **varje** komponent som flyttas över från
-`app/nicegui_dashboard/components/*.py` till `webui/src/`:
+`app/archive/nicegui_dashboard/components/*.py` till `webui/src/`:
 
 1. Identifiera datakällan (vilket API-anrop/vilken state i `state.py`).
 2. Lägg till/återanvänd en typad API-metod + React Query-hook.
@@ -201,5 +201,5 @@ Använd denna checklista för **varje** komponent som flyttas över från
 ## 7. Var koden finns
 
 - Ny frontend: `webui/` (se `webui/README.md` för hur man kör den lokalt).
-- Gammal frontend (referens under migreringen): `app/nicegui_dashboard/`.
+- Gammal frontend (referens under migreringen): `app/archive/nicegui_dashboard/`.
 - Backend (oförändrad): `src/api/`.

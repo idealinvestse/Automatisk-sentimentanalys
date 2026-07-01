@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.nicegui_dashboard.services.transcription_presets import (
+from app.archive.nicegui_dashboard.services.transcription_presets import (
     DEFAULT_PRESET_ID,
     apply_default_preset,
     apply_preset,
@@ -10,7 +10,7 @@ from app.nicegui_dashboard.services.transcription_presets import (
     is_recommended_preset,
     preset_options,
 )
-from app.nicegui_dashboard.services.transcription_service import (
+from app.archive.nicegui_dashboard.services.transcription_service import (
     TranscriptionState,
     create_transcription_state,
 )
@@ -43,11 +43,11 @@ def test_get_preset_api_callcenter() -> None:
 
 def test_apply_preset_updates_state(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+        "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
         tmp_path,
     )
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+        "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
         tmp_path / "transcription_queue.json",
     )
     state = TranscriptionState()
@@ -60,11 +60,11 @@ def test_apply_preset_updates_state(tmp_path, monkeypatch) -> None:
 
 def test_apply_default_preset(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+        "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
         tmp_path,
     )
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+        "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
         tmp_path / "transcription_queue.json",
     )
     state = TranscriptionState()
@@ -82,11 +82,11 @@ def test_apply_unknown_preset_returns_false() -> None:
 
 def test_create_transcription_state_applies_default_on_fresh(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.CACHE_DIR",
+        "app.archive.nicegui_dashboard.services.transcription_service.CACHE_DIR",
         tmp_path,
     )
     monkeypatch.setattr(
-        "app.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
+        "app.archive.nicegui_dashboard.services.transcription_service.QUEUE_STATE_FILE",
         tmp_path / "transcription_queue.json",
     )
     state = create_transcription_state()
