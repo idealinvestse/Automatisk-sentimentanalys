@@ -155,7 +155,23 @@ class CallAnalysisPipeline:
         segments: list[Segment],
         results: dict[str, Any],
     ) -> dict[str, Any]:
-        """Run FAS 4 enrichment steps shared by audio and segment analysis."""
+        """Run FAS 4 enrichment steps shared by audio and segment analysis.
+
+        GDPR safety: if early PII redaction failed (``results["pii_redaction"]["error"]``
+        is set), LLM enrichment is skipped to avoid leaking unredacted PII to an
+        external provider. Local Fas 4 steps (agent_performance, QA rules) still run.
+        """
+        pii_info = results.get("pii_redaction")
+        if isinstance(pii_info, dict) and pii_info.get("error"):
+            logger.warning(
+                "Skipping LLM enrichment: PII redaction failed (error=%s). "
+                "Local Fas 4 analysis continues without LLM.",
+                pii_info["error"],
+            )
+            ctx = self._llm_context()
+            ctx.use_mistral_llm = False
+            ctx.deep_analysis = False
+            return run_fas4_enrichment(segments, results, ctx)
         return run_fas4_enrichment(segments, results, self._llm_context())
 
     def _build_report(
@@ -217,7 +233,7 @@ class CallAnalysisPipeline:
                 ),
             )
 
-        if pii_log is not None and pii_log.total_redacted > 0:
+        if pii_log is not None and (pii_log.total_redacted > 0 or pii_log.error):
             results["pii_redaction"] = pii_log.model_dump()
 
         return redacted_segments, results, pii_log
@@ -410,7 +426,7 @@ class CallAnalysisPipeline:
         try:
             from .insights_aggregator import aggregate_call_reports
 
-            mistral = None
+            mistral: Any | None = None
             if self.use_mistral_llm or self.deep_analysis:
                 if self.provider == "groq":
                     from .llm.groq_analyzer import GroqAnalyzer

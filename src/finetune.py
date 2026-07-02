@@ -115,9 +115,10 @@ def train(cfg: FinetuneConfig) -> str:
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
 
     def tokenize(batch: dict[str, list[str]]) -> dict[str, Any]:
-        return tokenizer(
+        result: dict[str, Any] = tokenizer(
             batch["text"], truncation=True, max_length=cfg.max_length, padding="max_length"
         )
+        return result
 
     tokenized = dataset.map(tokenize, batched=True)
     model = AutoModelForSequenceClassification.from_pretrained(
@@ -147,7 +148,7 @@ def train(cfg: FinetuneConfig) -> str:
         per_device_train_batch_size=cfg.per_device_train_batch_size,
         per_device_eval_batch_size=cfg.per_device_eval_batch_size,
         num_train_epochs=cfg.num_train_epochs,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -160,13 +161,13 @@ def train(cfg: FinetuneConfig) -> str:
         args=args,
         train_dataset=tokenized["train"],
         eval_dataset=tokenized["validation"],
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         compute_metrics=compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=cfg.early_stopping_patience)],
     )
-    trainer.train()
+    trainer.train()  # type: ignore[attr-defined]
     os.makedirs(cfg.output_dir, exist_ok=True)
-    trainer.save_model(cfg.output_dir)
+    trainer.save_model(cfg.output_dir)  # type: ignore[attr-defined]
     tokenizer.save_pretrained(cfg.output_dir)
     return cfg.output_dir
 

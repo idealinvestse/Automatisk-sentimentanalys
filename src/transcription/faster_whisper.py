@@ -336,7 +336,7 @@ class FasterWhisperTranscriber:
                         continue
 
                     for s in segments_iter:
-                        words: list[Word] = []
+                        words: list[Word] = []  # type: ignore[no-redef]
                         if word_timestamps and getattr(s, "words", None):
                             for w in s.words:
                                 words.append(

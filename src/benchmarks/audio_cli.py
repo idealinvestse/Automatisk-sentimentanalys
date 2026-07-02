@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime
+from typing import cast
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from .audio_catalog import load_catalog
-from .audio_models import SampleFilter
+from .audio_models import SampleFilter, ScenarioId
 from .audio_runner import run_scenario
 from .audio_scenarios import SCENARIO_IDS
 
@@ -159,7 +160,7 @@ def audio_run(
         raise typer.Exit(code=1)
 
     report = run_scenario(
-        scenario,
+        cast(ScenarioId, scenario),
         audio_root=audio_root,
         pack_ids=[pack] if pack else None,
         tags=_split_csv(tags),

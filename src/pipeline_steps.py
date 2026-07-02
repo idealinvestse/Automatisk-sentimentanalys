@@ -42,8 +42,28 @@ def apply_early_pii_redaction(
     *,
     profile_name: str,
 ) -> tuple[list[Segment], Any | None]:
-    """Fas 4.4.1 early PII redaction before analyzers/LLM."""
+    """Fas 4.4.1 early PII redaction before analyzers/LLM.
+
+    GDPR safety: if the profile requires ``anonymize_before_llm`` but redaction
+    fails, the returned ``PiiRedactionLog`` will have its ``error`` field set.
+    Downstream LLM steps MUST check this and skip the LLM call to avoid
+    forwarding unredacted PII to an external provider (see Risk 5 in the debug
+    plan). Local analyzers still run on the original segments — they do not
+    send data externally.
+    """
     status = get_status_reporter()
+
+    def _profile_requires_anonymization() -> bool:
+        """Check if the profile has llm.anonymize_before_llm=True."""
+        try:
+            from .profiles import resolve_profile
+
+            _, spec = resolve_profile(profile=profile_name)
+            llm_spec = spec.get("llm", {}) or {}
+            return bool(llm_spec.get("anonymize_before_llm"))
+        except Exception:
+            return False
+
     try:
         from .llm.pii_redactor import redact_segments
 
@@ -51,7 +71,11 @@ def apply_early_pii_redaction(
         redacted_dicts, pii_log = redact_segments(
             seg_dicts, profile_name=profile_name, return_log=True
         )
-        if pii_log and pii_log.total_redacted > 0:
+        # Defensive: redact_segments should always return PiiRedactionLog when
+        # return_log=True, but guard against unexpected dict returns.
+        from .llm.schemas import PiiRedactionLog as _PiiRedactionLog
+
+        if isinstance(pii_log, _PiiRedactionLog) and pii_log.total_redacted > 0:
             logger.info(
                 "PII redaction (early): %d events, types=%s",
                 pii_log.total_redacted,
@@ -66,7 +90,31 @@ def apply_early_pii_redaction(
             segments = [Segment.from_dict(d) for d in redacted_dicts]
         return segments, pii_log
     except Exception as exc:
-        logger.debug("Early PII redaction skipped: %s", exc)
+        requires_anon = _profile_requires_anonymization()
+        if requires_anon:
+            logger.error(
+                "Early PII redaction FAILED but profile '%s' requires anonymize_before_llm. "
+                "LLM enrichment will be SKIPPED to protect PII. Error: %s",
+                profile_name,
+                exc,
+            )
+            status.warn(
+                "pipeline",
+                "pii_redact",
+                f"PII-redigering misslyckades (anonymisering krävs) — LLM hoppas över: {exc}",
+            )
+            from .llm.schemas import PiiRedactionLog
+
+            failure_log = PiiRedactionLog(
+                events=[],
+                total_redacted=0,
+                types_redacted=[],
+                applied_to_local=False,
+                profile=profile_name,
+                error=str(exc),
+            )
+            return segments, failure_log
+        logger.debug("Early PII redaction skipped (not required): %s", exc)
         status.warn("pipeline", "pii_redact", f"PII-redigering hoppades över: {exc}")
         return segments, None
 
@@ -362,7 +410,7 @@ def _run_fas4_enrichment_body(
         use_llm_qa = bool(
             ctx.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used")
         )
-        qa_analyzer = None
+        qa_analyzer: Any | None = None
         if use_llm_qa:
             if ctx.provider == "groq":
                 from .llm.groq_analyzer import GroqAnalyzer

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Any
 
 import torch
 from transformers import pipeline
@@ -92,16 +93,16 @@ class SentimentPipeline:
         normalize: bool = True,
         return_all_scores: bool | None = None,
         max_length: int | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         ras = self.return_all_scores if return_all_scores is None else return_all_scores
         ml = self.max_length if max_length is None else max_length
         # Build kwargs to control output shape without deprecated flags
-        call_kwargs = dict(batch_size=batch_size, truncation=True, max_length=ml)
+        call_kwargs: dict[str, Any] = dict(batch_size=batch_size, truncation=True, max_length=ml)
         if ras:
             # Full distribution using modern API
             call_kwargs["top_k"] = None
         try:
-            raw = self._nlp(texts, **call_kwargs)
+            raw: list[Any] = self._nlp(texts, **call_kwargs)
         except Exception as e:
             raise AnalysisError(f"Sentiment inference failed for {len(texts)} text(s): {e}") from e
 
@@ -158,7 +159,7 @@ def analyze(
     normalize: bool = True,
     return_all_scores: bool = False,
     max_length: int = 256,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Analyze texts in one call using a cached pipeline instance.
 
     Example:
@@ -189,7 +190,7 @@ def analyze_smart(
     clean: bool = True,
     lexicon_file: str | None = None,
     lexicon_weight: float | None = None,
-) -> tuple[list[dict], dict[str, str | int]]:
+) -> tuple[list[dict[str, Any]], dict[str, str | int | float | None]]:
     """Profile-aware analysis.
 
     - Resolves a profile from (profile | source | datatype)
@@ -290,7 +291,7 @@ def analyze_smart(
     return results, meta
 
 
-def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> dict:
+def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> dict[str, Any]:
     """Analyze a single text and return one result dict."""
     results = analyze([text], model_name=model_name, batch_size=1, normalize=normalize)
     if not results:

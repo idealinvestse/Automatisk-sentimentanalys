@@ -337,6 +337,60 @@ class TestCallAnalysisPipeline:
                 txt = report.segments[0].get("text", "")
                 assert "[REDACTED_PNR]" in txt or "[REDACTED_EMAIL]" in txt
 
+    def test_pii_redaction_failure_skips_llm(self, monkeypatch):
+        """Risk 5: if redaction fails AND profile requires anonymization,
+        LLM enrichment MUST be skipped to avoid leaking unredacted PII.
+
+        The pipeline should still produce a report (local analysis only) but
+        the LLM result must indicate it was skipped due to PII safety.
+        """
+        self._mock_sentiment(monkeypatch)
+        with monkeypatch.context() as m:
+            # Profile requires anonymization
+            m.setattr(
+                "src.profiles.resolve_profile",
+                lambda *a, **k: ("callcenter", {"llm": {"anonymize_before_llm": True}}),
+                raising=False,
+            )
+            # Make redact_segments fail
+            def _boom(*a, **k):
+                raise RuntimeError("redaction engine crashed")
+
+            m.setattr(
+                "src.llm.pii_redactor.redact_segments",
+                _boom,
+                raising=True,
+            )
+            # Track whether LLM holistic is called
+            m.setattr(
+                "src.pipeline_steps.run_llm_holistic",
+                lambda *a, **k: (_ for _ in ()).throw(
+                    AssertionError("LLM must NOT be called when PII redaction failed")
+                ),
+            )
+
+            p = CallAnalysisPipeline(profile="callcenter")
+            segs = [
+                {
+                    "start": 0,
+                    "end": 2,
+                    "text": "Mitt personnummer är 19850101-1234",
+                    "speaker": "C",
+                },
+                {"start": 2, "end": 5, "text": "Tack.", "speaker": "A"},
+            ]
+            report = p.analyze_segments(segs)
+
+            # Pipeline must still produce a valid report (local analysis).
+            assert isinstance(report, CallAnalysisReport)
+            # PII redaction failure must be recorded in results.
+            pii_info = report.results.get("pii_redaction")
+            assert pii_info is not None
+            assert pii_info.get("error") is not None
+            # LLM must NOT have been used.
+            llm = report.llm or {}
+            assert not llm.get("meta", {}).get("llm_used", False)
+
     def test_alerting_fas4_4_2(self, monkeypatch):
         """Fas 4.4.2: alerts triggered from results (qa + agent + sentiment), evidence and actions present."""
         self._mock_sentiment(monkeypatch)

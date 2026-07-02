@@ -125,14 +125,14 @@ def _check_api_deps(report: PreflightReport, cfg: UserConfig) -> None:
 
 def _check_secrets(report: PreflightReport, cfg: UserConfig, *, require_openrouter: bool) -> None:
     status = secret_status(cfg.resolved_app_root())
-    or_ok = status["openrouter"]["configured"]
+    or_ok = bool(status["openrouter"]["configured"])
     report.add(
         "openrouter_key",
         or_ok or not require_openrouter,
         "OPENROUTER_API_KEY set" if or_ok else "OPENROUTER_API_KEY missing (LLM disabled)",
         str(status["openrouter"]["source"]),
     )
-    hf_ok = status["huggingface"]["configured"]
+    hf_ok = bool(status["huggingface"]["configured"])
     report.add(
         "hf_token",
         True,

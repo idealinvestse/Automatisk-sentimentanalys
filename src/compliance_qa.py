@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -110,7 +111,7 @@ def load_scorecard(name_or_path: str = "standard_support_v1") -> dict[str, Any]:
             f"Scorecard not found: {name_or_path} (looked in {QA_SCORECARDS_DIR})"
         )
     with open(p, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+        data: dict[str, Any] = yaml.safe_load(f) or {}
     data["_path"] = str(p)
     return data
 
@@ -181,7 +182,7 @@ def _apply_local_signal_adjustment(
 
 def _compute_rule_based(
     criterion: dict[str, Any],
-    segments: list[dict | Segment],
+    segments: Sequence[dict[str, Any] | Segment],
     role_map: dict[str, str] | None,
 ) -> tuple[float, bool, list[str], list[EvidenceSpan]]:
     """Pure rule-based scoring. Returns (score 0-1, passed, evidence_texts, spans)."""
@@ -205,10 +206,9 @@ def _compute_rule_based(
     if criterion.get("id") == "greeting":
         first_agent = ""
         for seg in segments:
+            spk = seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", "")
             r = (
-                role_map.get(
-                    seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", ""), ""
-                )
+                role_map.get(str(spk) if spk is not None else "", "")
                 if role_map
                 else ""
             )
@@ -230,7 +230,7 @@ def _compute_rule_based(
 
 def _score_with_llm_if_needed(
     criterion: dict[str, Any],
-    segments: list[dict | Segment],
+    segments: Sequence[dict[str, Any] | Segment],
     role_map: dict[str, str] | None,
     analyzer: Any | None = None,  # ConversationMistralAnalyzer or None
     profile_name: str = "callcenter",
@@ -258,16 +258,32 @@ def _score_with_llm_if_needed(
 
     # llm or (hybrid that needs LLM): try LLM ...
     prompt_hint = criterion.get("prompt_hint") or criterion.get("description")
-    # Privacy: redact before building LLM transcript slice (honor profile + early PII rule)
-    segments_for_qa_llm = segments
+    # Privacy: redact before building LLM transcript slice (honor profile + early PII rule).
+    # GDPR safety: if redaction fails we MUST NOT forward unredacted segments
+    # to the LLM — fall back to the rule-based score instead (see Risk 4 in the
+    # debug plan). Returning here keeps the PII promise of 'redact before LLM'.
     try:
-        # Use the same redact_segments as main path (respects profile "anonymize_before_llm")
         segments_for_qa_llm = redact_segments(segments, profile_name=profile_name)
-    except Exception:
-        segments_for_qa_llm = segments
-    # Build tiny transcript slice (first + last + any frustration area) to save tokens
+    except Exception as redact_exc:
+        logger.warning(
+            "PII redaction failed for QA criterion %s; skipping LLM to avoid "
+            "leaking unredacted data: %s",
+            criterion.get("id"),
+            redact_exc,
+        )
+        rule_sc, rule_pas, rule_ev, rule_sp = _compute_rule_based(criterion, segments, role_map)
+        return rule_sc, rule_pas, rule_ev, rule_sp, False
+    # Build tiny transcript slice (first + last + any frustration area) to save tokens.
+    # ``redact_segments`` always returns list[dict], but be defensive in case a
+    # future caller passes list[Segment] and redaction is a no-op.
+    def _seg_text(s: Any) -> str:
+        return str(s.get("text", "") if isinstance(s, dict) else getattr(s, "text", ""))
+
+    def _seg_speaker(s: Any) -> str:
+        return str(s.get("speaker", "") if isinstance(s, dict) else getattr(s, "speaker", ""))
+
     transcript = "\n".join(
-        f"[{role_map.get(s.get('speaker', ''), s.get('speaker', '')) if role_map else s.get('speaker', '')}] {(s.get('text', '') if isinstance(s, dict) else getattr(s, 'text', ''))[:120]}"
+        f"[{role_map.get(_seg_speaker(s), _seg_speaker(s)) if role_map else _seg_speaker(s)}] {_seg_text(s)[:120]}"
         for s in segments_for_qa_llm[:12]  # limit
     )
 
@@ -363,7 +379,7 @@ class QAScorer:
 
     def score_conversation(
         self,
-        segments: list[dict[str, Any]] | list[Segment],
+        segments: Sequence[dict[str, Any] | Segment],
         role_map: dict[str, str] | None = None,
         local_signals: dict[str, Any] | None = None,
         profile_name: str = "callcenter",
@@ -465,7 +481,7 @@ class QAScorer:
 
 # Convenience for pipeline
 def score_call_with_default_scorecard(
-    segments: list[dict | Segment],
+    segments: Sequence[dict[str, Any] | Segment],
     role_map: dict | None = None,
     local_signals: dict | None = None,
     profile_name: str = "callcenter",

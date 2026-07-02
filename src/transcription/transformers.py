@@ -19,7 +19,7 @@ try:
 
     _HAS_TRANSFORMERS = True
 except Exception:
-    pipeline = None
+    _pipeline_fallback: Any = None
     _HAS_TRANSFORMERS = False
 
 
@@ -49,7 +49,7 @@ class TransformersTranscriber:
         )
 
         if dev_kind == "cuda":
-            pipeline_device = cuda_idx
+            pipeline_device: int | str = cuda_idx if cuda_idx is not None else 0
         elif dev_kind == "mps":
             pipeline_device = "mps"
         else:
@@ -64,7 +64,8 @@ class TransformersTranscriber:
             pipeline_kwargs["revision"] = revision
 
         try:
-            self._pipeline = pipeline(**pipeline_kwargs)
+            _pipeline_fn = pipeline if _HAS_TRANSFORMERS else _pipeline_fallback
+            self._pipeline = _pipeline_fn(**pipeline_kwargs)
             logger.debug("Transformers ASR pipeline created successfully")
             return self._pipeline
         except Exception as e:
@@ -189,7 +190,8 @@ class TransformersTranscriber:
                     )
             else:
                 # Single segment fallback
-                text_val = (out.get("text") if isinstance(out, dict) else str(out)).strip()
+                raw_text = out.get("text") if isinstance(out, dict) else str(out)
+                text_val = str(raw_text or "").strip()
                 segs.append(
                     Segment(
                         start=0.0,

@@ -396,7 +396,7 @@ def main() -> None:
 
     def _entry(
         backend: Annotated[
-            list[str],
+            list[str] | None,
             typer.Option(help="faster | whisperx | transformers"),
         ] = None,
         model: Annotated[str, typer.Option("--model", "-m")] = "kb-whisper-large",

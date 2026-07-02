@@ -29,7 +29,8 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, Literal, overload
 
 from .schemas import PiiRedactionEvent, PiiRedactionLog
 
@@ -339,11 +340,30 @@ def redact_pii(
     return result, events
 
 
+@overload
 def redact_segments(
-    segments: list[dict[str, Any]] | list[Any],
+    segments: Sequence[dict[str, Any] | Any],
+    profile_name: str = ...,
+    *,
+    return_log: Literal[True],
+) -> tuple[list[dict[str, Any]], PiiRedactionLog]: ...
+
+
+@overload
+def redact_segments(
+    segments: Sequence[dict[str, Any] | Any],
+    profile_name: str = ...,
+    return_log: Literal[False] = ...,
+) -> list[dict[str, Any]]: ...
+
+
+def redact_segments(
+    segments: Sequence[dict[str, Any] | Any],
     profile_name: str = "callcenter",
     return_log: bool = False,
 ) -> tuple[list[dict[str, Any]], PiiRedactionLog] | list[dict[str, Any]]:
+    # The overloads above give precise return types for mypy; this body
+    # signature keeps the runtime-compatible union for dynamic callers.
     """Redact PII in segments list (early pipeline for Fas 4.4.1).
 
     If profile llm.anonymize_before_llm is True:
@@ -357,6 +377,15 @@ def redact_segments(
     Supports input as list[dict] or list[Segment]. Always returns list[dict].
     """
     applied = False  # noqa: F841 — kept for clarity/logging hooks
+    # Normalize input to list[dict] for consistent processing and return type.
+    seg_list: list[dict[str, Any]] = []
+    for s in segments:
+        if isinstance(s, dict):
+            seg_list.append(s)
+        elif hasattr(s, "to_dict"):
+            seg_list.append(s.to_dict())  # type: ignore[union-attr]
+        else:
+            seg_list.append(dict(getattr(s, "__dict__", {})))
     try:
         from ..profiles import resolve_profile
 
@@ -371,8 +400,8 @@ def redact_segments(
                     applied_to_local=False,
                     profile=profile_name,
                 )
-                return segments, log
-            return segments
+                return seg_list, log
+            return seg_list
     except Exception:
         if return_log:
             log = PiiRedactionLog(
@@ -382,8 +411,8 @@ def redact_segments(
                 applied_to_local=False,
                 profile=profile_name,
             )
-            return segments, log
-        return segments
+            return seg_list, log
+        return seg_list
 
     redacted_list: list[dict[str, Any]] = []
     all_events: list[dict[str, Any]] = []
@@ -401,14 +430,8 @@ def redact_segments(
     except Exception:
         ner_pipeline = None  # regex + heuristic only
 
-    for idx, seg in enumerate(segments):
-        if isinstance(seg, dict):
-            new_seg = dict(seg)
-        else:
-            if hasattr(seg, "to_dict"):
-                new_seg = seg.to_dict()
-            else:
-                new_seg = dict(getattr(seg, "__dict__", {}))
+    for idx, seg in enumerate(seg_list):
+        new_seg = dict(seg)
 
         original_text = new_seg.get("text", "") if isinstance(new_seg.get("text"), str) else ""
         if original_text:

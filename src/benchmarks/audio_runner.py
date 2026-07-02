@@ -252,7 +252,7 @@ def run_scenario(
                     sentiment_pairs.append((sample.expected_sentiment, pred))
 
             elif scenario == "pipeline":
-                ok, transcript = _run_pipeline_on_sample(
+                ok, pipeline_transcript = _run_pipeline_on_sample(
                     sample.path,
                     backend=backend,
                     device=device,
@@ -260,10 +260,10 @@ def run_scenario(
                 )
                 result.pipeline_ok = ok
                 result.ok = ok
-                result.transcript_preview = _preview_text(transcript or "")
+                result.transcript_preview = _preview_text(pipeline_transcript or "")
                 if ok:
                     pipeline_ok_count += 1
-                    pred = _run_sentiment_on_text(transcript or "", device=device)
+                    pred = _run_sentiment_on_text(pipeline_transcript or "", device=device)
                     result.sentiment_pred = pred
                     sentiment_pairs.append((sample.expected_sentiment, pred))
             else:

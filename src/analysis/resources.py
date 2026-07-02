@@ -6,7 +6,9 @@ import logging
 import os
 import threading
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
+
+import torch
 
 from ..core.device import normalize_device_spec
 from ..intent import IntentClassifier
@@ -33,7 +35,7 @@ class ModelResourcePool:
     def _get_or_create(self, key: tuple[str, ...], factory: Callable[[], T]) -> T:
         with self._lock:
             if key in self._cache:
-                return self._cache[key]
+                return cast(T, self._cache[key])
             if len(self._cache) >= self._maxsize:
                 oldest = next(iter(self._cache))
                 del self._cache[oldest]
@@ -46,7 +48,7 @@ class ModelResourcePool:
     def get_sentiment_pipeline(
         self,
         model_name: str,
-        device: str | None = None,
+        device: int | str | torch.device | None = None,
         return_all_scores: bool = False,
     ) -> SentimentPipeline:
         device_arg, device_key = normalize_device_spec(device or "auto")

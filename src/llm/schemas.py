@@ -612,6 +612,11 @@ class PiiRedactionLog(BaseModel):
         description="Whether redaction affected local analyzers (sentiment, role, etc) and not only LLM.",
     )
     profile: str = "default"
+    error: str | None = Field(
+        default=None,
+        description="Set when redaction was required but failed. Downstream LLM steps MUST "
+        "skip when this is non-None to avoid leaking unredacted PII (GDPR safety).",
+    )
     timestamp: str = Field(
         default_factory=lambda: __import__("datetime")
         .datetime.now(__import__("datetime").timezone.utc)

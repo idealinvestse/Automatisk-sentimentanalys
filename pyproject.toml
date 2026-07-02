@@ -99,6 +99,8 @@ dev = [
     # back to a constant "neutral" label and callcenter golden tests fail.
     "sentencepiece>=0.1.99",
     "protobuf>=3.20.0",
+    # Type stubs for mypy (yaml is used in compliance_qa, alerting, finetune, etc.)
+    "types-PyYAML>=6.0.0",
 ]
 diarize = [
     "pyannote.audio>=3.1.0",

@@ -52,6 +52,7 @@ def _light_analyze(req: AnalyzeConversationRequest) -> AnalyzeConversationRespon
         segment_sentiments=seg_out,
         meta=meta,
         timestamp=utc_now_iso(),
+        pipeline_results=None,
     )
 
 
@@ -131,6 +132,7 @@ def _scan_to_conversation_request(req: Any, audio_path: str) -> AnalyzeConversat
         sentiment_model=req.sentiment_model,
         lexicon_file=req.lexicon_file,
         lexicon_weight=req.lexicon_weight,
+        return_all_scores=getattr(req, "return_all_scores", True),
     )
 
 

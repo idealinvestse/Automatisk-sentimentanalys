@@ -74,5 +74,5 @@ class SentimentAnalyzer(Analyzer):
                         {"label": "positiv", "score": 0.0},
                     ]
                     for _ in texts
-                ]
+                ]  # type: ignore[return-value]
             return [{"label": fallback_label, "score": 0.0} for _ in texts]

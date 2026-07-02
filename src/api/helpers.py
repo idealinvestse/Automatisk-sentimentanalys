@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from ..transcription import get_transcriber
 from ..transcription.factory import resolve_preprocess_mode
@@ -11,8 +11,32 @@ from ..transcription.factory import resolve_preprocess_mode
 logger = logging.getLogger(__name__)
 
 
+@runtime_checkable
+class AsrRequest(Protocol):
+    """Structural type matching :class:`~src.api.schemas.AsrParamsMixin`.
+
+    Using a Protocol lets mypy verify attribute access on request models
+    without coupling this helper to a specific Pydantic class. All request
+    models that mix in ``AsrParamsMixin`` satisfy this protocol.
+    """
+
+    model: str
+    backend: str
+    device: str
+    language: str
+    beam_size: int
+    vad: bool
+    chunk_length_s: int
+    revision: str | None
+    diarize: bool
+    num_speakers: int | None
+    # Optional on some request models — accessed via getattr with defaults.
+    hotwords: list[str] | None
+    initial_prompt: str | None
+
+
 def asr_kwargs_from(
-    req: object,
+    req: AsrRequest,
     *,
     audio_path: str | None = None,
     word_timestamps: bool | None = None,

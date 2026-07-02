@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+from collections.abc import Sequence
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -297,7 +298,7 @@ def _hash_texts(texts: list[str]) -> str:
 
 # Pipeline convenience
 def build_semantic_index_from_reports(
-    reports: list[CallAnalysisReport | dict],
+    reports: Sequence[CallAnalysisReport | dict[str, Any]],
 ) -> SemanticSearchEngine:
     """Helper to build a search index directly from Fas4 reports (used by pipeline)."""
     engine = SemanticSearchEngine()
