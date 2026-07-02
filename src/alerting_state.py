@@ -59,33 +59,33 @@ class AlertingStateManager:
 
     def record_failure(self, threshold: int = 5) -> dict[str, Any]:
         with self._lock:
-            data = self._read()
+            data: dict[str, Any] = self._read()
             failures = int(data.get("consecutive_failures", 0)) + 1
             data["consecutive_failures"] = failures
             if failures >= threshold:
                 data["circuit_breaker_open"] = True
             self._write(data)
-            result = dict(data)
+            result: dict[str, Any] = dict(data)
             result["path"] = str(self.path)
         self._update_prometheus_metrics()
         return result
 
     def record_success(self) -> dict[str, Any]:
         with self._lock:
-            data = self._read()
+            data: dict[str, Any] = self._read()
             data["consecutive_failures"] = 0
             data["circuit_breaker_open"] = False
             self._write(data)
-            result = dict(data)
+            result: dict[str, Any] = dict(data)
             result["path"] = str(self.path)
         self._update_prometheus_metrics()
         return result
 
     def reset(self) -> dict[str, Any]:
         with self._lock:
-            data = {"consecutive_failures": 0, "circuit_breaker_open": False}
+            data: dict[str, Any] = {"consecutive_failures": 0, "circuit_breaker_open": False}
             self._write(data)
-            result = dict(data)
+            result: dict[str, Any] = dict(data)
             result["path"] = str(self.path)
         self._update_prometheus_metrics()
         return result

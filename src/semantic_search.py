@@ -140,7 +140,7 @@ class SemanticSearchEngine:
         self.docs: list[dict[str, Any]] = []
         self.embeddings: list[list[float]] | None = None
         self.use_faiss = use_faiss and FAISS_AVAILABLE
-        self._faiss_index = None
+        self._faiss_index: Any = None
         self._embed_cache: dict[str, list[float]] = {}
 
     def _embed(self, texts: list[str]) -> list[list[float]] | None:
@@ -151,7 +151,8 @@ class SemanticSearchEngine:
         if key in self._embed_cache:
             return [self._embed_cache[key]] * len(texts)  # simplistic; real would per-text
         try:
-            embs = model.encode(texts, show_progress_bar=False, normalize_embeddings=True).tolist()
+            embs_raw = model.encode(texts, show_progress_bar=False, normalize_embeddings=True).tolist()
+            embs: list[list[float]] = [list(map(float, row)) for row in embs_raw]
             for t, e in zip(texts, embs, strict=False):
                 self._embed_cache[_hash_texts([t])] = e
             return embs
@@ -162,21 +163,22 @@ class SemanticSearchEngine:
         self,
         items: list[dict[str, Any]],
         id_field: str = "id",
-        text_fields: list[str] = ("text", "summary", "insights"),
+        text_fields: Sequence[str] = ("text", "summary", "insights"),
     ) -> None:
         """Index a list of documents. Each item should have text-ish fields + metadata."""
         self.docs = []
         texts_for_embed: list[str] = []
         for item in items:
-            doc = {
+            doc_text = " ".join(str(item.get(f, "")) for f in text_fields if item.get(f))
+            doc: dict[str, Any] = {
                 "id": str(item.get(id_field, len(self.docs))),
-                "text": " ".join(str(item.get(f, "")) for f in text_fields if item.get(f)),
+                "text": doc_text,
                 "metadata": {
                     k: v for k, v in item.items() if k not in list(text_fields) + [id_field]
                 },
             }
             self.docs.append(doc)
-            texts_for_embed.append(doc["text"][:2000])
+            texts_for_embed.append(doc_text[:2000])
 
         self.embeddings = self._embed(texts_for_embed)
 

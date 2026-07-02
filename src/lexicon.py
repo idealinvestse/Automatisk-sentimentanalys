@@ -193,7 +193,7 @@ def blend_results_with_lexicon(
         for idx, (text, result) in enumerate(zip(texts, results, strict=False)):
             if full_distribution:
                 scores: dict[str, float] = {
-                    entry.get("label"): float(entry.get("score", 0.0) or 0.0)
+                    str(entry.get("label")): float(entry.get("score", 0.0) or 0.0)
                     for entry in result
                     if isinstance(entry, dict)
                     and entry.get("label") in {"negativ", "neutral", "positiv"}

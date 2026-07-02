@@ -46,9 +46,11 @@ class EvidenceSpan(BaseModel):
 
     text: str = Field(..., description="The exact quote or close paraphrase from the transcript.")
     speaker_role: str | None = Field(
-        None, description="agent | customer | unknown (if known from role inference)"
+        default=None, description="agent | customer | unknown (if known from role inference)"
     )
-    turn_index: int | None = Field(None, description="0-based turn number in the conversation.")
+    turn_index: int | None = Field(
+        default=None, description="0-based turn number in the conversation."
+    )
 
 
 class EmotionTrajectoryPoint(BaseModel):

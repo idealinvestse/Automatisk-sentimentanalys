@@ -37,7 +37,7 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class AggregateCache:
             data = self.redis_client.get(key)
             if data:
                 try:
-                    val = json.loads(data)
+                    val = cast(dict[str, Any], json.loads(data))
                     if self._is_valid(val):
                         logger.debug("Aggregate cache HIT (redis): %s", key)
                         record_cache_operation("get", "hit")
@@ -107,7 +107,7 @@ class AggregateCache:
         if path.exists():
             try:
                 with open(path, encoding="utf-8") as f:
-                    val = json.load(f)
+                    val = cast(dict[str, Any], json.load(f))
                 if self._is_valid(val):
                     logger.debug("Aggregate cache HIT (file): %s", key)
                     record_cache_operation("get", "hit")
@@ -123,7 +123,7 @@ class AggregateCache:
         try:
             computed = datetime.fromisoformat(val["computed_at"])
             ttl = val.get("ttl", self.default_ttl)
-            return (datetime.now() - computed).total_seconds() < ttl
+            return bool((datetime.now() - computed).total_seconds() < ttl)
         except Exception:
             return True
 

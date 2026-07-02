@@ -234,17 +234,17 @@ def _compare(left: Any, op: str, right: Any) -> bool:
         return left_cmp in right_cmp
     left, right = _coerce_for_compare(left, right)
     if op == "==":
-        return left == right
+        return bool(left == right)
     if op == "!=":
-        return left != right
+        return bool(left != right)
     if op == "<":
-        return left < right
+        return bool(left < right)
     if op == ">":
-        return left > right
+        return bool(left > right)
     if op == "<=":
-        return left <= right
+        return bool(left <= right)
     if op == ">=":
-        return left >= right
+        return bool(left >= right)
     raise ValueError(f"Unknown operator {op}")
 
 

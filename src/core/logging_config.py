@@ -65,10 +65,10 @@ class _ContextLoggerAdapter(logging.LoggerAdapter):
     """Logger adapter that injects live ContextVar values on each log call."""
 
     def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
-        extra = dict(kwargs.get("extra") or {})
+        extra: dict[str, Any] = dict(kwargs.get("extra") or {})
         for key, value in _context_payload().items():
             extra.setdefault(key, value)
-        adapter_extra = self.extra or {}
+        adapter_extra: dict[str, Any] = dict(self.extra or {})
         for key, value in adapter_extra.items():
             if value is not None:
                 extra[key] = value

@@ -126,7 +126,7 @@ def get_secret(kind: SecretKind, app_root: Path | None = None) -> str | None:
 
         stored = keyring.get_password(SERVICE_NAME, env_name)
         if stored and stored.strip():
-            return stored.strip()
+            return str(stored.strip())
 
     file_val = _read_user_secret_file(kind, app_root)
     if file_val:

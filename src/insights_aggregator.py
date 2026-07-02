@@ -120,7 +120,7 @@ def _embed_texts(texts: list[str]) -> list[list[float]] | None:
         return None
     try:
         embeddings = model.encode(texts, show_progress_bar=False, normalize_embeddings=True)
-        return embeddings.tolist()
+        return [list(map(float, row)) for row in embeddings.tolist()]
     except Exception as e:
         logger.warning("Embedding failed: %s", e)
         return None
@@ -132,6 +132,7 @@ def _cluster_embeddings(embeddings: list[list[float]]) -> list[int] | None:
     try:
         clusterer = hdbscan.HDBSCAN(min_cluster_size=2, metric="euclidean")
         labels = clusterer.fit_predict(embeddings)
+        return [int(x) for x in labels]
         return labels.tolist()
     except Exception as e:
         logger.warning("HDBSCAN clustering failed: %s", e)

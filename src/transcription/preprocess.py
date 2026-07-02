@@ -111,7 +111,8 @@ def _numpy_to_wav(audio: np.ndarray, output_path: str, sr: int = 16000) -> None:
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     proc.communicate(input=audio.astype(np.float32).tobytes())
     if proc.returncode != 0:
-        raise RuntimeError(f"Failed to encode WAV with ffmpeg: {proc.stderr.read().decode()}")
+        stderr_msg = proc.stderr.read().decode() if proc.stderr else "unknown error"
+        raise RuntimeError(f"Failed to encode WAV with ffmpeg: {stderr_msg}")
 
 
 def _cleanup_paths(paths: list[str], *, exclude: str) -> None:

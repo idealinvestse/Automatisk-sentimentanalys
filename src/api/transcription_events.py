@@ -72,7 +72,7 @@ class TranscriptionEventHub:
             return True
         if not event_job:
             return event.get("type") in ("connected", "pong", "subscribed")
-        return event_job == conn.job_id
+        return bool(event_job == conn.job_id)
 
     async def _broadcast(self, event: dict[str, Any]) -> None:
         async with self._lock:

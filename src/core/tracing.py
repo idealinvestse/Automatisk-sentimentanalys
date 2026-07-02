@@ -28,10 +28,10 @@ def init_tracing(service_name: str | None = None) -> None:
         return
 
     name = service_name or os.getenv("OTEL_SERVICE_NAME", "sentiment-api")
-    provider = TracerProvider(resource=Resource.create({"service.name": name}))
+    provider = TracerProvider(resource=Resource.create({"service.name": str(name)}))
     provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
     trace.set_tracer_provider(provider)
-    _tracer = trace.get_tracer(name)
+    _tracer = trace.get_tracer(str(name))
 
 
 @contextmanager

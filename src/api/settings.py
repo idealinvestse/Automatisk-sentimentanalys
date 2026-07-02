@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ def validate_production_settings(settings: APISettings) -> None:
         )
 
 
-def _runtime_api_defaults() -> dict[str, object]:
+def _runtime_api_defaults() -> dict[str, Any]:
     """Fallback to user_config.yaml when env vars are unset (launcher-managed)."""
     try:
         from ..install.user_config import load_user_config
@@ -92,7 +93,7 @@ def get_api_settings() -> APISettings:
         use_redis_cache=_env_bool("API_USE_REDIS_CACHE", bool(defaults.get("use_redis_cache"))),
         redis_url=os.getenv("REDIS_URL") or defaults.get("redis_url"),
         cache_dir=os.getenv("API_CACHE_DIR", ".cache/aggregates"),
-        state_dir=os.getenv("API_STATE_DIR") or os.getenv("API_CACHE_DIR", ".cache/aggregates"),
+        state_dir=os.getenv("API_STATE_DIR") or os.getenv("API_CACHE_DIR", ".cache/aggregates") or ".cache/aggregates",
         rate_limit_rpm=rate_limit,
         trusted_proxy=_env_bool("API_TRUSTED_PROXY"),
         production=_env_bool("API_PRODUCTION"),
