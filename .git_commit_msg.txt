@@ -1,28 +1,16 @@
-feat: Edge AI REST API + webui /edge page (Spår C.3)
+docs: verify production checklist + add .env.example + prometheus config (Spår D.3)
 
-Backend:
-- New FastAPI router src/api/routers/edge.py with POST /edge/analyze-text
-  and POST /edge/analyze-segments exposing src/edge/local_inference.py
-  (offline sentiment + heuristic intent + PII redaction) over REST
-- Registered in src/api/app.py with auth dependencies
-- 5 new API tests (happy path mocked, validation, openapi paths)
+- New .env.example with all 25+ environment variables documented
+  (LLM keys, API security, production guards, caching, observability, status)
+- New docs/examples/prometheus.yml scrape config with bearer-token guidance
+- Updated docs/PRODUCTION_CHECKLIST.md with verified status per item
+  (15 PASS, 4 FAIL, 1 PARTIAL) including file:line evidence references
+- Added backup guide with data paths, frequency, and example commands
+- Documented remaining gaps: PII default (anonymize_before_llm=False),
+  GPU verification on real host, automated backup script
+- Updated CHANGELOG.md and PROJECT_ASSESSMENT_2026-07.md (Spår D.3 complete)
 
-Frontend (webui):
-- New /edge route with text/segments input mode toggle
-- Result view: sentiment + intent per segment, offline badge,
-  limitations list, summary
-- Edge types (EdgeSegmentResult, EdgeAnalysisResult) + API client
-  methods (edgeAnalyzeText, edgeAnalyzeSegments)
-- Cpu nav icon + e2e smoke test for /edge
-
-Docs:
-- docs/EDGE_AI.md: added REST API section
-- docs/WEBUI_MODERNIZATION_PLAN.md: /edge route in routing table
-- CHANGELOG.md, PROJECT_ASSESSMENT: Spår C.3 marked complete
-
-Verified: ruff 0 errors, pytest 5/5 edge tests pass,
-npm run lint (0 errors), npm run build (clean, /edge route generated),
-Playwright smoke 9/9 routes pass.
+Verified: ruff 0 errors, pytest 19/19 api-smoke tests pass.
 
 Generated with [Devin](https://devin.ai)
 
