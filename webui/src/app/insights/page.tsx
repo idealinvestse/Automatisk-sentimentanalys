@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
+import { AlertsPanel } from "@/components/alerts-panel";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { useHotTopics } from "@/hooks/use-hot-topics";
 import type { HotTopicItem } from "@/lib/api/client";
@@ -105,6 +106,8 @@ export default function InsightsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertsPanel />
     </div>
   );
 }

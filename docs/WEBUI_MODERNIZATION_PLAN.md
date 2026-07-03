@@ -119,17 +119,21 @@ Fas 0 – resten läggs till i samband med att respektive vy migreras.
 ### Fas 2 – Djupdykningsvyer — klar (riktig data)
 - [x] `/insights` (Fas 4 Insikter): hot topics-lista med volym/trend/sentiment,
       hämtad från den riktiga Fas 4-endpointen `POST /insights/hot_topics`.
+      **Larmpanel** (`AlertsPanel`) visar alla strukturerade alerts från
+      pipeline-resultaten med severity-filter, rekommenderade åtgärder,
+      beviscitat och webhook/circuit breaker-status från `GET /alerting/status`.
       Wordcloud och "advanced insights" (`hot_topic_wordcloud.py`,
       `advanced_insights.py`) är inte migrerade än.
 - [x] `/calls/[id]` Samtalsdetalj: transkript, känslotidslinje (recharts),
       QA & Compliance-scorecard (kriterier, progress, compliance-flaggor),
-      beviscitat. `EmptyState` för samtal utan djupdykningsdata i mockdatat,
+      beviscitat, **per-call larmsektion** (`CallAlertsSection`) och
+      **LLM Judge-panel** (`LlmJudgePanel`) — alla med riktig data från
+      `/analyze_pipeline`-svaret (`results.alerts`, `results.llm_judge`,
+      `results.qa`). `EmptyState` för samtal utan djupdykningsdata,
       404 för okänt call-id.
 - [ ] Virtuell transkriptvy för långa samtal (`virtual_transcript.py` →
       `@tanstack/react-virtual`) — nuvarande transkript-lista är inte
       virtualiserad (ok för demo-datats korta samtal).
-- [ ] LLM judge panel/breakdown (`llm_judge_panel.py`, `llm_judge_breakdown.py`).
-- [ ] Larmpanel (`alerts_panel.py`, `call_alerts_section.py`) i header + egen vy.
 
 **QA-process etablerad i Fas 1/2 (återanvänd för alla kommande faser):**
 Playwright MCP mot lokal `npm run dev`-server, per migrerad sida:

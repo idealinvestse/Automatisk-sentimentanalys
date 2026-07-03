@@ -1,6 +1,6 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad samma dag efter triage av testfynd, se §7, och efter webui-datacutover, se §3.2/Spår B.1)
+**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår B.2 — larm/LLM judge-paneler migrerade)
 **Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
@@ -63,7 +63,7 @@ Detta är ett **ovanligt moget och välarkitekterat open-source-projekt** för s
 ### 3.2 🟡 Pågående frontend-duplicering
 Två parallella UI:er existerar samtidigt: den ärvda NiceGUI-dashboarden (`app/archive/nicegui_dashboard/`, ~25 komponenter, trots att den ligger i en mapp som heter `archive/`) och den nya Next.js-appen (`webui/`). **Uppdatering 2026-07-01:** webui kör nu på **riktig data** för alla fyra kärnvyer (`/`, `/analytics`, `/agents`, `/insights`) via `useDemoReports` + `useAgentPerformance` + `useHotTopics` — sentiment, QA, risk, empati och hot topics beräknas live av `CallAnalysisPipeline` på de kanoniska demo-transkripten. Kvarstående risker:
 - Namnet `archive/` signalerar att den gamla dashboarden är avvecklad, men den är fortfarande en fullständig referensimplementation — detta kan vilseleda nya bidragsgivare/agenter.
-- Ej migrerat: virtualiserad transkriptvy, LLM judge-panel, larmpanel i header, wordcloud/avancerade insikter. Dessa är inte kosmetiska — larmpanelen och LLM judge-panelen är operativt viktiga för QA-användningsfallet.
+- Ej migrerat: virtualiserad transkriptvy, wordcloud/avancerade insikter. Larmpanel och LLM judge-panel är nu migrerade (B.2 klart 2026-07-03). Återstående oför migrerade komponenter är kosmetiska eller prestandarelaterade (virtualisering), inte operativt kritiska.
 - Två kodbaser att underhålla samtidigt ökar risken för att buggfixar bara görs på ena sidan.
 - **Pipeline-latens:** `POST /analyze_pipeline` tar 30–60s per demo-samtal på CPU. API-klienten har nu en per-anrop-timeout på 180s för pipeline/agent_performance/hot_topics-anrop (default är 30s), och React Query cachar varje anrop i 5 min så navigering mellan vyer inte utlöser omkörningar.
 
@@ -101,7 +101,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 
 ### Spår B — Konsolidera (minska dubbel yta, störst DX-vinst)
 1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** ✅ **Klart 2026-07-01:** Byt mockdata mot riktig `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights`. Alla fyra kärnvyer hämtar nu riktig data från backend-pipelinen via React Query-hooks (`useDemoReports`, `useAgentPerformance`, `useHotTopics`). Detta var den enda blockeraren för att kunna säga "webui är primär" på riktigt — webui är nu den primära dashboarden för demo-data.
-2. **Migrera larmpanel och LLM judge-panel** (operativt kritiska för QA-arbetsflödet) innan ytterligare kosmetisk polish på redan migrerade vyer — dessa två saknas fortfarande enligt egen Fas 2-status.
+2. **Migrera larmpanel och LLM judge-panel** ✅ **Klart 2026-07-03:** Larmpanel (`AlertsPanel`) och per-call larmsektion (`CallAlertsSection`) migrerade till webui med riktig data från `results.alerts` i pipeline-svaret. LLM Judge-panel (`LlmJudgePanel`) migrerad till `/calls/[id]` med data från `results.llm_judge`. Webhook/circuit breaker-status hämtas från `GET /alerting/status`. `/calls/[id]` omskriven till att använda `useDemoReports` + `buildCallDetail` istället för `MOCK_CALL_DETAILS` — alla fyra kärnvyer + detaljvy använder nu uteslutande riktig pipeline-data.
 3. **Byt namn eller arkivera på riktigt**: antingen döp om `app/archive/nicegui_dashboard/` till något som signalerar "fortfarande i drift tills webui X är klar" (t.ex. behåll namnet men lägg en README-varningsbanner), eller sätt upp en definitiv avstängningsplan så det inte blir en tredje permanent UI.
 4. **Virtualisera transkriptvyn** (`@tanstack/react-virtual`) innan verkliga (långa) samtal används i produktion — nuvarande icke-virtualiserade lista fungerar bara för korta demo-samtal.
 
@@ -124,8 +124,9 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 ```
 [✅ Spår A klart 2026-07-01: 0 failande tester (882 gröna/2 skippade av 884), ruff 0 fel]
 [✅ Spår B.1 klart 2026-07-01: webui kör riktig data för /, /analytics, /agents, /insights]
-  → B.2 (larm/LLM-judge-paneler) ──→ B.3 (arkivbeslut NiceGUI)
-  → C.2 (Executive Insights ovanpå riktig data) — nu upplåst via B.1
+[✅ Spår B.2 klart 2026-07-03: larmpanel + LLM judge-panel + /calls/[id] med riktig data]
+  → B.3 (arkivbeslut NiceGUI) ──→ B.4 (virtualiserad transkriptvy)
+  → C.2 (Executive Insights ovanpå riktig data) — nu upplåst via B.1+B.2
     → B.3 (arkivbeslut NiceGUI) → B.4 (virtualiserad transkriptvy)
       → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
         → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)

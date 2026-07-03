@@ -1,22 +1,37 @@
-feat(webui): replace mockdata with real backend pipeline data (Spår B.1)
+feat(webui): migrate alerts panel + LLM judge panel to Next.js (Spår B.2)
 
-Alla fyra kärnvyer (/, /analytics, /agents, /insights) hämtar nu sentiment,
-QA, risk, empati och hot topics från den riktiga CallAnalysisPipeline via
-React Query-hooks (useDemoReports, useAgentPerformance, useHotTopics).
+Migrerar de operativt kritiska larm- och LLM judge-komponenterna från
+NiceGUI till webui, med riktig data från pipeline-resultaten.
 
-- Ny: demo-transcripts.ts, real-data.ts, use-demo-reports.ts,
-  use-agent-performance.ts, use-hot-topics.ts
-- API-klienten får per-anrop-timeout (180s för pipeline/aggregate-anrop)
-  eftersom POST /analyze_pipeline tar 30–60s per demo-samtal på CPU
-- React Query cachar varje anrop i 5 min så navigering mellan vyer
-  inte utlöser omkörningar av pipelinen
-- Endast själva samtalen (transkripten) är syntetisk demo-data; alla
-  analyserade värden beräknas live av backend
-- Dokumentation uppdaterad: WEBUI_MODERNIZATION_PLAN Fas 1/2 markerade
-  som "riktig data", PROJECT_ASSESSMENT Spår B.1 markerad som klart
+Nya komponenter:
+- alerts-panel.tsx: aggregerad larmpanel med severity-filter,
+  rekommenderade åtgärder, beviscitat och webhook/circuit breaker-status
+  (GET /alerting/status + POST /alerting/reset-circuit-breaker)
+- call-alerts-section.tsx: kompakt per-call larmsektion för /calls/[id]
+- llm-judge-panel.tsx: LLM judge-verdicts med original/judge-jämförelse,
+  confidence-färgkodning, motiveringar och "endast ändrade"-filter
 
-Verifierat med Playwright mot levande backend: alla 4 vyer renderar
-korrekt, 0 konsol-fel, npm run lint (0 fel) + npm run build (9 routes).
+Nya hooks:
+- use-alerts.ts: samlar alerts från useDemoReports (results.alerts)
+- use-alerting-status.ts: webhook/circuit breaker-status + reset-mutation
+
+API-klient:
+- Typade AlertingStatusResponse och AlertsResponse
+- resetCircuitBreaker() och getAlerts() metoder tillagda
+- PipelineReport utökad med alerts/llm_judge/risks/insights-fält
+
+real-data.ts:
+- AlertItem, LlmJudgeVerdict, LlmJudgeResult, CallQa, QaCriterion-typer
+- extractAlerts(), collectAllAlerts(), extractLlmJudge(),
+  extractQa(), extractEmotionTimeline(), buildCallDetail()
+- /calls/[id] omskriven till useDemoReports + buildCallDetail
+  (ersätter MOCK_CALL_DETAILS helt)
+
+Verifierat med Playwright:
+- /insights: 5 larm (qa_failed_high_risk) med severity, åtgärder, bevis
+- /calls/CALL-001: transkript, QA-scorecard, känslotidslinje, larm,
+  LLM Judge-panel — all riktig data, 0 konsol-fel
+- npm run lint (0 fel) + npm run build (9 routes gröna)
 
 Generated with [Devin](https://devin.ai)
 

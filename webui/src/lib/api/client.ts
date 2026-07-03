@@ -13,12 +13,18 @@ export interface PipelineReport {
   sentiment_results?: { label?: string; score?: number }[];
   results?: {
     qa?: { overall_qa_score?: number | null; [key: string]: unknown };
+    alerts?: Record<string, unknown>[];
+    llm_judge?: Record<string, unknown>;
     [key: string]: unknown;
   };
   llm?: {
     actionable_summary?: { problem?: string; [key: string]: unknown };
+    judge_verdicts?: unknown;
     [key: string]: unknown;
   };
+  llm_judge?: Record<string, unknown>;
+  risks?: Record<string, unknown>;
+  insights?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -52,6 +58,25 @@ export interface HotTopicItem {
 export interface HotTopicsResponse {
   hot_topics: HotTopicItem[];
   meta: Record<string, unknown>;
+  timestamp: string;
+}
+
+/** Response shape of GET /alerting/status (webhook + circuit breaker health). */
+export interface AlertingStatusResponse {
+  ok?: boolean;
+  webhook?: {
+    circuit_breaker_open?: boolean;
+    consecutive_failures?: number;
+    circuit_breaker_threshold?: number;
+    [key: string]: unknown;
+  };
+  note?: string;
+  [key: string]: unknown;
+}
+
+/** Response shape of POST /alerts (Fas 4.4.2 + 4.5.2). */
+export interface AlertsResponse {
+  alerts: Record<string, unknown>[];
   timestamp: string;
 }
 
@@ -194,8 +219,31 @@ export class ApiClient {
     );
   }
 
-  getAlertingStatus<T = unknown>() {
+  getAlertingStatus<T = AlertingStatusResponse>() {
     return this.get<T>("/alerting/status");
+  }
+
+  /** Manually reset the webhook circuit breaker (POST /alerting/reset-circuit-breaker). */
+  resetCircuitBreaker<T = AlertingStatusResponse>() {
+    return this.post<T>("/alerting/reset-circuit-breaker", {});
+  }
+
+  /** Get alerts from per-call results or aggregate trends (POST /alerts, Fas 4). */
+  getAlerts<T = AlertsResponse>(
+    segmentsList: unknown[][] | null = null,
+    aggregate: Record<string, unknown> | null = null,
+    options: Record<string, unknown> = {},
+  ) {
+    return this.post<T>(
+      "/alerts",
+      {
+        segments_list: segmentsList,
+        aggregate,
+        profile: "callcenter",
+        ...options,
+      },
+      180_000,
+    );
   }
 
   getProcessEvents<T = unknown>(params: { limit?: number; job_id?: string; component?: string; level?: string } = {}) {
