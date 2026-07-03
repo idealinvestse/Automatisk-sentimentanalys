@@ -11,9 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
+import { ModelRoutingCard } from "@/components/model-routing-card";
 import { apiClient, ApiError, type PipelineReport } from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { useHealth } from "@/hooks/use-health";
+import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
 
 const EXAMPLE_SEGMENTS = JSON.stringify(
   [{ text: "Hej, hur kan jag hjälpa dig?", speaker: "Agent" }],
@@ -26,6 +28,7 @@ export default function TestLabPage() {
   const [segmentsInput, setSegmentsInput] = React.useState("");
   const [useLlm, setUseLlm] = React.useState(false);
   const [provider, setProvider] = React.useState<"openrouter" | "groq">("openrouter");
+  const [routingTier, setRoutingTier] = React.useState<RoutingTier>("balanced");
 
   const mutation = useMutation<PipelineReport, ApiError, void>({
     mutationFn: async () => {
@@ -40,10 +43,13 @@ export default function TestLabPage() {
       if (!Array.isArray(segments) || segments.length === 0) {
         throw new ApiError("segments måste vara en icke-tom lista");
       }
+      const segArr = segments as unknown[];
+      const effectiveTier = resolveEffectiveTier(routingTier, segArr.length, useLlm);
       return apiClient.analyzePipeline(segments, {
         use_mistral_llm: useLlm,
         deep_analysis: useLlm,
         provider,
+        llm_model: useLlm ? tierToModel(effectiveTier) : undefined,
       });
     },
     onSuccess: () => notifySuccess("Pipeline-analys klar"),
@@ -120,6 +126,25 @@ export default function TestLabPage() {
                 användning i produktion.
               </span>
             </div>
+          ) : null}
+
+          {useLlm && provider === "openrouter" ? (
+            <ModelRoutingCard
+              tier={routingTier}
+              onTierChange={setRoutingTier}
+              effectiveTier={resolveEffectiveTier(
+                routingTier,
+                (() => {
+                  try {
+                    const parsed = JSON.parse(segmentsInput);
+                    return Array.isArray(parsed) ? parsed.length : 0;
+                  } catch {
+                    return 0;
+                  }
+                })(),
+                useLlm,
+              )}
+            />
           ) : null}
 
           <div>

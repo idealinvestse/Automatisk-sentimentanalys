@@ -1,15 +1,17 @@
-feat(webui): virtualize transcript view with @tanstack/react-virtual (Spår B.4)
+feat(webui): model routing tier selector in Test Lab (Spår C.1)
 
-- New TranscriptView component (webui/src/components/transcript-view.tsx)
-  using useVirtualizer from @tanstack/react-virtual
-- Renders only visible rows + overscan (8) regardless of transcript length
-- Dynamic row measurement via measureElement handles varying text heights
-- /calls/[id] now uses TranscriptView instead of inline non-virtualized list
-- Shows "Virtualiserad vy · N segment" description for transcripts > 50 turns
-- Prepares webui for real (long) production calls beyond demo data
+- New routing-tier module (webui/src/lib/routing-tier.ts) mirroring
+  src/llm/routing.py — FAST/BALANCED/DEEP tiers with model slugs,
+  cost/M tokens, latency band, quality rating
+- New ModelRoutingCard component with three tier buttons showing
+  cost/quality tradeoffs; "auto" badge when tier is overridden by
+  segment count or deep_analysis flag (same logic as select_model())
+- Test Lab page (/testlab) now includes ModelRoutingCard when LLM is
+  enabled with openrouter provider; sends llm_model in pipeline request
+- No backend changes required — PipelineRequest.llm_model already exists
 
-Verified: npm run lint (0 errors, 2 pre-existing TanStack warnings),
-npm run build (clean), Playwright smoke tests pass for all routes.
+Verified: npm run lint (0 errors), npm run build (clean),
+Playwright smoke tests pass for all 8 routes.
 
 Generated with [Devin](https://devin.ai)
 
