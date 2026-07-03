@@ -2,7 +2,8 @@
 # docs/WEBUI_MODERNIZATION_PLAN.md
 #
 # Usage:
-#   docker compose -f docker-compose.webui.yml up --build
+#   1. Copy .env.example to .env and fill in real values
+#   2. docker compose -f docker-compose.webui.yml up --build
 #   Web UI:     http://localhost:3000
 #   API docs:   http://localhost:8000/docs
 
@@ -15,8 +16,13 @@ services:
     volumes:
       - hf_cache:/cache/hf
       - app_outputs:/app/outputs
+      - api_cache:/app/.cache
+    env_file:
+      - .env
     environment:
       - HF_HOME=/cache/hf
+      # API_CORS_ORIGINS must include the webui origin
+      - API_CORS_ORIGINS=http://localhost:3000
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -37,3 +43,4 @@ services:
 volumes:
   hf_cache:
   app_outputs:
+  api_cache:

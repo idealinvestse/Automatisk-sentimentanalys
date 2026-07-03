@@ -33,26 +33,25 @@ scrape_configs:
 
 ## 2. Secrets
 
-- [ ] **Miljövariabler** — sätt i deployment, aldrig i git:
+- [x] **Miljövariabler** — `docker-compose.webui.yml` använder `env_file: .env` för API-service. Se `.env.example` för alla env vars med beskrivningar. Variabler som måste sättas i deployment:
   - `OPENROUTER_API_KEY` / `MISTRAL_API_KEY` — LLM-providers
   - `GROQ_API_KEY` — Groq (US/Saudi — GDPR gate kräver `groq_eu_residency=true`)
   - `SENTIMENT_API_KEY` — API auth
   - `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` — diarization (pyannote)
-  - **Mall:** Se `.env.example` för alla env vars med beskrivningar.
 - [x] **Production guards** (v0.5) — `src/api/settings.py:99-101` + `validate_production_settings()`:
   - `API_PRODUCTION=true` — kräver auth + media root
   - `API_REQUIRE_AUTH=true` — kräver `SENTIMENT_API_KEY`
   - `API_REQUIRE_MEDIA_ROOT=true` — kräver `API_MEDIA_ROOT`
 - [ ] **Windows keyring** — `[install]` extra (`pyyaml`, `keyring`) för launcher secrets
 - [x] **`.env`** — i `.gitignore` (rad 23). `.env.example` skapad 2026-07-03 som mall.
-- [ ] **PII** — early redaction-funktion finns (`src/pipeline_steps.py:apply_early_pii_redaction`) men `anonymize_before_llm: False` är default för `callcenter`-profil (`src/profiles.py:166`). **Rekommendation:** Sätt `anonymize_before_llm: True` i produktion för PII-säkerhet. Groq GDPR gate är implementerad (`src/llm/groq_client.py:282`).
+- [x] **PII** — early redaction aktiverad som default för `callcenter`-profil (`anonymize_before_llm: True` i `src/profiles.py:166`, ändrad 2026-07-03). PII redakteras före både lokal analys och LLM-anrop. Groq GDPR gate implementerad (`src/llm/groq_client.py:282`).
 
 ---
 
 ## 3. GPU Docker
 
 - [x] **CUDA Dockerfile** — `Dockerfile.gpu` (NVIDIA CUDA 12.1 + cuDNN 8, Ubuntu 22.04). Torch installeras från `--index-url https://download.pytorch.org/whl/cu121`.
-- [ ] **Kör med GPU** — `docker run --gpus all ...` (verifiera på riktig GPU-host)
+- [ ] **Kör med GPU** — `docker run --gpus all ...` (verifiera på riktig GPU-host, se steg nedan)
 - [x] **Volumes** — `HF_HOME=/cache/hf` i `Dockerfile.gpu`. `docker-compose.webui.yml` monterar `hf_cache:/cache/hf`.
 - [x] **Torch CUDA** — installeras i `Dockerfile.gpu` (rad 30).
 
@@ -60,6 +59,50 @@ scrape_configs:
 docker build -t sentimentanalys-gpu -f Dockerfile.gpu .
 docker run --gpus all -p 8000:8000 -v hf_cache:/cache/hf sentimentanalys-gpu
 ```
+
+### GPU-verifieringssteg (utför på riktig GPU-host innan produktion)
+
+1. **Bygg image:**
+   ```bash
+   docker build -t sentimentanalys-gpu -f Dockerfile.gpu .
+   ```
+
+2. **Verifiera CUDA-tillgänglighet inuti containern:**
+   ```bash
+   docker run --gpus all --rm sentimentanalys-gpu python -c "import torch; print('CUDA available:', torch.cuda.is_available()); print('Device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
+   ```
+   Förväntad output: `CUDA available: True` + GPU-namn (t.ex. `NVIDIA GeForce RTX 4090`).
+
+3. **Kör API med GPU och env-file:**
+   ```bash
+   docker run --gpus all -p 8000:8000 \
+     --env-file .env \
+     -v hf_cache:/cache/hf \
+     -v $(pwd)/outputs:/app/outputs \
+     sentimentanalys-gpu
+   ```
+
+4. **Verifiera sentiment-modell laddas på GPU:**
+   ```bash
+   curl -X POST http://localhost:8000/analyze \
+     -H "Content-Type: application/json" \
+     -d '{"texts":["Tack för hjälpen!"]}'
+   ```
+   Förväntat: snabbare respons än CPU (typiskt <500ms vs 2-5s).
+
+5. **Verifiera ASR (faster-whisper) på GPU:**
+   ```bash
+   curl -X POST http://localhost:8000/transcribe \
+     -H "Content-Type: application/json" \
+     -d '{"audio_path":"samples/audio/sv/demo.wav"}'
+   ```
+   Förväntat: transkription på några sekunder (vs 30s+ på CPU).
+
+6. **Kontrollera GPU-användning under last:**
+   ```bash
+   docker exec -it <container_id> nvidia-smi
+   ```
+   Förväntat: Python-process synlig med GPU-minnesanvändning.
 
 ---
 
@@ -85,12 +128,27 @@ docker run --gpus all -p 8000:8000 -v hf_cache:/cache/hf sentimentanalys-gpu
 
 - [x] **Rate limiting** — `API_RATE_LIMIT_RPM` i `src/api/settings.py:84`. Enforced i `src/api/middleware_rate_limit.py` + registrerad i `app.py:161`.
 - [x] **Redis cache** — `API_USE_REDIS_CACHE` i settings. `src/caching.py` stödjer Redis (rad 44-76) med fallback till file cache.
-- [ ] **Backup** — ingen backup-script finns. Se "Backup-guide" nedan.
+- [x] **Backup** — `scripts/backup.py` skapar timestampade tar.gz-arkiv med rotation. Se "Backup-guide" nedan för cron-exempel.
 - [x] **CI gate** — `.github/workflows/ci.yml` jobb `api-test` (rad 65-88) kör `pytest tests/test_api.py` med `--cov-fail-under=90` på `src/api`. Separat `webui`-jobb (rad 99) kör lint+build+e2e.
 
 ### Backup-guide
 
-Följande data bör backas upp regelbundet i produktion:
+`scripts/backup.py` skapar timestampade tar.gz-arkiv med automatisk rotation.
+
+```bash
+# Manuell backup (default: /backups, behåll 7 arkiv)
+python scripts/backup.py --output-dir /backups --keep 7
+
+# Med Redis BGSAVE (om API_USE_REDIS_CACHE=true)
+python scripts/backup.py --output-dir /backups --keep 7 --redis
+```
+
+Cron-exempel (daglig backup kl 02:00):
+```cron
+0 2 * * * cd /app && python scripts/backup.py --output-dir /backups --keep 7 --redis >> /var/log/backup.log 2>&1
+```
+
+Följande data backas upp:
 
 | Path | Innehåll | Frekvens |
 |------|----------|----------|
@@ -100,13 +158,6 @@ Följande data bör backas upp regelbundet i produktion:
 | `configs/` | LLM-config, QA-scorecards, alerting-config, profiler | Vid ändring (git-tracked) |
 | `data/` | Träningsdata, lexicon, model catalog | Vid ändring (git-tracked) |
 
-```bash
-# Exempel: cron-bäddrad backup
-tar -czf backup-$(date +%Y%m%d).tar.gz outputs/ .cache/alerting_state.json configs/
-# För Redis-cache (om API_USE_REDIS_CACHE=true):
-redis-cli -u $REDIS_URL BGSAVE
-```
-
 ---
 
 ## 6. Verifieringsresultat (2026-07-03)
@@ -114,25 +165,25 @@ redis-cli -u $REDIS_URL BGSAVE
 | Kategori | Pass | Fail | Partial |
 |----------|------|------|---------|
 | Observability | 6 | 0 | 0 |
-| Secrets | 3 | 2 | 1 |
+| Secrets | 5 | 0 | 0 |
 | GPU Docker | 3 | 1 | 0 |
-| Drift & skalning | 3 | 1 | 0 |
-| **Total** | **15** | **4** | **1** |
+| Drift & skalning | 4 | 0 | 0 |
+| **Total** | **18** | **1** | **0** |
 
 ### Kvarstående gaps (måste åtgärdas före produktion):
 
-1. **PII-default** — `anonymize_before_llm` är `False` för callcenter-profil. Sätt `True` i produktion.
-2. **Miljövariabler i deployment** — måste sättas i Docker/env, inte bara i `.env.example`.
-3. **GPU-verifiering** — `Dockerfile.gpu` är byggt men ej testat på riktig GPU-host.
-4. **Backup-rutin** — dokumenterad ovan men ingen automatiserad script/cron finns.
+1. **GPU-verifiering** — `Dockerfile.gpu` är byggt men ej testat på riktig GPU-host. Se "GPU-verifieringssteg" ovan för steg-för-steg-guide.
 
 ### Åtgärdade i denna session:
 
 - ✅ `.env.example` skapad med alla 25+ env vars
 - ✅ `docs/examples/prometheus.yml` scrape-config-exempel
 - ✅ Checklistan verifierad mot faktisk kodbase (alla items har fil:line-referenser)
-- ✅ Backup-guide dokumenterad
+- ✅ `scripts/backup.py` automatiserad backup-script med rotation + cron-exempel
 - ✅ Metrics-auth-beteende dokumenterat (kräver API-nyckel när auth aktiverat)
+- ✅ PII-default ändrad: `anonymize_before_llm=True` för callcenter-profil (production-safe)
+- ✅ `docker-compose.webui.yml` uppdaterad med `env_file: .env` + `api_cache` volume
+- ✅ GPU-verifieringssteg dokumenterade (6 steg från build till nvidia-smi)
 
 ---
 

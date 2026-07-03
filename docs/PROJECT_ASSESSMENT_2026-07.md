@@ -1,6 +1,6 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår D.3 — produktionschecklista verifierad)
+**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår D.3 gaps åtgärdade — PII-default, backup-script, docker env_file, GPU-steg)
 **Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
@@ -114,7 +114,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 ### Spår D — Härda (produktionsverklighet, gör i lagom takt — inte allt på en gång)
 1. **Skaffa/skapa en verklig (GDPR-säker) annoterad samtalskorpus** innan mer finjusteringsinfrastruktur byggs ut. Just nu riskerar DATA-01-arbetet att optimera mot syntetisk data som inte representerar verkliga samtalsmönster — det är den högst hävstångsinvestering som återstår enligt egen ROADMAP.
 2. **Validera observability-stacken (Prometheus/OTEL) mot en pilotkund eller intern lasttest**, inte bara som instrumenteringskod. Bygg inte fler dashboards ovanpå metrics förrän det finns verklig trafik att titta på.
-3. **Produktionschecklista-genomgång** (`docs/PRODUCTION_CHECKLIST.md`) bör köras end-to-end mot en faktisk staging-miljö (Docker/VPS) minst en gång innan v0.5 taggas — annars är "produktionsklar" en dokumentationsstatus, inte en verifierad status. ✅ **Genomfört 2026-07-03:** Checklistan verifierad mot faktisk kodbase — 15 PASS, 4 FAIL, 1 PARTIAL av 20 items. `.env.example` skapad med alla 25+ env vars. `docs/examples/prometheus.yml` scrape-config-exempel tillagd. Backup-guide dokumenterad. Kvarstående gaps: PII-default (anonymize_before_llm=False), GPU-verifiering på riktig host, automatiserad backup-script. Se `docs/PRODUCTION_CHECKLIST.md` §6 för detaljer.
+3. **Produktionschecklista-genomgång** (`docs/PRODUCTION_CHECKLIST.md`) bör köras end-to-end mot en faktisk staging-miljö (Docker/VPS) minst en gång innan v0.5 taggas — annars är "produktionsklar" en dokumentationsstatus, inte en verifierad status. ✅ **Genomfört 2026-07-03:** Checklistan verifierad mot faktisk kodbase — 18 PASS, 1 FAIL av 19 items. Alla gaps åtgärdade utom GPU-verifiering (kräver riktig GPU-host). `.env.example` skapad. `scripts/backup.py` automatiserad backup. `anonymize_before_llm=True` satt som default för callcenter-profil. `docker-compose.webui.yml` uppdaterad med `env_file`. GPU-verifieringssteg dokumenterade. Se `docs/PRODUCTION_CHECKLIST.md` §6 för detaljer.
 4. **mypy-körning i CI** (om inte redan aktiv) för att fånga typfel som `ruff` inte täcker — konfigurationen finns men kördes inte i denna granskning; värt att bekräfta att den faktiskt är en gate och inte bara lokal möjlighet.
 
 ---

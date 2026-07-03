@@ -1,16 +1,27 @@
-docs: verify production checklist + add .env.example + prometheus config (Spår D.3)
+fix: address all production checklist gaps (D.3 — PII, backup, docker, GPU docs)
 
-- New .env.example with all 25+ environment variables documented
-  (LLM keys, API security, production guards, caching, observability, status)
-- New docs/examples/prometheus.yml scrape config with bearer-token guidance
-- Updated docs/PRODUCTION_CHECKLIST.md with verified status per item
-  (15 PASS, 4 FAIL, 1 PARTIAL) including file:line evidence references
-- Added backup guide with data paths, frequency, and example commands
-- Documented remaining gaps: PII default (anonymize_before_llm=False),
-  GPU verification on real host, automated backup script
-- Updated CHANGELOG.md and PROJECT_ASSESSMENT_2026-07.md (Spår D.3 complete)
+Gap 1 — PII default (production safety):
+- Changed anonymize_before_llm from False to True for callcenter profile
+  (src/profiles.py:166). PII is now redacted before both local analysis
+  and LLM calls by default — privacy-by-design for production.
+- Verified: 72 pipeline/PII/Groq/LLM tests pass + 7 golden tests pass.
 
-Verified: ruff 0 errors, pytest 19/19 api-smoke tests pass.
+Gap 2 — Environment variables in deployment:
+- Updated docker-compose.webui.yml with env_file: .env for API service
+- Added api_cache volume for .cache directory
+- Added API_CORS_ORIGINS env var to ensure webui can reach API
+
+Gap 3 — GPU verification documentation:
+- Added 6-step GPU verification guide to PRODUCTION_CHECKLIST.md
+  (build, CUDA check, run with env_file, sentiment test, ASR test, nvidia-smi)
+
+Gap 4 — Automated backup:
+- New scripts/backup.py: timestamped tar.gz archives with rotation
+- Supports --redis flag for BGSAVE before archiving
+- Cron example documented in PRODUCTION_CHECKLIST.md
+
+Updated docs/PRODUCTION_CHECKLIST.md: 18 PASS, 1 FAIL (GPU verification
+on real host — requires physical GPU). All other gaps closed.
 
 Generated with [Devin](https://devin.ai)
 

@@ -163,7 +163,7 @@ PROFILE_SPECS: dict[str, dict] = {
             "fallback_model": "mistralai/mistral-medium-3.5",
             "routing_tier": "balanced",
             "cost_budget_per_call": 0.08,
-            "anonymize_before_llm": False,  # Fas 3.4 hook
+            "anonymize_before_llm": True,  # Fas 4.4.1 — PII-safe default for production
         },
     },
     # Analyzer-profile aliases (sentiment/cleaning similar to callcenter; analyzer sets from YAML)
