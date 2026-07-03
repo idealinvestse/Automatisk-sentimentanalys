@@ -132,9 +132,12 @@ Fas 0 – resten läggs till i samband med att respektive vy migreras.
       `/analyze_pipeline`-svaret (`results.alerts`, `results.llm_judge`,
       `results.qa`). `EmptyState` för samtal utan djupdykningsdata,
       404 för okänt call-id.
-- [ ] Virtuell transkriptvy för långa samtal (`virtual_transcript.py` →
-      `@tanstack/react-virtual`) — nuvarande transkript-lista är inte
-      virtualiserad (ok för demo-datats korta samtal).
+- [x] Virtuell transkriptvy för långa samtal (`virtual_transcript.py` →
+      `@tanstack/react-virtual`) — `TranscriptView`-komponenten i
+      `webui/src/components/transcript-view.tsx` renderar endast synliga rader
+      (+overscan) via `useVirtualizer`. Dynamic row measurement via
+      `measureElement` så varierande texthöjd hanteras. Visar "Virtualiserad
+      vy · N segment" som beskrivning när transkriptet > 50 segment.
 
 ### Fas 2 (tillägg) – Executive Insights — klar (riktig data)
 - [x] `/executive` (Executive Insights, ny flik): aggregerade KPI:er över

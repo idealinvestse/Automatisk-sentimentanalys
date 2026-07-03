@@ -1,6 +1,6 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår B.3 + C.2 — NiceGUI deprecaterad, Executive Insights-flik tillagd)
+**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår B.4 — virtualiserad transkriptvy)
 **Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
@@ -103,7 +103,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** ✅ **Klart 2026-07-01:** Byt mockdata mot riktig `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights`. Alla fyra kärnvyer hämtar nu riktig data från backend-pipelinen via React Query-hooks (`useDemoReports`, `useAgentPerformance`, `useHotTopics`). Detta var den enda blockeraren för att kunna säga "webui är primär" på riktigt — webui är nu den primära dashboarden för demo-data.
 2. **Migrera larmpanel och LLM judge-panel** ✅ **Klart 2026-07-03:** Larmpanel (`AlertsPanel`) och per-call larmsektion (`CallAlertsSection`) migrerade till webui med riktig data från `results.alerts` i pipeline-svaret. LLM Judge-panel (`LlmJudgePanel`) migrerad till `/calls/[id]` med data från `results.llm_judge`. Webhook/circuit breaker-status hämtas från `GET /alerting/status`. `/calls/[id]` omskriven till att använda `useDemoReports` + `buildCallDetail` istället för `MOCK_CALL_DETAILS` — alla fyra kärnvyer + detaljvy använder nu uteslutande riktig pipeline-data.
 3. **Byt namn eller arkivera på riktigt**: antingen döp om `app/archive/nicegui_dashboard/` till något som signalerar "fortfarande i drift tills webui X är klar" (t.ex. behåll namnet men lägg en README-varningsbanner), eller sätt upp en definitiv avstängningsplan så det inte blir en tredje permanent UI. ✅ **Klart 2026-07-03:** `app/archive/README.md` skapad med tydlig deprecation-banner. `AGENT_CONTEXT.md`, `PROJECT_STATUS.md`, `docs/ROADMAP.md`, `CHANGELOG.md` och `AGENTS.md` uppdaterade — webui är nu entydigt dokumenterad som primär dashboard och NiceGUI som legacy/referens. Inga nya features läggs i NiceGUI.
-4. **Virtualisera transkriptvyn** (`@tanstack/react-virtual`) innan verkliga (långa) samtal används i produktion — nuvarande icke-virtualiserade lista fungerar bara för korta demo-samtal.
+4. **Virtualisera transkriptvyn** (`@tanstack/react-virtual`) innan verkliga (långa) samtal används i produktion — nuvarande icke-virtualiserade lista fungerar bara för korta demo-samtal. ✅ **Klart 2026-07-03:** `TranscriptView`-komponent (`webui/src/components/transcript-view.tsx`) med `useVirtualizer` från `@tanstack/react-virtual`. Dynamic row measurement via `measureElement`, overscan=8. `/calls/[id]` använder nu den virtualiserade vyn — renderar endast synliga rader oavsett transkriptlängd. Visar "Virtualiserad vy · N segment" som beskrivning för > 50 segment.
 
 ### Spår C — Väx (nya kundvärden, i linje med egen ROADMAP v0.5)
 1. **Model routing (kostnad/kvalitet)**: `src/llm/routing.py` + `model_catalog` är påbörjat (FAST/BALANCED/DEEP-tiers) — bra ROI om det kopplas till en enkel policy i dashboarden ("spara pengar"-läge vs "max kvalitet"-läge), vilket är ett konkret säljbart värde mot kunder.
@@ -127,8 +127,8 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 [✅ Spår B.2 klart 2026-07-03: larmpanel + LLM judge-panel + /calls/[id] med riktig data]
 [✅ Spår B.3 klart 2026-07-03: NiceGUI deprecaterad, webui dokumenterad som primär]
 [✅ Spår C.2 klart 2026-07-03: Executive Insights-flik (/executive) med aggregerade KPI:er]
-  → B.4 (virtualiserad transkriptvy)
-      → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
+[✅ Spår B.4 klart 2026-07-03: virtualiserad transkriptvy (@tanstack/react-virtual)]
+  → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
         → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
           → C.4 (marknadsexpansion DK)
 ```

@@ -13,6 +13,7 @@ import { EmotionTimelineChart } from "@/components/emotion-timeline-chart";
 import { RiskBadge, SentimentBadge } from "@/components/status-badges";
 import { CallAlertsSection } from "@/components/call-alerts-section";
 import { LlmJudgePanel } from "@/components/llm-judge-panel";
+import { TranscriptView } from "@/components/transcript-view";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { buildCallDetail } from "@/lib/real-data";
 
@@ -89,25 +90,14 @@ export default function CallDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Transkript</CardTitle>
+                  {detail.transcript.length > 50 && (
+                    <CardDescription>
+                      Virtualiserad vy · {detail.transcript.length} segment
+                    </CardDescription>
+                  )}
                 </CardHeader>
-                <CardContent className="flex max-h-96 flex-col gap-3 overflow-y-auto">
-                  {detail.transcript.map((turn, i) => (
-                    <div key={i} className="flex gap-3">
-                      <span className="w-10 shrink-0 text-xs text-muted-foreground">{turn.start}s</span>
-                      <div className="flex min-w-0 flex-col">
-                        <span
-                          className={
-                            turn.speaker === "Agent"
-                              ? "text-xs font-medium text-primary"
-                              : "text-xs font-medium text-muted-foreground"
-                          }
-                        >
-                          {turn.speaker}
-                        </span>
-                        <span className="text-sm">{turn.text}</span>
-                      </div>
-                    </div>
-                  ))}
+                <CardContent>
+                  <TranscriptView turns={detail.transcript} />
                 </CardContent>
               </Card>
 

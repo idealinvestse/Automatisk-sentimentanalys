@@ -1,21 +1,15 @@
-feat(webui): deprecate NiceGUI + add Executive Insights tab (Spår B.3, C.2)
+feat(webui): virtualize transcript view with @tanstack/react-virtual (Spår B.4)
 
-B.3 — Archive decision for NiceGUI:
-- Add app/archive/README.md with deprecation banner pointing to webui/
-- Update AGENT_CONTEXT.md, PROJECT_STATUS.md, docs/ROADMAP.md, CHANGELOG.md
-  to mark webui as primary dashboard and NiceGUI as legacy/reference only
+- New TranscriptView component (webui/src/components/transcript-view.tsx)
+  using useVirtualizer from @tanstack/react-virtual
+- Renders only visible rows + overscan (8) regardless of transcript length
+- Dynamic row measurement via measureElement handles varying text heights
+- /calls/[id] now uses TranscriptView instead of inline non-virtualized list
+- Shows "Virtualiserad vy · N segment" description for transcripts > 50 turns
+- Prepares webui for real (long) production calls beyond demo data
 
-C.2 — Executive Insights tab on top of real data:
-- New /executive route with aggregated KPIs across all demo calls:
-  total calls, avg QA, avg sentiment, total alerts, critical calls, LLM cost
-- Risk overview (churn/escalation/satisfaction) with risk-level distribution
-- Top alert rules, category breakdown, agent benchmark table
-- All data aggregated client-side from useDemoReports via
-  aggregateExecutiveSummary() — no new backend endpoint required
-- Add Briefcase nav icon + e2e smoke test for /executive
-
-Verified: npm run lint (0 errors), npm run build (clean, /executive route
-generated), Playwright smoke tests pass for all routes including /executive.
+Verified: npm run lint (0 errors, 2 pre-existing TanStack warnings),
+npm run build (clean), Playwright smoke tests pass for all routes.
 
 Generated with [Devin](https://devin.ai)
 
