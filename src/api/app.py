@@ -52,6 +52,7 @@ from .middleware_rate_limit import RateLimitMiddleware
 from .routers import (
     alerting,
     conversation,
+    edge,
     health,
     pipeline,
     scan,
@@ -270,6 +271,7 @@ def create_app() -> FastAPI:
     app.include_router(scan.router, dependencies=_auth)
     app.include_router(ws_transcription.router)
     app.include_router(alerting.router, dependencies=_auth)
+    app.include_router(edge.router, dependencies=_auth)
 
     _init_app_state(app)
     return app

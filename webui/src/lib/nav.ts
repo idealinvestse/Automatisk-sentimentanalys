@@ -15,4 +15,5 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/executive", label: "Executive Insights", icon: "Briefcase" },
   { href: "/transcription", label: "Transkribering", icon: "AudioLines", legacyTab: "Transkribering" },
   { href: "/testlab", label: "Testlabb", icon: "FlaskConical", legacyTab: "Testlabb" },
+  { href: "/edge", label: "Edge AI", icon: "Cpu" },
 ];

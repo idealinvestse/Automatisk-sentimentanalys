@@ -20,6 +20,19 @@ sentimentanalys edge-analyze --text "Tack för hjälpen, det fungerade bra!"
 sentimentanalys edge-analyze --audio samples/audio/sv/demo.wav --profile callcenter
 ```
 
+## REST API (v0.5+)
+
+Edge analysis is also exposed over the FastAPI backend:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/edge/analyze-text` | POST | Offline sentiment + intent on a single text string |
+| `/edge/analyze-segments` | POST | Offline analysis on pre-transcribed segments (with PII redaction) |
+
+Both return `EdgeAnalysisResult`. See `src/api/routers/edge.py`.
+
+The webui `/edge` page provides an interactive UI for these endpoints.
+
 ## Contract
 
 Output type: `EdgeAnalysisResult` in `src/edge/contracts.py`

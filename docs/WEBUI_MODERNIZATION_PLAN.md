@@ -73,6 +73,7 @@ Routing ersätter NiceGUI:s flikar 1:1:
 | `/agents` | Agentprestanda | 1 |
 | `/insights` | Fas 4 Insikter | 2 |
 | `/executive` | Executive Insights (ny) | 2 |
+| `/edge` | Edge AI (ny) | 2 |
 | `/calls/[id]` | Samtalsdetalj | 2 |
 | `/transcription` | Transkribering | 3 |
 | `/testlab` | Testlabb (endast dev) | 3 |

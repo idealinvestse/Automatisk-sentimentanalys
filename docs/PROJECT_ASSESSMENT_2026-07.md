@@ -1,6 +1,6 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår C.1 — model routing-väljare i Testlabb)
+**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår C.3 — Edge AI REST API + webui-sida)
 **Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
@@ -108,7 +108,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 ### Spår C — Väx (nya kundvärden, i linje med egen ROADMAP v0.5)
 1. **Model routing (kostnad/kvalitet)**: `src/llm/routing.py` + `model_catalog` är påbörjat (FAST/BALANCED/DEEP-tiers) — bra ROI om det kopplas till en enkel policy i dashboarden ("spara pengar"-läge vs "max kvalitet"-läge), vilket är ett konkret säljbart värde mot kunder. ✅ **Klart 2026-07-03:** `ModelRoutingCard`-komponent i Testlabb-sidan med tre tier-knappar (FAST/BALANCED/DEEP) som mappar till `llm_model` i pipeline-requesten. Visar kostnad/M tokens, latency-band och kvalitetsbetyg per tier. `resolveEffectiveTier()` speglar `select_model()`-override-logiken (deep_analysis eller ≥20 segment → DEEP; <6 segment → FAST) och visar "auto"-badge när tier justerats automatiskt. Ingen backend-ändring krävdes — `PipelineRequest.llm_model` fanns redan.
 2. **Executive Insights-flik + modell-A/B-jämförelse** i webui — redan planerat, naturlig fortsättning efter att insights-vyn har riktig data (se Spår B.1). ✅ **Executive Insights klart 2026-07-03:** Ny `/executive`-route med aggregerade KPI:er (totala samtal, snitt-QA, snitt-sentiment, totala larm, kritiska samtal, LLM-kostnad), risköversikt (churn/escalation/satisfaction med risknivå-fördelning), topp larmregler, kategorifördelning och agentbenchmark-tabell. All data aggregeras klientsidans från `useDemoReports` via `aggregateExecutiveSummary()` — ingen ny backend-endpoint krävdes. Modells-A/B-jämförelse är ännu inte implementerat (kräver backend-stöd för parallell körning med olika modeller).
-3. **Edge AI-MVP-utbyggnad**: `sentimentanalys edge-analyze` finns som CLI; om affärsmålet är on-prem/offline-kunder (t.ex. myndigheter med extra höga datakrav) är detta en differentiator värd att bygga ut mot en tunn UI/rapport-export, snarare än bara CLI.
+3. **Edge AI-MVP-utbyggnad**: `sentimentanalys edge-analyze` finns som CLI; om affärsmålet är on-prem/offline-kunder (t.ex. myndigheter med extra höga datakrav) är detta en differentiator värd att bygga ut mot en tunn UI/rapport-export, snarare än bara CLI. ✅ **Klart 2026-07-03:** Ny FastAPI-router `src/api/routers/edge.py` med `POST /edge/analyze-text` och `POST /edge/analyze-segments` som exponerar `local_inference.py` över REST. Ny `/edge`-sida i webui med text/segments-input, resultatvy (sentiment + intent per segment), begränsnings-lista och offline-badge. 5 nya API-tester (happy + validation + openapi). Cpu-ikon i sidebar.
 4. **Multi-språk/marknadsexpansion (DK)** nämns i AGENT_CONTEXT som planerat. Spår A är nu klart (svensk kärnheuristik verifierad grön, se §7), så detta är inte längre blockerat av en misstänkt regression — men bör ändå vänta tills webui:s riktiga datakälla (Spår B.1) är på plats, så att samma dashboard-arbete inte görs två gånger för två marknader.
 
 ### Spår D — Härda (produktionsverklighet, gör i lagom takt — inte allt på en gång)
@@ -129,7 +129,8 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 [✅ Spår C.2 klart 2026-07-03: Executive Insights-flik (/executive) med aggregerade KPI:er]
 [✅ Spår B.4 klart 2026-07-03: virtualiserad transkriptvy (@tanstack/react-virtual)]
 [✅ Spår C.1 klart 2026-07-03: model routing-väljare i Testlabb (FAST/BALANCED/DEEP)]
-  → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.3 (Edge AI-utbyggnad)
+[✅ Spår C.3 klart 2026-07-03: Edge AI REST API + /edge-sida i webui]
+  → D.1 (verklig korpus, kan köras parallellt med B — se §6)
         → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
           → C.4 (marknadsexpansion DK)
 ```

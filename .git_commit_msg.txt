@@ -1,17 +1,28 @@
-feat(webui): model routing tier selector in Test Lab (Spår C.1)
+feat: Edge AI REST API + webui /edge page (Spår C.3)
 
-- New routing-tier module (webui/src/lib/routing-tier.ts) mirroring
-  src/llm/routing.py — FAST/BALANCED/DEEP tiers with model slugs,
-  cost/M tokens, latency band, quality rating
-- New ModelRoutingCard component with three tier buttons showing
-  cost/quality tradeoffs; "auto" badge when tier is overridden by
-  segment count or deep_analysis flag (same logic as select_model())
-- Test Lab page (/testlab) now includes ModelRoutingCard when LLM is
-  enabled with openrouter provider; sends llm_model in pipeline request
-- No backend changes required — PipelineRequest.llm_model already exists
+Backend:
+- New FastAPI router src/api/routers/edge.py with POST /edge/analyze-text
+  and POST /edge/analyze-segments exposing src/edge/local_inference.py
+  (offline sentiment + heuristic intent + PII redaction) over REST
+- Registered in src/api/app.py with auth dependencies
+- 5 new API tests (happy path mocked, validation, openapi paths)
 
-Verified: npm run lint (0 errors), npm run build (clean),
-Playwright smoke tests pass for all 8 routes.
+Frontend (webui):
+- New /edge route with text/segments input mode toggle
+- Result view: sentiment + intent per segment, offline badge,
+  limitations list, summary
+- Edge types (EdgeSegmentResult, EdgeAnalysisResult) + API client
+  methods (edgeAnalyzeText, edgeAnalyzeSegments)
+- Cpu nav icon + e2e smoke test for /edge
+
+Docs:
+- docs/EDGE_AI.md: added REST API section
+- docs/WEBUI_MODERNIZATION_PLAN.md: /edge route in routing table
+- CHANGELOG.md, PROJECT_ASSESSMENT: Spår C.3 marked complete
+
+Verified: ruff 0 errors, pytest 5/5 edge tests pass,
+npm run lint (0 errors), npm run build (clean, /edge route generated),
+Playwright smoke 9/9 routes pass.
 
 Generated with [Devin](https://devin.ai)
 

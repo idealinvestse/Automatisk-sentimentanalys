@@ -80,6 +80,24 @@ export interface AlertsResponse {
   timestamp: string;
 }
 
+/** Edge AI: single segment result from offline analysis. */
+export interface EdgeSegmentResult {
+  text: string;
+  sentiment_label: string | null;
+  sentiment_score: number | null;
+  intent: string | null;
+}
+
+/** Edge AI: full offline analysis result (POST /edge/analyze-*). */
+export interface EdgeAnalysisResult {
+  profile: string;
+  offline: boolean;
+  llm_used: boolean;
+  segments: EdgeSegmentResult[];
+  summary: string;
+  limitations: string[];
+}
+
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -273,6 +291,19 @@ export class ApiClient {
     url.pathname = path;
     url.search = "";
     return url.toString();
+  }
+
+  /** Edge AI: analyze a single text offline (POST /edge/analyze-text). */
+  edgeAnalyzeText<T = EdgeAnalysisResult>(text: string, profile = "callcenter") {
+    return this.post<T>("/edge/analyze-text", { text, profile }, 60_000);
+  }
+
+  /** Edge AI: analyze pre-transcribed segments offline (POST /edge/analyze-segments). */
+  edgeAnalyzeSegments<T = EdgeAnalysisResult>(
+    segments: { text: string; speaker?: string }[],
+    profile = "callcenter",
+  ) {
+    return this.post<T>("/edge/analyze-segments", { segments, profile }, 60_000);
   }
 }
 

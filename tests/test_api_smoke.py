@@ -149,3 +149,68 @@ def test_production_guard_requires_media_root(monkeypatch: pytest.MonkeyPatch) -
     settings = get_api_settings()
     with pytest.raises(ConfigurationError, match="API_MEDIA_ROOT"):
         validate_production_settings(settings)
+
+
+# --- Edge AI router tests ---------------------------------------------------
+
+
+def test_edge_analyze_text_happy_mocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.edge.contracts import EdgeAnalysisResult, EdgeSegmentResult
+
+    def fake_analyze_text(text: str, *, profile: str = "callcenter") -> EdgeAnalysisResult:
+        return EdgeAnalysisResult(
+            profile=profile,
+            segments=[EdgeSegmentResult(text=text, sentiment_label="positiv", sentiment_score=0.9, intent="information_request")],
+            summary="Offline analysis (callcenter)",
+        )
+
+    monkeypatch.setattr("src.api.routers.edge.analyze_text_offline", fake_analyze_text)
+    r = client.post("/edge/analyze-text", json={"text": "Tack för hjälpen!", "profile": "callcenter"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["profile"] == "callcenter"
+    assert data["offline"] is True
+    assert data["llm_used"] is False
+    assert len(data["segments"]) == 1
+    assert data["segments"][0]["sentiment_label"] == "positiv"
+
+
+def test_edge_analyze_text_empty_422() -> None:
+    r = client.post("/edge/analyze-text", json={"text": "", "profile": "callcenter"})
+    assert r.status_code in (400, 422)
+
+
+def test_edge_analyze_segments_happy_mocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.edge.contracts import EdgeAnalysisResult, EdgeSegmentResult
+
+    def fake_analyze_segments(segments, *, profile: str = "callcenter") -> EdgeAnalysisResult:
+        return EdgeAnalysisResult(
+            profile=profile,
+            segments=[
+                EdgeSegmentResult(text=s.get("text", ""), sentiment_label="neutral", intent="other")
+                for s in segments
+            ],
+        )
+
+    monkeypatch.setattr("src.api.routers.edge.analyze_segments_offline", fake_analyze_segments)
+    r = client.post(
+        "/edge/analyze-segments",
+        json={"segments": [{"text": "Hej", "speaker": "Agent"}, {"text": "Hej då", "speaker": "Kund"}], "profile": "callcenter"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["segments"]) == 2
+    assert data["segments"][0]["text"] == "Hej"
+
+
+def test_edge_analyze_segments_empty_422() -> None:
+    r = client.post("/edge/analyze-segments", json={"segments": [], "profile": "callcenter"})
+    assert r.status_code in (400, 422)
+
+
+def test_edge_paths_in_openapi() -> None:
+    r = client.get("/openapi.json")
+    assert r.status_code == 200
+    paths = r.json().get("paths", {})
+    assert "/edge/analyze-text" in paths
+    assert "/edge/analyze-segments" in paths

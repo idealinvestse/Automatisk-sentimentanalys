@@ -11,6 +11,7 @@ const ROUTES = [
   { path: "/agents", h1: "Agentprestanda" },
   { path: "/insights", h1: "Fas 4" },
   { path: "/executive", h1: "Executive Insights" },
+  { path: "/edge", h1: "Edge AI" },
   { path: "/transcription", h1: "Transkribering" },
   { path: "/testlab", h1: "Testlabb" },
 ];

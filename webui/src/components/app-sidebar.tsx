@@ -10,6 +10,7 @@ import {
   Briefcase,
   AudioLines,
   FlaskConical,
+  Cpu,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ const ICONS: Record<string, LucideIcon> = {
   Briefcase,
   AudioLines,
   FlaskConical,
+  Cpu,
 };
 
 export function AppSidebar() {
