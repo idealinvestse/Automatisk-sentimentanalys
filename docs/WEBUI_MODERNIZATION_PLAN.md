@@ -97,21 +97,28 @@ Fas 0 – resten läggs till i samband med att respektive vy migreras.
       övriga visar en tydlig "migreras enligt plan"-vy (`ComingSoon`).
 - [x] `npm run lint` och `npm run build` gröna.
 
-### Fas 1 – Kärnvyer (högst trafik) — klar (mockdata)
+### Fas 1 – Kärnvyer (högst trafik) — klar (riktig data)
 - [x] `/` Översikt: KPI-kort, sorterbar samtalstabell (`CallsTable`,
-      `@tanstack/react-table`), onboarding-text. Datan kommer från
-      `src/lib/mock-data.ts` i väntan på beslut om datakälla (riktig
-      `/reports`-endpoint vs. klientside `/analyze_pipeline`, se §6) — formen
-      speglar `reports_to_table_rows()` i `demo_provider.py` för enkel
-      drop-in senare.
-- [x] `/analytics`: sentiment- och volymdiagram per kategori (recharts).
-- [x] `/agents`: agentprestandakort motsvarande `agent_performance.py`.
+      `@tanstack/react-table`), onboarding-text. Datan kommer från den riktiga
+      pipelinen via `useDemoReports` (klientside `/analyze_pipeline` på de
+      kanoniska demo-transkripten i `src/lib/demo-transcripts.ts`) — se §6
+      för beslutet om datakälla.
+- [x] `/analytics`: sentiment- och volymdiagram per kategori (recharts),
+      beräknat av den riktiga pipelinen.
+- [x] `/agents`: agentprestandakort motsvarande `agent_performance.py`, med
+      empati/compliance från Fas 4-endpointen `POST /agent_performance/{id}`.
 - [x] Delad `CallsTable`-komponent (sortering) som ersätter `calls_table.py`;
       filter/paginering läggs till när datamängden är större än demo-datat.
-- [ ] Byt mockdata mot riktig datakälla när beslutet är taget.
+- [x] Byt mockdata mot riktig datakälla — **klart**. Alla fyra kärnvyer
+      (`/`, `/analytics`, `/agents`, `/insights`) hämtar nu sentiment, QA,
+      risk, empati och hot topics från den riktiga backend-pipelinen via
+      `useDemoReports` + `useAgentPerformance` + `useHotTopics`. Endast
+      själva *samtalen* (transkripten) är syntetiska demo-data; alla
+      analyserade värden beräknas live av `CallAnalysisPipeline`.
 
-### Fas 2 – Djupdykningsvyer — klar (mockdata)
-- [x] `/insights` (Fas 4 Insikter): hot topics-lista med volym/trend/sentiment.
+### Fas 2 – Djupdykningsvyer — klar (riktig data)
+- [x] `/insights` (Fas 4 Insikter): hot topics-lista med volym/trend/sentiment,
+      hämtad från den riktiga Fas 4-endpointen `POST /insights/hot_topics`.
       Wordcloud och "advanced insights" (`hot_topic_wordcloud.py`,
       `advanced_insights.py`) är inte migrerade än.
 - [x] `/calls/[id]` Samtalsdetalj: transkript, känslotidslinje (recharts),
@@ -197,6 +204,12 @@ Använd denna checklista för **varje** komponent som flyttas över från
 - **WebSocket-protokoll** (`/ws/transcription`) måste speglas exakt i en TS-
   klient (Fas 3) – verifiera meddelandeformat mot
   `src/api/routers/ws_transcription.py` innan implementation.
+- **Pipeline-latens:** `POST /analyze_pipeline` tar 30–60s per demo-samtal
+  på CPU (sentiment + QA + Fas 4-analyser). API-klientens default-timeout
+  (30s) räcker inte — `analyzePipeline`, `getAgentPerformance` och
+  `getHotTopics` använder därför en per-anrop-timeout på 180s. React Query
+  cachar varje anrop individuellt (`staleTime: 5 min`) så navigering mellan
+  vyerna inte utlöser omkörningar av pipelinen.
 
 ## 7. Var koden finns
 

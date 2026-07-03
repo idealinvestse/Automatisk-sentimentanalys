@@ -22,6 +22,39 @@ export interface PipelineReport {
   [key: string]: unknown;
 }
 
+/** Response shape of POST /agent_performance/{agent_id} (Fas 4). */
+export interface AgentPerformanceResponse {
+  agent_id: string;
+  metrics: {
+    call_count?: number;
+    averages?: Record<string, number>;
+    trend_empathy?: string;
+    /** Count of compliance flags across the agent's calls (aggregate endpoint does not return the flag text itself). */
+    total_compliance_flags?: number;
+    avg_flags_per_call?: number;
+    [key: string]: unknown;
+  };
+  cached?: boolean;
+  timestamp: string;
+}
+
+/** Response shape of POST /insights/hot_topics (Fas 4). */
+export interface HotTopicItem {
+  topic: string;
+  volume: number;
+  avg_sentiment: number;
+  trend: "up" | "down" | "stable";
+  evidence_spans?: unknown[];
+  sample_quotes?: string[];
+  llm_summary?: string | null;
+}
+
+export interface HotTopicsResponse {
+  hot_topics: HotTopicItem[];
+  meta: Record<string, unknown>;
+  timestamp: string;
+}
+
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -61,9 +94,10 @@ export class ApiClient {
     return headers;
   }
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  private async request<T>(path: string, init: RequestInit = {}, timeoutMs?: number): Promise<T> {
+    const effectiveTimeout = timeoutMs ?? this.timeoutMs;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), effectiveTimeout);
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}${path}`, {
@@ -73,7 +107,7 @@ export class ApiClient {
       });
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new ApiError(`Timeout mot ${path} (${this.timeoutMs}ms)`);
+        throw new ApiError(`Timeout mot ${path} (${effectiveTimeout}ms)`);
       }
       throw new ApiError(`Kan inte ansluta till backend (${this.baseUrl}): ${String(err)}`);
     } finally {
@@ -104,8 +138,8 @@ export class ApiClient {
     return this.request<T>(`${path}${search}`, { method: "GET" });
   }
 
-  post<T>(path: string, body: unknown) {
-    return this.request<T>(path, { method: "POST", body: JSON.stringify(body) });
+  post<T>(path: string, body: unknown, timeoutMs?: number) {
+    return this.request<T>(path, { method: "POST", body: JSON.stringify(body) }, timeoutMs);
   }
 
   async health(): Promise<boolean> {
@@ -121,7 +155,43 @@ export class ApiClient {
     segments: unknown[],
     options: Record<string, unknown> = {},
   ) {
-    return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options });
+    // The full CallAnalysisPipeline (sentiment + QA + insights + Fas 4
+    // analyzers) can take 30–60s per call on CPU. Use a generous timeout so
+    // the demo transcripts don't get aborted mid-analysis.
+    return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options }, 180_000);
+  }
+
+  /** Aggregate agent metrics for one agent, computed over the given calls (Fas 4). */
+  getAgentPerformance<T = AgentPerformanceResponse>(
+    agentId: string,
+    segmentsList: unknown[][],
+    options: Record<string, unknown> = {},
+  ) {
+    return this.post<T>(
+      `/agent_performance/${encodeURIComponent(agentId)}`,
+      {
+        segments_list: segmentsList,
+        agent_id: agentId,
+        profile: "callcenter",
+        window: "7d",
+        ...options,
+      },
+      180_000,
+    );
+  }
+
+  /** Hot topics aggregated across the given calls (Fas 4). */
+  getHotTopics<T = HotTopicsResponse>(segmentsList: unknown[][], options: Record<string, unknown> = {}) {
+    return this.post<T>(
+      "/insights/hot_topics",
+      {
+        segments_list: segmentsList,
+        profile: "callcenter",
+        window: "7d",
+        ...options,
+      },
+      180_000,
+    );
   }
 
   getAlertingStatus<T = unknown>() {

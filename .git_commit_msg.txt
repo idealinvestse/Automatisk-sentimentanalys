@@ -1,0 +1,23 @@
+feat(webui): replace mockdata with real backend pipeline data (Spår B.1)
+
+Alla fyra kärnvyer (/, /analytics, /agents, /insights) hämtar nu sentiment,
+QA, risk, empati och hot topics från den riktiga CallAnalysisPipeline via
+React Query-hooks (useDemoReports, useAgentPerformance, useHotTopics).
+
+- Ny: demo-transcripts.ts, real-data.ts, use-demo-reports.ts,
+  use-agent-performance.ts, use-hot-topics.ts
+- API-klienten får per-anrop-timeout (180s för pipeline/aggregate-anrop)
+  eftersom POST /analyze_pipeline tar 30–60s per demo-samtal på CPU
+- React Query cachar varje anrop i 5 min så navigering mellan vyer
+  inte utlöser omkörningar av pipelinen
+- Endast själva samtalen (transkripten) är syntetisk demo-data; alla
+  analyserade värden beräknas live av backend
+- Dokumentation uppdaterad: WEBUI_MODERNIZATION_PLAN Fas 1/2 markerade
+  som "riktig data", PROJECT_ASSESSMENT Spår B.1 markerad som klart
+
+Verifierat med Playwright mot levande backend: alla 4 vyer renderar
+korrekt, 0 konsol-fel, npm run lint (0 fel) + npm run build (9 routes).
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

@@ -1,7 +1,7 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad samma dag efter triage av testfynd, se §7)
-**Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, och `npm run lint` i `webui/`.
+**Datum:** 2026-07-01 (uppdaterad samma dag efter triage av testfynd, se §7, och efter webui-datacutover, se §3.2/Spår B.1)
+**Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
 > **Uppdatering samma dag:** Fynd 3.1 nedan (5 failande golden-tester) har triagerats till grundorsak och åtgärdats. Det var **inte** en logikregression i sentiment/intent-heuristiken — se §7 för full analys och fix. Resten av rapporten (styrkor, övriga svagheter, utvecklingsplan) kvarstår oförändrad.
@@ -61,10 +61,11 @@ Detta är ett **ovanligt moget och välarkitekterat open-source-projekt** för s
 *(Sekundärt: 3 tester i `test_provision.py` failar fortfarande, men dessa är Linux-specifika sökvägstester som körs i en Windows-devmiljö — miljöartefakter, inte buggar. Bör ha plattforms-skip/marker istället för att tyst faila på Windows.)*
 
 ### 3.2 🟡 Pågående frontend-duplicering
-Två parallella UI:er existerar samtidigt: den ärvda NiceGUI-dashboarden (`app/archive/nicegui_dashboard/`, ~25 komponenter, trots att den ligger i en mapp som heter `archive/`) och den nya Next.js-appen (`webui/`), som enligt egen plan fortfarande kör på **mockdata** för flera vyer (Översikt, Analys, Agentprestanda, Insikter). Risker:
-- Namnet `archive/` signalerar att den gamla dashboarden är avvecklad, men den är fortfarande den enda vägen till *riktig* data för flera vyer tills mockdata bytts ut — detta kan vilseleda nya bidragsgivare/agenter.
+Två parallella UI:er existerar samtidigt: den ärvda NiceGUI-dashboarden (`app/archive/nicegui_dashboard/`, ~25 komponenter, trots att den ligger i en mapp som heter `archive/`) och den nya Next.js-appen (`webui/`). **Uppdatering 2026-07-01:** webui kör nu på **riktig data** för alla fyra kärnvyer (`/`, `/analytics`, `/agents`, `/insights`) via `useDemoReports` + `useAgentPerformance` + `useHotTopics` — sentiment, QA, risk, empati och hot topics beräknas live av `CallAnalysisPipeline` på de kanoniska demo-transkripten. Kvarstående risker:
+- Namnet `archive/` signalerar att den gamla dashboarden är avvecklad, men den är fortfarande en fullständig referensimplementation — detta kan vilseleda nya bidragsgivare/agenter.
 - Ej migrerat: virtualiserad transkriptvy, LLM judge-panel, larmpanel i header, wordcloud/avancerade insikter. Dessa är inte kosmetiska — larmpanelen och LLM judge-panelen är operativt viktiga för QA-användningsfallet.
 - Två kodbaser att underhålla samtidigt ökar risken för att buggfixar bara görs på ena sidan.
+- **Pipeline-latens:** `POST /analyze_pipeline` tar 30–60s per demo-samtal på CPU. API-klienten har nu en per-anrop-timeout på 180s för pipeline/agent_performance/hot_topics-anrop (default är 30s), och React Query cachar varje anrop i 5 min så navigering mellan vyer inte utlöser omkörningar.
 
 ### 3.3 🟡 Dokumentation-kod-drift (mindre men systematiskt)
 - `AGENT_CONTEXT.md` beskriver separata routrar för `agent_performance`, `search/semantic`, `qa/score` — i verkligheten ligger alla dessa endpoints i en enda `src/api/routers/pipeline.py` (bekräftat via kodgranskning). Inte fel i sak, men filkartan stämmer inte 1:1 med koden, vilket kan vilseleda en agent som letar efter "rätt fil att ändra i".
@@ -99,7 +100,7 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 **Resultat av Spår A:** Full testsvit gick från **8 failande/874 gröna → 0 failande/882 gröna** (2 skippade, oförändrat) av 884 samlade tester. `ruff check` gick från 21 fel → 0 fel.
 
 ### Spår B — Konsolidera (minska dubbel yta, störst DX-vinst)
-1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** Byt mockdata mot riktig `/reports`- eller `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights` (redan identifierat i egen plan, §6/Fas 1). Detta är den enda blockeraren för att kunna säga "webui är primär" på riktigt.
+1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** ✅ **Klart 2026-07-01:** Byt mockdata mot riktig `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights`. Alla fyra kärnvyer hämtar nu riktig data från backend-pipelinen via React Query-hooks (`useDemoReports`, `useAgentPerformance`, `useHotTopics`). Detta var den enda blockeraren för att kunna säga "webui är primär" på riktigt — webui är nu den primära dashboarden för demo-data.
 2. **Migrera larmpanel och LLM judge-panel** (operativt kritiska för QA-arbetsflödet) innan ytterligare kosmetisk polish på redan migrerade vyer — dessa två saknas fortfarande enligt egen Fas 2-status.
 3. **Byt namn eller arkivera på riktigt**: antingen döp om `app/archive/nicegui_dashboard/` till något som signalerar "fortfarande i drift tills webui X är klar" (t.ex. behåll namnet men lägg en README-varningsbanner), eller sätt upp en definitiv avstängningsplan så det inte blir en tredje permanent UI.
 4. **Virtualisera transkriptvyn** (`@tanstack/react-virtual`) innan verkliga (långa) samtal används i produktion — nuvarande icke-virtualiserade lista fungerar bara för korta demo-samtal.
@@ -122,8 +123,9 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 
 ```
 [✅ Spår A klart 2026-07-01: 0 failande tester (882 gröna/2 skippade av 884), ruff 0 fel]
-  → B.1 (riktig data i webui) ──┬─→ B.2 (larm/LLM-judge-paneler)
-                                 └─→ C.2 (Executive Insights ovanpå riktig data)
+[✅ Spår B.1 klart 2026-07-01: webui kör riktig data för /, /analytics, /agents, /insights]
+  → B.2 (larm/LLM-judge-paneler) ──→ B.3 (arkivbeslut NiceGUI)
+  → C.2 (Executive Insights ovanpå riktig data) — nu upplåst via B.1
     → B.3 (arkivbeslut NiceGUI) → B.4 (virtualiserad transkriptvy)
       → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
         → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
