@@ -12,6 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/analytics", label: "Analys & Trender", icon: "LineChart", legacyTab: "Analys & Trender" },
   { href: "/agents", label: "Agentprestanda", icon: "Users", legacyTab: "Agentprestanda" },
   { href: "/insights", label: "Fas 4 Insikter", icon: "Sparkles", legacyTab: "Fas 4 Insikter" },
+  { href: "/executive", label: "Executive Insights", icon: "Briefcase" },
   { href: "/transcription", label: "Transkribering", icon: "AudioLines", legacyTab: "Transkribering" },
   { href: "/testlab", label: "Testlabb", icon: "FlaskConical", legacyTab: "Testlabb" },
 ];

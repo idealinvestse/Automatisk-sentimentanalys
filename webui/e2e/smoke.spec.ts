@@ -10,6 +10,7 @@ const ROUTES = [
   { path: "/analytics", h1: "Analys" },
   { path: "/agents", h1: "Agentprestanda" },
   { path: "/insights", h1: "Fas 4" },
+  { path: "/executive", h1: "Executive Insights" },
   { path: "/transcription", h1: "Transkribering" },
   { path: "/testlab", h1: "Testlabb" },
 ];

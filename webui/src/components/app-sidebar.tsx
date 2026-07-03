@@ -7,6 +7,7 @@ import {
   LineChart,
   Users,
   Sparkles,
+  Briefcase,
   AudioLines,
   FlaskConical,
   type LucideIcon,
@@ -20,6 +21,7 @@ const ICONS: Record<string, LucideIcon> = {
   LineChart,
   Users,
   Sparkles,
+  Briefcase,
   AudioLines,
   FlaskConical,
 };

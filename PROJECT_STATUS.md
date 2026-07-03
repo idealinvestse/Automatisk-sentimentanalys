@@ -16,7 +16,8 @@
 | Core pipeline + registry | ✅ PIPE-01; deep-path skip (INSIGHT-02) |
 | Beroenden | ✅ `pyproject.toml` only (DEPS-01) |
 | API (FastAPI) | ✅ Fas 4 + `/metrics`; prod-guards (v0.5) |
-| NiceGUI dashboard | ✅ Standard-UI |
+| NiceGUI dashboard | ✅ Legacy (deprecated, se webui/) |
+| Next.js webui (webui/) | ✅ Primär dashboard — Fas 1-4 migrerade med riktig data |
 | Groq + OpenRouter LLM | ✅ + model routing (v0.5) |
 | Edge AI | 🟡 MVP: `sentimentanalys edge-analyze` |
 | Observability | 🟡 JSON logs + pipeline/LLM metrics (PROD-01) |

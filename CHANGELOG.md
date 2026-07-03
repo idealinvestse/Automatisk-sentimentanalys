@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Next.js webui — primär dashboard** — `webui/` (Next.js 16 + React 19 + TS + Tailwind v4 + TanStack Query). Fas 1–4 migrerade med riktig pipeline-data: Översikt, Analys & Trender, Agentprestanda, Fas 4 Insikter (hot topics + larmpanel), Samtalsdetalj (transkript, QA, LLM judge, per-call larm), Transkribering (WS), Testlabb. Se `docs/WEBUI_MODERNIZATION_PLAN.md`.
 - **Unified observability (PROD-01)** — `StatusReporter` (`src/core/status.py`), context-aware logging (`get_logger`, `log_context`), `GET /status/processes`, `GET /status/health/detail`, script bootstrap (`scripts/_bootstrap.py`), launcher/API/CLI/dashboard integration.
 - **Observability next-level (Fas A+B)** — lazy `get_logger` context, `RotatingFileHandler` JSONL sink, `phase_timer`/`degrading_phase`/`job_scope`, `error_code`/`exception_type` on status events, `sentiment_status_events_total` metric, DEBUG sampling/dedup, `GET /status/jobs/{id}` and filterable `/status/processes`.
 - **Intent corpus** — deduplicated balanced train/val JSONL; honest macro F1 metrics in `reports/intent_baseline.json`.
@@ -23,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Intent heuristic** — phrase boosts, disambiguation rules; ~76% macro F1 on honest `intent_val.jsonl`.
+
+### Deprecated
+- **NiceGUI dashboard** (`app/archive/nicegui_dashboard/`) — ersatt av `webui/` (Next.js). Behålls som referens, underhålls inte längre. Se `docs/WEBUI_MODERNIZATION_PLAN.md` för migreringsstatus.
 - **Emotion analyzer** — removed broad `hur`/`vad` förvirring markers.
 - **callcenter profile** — `dialect_sensitivity` disabled by default.
 - **LLM quality eval** — schema pass rate + deep-path eligibility in `evaluate llm-quality`.

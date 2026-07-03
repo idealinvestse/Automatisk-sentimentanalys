@@ -1,37 +1,21 @@
-feat(webui): migrate alerts panel + LLM judge panel to Next.js (Spår B.2)
+feat(webui): deprecate NiceGUI + add Executive Insights tab (Spår B.3, C.2)
 
-Migrerar de operativt kritiska larm- och LLM judge-komponenterna från
-NiceGUI till webui, med riktig data från pipeline-resultaten.
+B.3 — Archive decision for NiceGUI:
+- Add app/archive/README.md with deprecation banner pointing to webui/
+- Update AGENT_CONTEXT.md, PROJECT_STATUS.md, docs/ROADMAP.md, CHANGELOG.md
+  to mark webui as primary dashboard and NiceGUI as legacy/reference only
 
-Nya komponenter:
-- alerts-panel.tsx: aggregerad larmpanel med severity-filter,
-  rekommenderade åtgärder, beviscitat och webhook/circuit breaker-status
-  (GET /alerting/status + POST /alerting/reset-circuit-breaker)
-- call-alerts-section.tsx: kompakt per-call larmsektion för /calls/[id]
-- llm-judge-panel.tsx: LLM judge-verdicts med original/judge-jämförelse,
-  confidence-färgkodning, motiveringar och "endast ändrade"-filter
+C.2 — Executive Insights tab on top of real data:
+- New /executive route with aggregated KPIs across all demo calls:
+  total calls, avg QA, avg sentiment, total alerts, critical calls, LLM cost
+- Risk overview (churn/escalation/satisfaction) with risk-level distribution
+- Top alert rules, category breakdown, agent benchmark table
+- All data aggregated client-side from useDemoReports via
+  aggregateExecutiveSummary() — no new backend endpoint required
+- Add Briefcase nav icon + e2e smoke test for /executive
 
-Nya hooks:
-- use-alerts.ts: samlar alerts från useDemoReports (results.alerts)
-- use-alerting-status.ts: webhook/circuit breaker-status + reset-mutation
-
-API-klient:
-- Typade AlertingStatusResponse och AlertsResponse
-- resetCircuitBreaker() och getAlerts() metoder tillagda
-- PipelineReport utökad med alerts/llm_judge/risks/insights-fält
-
-real-data.ts:
-- AlertItem, LlmJudgeVerdict, LlmJudgeResult, CallQa, QaCriterion-typer
-- extractAlerts(), collectAllAlerts(), extractLlmJudge(),
-  extractQa(), extractEmotionTimeline(), buildCallDetail()
-- /calls/[id] omskriven till useDemoReports + buildCallDetail
-  (ersätter MOCK_CALL_DETAILS helt)
-
-Verifierat med Playwright:
-- /insights: 5 larm (qa_failed_high_risk) med severity, åtgärder, bevis
-- /calls/CALL-001: transkript, QA-scorecard, känslotidslinje, larm,
-  LLM Judge-panel — all riktig data, 0 konsol-fel
-- npm run lint (0 fel) + npm run build (9 routes gröna)
+Verified: npm run lint (0 errors), npm run build (clean, /executive route
+generated), Playwright smoke tests pass for all routes including /executive.
 
 Generated with [Devin](https://devin.ai)
 

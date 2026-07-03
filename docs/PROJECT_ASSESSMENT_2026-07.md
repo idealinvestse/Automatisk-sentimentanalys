@@ -1,6 +1,6 @@
 # Projektbedömning — Automatisk Sentimentanalys
 
-**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår B.2 — larm/LLM judge-paneler migrerade)
+**Datum:** 2026-07-01 (uppdaterad 2026-07-03 efter Spår B.3 + C.2 — NiceGUI deprecaterad, Executive Insights-flik tillagd)
 **Metod:** Statisk kodanalys, dokumentgranskning (ROADMAP, LLM_AGENT_GUIDE, CLEANUP_PLAN, WEBUI_MODERNIZATION_PLAN, CHANGELOG, SECURITY), körning av `pytest` (884 tester), `ruff check`, `npm run lint` + `npm run build` i `webui/`, samt Playwright-verifiering av alla fyra kärnvyer mot levande backend.
 **Syfte:** Ge ett helikopterperspektiv för att kunna prioritera nästa utvecklingssteg med hög säkerhet.
 
@@ -102,12 +102,12 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 ### Spår B — Konsolidera (minska dubbel yta, störst DX-vinst)
 1. **Sätt ett hårt slutdatum eller en tydlig "data cutover"-milstolpe för webui-migreringen.** ✅ **Klart 2026-07-01:** Byt mockdata mot riktig `/analyze_pipeline`-källa för `/`, `/analytics`, `/agents`, `/insights`. Alla fyra kärnvyer hämtar nu riktig data från backend-pipelinen via React Query-hooks (`useDemoReports`, `useAgentPerformance`, `useHotTopics`). Detta var den enda blockeraren för att kunna säga "webui är primär" på riktigt — webui är nu den primära dashboarden för demo-data.
 2. **Migrera larmpanel och LLM judge-panel** ✅ **Klart 2026-07-03:** Larmpanel (`AlertsPanel`) och per-call larmsektion (`CallAlertsSection`) migrerade till webui med riktig data från `results.alerts` i pipeline-svaret. LLM Judge-panel (`LlmJudgePanel`) migrerad till `/calls/[id]` med data från `results.llm_judge`. Webhook/circuit breaker-status hämtas från `GET /alerting/status`. `/calls/[id]` omskriven till att använda `useDemoReports` + `buildCallDetail` istället för `MOCK_CALL_DETAILS` — alla fyra kärnvyer + detaljvy använder nu uteslutande riktig pipeline-data.
-3. **Byt namn eller arkivera på riktigt**: antingen döp om `app/archive/nicegui_dashboard/` till något som signalerar "fortfarande i drift tills webui X är klar" (t.ex. behåll namnet men lägg en README-varningsbanner), eller sätt upp en definitiv avstängningsplan så det inte blir en tredje permanent UI.
+3. **Byt namn eller arkivera på riktigt**: antingen döp om `app/archive/nicegui_dashboard/` till något som signalerar "fortfarande i drift tills webui X är klar" (t.ex. behåll namnet men lägg en README-varningsbanner), eller sätt upp en definitiv avstängningsplan så det inte blir en tredje permanent UI. ✅ **Klart 2026-07-03:** `app/archive/README.md` skapad med tydlig deprecation-banner. `AGENT_CONTEXT.md`, `PROJECT_STATUS.md`, `docs/ROADMAP.md`, `CHANGELOG.md` och `AGENTS.md` uppdaterade — webui är nu entydigt dokumenterad som primär dashboard och NiceGUI som legacy/referens. Inga nya features läggs i NiceGUI.
 4. **Virtualisera transkriptvyn** (`@tanstack/react-virtual`) innan verkliga (långa) samtal används i produktion — nuvarande icke-virtualiserade lista fungerar bara för korta demo-samtal.
 
 ### Spår C — Väx (nya kundvärden, i linje med egen ROADMAP v0.5)
 1. **Model routing (kostnad/kvalitet)**: `src/llm/routing.py` + `model_catalog` är påbörjat (FAST/BALANCED/DEEP-tiers) — bra ROI om det kopplas till en enkel policy i dashboarden ("spara pengar"-läge vs "max kvalitet"-läge), vilket är ett konkret säljbart värde mot kunder.
-2. **Executive Insights-flik + modell-A/B-jämförelse** i webui — redan planerat, naturlig fortsättning efter att insights-vyn har riktig data (se Spår B.1).
+2. **Executive Insights-flik + modell-A/B-jämförelse** i webui — redan planerat, naturlig fortsättning efter att insights-vyn har riktig data (se Spår B.1). ✅ **Executive Insights klart 2026-07-03:** Ny `/executive`-route med aggregerade KPI:er (totala samtal, snitt-QA, snitt-sentiment, totala larm, kritiska samtal, LLM-kostnad), risköversikt (churn/escalation/satisfaction med risknivå-fördelning), topp larmregler, kategorifördelning och agentbenchmark-tabell. All data aggregeras klientsidans från `useDemoReports` via `aggregateExecutiveSummary()` — ingen ny backend-endpoint krävdes. Modells-A/B-jämförelse är ännu inte implementerat (kräver backend-stöd för parallell körning med olika modeller).
 3. **Edge AI-MVP-utbyggnad**: `sentimentanalys edge-analyze` finns som CLI; om affärsmålet är on-prem/offline-kunder (t.ex. myndigheter med extra höga datakrav) är detta en differentiator värd att bygga ut mot en tunn UI/rapport-export, snarare än bara CLI.
 4. **Multi-språk/marknadsexpansion (DK)** nämns i AGENT_CONTEXT som planerat. Spår A är nu klart (svensk kärnheuristik verifierad grön, se §7), så detta är inte längre blockerat av en misstänkt regression — men bör ändå vänta tills webui:s riktiga datakälla (Spår B.1) är på plats, så att samma dashboard-arbete inte görs två gånger för två marknader.
 
@@ -125,9 +125,9 @@ Kategoriserad efter: **Stabilisera** (skydda befintligt värde) → **Konsolider
 [✅ Spår A klart 2026-07-01: 0 failande tester (882 gröna/2 skippade av 884), ruff 0 fel]
 [✅ Spår B.1 klart 2026-07-01: webui kör riktig data för /, /analytics, /agents, /insights]
 [✅ Spår B.2 klart 2026-07-03: larmpanel + LLM judge-panel + /calls/[id] med riktig data]
-  → B.3 (arkivbeslut NiceGUI) ──→ B.4 (virtualiserad transkriptvy)
-  → C.2 (Executive Insights ovanpå riktig data) — nu upplåst via B.1+B.2
-    → B.3 (arkivbeslut NiceGUI) → B.4 (virtualiserad transkriptvy)
+[✅ Spår B.3 klart 2026-07-03: NiceGUI deprecaterad, webui dokumenterad som primär]
+[✅ Spår C.2 klart 2026-07-03: Executive Insights-flik (/executive) med aggregerade KPI:er]
+  → B.4 (virtualiserad transkriptvy)
       → D.1 (verklig korpus, kan köras parallellt med B — se §6) → C.1 (model routing i produkt) → C.3 (Edge AI-utbyggnad)
         → D.2 (observability-validering) → D.3 (produktionschecklista end-to-end)
           → C.4 (marknadsexpansion DK)

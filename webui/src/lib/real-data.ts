@@ -349,3 +349,186 @@ export function reportToCallRow({ transcript, report }: RealCall): CallRow {
 export function reportsToCallRows(calls: RealCall[]): CallRow[] {
   return calls.map(reportToCallRow);
 }
+
+// ---------------------------------------------------------------------------
+// Executive Insights aggregation (cross-call KPIs for management overview)
+// ---------------------------------------------------------------------------
+
+export interface RiskMetrics {
+  churnRisk: number;
+  escalationRisk: number;
+  satisfactionScore: number;
+  riskLevel: string;
+}
+
+export interface ExecutiveKpis {
+  totalCalls: number;
+  avgQaScore: number;
+  avgSentiment: number;
+  totalAlerts: number;
+  qaPassRate: number;
+  avgChurnRisk: number;
+  avgEscalationRisk: number;
+  avgSatisfaction: number;
+  criticalCalls: number;
+  totalLlmCostUsd: number;
+}
+
+export interface AgentBenchmark {
+  agent: string;
+  calls: number;
+  avgQaScore: number;
+  avgSentiment: number;
+  avgEmpathy: number | null;
+  alertCount: number;
+  avgChurnRisk: number;
+}
+
+export interface ExecutiveSummary {
+  kpis: ExecutiveKpis;
+  agentBenchmarks: AgentBenchmark[];
+  riskDistribution: Record<string, number>;
+  topAlertRules: { ruleId: string; count: number }[];
+  categoryBreakdown: { category: string; calls: number; avgSentiment: number; avgQa: number }[];
+}
+
+/** Extract risk metrics from a pipeline report. */
+export function extractRiskMetrics(report: PipelineReport): RiskMetrics {
+  const risks = report.risks as Record<string, unknown> | undefined;
+  return {
+    churnRisk: Number(risks?.churn_risk ?? 0),
+    escalationRisk: Number(risks?.escalation_risk ?? 0),
+    satisfactionScore: Number(risks?.satisfaction_score ?? 0.5),
+    riskLevel: String(risks?.risk_level ?? "medium"),
+  };
+}
+
+/** Aggregate executive-level KPIs across all demo reports. */
+export function aggregateExecutiveSummary(calls: RealCall[]): ExecutiveSummary {
+  if (calls.length === 0) {
+    return {
+      kpis: {
+        totalCalls: 0,
+        avgQaScore: 0,
+        avgSentiment: 0,
+        totalAlerts: 0,
+        qaPassRate: 0,
+        avgChurnRisk: 0,
+        avgEscalationRisk: 0,
+        avgSatisfaction: 0,
+        criticalCalls: 0,
+        totalLlmCostUsd: 0,
+      },
+      agentBenchmarks: [],
+      riskDistribution: {},
+      topAlertRules: [],
+      categoryBreakdown: [],
+    };
+  }
+
+  const rows = reportsToCallRows(calls);
+  const qaScores = rows.map((r) => r.qaScore ?? 0);
+  const sentiments = rows.map((r) => r.sentimentScore);
+  const allAlerts = collectAllAlerts(calls);
+
+  const riskMetrics = calls.map((c) => extractRiskMetrics(c.report));
+  const avgChurnRisk = riskMetrics.reduce((s, r) => s + r.churnRisk, 0) / calls.length;
+  const avgEscalationRisk = riskMetrics.reduce((s, r) => s + r.escalationRisk, 0) / calls.length;
+  const avgSatisfaction = riskMetrics.reduce((s, r) => s + r.satisfactionScore, 0) / calls.length;
+  const criticalCalls = riskMetrics.filter((r) => r.riskLevel === "critical").length;
+
+  // LLM cost from llm_judge results
+  let totalLlmCostUsd = 0;
+  for (const c of calls) {
+    const judge = extractLlmJudge(c.report);
+    if (judge) totalLlmCostUsd += judge.total_cost_usd;
+  }
+
+  // Risk distribution
+  const riskDistribution: Record<string, number> = {};
+  for (const r of riskMetrics) {
+    riskDistribution[r.riskLevel] = (riskDistribution[r.riskLevel] ?? 0) + 1;
+  }
+
+  // Top alert rules
+  const ruleCounts = new Map<string, number>();
+  for (const a of allAlerts) {
+    ruleCounts.set(a.rule_id, (ruleCounts.get(a.rule_id) ?? 0) + 1);
+  }
+  const topAlertRules = [...ruleCounts.entries()]
+    .map(([ruleId, count]) => ({ ruleId, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Agent benchmarks
+  const byAgent = new Map<string, RealCall[]>();
+  for (const call of calls) {
+    const agent = call.transcript.meta.agent;
+    const list = byAgent.get(agent) ?? [];
+    list.push(call);
+    byAgent.set(agent, list);
+  }
+
+  const agentBenchmarks: AgentBenchmark[] = [];
+  for (const [agent, agentCalls] of byAgent) {
+    const agentRows = reportsToCallRows(agentCalls);
+    const agentRisks = agentCalls.map((c) => extractRiskMetrics(c.report));
+    const empathyScores = agentCalls
+      .map((c) => {
+        const ap = c.report.results?.agent_performance as Record<string, Record<string, unknown>> | undefined;
+        const agentPerf = ap?.agent;
+        return typeof agentPerf?.empathy_score === "number" ? agentPerf.empathy_score : null;
+      })
+      .filter((v): v is number => v !== null);
+
+    agentBenchmarks.push({
+      agent,
+      calls: agentCalls.length,
+      avgQaScore: agentRows.reduce((s, r) => s + (r.qaScore ?? 0), 0) / agentRows.length,
+      avgSentiment: agentRows.reduce((s, r) => s + r.sentimentScore, 0) / agentRows.length,
+      avgEmpathy: empathyScores.length > 0 ? empathyScores.reduce((s, v) => s + v, 0) / empathyScores.length : null,
+      alertCount: agentRows.reduce((s, r) => s + r.alertCount, 0),
+      avgChurnRisk: agentRisks.reduce((s, r) => s + r.churnRisk, 0) / agentRisks.length,
+    });
+  }
+  agentBenchmarks.sort((a, b) => b.avgQaScore - a.avgQaScore);
+
+  // Category breakdown
+  const byCategory = new Map<string, RealCall[]>();
+  for (const call of calls) {
+    const cat = call.transcript.meta.category;
+    const list = byCategory.get(cat) ?? [];
+    list.push(call);
+    byCategory.set(cat, list);
+  }
+  const categoryBreakdown = [...byCategory.entries()].map(([category, catCalls]) => {
+    const catRows = reportsToCallRows(catCalls);
+    return {
+      category,
+      calls: catCalls.length,
+      avgSentiment: catRows.reduce((s, r) => s + r.sentimentScore, 0) / catRows.length,
+      avgQa: catRows.reduce((s, r) => s + (r.qaScore ?? 0), 0) / catRows.length,
+    };
+  });
+
+  const qaPassRate = rows.filter((r) => r.qaPassed === true).length / rows.length;
+
+  return {
+    kpis: {
+      totalCalls: calls.length,
+      avgQaScore: qaScores.reduce((s, v) => s + v, 0) / qaScores.length,
+      avgSentiment: sentiments.reduce((s, v) => s + v, 0) / sentiments.length,
+      totalAlerts: allAlerts.length,
+      qaPassRate,
+      avgChurnRisk,
+      avgEscalationRisk,
+      avgSatisfaction,
+      criticalCalls,
+      totalLlmCostUsd,
+    },
+    agentBenchmarks,
+    riskDistribution,
+    topAlertRules,
+    categoryBreakdown,
+  };
+}

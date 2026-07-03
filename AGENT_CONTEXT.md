@@ -4,7 +4,7 @@
 ## 1. What This System Is
 Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkribering (ASR + diarization), intent/ emotion/ aspect-analys, LLM-baserad QA/compliance, PII-redaktion, insikter, agent performance metrics och realtids-dashboard. Byggt för svenska kundtjänstsamtal med stark GDPR-fokus, skalbarhet och self-hosted/VPS-deployment. Mål: ersätta manuell samtalshantering med automatiserad, pålitlig analys som ger actionable insights till QA, coacher och chefer.
 
-**Core Value**: End-to-end från ljud → strukturerad rapport (sentiment scores, intents, QA-evidence, alerts, hot topics, coaching tips) → dashboard/API consumption. Stödjer batch, real-time WS och interaktiv NiceGUI UI. **Ny**: Dynamisk LLM model pricing via OpenRouter catalog.
+**Core Value**: End-to-end från ljud → strukturerad rapport (sentiment scores, intents, QA-evidence, alerts, hot topics, coaching tips) → dashboard/API consumption. Stödjer batch, real-time WS och interaktiv Next.js web UI. **Ny**: Dynamisk LLM model pricing via OpenRouter catalog.
 
 ## 2. Current Feature Inventory
 
@@ -14,7 +14,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - LLM Layer: Pluggable providers (Groq med EU-residency gate + caching + cost, Mistral, OpenRouter). Strict Pydantic schemas, prompts, fallback chains. **Ny**: Dynamic pricing från model_catalog + refresh_pricing_from_catalog().
 - Fas 4 Backend: agent_performance, compliance_qa (YAML scorecards + LLM hybrid + evidence spans), insights_aggregator (hot topics, root cause, trender), semantic_search (hybrid vector+keyword), alerting (rules + webhook w/ circuit breaker + retries).
 - API (FastAPI): Routers för transcription, pipeline, scan, text, ws, batch, agent_performance, search/semantic, qa/score, alerts. Schemas, middleware, services, cached responses, OpenAPI.
-- Dashboard (NiceGUI): KPI, calls table, live_analysis, transcription_monitor, call_detail (emotion timeline, virtual transcript), hot_topic_wordcloud, insights_hot_topics, agent_performance, qa_scorecard, alerts_panel, pii_audit, **test_lab (med LLM Model Catalog refresh-knapp + status)**, fas4_insights. Local demo + API client modes. Modern, responsive UI.
+- Dashboard (webui/ — Next.js 16 + React 19 + TS + Tailwind v4): KPI, calls table, call_detail (emotion timeline, QA scorecard, alerts, LLM judge), analytics, agent_performance, fas4_insights (hot topics + alerts panel), transcription (WS), test_lab. All data from real backend pipeline via React Query. **Legacy**: `app/archive/nicegui_dashboard/` är deprecated, se `docs/WEBUI_MODERNIZATION_PLAN.md`.
 - CLI + Evaluation: Full CLI, evaluate (fas4-validation reports), audio benchmarks, finetune scripts, data prep. **Ny**: `scan-openrouter-models` kommando med rich table.
 - Data: callcenter_train/val (CSV/JSONL), sensaldo_lexicon, intent data; reports/.
 - Security: PII hardening (Luhn, Swedish names/phones/addresses), GDPR LLM routing, SECURITY.md, preflight.
@@ -40,7 +40,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Analysis** (src/analysis/, src/sentiment.py, src/intent.py, src/llm_judge.py etc.): Modular, each returns structured dict/Pydantic. LLM judge for advanced QA/evidence.
 - **LLM** (src/llm/): Clients + Analyzers per provider. groq_client.py, mistral_analyzer.py, openrouter_client.py (nu med dynamic pricing från catalog). Schemas define output strictly. Prompts in prompts.py. PII redaction before LLM calls where configured.
 - **API** (src/api/app.py, routers/, services/): Dependency injection, rate limit, error responses, transcription_jobs, pipeline_cache. WS for streaming transcription events.
-- **Dashboard** (app/archive/nicegui_dashboard/): Components in components/, services in services/ (nicegui_api_client.py for backend calls, fas4_data.py for local, chart_data.py). State management, theme, layout. **Ny**: test_lab med create_llm_model_settings() för catalog refresh.
+- **Dashboard** (webui/): Next.js App Router pages, React Query hooks, typed API client (`webui/src/lib/api/client.ts`). shadcn/ui primitives + feature components. **Legacy**: `app/archive/nicegui_dashboard/` (Python/NiceGUI) är deprecated men behålls som referens.
 - **Launcher** (launcher/): Process manager, ASR dialog, status panel, env builder, pid store. PowerShell entry for desktop users. **Ny**: Valbar mapp för modeller.
 - **Data Layer**: Local CSV/JSONL + in-memory/demo providers. Caching for expensive aggregations.
 - **Key Invariants**: Always PII-safe (redact before LLM if flag set), graceful degradation (missing optional deps don't crash core), Swedish-first (lexicon, prompts, data), structured output everywhere (Pydantic), tests cover happy + edge paths. **Ny**: Model catalog pricing är live och uppdateras via CLI/Dashboard.
@@ -55,7 +55,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - src/llm/schemas.py + src/llm/prompts.py — LLM output contracts and prompt engineering.
 - src/llm/openrouter_client.py + src/llm/model_catalog.py — **Ny viktig**: Dynamic pricing + full model scan. Använd refresh_pricing_from_catalog() och load_catalog().
 - src/api/routers/pipeline.py + src/api/schemas.py — API contract for analysis requests.
-- app/archive/nicegui_dashboard/main.py + app/archive/nicegui_dashboard/services/nicegui_api_client.py — Dashboard entry + data fetching. **Ny**: test_lab.py har LLM catalog UI.
+- webui/src/lib/api/client.ts + webui/src/hooks/ — Primary frontend API client + React Query hooks. **Legacy**: app/archive/nicegui_dashboard/ (deprecated, referens endast).
 - launcher/main.py + launcher/process_manager.py — Desktop launcher logic. **Ny**: Storage path settings.
 - pyproject.toml — Dependencies, optional groups (cli, api, dashboard-nicegui, diarize), scripts.
 - configs/ — llm_config.yaml, alerting_config.yaml, qa_scorecards/*.yaml, install_defaults.
@@ -68,7 +68,8 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Run**:
   - CLI: sentimentanalys --help or python -m src.cli   (ny: scan-openrouter-models)
   - API: uvicorn src.api:app --reload (or via launcher)
-  - Dashboard: python -m app.archive.nicegui_dashboard.main   (Test Lab har nu LLM catalog knapp)
+  - Dashboard (primär): cd webui && npm run dev   (Next.js, http://localhost:3000)
+  - Dashboard (legacy, ej underhåll): python -m app.archive.nicegui_dashboard.main
   - Windows: .\launcher.ps1 or Sentimentanalys.bat   (ny: valbar modeller-mapp)
   - Tests: pytest (or specific pytest tests/test_pipeline.py -q )
   - Evaluate: python -m src.evaluate fas4-validation
@@ -76,7 +77,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Adding Features**:
   - New analysis step: Implement in src/analysis/, register in registry.py, add to pipeline, update schemas/tests.
   - New LLM provider / model handling: Använd model_catalog.py + uppdatera openrouter_client pricing.
-  - Dashboard tab/component: New file in components/, wire in main/layout, add to api_client if backend. (Test Lab är bra plats för LLM-verktyg)
+  - Dashboard tab/component: New page in webui/src/app/, hook in webui/src/hooks/, component in webui/src/components/. Använd React Query + typed API client.
   - API endpoint: Router in routers/, service if needed, schema, test.
 - **Testing**: Unit + integration. Mock external (LLM, ASR heavy). Use fixtures. Aim high coverage on src/.
 - **Docs**: Update ROADMAP/CHANGELOG on releases. Use this AGENT_CONTEXT + PROJECT_STATUS as single source. **Re-run github-project-status skill after significant changes**.
@@ -91,4 +92,4 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Städning (2026-06-28)**: Legacy-planer arkiverade i `docs/archive/`; Streamlit borttagen; pipeline refaktorerad (`_run_local_analysis`, `_run_fas4_enrichment`, `_build_report`).
 
 ## 7. Context for Future Agents
-After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature (särskilt model catalog / pricing), se src/llm/model_catalog.py och openrouter_client.py. Dashboard components should use nicegui_api_client.py for backend data. Använd .grok/skills/ för kvalitet, review och launch-hjälp. **Ny regel**: Efter model-relaterade ändringar, kör `sentimentanalys scan-openrouter-models` och uppdatera pricing i client.
+After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature (särskilt model catalog / pricing), se src/llm/model_catalog.py och openrouter_client.py. Dashboard components should use `webui/src/lib/api/client.ts` for backend data (NiceGUI-dashboarden är deprecated). Använd .grok/skills/ för kvalitet, review och launch-hjälp. **Ny regel**: Efter model-relaterade ändringar, kör `sentimentanalys scan-openrouter-models` och uppdatera pricing i client.

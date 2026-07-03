@@ -72,6 +72,7 @@ Routing ersätter NiceGUI:s flikar 1:1:
 | `/analytics` | Analys & Trender | 1 |
 | `/agents` | Agentprestanda | 1 |
 | `/insights` | Fas 4 Insikter | 2 |
+| `/executive` | Executive Insights (ny) | 2 |
 | `/calls/[id]` | Samtalsdetalj | 2 |
 | `/transcription` | Transkribering | 3 |
 | `/testlab` | Testlabb (endast dev) | 3 |
@@ -134,6 +135,16 @@ Fas 0 – resten läggs till i samband med att respektive vy migreras.
 - [ ] Virtuell transkriptvy för långa samtal (`virtual_transcript.py` →
       `@tanstack/react-virtual`) — nuvarande transkript-lista är inte
       virtualiserad (ok för demo-datats korta samtal).
+
+### Fas 2 (tillägg) – Executive Insights — klar (riktig data)
+- [x] `/executive` (Executive Insights, ny flik): aggregerade KPI:er över
+      alla demo-samtal — totala samtal, snitt-QA, snitt-sentiment, totala
+      larm, kritiska samtal, LLM-kostnad. Risköversikt (churn/escalation/
+      satisfaction) med fördelning per risknivå. Topp larmregler,
+      kategorifördelning och agentbenchmark-tabell (QA, sentiment, empathy,
+      larm, churn-risk per agent). All data hämtas från `useDemoReports` och
+      aggregeras klientsidans i `aggregateExecutiveSummary()` — ingen ny
+      backend-endpoint krävs.
 
 **QA-process etablerad i Fas 1/2 (återanvänd för alla kommande faser):**
 Playwright MCP mot lokal `npm run dev`-server, per migrerad sida:
