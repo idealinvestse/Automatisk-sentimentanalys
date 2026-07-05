@@ -166,3 +166,94 @@ def test_asr_payload_includes_beam_size() -> None:
     assert payload["beam_size"] == 7
     assert payload["preprocess"] is True
     assert payload["hotwords"] == ["a", "b"]
+
+
+# ---------------------------------------------------------------------------
+# WS Ticket Auth Tests (Fas 5 harmonization)
+# ---------------------------------------------------------------------------
+
+
+def test_ws_ticket_endpoint_returns_ticket_with_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GET /ws/transcription/ticket returns a ticket when auth is enabled."""
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/ws/transcription/ticket", headers={"X-API-Key": "secret-key"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "ticket" in data
+    assert data["ticket"] != "no-auth-required"
+    assert "expires_in" in data
+    assert data["expires_in"] == 300  # 5 minutes
+
+
+def test_ws_ticket_endpoint_returns_dummy_without_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GET /ws/transcription/ticket returns dummy ticket when auth is disabled."""
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/ws/transcription/ticket")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ticket"] == "no-auth-required"
+    assert data["expires_in"] == 300
+
+
+def test_ws_ticket_endpoint_requires_auth_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GET /ws/transcription/ticket is protected when auth is enabled."""
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/ws/transcription/ticket")
+    assert response.status_code == 403
+
+
+def test_ws_accepts_valid_ticket_via_query_param(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WebSocket accepts valid ticket via ?token= query parameter."""
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    # Get a ticket first
+    ticket_response = client.get("/ws/transcription/ticket", headers={"X-API-Key": "secret-key"})
+    ticket = ticket_response.json()["ticket"]
+
+    # Connect using the ticket
+    with client.websocket_connect(f"/ws/transcription?token={ticket}") as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "connected"
+
+
+def test_ws_rejects_invalid_ticket(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WebSocket rejects invalid ticket."""
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/transcription?token=invalid"):
+        pass
+
+
+def test_ws_accepts_header_auth_with_ticket_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WebSocket still accepts header auth even when ticket auth is available."""
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws/transcription", headers={"X-API-Key": "secret-key"}) as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "connected"
+
+
+def test_ws_accepts_no_auth_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WebSocket accepts connection without auth when auth is disabled."""
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws/transcription") as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "connected"
