@@ -25,7 +25,202 @@ export interface PipelineReport {
   llm_judge?: Record<string, unknown>;
   risks?: Record<string, unknown>;
   insights?: Record<string, unknown>;
+  /** Typed view of `results` (Fas 5). Null when no analyzers ran. */
+  analyzer_results?: AnalyzerResults | null;
   [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Typed analyzer output interfaces (Fas 5 — mirrors src/api/schemas.py)
+// ---------------------------------------------------------------------------
+
+export interface EmotionSegmentResult {
+  primary: string;
+  scores: Record<string, number>;
+  speaker?: string | null;
+}
+
+export interface AspectItem {
+  aspect: string;
+  sentiment: string;
+  score: number;
+  evidence?: string | null;
+  start?: number | null;
+  end?: number | null;
+  speaker?: string | null;
+}
+
+export interface TrajectoryResult {
+  customer_sentiment_slope: number;
+  escalation_events: number;
+  escalation_event_details: Array<Record<string, unknown>>;
+  peak_frustration_turn: number | null;
+  sentiment_trend: number[];
+}
+
+export interface RootCauseItem {
+  cause: string;
+  count: number;
+  recommendation?: string | null;
+}
+
+export interface RootCauseResult {
+  root_causes: RootCauseItem[];
+  top_root_cause?: string | null;
+  evidence_examples: Array<Record<string, unknown>>;
+  overall_risk: "low" | "medium" | "high";
+  message?: string | null;
+}
+
+export interface CoachingInsightItem {
+  rule_id: string;
+  priority: "high" | "medium" | "low";
+  recommendation: string;
+  evidence?: unknown;
+}
+
+export interface CoachingResult {
+  coaching_insights: CoachingInsightItem[];
+  top_recommendation?: string | null;
+  insight_count: number;
+}
+
+export interface CustomerEffortSegment {
+  speaker?: string | null;
+  start: number;
+  end: number;
+  effort_score: number;
+}
+
+export interface CustomerEffortResult {
+  overall_ces: number;
+  scale: string;
+  per_segment: CustomerEffortSegment[];
+  coaching_tips: string[];
+}
+
+export interface ActiveListeningResult {
+  listening_score: number;
+  backchannel_count: number;
+  speaker_balance: Record<string, number>;
+  events: Array<Record<string, unknown>>;
+  tips: string[];
+}
+
+export interface EmpathySegment {
+  speaker?: string | null;
+  start?: number | null;
+  empathy_score: number;
+  evidence: string[];
+}
+
+export interface EmpathyResult {
+  overall_empathy: number;
+  scale: string;
+  per_segment: EmpathySegment[];
+  coaching_tips: string[];
+}
+
+export interface ResolutionProbabilityResult {
+  resolution_probability: number;
+  confidence: number;
+  recommended_action: string;
+  factors: Record<string, unknown>;
+}
+
+export interface JourneyStage {
+  stage: string;
+  start: number;
+  speaker?: string | null;
+  text_snippet: string;
+  intent?: string | null;
+  sentiment?: string | null;
+}
+
+export interface MultiTurnJourneyResult {
+  journey_stages: JourneyStage[];
+  resolved: boolean;
+  unresolved_count: number;
+  key_turning_points: Array<Record<string, unknown>>;
+  recommendation?: string | null;
+  message?: string | null;
+}
+
+export interface UpsellOpportunity {
+  speaker?: string | null;
+  start: number;
+  end: number;
+  confidence: number;
+  signals: string[];
+  suggested_action: string;
+  evidence: string;
+}
+
+export interface UpsellResult {
+  opportunities: UpsellOpportunity[];
+  count: number;
+  recommendation?: string | null;
+}
+
+export interface DialectSensitivityResult {
+  dialect_risk_level: "low" | "medium" | "high";
+  flagged_segments: Array<Record<string, unknown>>;
+  total_dialect_hits: number;
+  slang_count: number;
+  recommendation?: string | null;
+}
+
+export interface ComplianceRiskResult {
+  overall_risk_level: "low" | "medium" | "high";
+  flagged_segments: Array<Record<string, unknown>>;
+  recommendation?: string | null;
+}
+
+export interface RoleClassifierResult {
+  roles: Record<string, string>;
+  talk_ratios: Record<string, number>;
+  question_density: Record<string, number>;
+  lexical_formality: number;
+  intervention_count: number;
+  sentiment_variance: number;
+  num_agent_turns: number;
+  num_customer_turns: number;
+}
+
+export interface PredictiveResult {
+  churn_risk: number;
+  escalation_risk: number;
+  satisfaction_score: number;
+  risk_factors: string[];
+  risk_level: "low" | "medium" | "high" | "critical";
+  recommended_action?: string | null;
+}
+
+/** Typed view of `PipelineResponse.results` (Fas 5). */
+export interface AnalyzerResults {
+  emotion?: EmotionSegmentResult[] | null;
+  aspect?: AspectItem[] | null;
+  trajectory?: TrajectoryResult | null;
+  root_cause?: RootCauseResult | null;
+  actionable_coaching?: CoachingResult | null;
+  customer_effort?: CustomerEffortResult | null;
+  active_listening?: ActiveListeningResult | null;
+  empathy?: EmpathyResult | null;
+  resolution_probability?: ResolutionProbabilityResult | null;
+  multi_turn_journey?: MultiTurnJourneyResult | null;
+  upsell_opportunity?: UpsellResult | null;
+  dialect_sensitivity?: DialectSensitivityResult | null;
+  compliance_risk?: ComplianceRiskResult | null;
+  role?: RoleClassifierResult | null;
+  predictive?: PredictiveResult | null;
+  agent_performance?: Record<string, unknown> | null;
+  qa?: Record<string, unknown> | null;
+  agent_assessment?: Record<string, unknown> | null;
+  agent_assessment_local?: Record<string, unknown> | null;
+  customer_metrics?: Record<string, unknown> | null;
+  pii_redaction?: Record<string, unknown> | null;
+  alerts?: Array<Record<string, unknown>> | null;
+  llm_judge?: Record<string, unknown> | null;
 }
 
 /** Response shape of POST /agent_performance/{agent_id} (Fas 4). */
@@ -98,6 +293,59 @@ export interface EdgeAnalysisResult {
   limitations: string[];
 }
 
+/** Response shape of POST /transcribe. */
+export interface TranscribeResponse {
+  transcript: Record<string, unknown>;
+  timestamp: string;
+}
+
+/** Request shape of POST /transcribe (subset of backend AsrParamsMixin). */
+export interface TranscribeRequest {
+  audio_path: string;
+  backend?: string;
+  model?: string;
+  device?: string;
+  language?: string;
+  word_timestamps?: boolean;
+  preprocess?: boolean;
+  preprocess_mode?: string;
+  vad?: boolean;
+  diarize?: boolean;
+  num_speakers?: number | null;
+}
+
+/** Response shape of POST /batch_transcribe. */
+export interface BatchTranscribeResponse {
+  items: Array<{
+    file: string;
+    transcript?: Record<string, unknown>;
+    error?: string;
+  }>;
+  ok: number;
+  failed: number;
+  total: number;
+  timestamp: string;
+}
+
+/** Request shape of POST /batch_transcribe. */
+export interface BatchTranscribeRequest {
+  audio_paths?: string[];
+  directory?: string | null;
+  glob?: string | null;
+  recursive?: boolean;
+  limit?: number | null;
+  workers?: number;
+  worker_timeout?: number;
+  backend?: string;
+  model?: string;
+  device?: string;
+  language?: string;
+  word_timestamps?: boolean;
+  vad?: boolean;
+  diarize?: boolean;
+  num_speakers?: number | null;
+}
+
 export class ApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -124,6 +372,8 @@ export class ApiClient {
   readonly baseUrl: string;
   private readonly apiKey?: string;
   private readonly timeoutMs: number;
+  private wsTicket: string | null = null;
+  private wsTicketExpiry: number = 0;
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? getBaseUrl()).replace(/\/$/, "");
@@ -167,6 +417,28 @@ export class ApiClient {
       throw new ApiError(`API-fel ${response.status} på ${path}`, response.status, detail);
     }
     return (await response.json()) as T;
+  }
+
+  /** Fetch a WebSocket authentication ticket (for browsers that cannot send custom headers). */
+  private async fetchWsTicket(): Promise<string> {
+    const now = Date.now();
+    // Reuse existing ticket if it's still valid (with 30s buffer)
+    if (this.wsTicket && this.wsTicketExpiry > now + 30_000) {
+      return this.wsTicket;
+    }
+
+    try {
+      const response = await this.get<{ ticket: string; expires_in: number }>("/ws/transcription/ticket");
+      this.wsTicket = response.ticket;
+      this.wsTicketExpiry = now + response.expires_in * 1000;
+      return this.wsTicket;
+    } catch {
+      // If ticket fetch fails (e.g., no auth), fall back to no ticket
+      // This allows the WS to work when auth is disabled
+      this.wsTicket = null;
+      this.wsTicketExpiry = 0;
+      return "";
+    }
   }
 
   get<T>(path: string, params?: Record<string, string | number | boolean | undefined>) {
@@ -284,12 +556,29 @@ export class ApiClient {
     return this.post<T>(`/transcription/jobs/${jobId}/cancel`, {});
   }
 
+  /** Transcribe a single audio file (POST /transcribe). */
+  transcribe<T = TranscribeResponse>(req: TranscribeRequest) {
+    return this.post<T>("/transcribe", req, 600_000); // 10 minute timeout for large files
+  }
+
+  /** Transcribe multiple audio files (POST /batch_transcribe). */
+  batchTranscribe<T = BatchTranscribeResponse>(req: BatchTranscribeRequest) {
+    return this.post<T>("/batch_transcribe", req, 600_000); // 10 minute timeout for batches
+  }
+
   /** ws:// or wss:// URL for the live transcription event stream. */
-  wsUrl(path = "/ws/transcription"): string {
+  async wsUrl(path = "/ws/transcription"): Promise<string> {
     const url = new URL(this.baseUrl);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     url.pathname = path;
-    url.search = "";
+
+    // Fetch and append WebSocket ticket for auth (browsers cannot send custom headers)
+    const ticket = await this.fetchWsTicket();
+    if (ticket) {
+      url.searchParams.set("token", ticket);
+    } else {
+      url.search = "";
+    }
     return url.toString();
   }
 

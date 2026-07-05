@@ -81,14 +81,15 @@ export function useTranscriptionSocket() {
   // Keep the connect closure in a ref so callers (connect/scheduleRetry) always
   // invoke the latest version without re-creating their own callbacks.
   React.useEffect(() => {
-    connectRef.current = (targetJobId: string | null) => {
+    connectRef.current = async (targetJobId: string | null) => {
       if (stoppedRef.current) return;
       clearRetryTimer();
       setStatus(attemptRef.current > 0 ? "reconnecting" : "disconnected");
 
       let ws: WebSocket;
       try {
-        ws = new WebSocket(apiClient.wsUrl());
+        const url = await apiClient.wsUrl();
+        ws = new WebSocket(url);
       } catch {
         scheduleRetry(targetJobId);
         return;

@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Radio, Play, Square, Trash2 } from "lucide-react";
+import { Radio, Play, Square, Trash2, Upload, FileAudio } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { useTranscriptionSocket } from "@/hooks/use-transcription-socket";
+import { apiClient, ApiError, type TranscribeRequest } from "@/lib/api/client";
+import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { WsConnectionStatus } from "@/lib/transcription-events";
 
@@ -35,7 +38,28 @@ export default function TranscriptionPage() {
   const { status, logs, progress, done, connect, disconnect, clearLogs } =
     useTranscriptionSocket();
   const [jobIdInput, setJobIdInput] = React.useState("");
+  const [audioPath, setAudioPath] = React.useState("");
   const logEndRef = React.useRef<HTMLDivElement>(null);
+
+  const transcribeMutation = useMutation({
+    mutationFn: async () => {
+      if (!audioPath.trim()) throw new ApiError("Ange sökväg till ljudfil");
+      const req: TranscribeRequest = {
+        audio_path: audioPath.trim(),
+        backend: "faster",
+        model: "kb-whisper-large",
+        language: "sv",
+        word_timestamps: true,
+        vad: true,
+      };
+      return apiClient.transcribe(req);
+    },
+    onSuccess: () => {
+      notifySuccess("Transkribering startad");
+      setAudioPath("");
+    },
+    onError: (err) => notifyApiError(err, "Transkriberingsfel: "),
+  });
 
   React.useEffect(() => {
     logEndRef.current?.scrollIntoView({ block: "end" });
@@ -92,6 +116,41 @@ export default function TranscriptionPage() {
           <Button variant="ghost" onClick={clearLogs} className="gap-1.5">
             <Trash2 className="size-4" />
             Rensa loggar
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileAudio className="size-4" />
+            Starta transkribering
+          </CardTitle>
+          <CardDescription>
+            Transkribera en ljudfil på servern (sökvägen måste vara tillgänglig för backend).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="audio-path" className="text-xs font-medium text-muted-foreground">
+              Sökväg till ljudfil
+            </label>
+            <Input
+              id="audio-path"
+              placeholder="t.ex. samples/audio/sv/call1.wav"
+              value={audioPath}
+              onChange={(e) => setAudioPath(e.target.value)}
+              disabled={transcribeMutation.isPending}
+              className="font-mono text-xs"
+            />
+          </div>
+          <Button
+            onClick={() => transcribeMutation.mutate()}
+            disabled={transcribeMutation.isPending || !audioPath.trim()}
+            className="w-fit gap-1.5"
+          >
+            <Upload className="size-4" />
+            {transcribeMutation.isPending ? "Startar..." : "Starta transkribering"}
           </Button>
         </CardContent>
       </Card>

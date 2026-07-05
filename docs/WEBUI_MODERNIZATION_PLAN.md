@@ -171,7 +171,8 @@ Playwright MCP mot lokal `npm run dev`-server, per migrerad sida:
 
 ### Fas 3 – Live/interaktiva funktioner
 - [x] `/transcription`: WS-klient mot `/ws/transcription` (ersätter
-      `transcription_ws_client.py`), live-loggvy, jobbstatus, ad-hoc-uppladdning.
+      `transcription_ws_client.py`), live-loggvy, jobbstatus, WS ticket-based auth för webbläsare.
+- [x] `/transcription`: formulär för att starta transkribering (`POST /transcribe`) via sökväg (server-side filer).
 - [x] `/testlab` (endast i dev-läge, motsvarande `is_dev_mode()`): pipeline-test
       på JSON-segments (`live_analysis.py`), PII-audit-vy.
 - [x] Toast/notifieringsparitet med `ui_helpers.py` (success/warning/error).
@@ -208,7 +209,25 @@ Använd denna checklista för **varje** komponent som flyttas över från
    funktionalitet utan explicit beslut.
 8. Skriv minst ett rök-test (render utan krasch) eller Playwright-steg.
 
-## 6. Risker / avvägningar
+## 6. Endpoints som är CLI/API-only (avsiktligt exkluderade från webui)
+
+Följande backend-endpoints är avsiktligt **inte** exponerade i `webui/` och
+är endast tillgängliga via CLI eller direkt REST-anrop:
+
+- `POST /analyze` — ren textsentiment, ersatt av `/analyze_pipeline` i webui
+- `POST /analyze_conversation`, `POST /batch_analyze_conversation` —
+  transkribering + analys i ett steg; webui separerar detta i `/transcription`
+  och `/testlab` för bättre UX
+- `POST /scan_process` — katalog-scanning för batch-jobb; används främst av
+  CLI och externa skript, inte interaktivt dashboard-arbete
+- `POST /search/semantic` — semantisk sökning över samtal; kan läggas till
+  i `/insights` vid behov, men prioriterades inte i Fas 1-4
+- `POST /qa/score` — isolerad QA-scoring; webui visar QA som del av
+  `/analyze_pipeline`-resultat (`results.qa`)
+
+Dessa kan migreras till webui vid behov, men ingår inte i Fas 0-4 scope.
+
+## 7. Risker / avvägningar
 
 - **Omfattning:** Detta är en fullständig nyskrivning av en ~25-komponents
   dashboard, inte en uppfräschning – betydligt större insats än att bara
