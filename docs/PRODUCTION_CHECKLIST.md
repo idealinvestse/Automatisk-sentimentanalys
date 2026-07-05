@@ -174,6 +174,10 @@ Följande data backas upp:
 
 1. **GPU-verifiering** — `Dockerfile.gpu` är byggt men ej testat på riktig GPU-host. Se "GPU-verifieringssteg" ovan för steg-för-steg-guide.
 
+### WebSocket ticket auth (Fas 5 harmonization)
+
+WebSocket ticket-baserad auth (`GET /ws/transcription/ticket` + `?token=` query param) använder in-memory ticket-store (`_tickets` dict i `src/api/routers/ws_transcription.py`). **Begränsning:** Fungerar endast med single uvicorn-worker. För multi-worker deployment måste tickets flyttas till `AggregateCache` (Redis) eller liknande distribuerad cache. För nu, kör med `--workers 1` eller dokumentera detta som known limitation.
+
 ### Åtgärdade i denna session:
 
 - ✅ `.env.example` skapad med alla 25+ env vars
