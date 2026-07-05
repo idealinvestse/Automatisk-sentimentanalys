@@ -6,9 +6,10 @@ import logging
 import os
 import threading
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-import torch
+if TYPE_CHECKING:
+    import torch
 
 from ..core.device import normalize_device_spec
 from ..intent import IntentClassifier
