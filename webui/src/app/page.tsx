@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { PhoneCall, Smile, ShieldCheck, AlertTriangle, WifiOff } from "lucide-react";
+import { PhoneCall, Smile, ShieldCheck, AlertTriangle, WifiOff, Gauge, Lightbulb, ArrowUpCircle, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,34 @@ import { CallsTable } from "@/components/calls-table";
 import { useHealth } from "@/hooks/use-health";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { summarizeKpis } from "@/lib/mock-data";
+import { extractCustomerEffort, extractCoaching, extractUpsell, extractResolutionProbability } from "@/lib/real-data";
 
 export default function OverviewPage() {
   const router = useRouter();
   const { data: connected } = useHealth();
-  const { calls, isLoading, isError, errorCount } = useDemoReports();
+  const { calls, reports, isLoading, isError, errorCount } = useDemoReports();
   const kpis = summarizeKpis(calls);
+
+  // Fas 5: aggregate analyzer KPIs across all demo reports
+  const cesScores = reports
+    .map((r) => extractCustomerEffort(r.report)?.overall_ces)
+    .filter((v): v is number => typeof v === "number");
+  const avgCes = cesScores.length > 0 ? cesScores.reduce((s, v) => s + v, 0) / cesScores.length : null;
+
+  const coachingCounts = reports
+    .map((r) => extractCoaching(r.report)?.insight_count ?? 0);
+  const totalCoachingInsights = coachingCounts.reduce((s, v) => s + v, 0);
+
+  const upsellCounts = reports
+    .map((r) => extractUpsell(r.report)?.count ?? 0);
+  const totalUpsellOpps = upsellCounts.reduce((s, v) => s + v, 0);
+
+  const resolutionProbs = reports
+    .map((r) => extractResolutionProbability(r.report)?.resolution_probability)
+    .filter((v): v is number => typeof v === "number");
+  const avgResolution = resolutionProbs.length > 0
+    ? resolutionProbs.reduce((s, v) => s + v, 0) / resolutionProbs.length
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,6 +91,38 @@ export default function OverviewPage() {
               icon={AlertTriangle}
               tone={kpis.activeAlerts > 0 ? "warning" : "default"}
               hint="Kräver åtgärd"
+            />
+          </div>
+
+          {/* Fas 5: Analyzer aggregate KPIs */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              label="Snitt CES"
+              value={avgCes !== null ? `${Math.round(avgCes)}/100` : "—"}
+              icon={Gauge}
+              tone={avgCes !== null ? (avgCes < 40 ? "success" : "warning") : "default"}
+              hint="Kundinsats (lägre = bättre)"
+            />
+            <KpiCard
+              label="Coaching-insikter"
+              value={String(totalCoachingInsights)}
+              icon={Lightbulb}
+              tone={totalCoachingInsights > 0 ? "warning" : "default"}
+              hint="Prioriterade rekommendationer"
+            />
+            <KpiCard
+              label="Upsell-möjligheter"
+              value={String(totalUpsellOpps)}
+              icon={ArrowUpCircle}
+              tone={totalUpsellOpps > 0 ? "success" : "default"}
+              hint="Identifierade tillfällen"
+            />
+            <KpiCard
+              label="Snitt lösningsgrad"
+              value={avgResolution !== null ? `${Math.round(avgResolution)}%` : "—"}
+              icon={CheckCircle2}
+              tone={avgResolution !== null ? (avgResolution > 60 ? "success" : "warning") : "default"}
+              hint="Sannolikhet för resolution"
             />
           </div>
 

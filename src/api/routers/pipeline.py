@@ -33,6 +33,7 @@ from ..schemas import (
     QAScoreResponse,
     SemanticSearchRequest,
     SemanticSearchResponse,
+    build_analyzer_results,
 )
 from ..services.pipeline_cache import resolve_reports
 
@@ -104,6 +105,7 @@ async def analyze_pipeline(
             timestamp=utc_now_iso(),
             llm=report.llm,
             results=report.results,
+            analyzer_results=build_analyzer_results(report.results),
         )
 
     return await run_route("analyze_pipeline", _do)

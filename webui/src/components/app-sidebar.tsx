@@ -11,6 +11,7 @@ import {
   AudioLines,
   FlaskConical,
   Cpu,
+  Microscope,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ const ICONS: Record<string, LucideIcon> = {
   AudioLines,
   FlaskConical,
   Cpu,
+  Microscope,
 };
 
 export function AppSidebar() {

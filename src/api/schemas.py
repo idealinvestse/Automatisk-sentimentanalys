@@ -251,6 +251,240 @@ class PipelineRequest(BaseModel):
         return v
 
 
+# ---------------------------------------------------------------------------
+# Typed analyzer output models (Fas 5 — full analyzer surface in API/UI)
+# These mirror the dict shapes returned by each analyzer in src/analysis/.
+# `PipelineResponse.results` stays `dict[str, Any]` for backward compatibility,
+# but these models document the expected shape and can be used for validation.
+# ---------------------------------------------------------------------------
+
+
+class EmotionSegmentResult(BaseModel):
+    """Per-segment emotion output from the `emotion` analyzer."""
+
+    primary: str = Field(..., description="Primary emotion label (frustration, ilska, besvikelse, förvirring, tillfredsställelse, neutral, oro, glädje)")
+    scores: dict[str, float] = Field(default_factory=dict, description="Score per emotion label")
+    speaker: str | None = None
+
+
+class AspectItem(BaseModel):
+    """One aspect-based sentiment item from the `aspect` analyzer."""
+
+    aspect: str
+    sentiment: str = Field(..., description="positive | negative | neutral")
+    score: float = 0.0
+    evidence: str | None = None
+    start: float | None = None
+    end: float | None = None
+    speaker: str | None = None
+
+
+class TrajectoryResult(BaseModel):
+    """Output from the `trajectory` analyzer."""
+
+    customer_sentiment_slope: float = 0.0
+    escalation_events: int = 0
+    escalation_event_details: list[dict[str, Any]] = Field(default_factory=list)
+    peak_frustration_turn: int | None = None
+    sentiment_trend: list[float] = Field(default_factory=list)
+
+
+class RootCauseItem(BaseModel):
+    cause: str
+    count: int = 1
+    recommendation: str | None = None
+
+
+class RootCauseResult(BaseModel):
+    """Output from the `root_cause` analyzer."""
+
+    root_causes: list[RootCauseItem] = Field(default_factory=list)
+    top_root_cause: str | None = None
+    evidence_examples: list[dict[str, Any]] = Field(default_factory=list)
+    overall_risk: str = Field("low", description="low | medium | high")
+    message: str | None = None
+
+
+class CoachingInsightItem(BaseModel):
+    rule_id: str
+    priority: str = Field(..., description="high | medium | low")
+    recommendation: str
+    evidence: Any = None
+
+
+class CoachingResult(BaseModel):
+    """Output from the `actionable_coaching` analyzer."""
+
+    coaching_insights: list[CoachingInsightItem] = Field(default_factory=list)
+    top_recommendation: str | None = None
+    insight_count: int = 0
+
+
+class CustomerEffortSegment(BaseModel):
+    speaker: str | None = None
+    start: float = 0.0
+    end: float = 0.0
+    effort_score: float = 0.0
+
+
+class CustomerEffortResult(BaseModel):
+    """Output from the `customer_effort` analyzer."""
+
+    overall_ces: float = 0.0
+    scale: str = "0-100 (högre = mer effort/frustration)"
+    per_segment: list[CustomerEffortSegment] = Field(default_factory=list)
+    coaching_tips: list[str] = Field(default_factory=list)
+
+
+class ActiveListeningResult(BaseModel):
+    """Output from the `active_listening` analyzer."""
+
+    listening_score: float = 50.0
+    backchannel_count: int = 0
+    speaker_balance: dict[str, float] = Field(default_factory=dict)
+    events: list[dict[str, Any]] = Field(default_factory=list)
+    tips: list[str] = Field(default_factory=list)
+
+
+class EmpathySegment(BaseModel):
+    speaker: str | None = None
+    start: float | None = None
+    empathy_score: float = 0.0
+    evidence: list[str] = Field(default_factory=list)
+
+
+class EmpathyResult(BaseModel):
+    """Output from the `empathy` analyzer."""
+
+    overall_empathy: float = 50.0
+    scale: str = "0-100 (högre = bättre empati)"
+    per_segment: list[EmpathySegment] = Field(default_factory=list)
+    coaching_tips: list[str] = Field(default_factory=list)
+
+
+class ResolutionProbabilityResult(BaseModel):
+    """Output from the `resolution_probability` analyzer."""
+
+    resolution_probability: float = 50.0
+    confidence: int = 30
+    recommended_action: str = ""
+    factors: dict[str, Any] = Field(default_factory=dict)
+
+
+class JourneyStage(BaseModel):
+    stage: str
+    start: float = 0.0
+    speaker: str | None = None
+    text_snippet: str = ""
+    intent: str | None = None
+    sentiment: str | None = None
+
+
+class MultiTurnJourneyResult(BaseModel):
+    """Output from the `multi_turn_journey` analyzer."""
+
+    journey_stages: list[JourneyStage] = Field(default_factory=list)
+    resolved: bool = False
+    unresolved_count: int = 0
+    key_turning_points: list[dict[str, Any]] = Field(default_factory=list)
+    recommendation: str | None = None
+    message: str | None = None
+
+
+class UpsellOpportunity(BaseModel):
+    speaker: str | None = None
+    start: float = 0.0
+    end: float = 0.0
+    confidence: float = 0.0
+    signals: list[str] = Field(default_factory=list)
+    suggested_action: str = ""
+    evidence: str = ""
+
+
+class UpsellResult(BaseModel):
+    """Output from the `upsell_opportunity` analyzer."""
+
+    opportunities: list[UpsellOpportunity] = Field(default_factory=list)
+    count: int = 0
+    recommendation: str | None = None
+
+
+class DialectSensitivityResult(BaseModel):
+    """Output from the `dialect_sensitivity` analyzer."""
+
+    dialect_risk_level: str = Field("low", description="low | medium | high")
+    flagged_segments: list[dict[str, Any]] = Field(default_factory=list)
+    total_dialect_hits: int = 0
+    slang_count: int = 0
+    recommendation: str | None = None
+
+
+class ComplianceRiskResult(BaseModel):
+    """Output from the `compliance_risk` analyzer."""
+
+    overall_risk_level: str = Field("low", description="low | medium | high")
+    flagged_segments: list[dict[str, Any]] = Field(default_factory=list)
+    recommendation: str | None = None
+
+
+class RoleClassifierResult(BaseModel):
+    """Output from the `role` analyzer."""
+
+    roles: dict[str, str] = Field(default_factory=dict, description="speaker -> agent|customer")
+    talk_ratios: dict[str, float] = Field(default_factory=dict)
+    question_density: dict[str, float] = Field(default_factory=dict)
+    lexical_formality: float = 0.0
+    intervention_count: int = 0
+    sentiment_variance: float = 0.0
+    num_agent_turns: int = 0
+    num_customer_turns: int = 0
+
+
+class PredictiveResult(BaseModel):
+    """Output from the `predictive` analyzer (RiskAnalyzer)."""
+
+    churn_risk: float = 0.0
+    escalation_risk: float = 0.0
+    satisfaction_score: float = 0.5
+    risk_factors: list[str] = Field(default_factory=list)
+    risk_level: str = Field("low", description="low | medium | high | critical")
+    recommended_action: str | None = None
+
+
+class AnalyzerResults(BaseModel):
+    """Typed view of `PipelineResponse.results`.
+
+    All fields are optional because analyzers may be skipped (profile config,
+    LLM deep path, or graceful degradation). Consumers should null-check each
+    field before rendering.
+    """
+
+    emotion: list[EmotionSegmentResult] | None = None
+    aspect: list[AspectItem] | None = None
+    trajectory: TrajectoryResult | None = None
+    root_cause: RootCauseResult | None = None
+    actionable_coaching: CoachingResult | None = None
+    customer_effort: CustomerEffortResult | None = None
+    active_listening: ActiveListeningResult | None = None
+    empathy: EmpathyResult | None = None
+    resolution_probability: ResolutionProbabilityResult | None = None
+    multi_turn_journey: MultiTurnJourneyResult | None = None
+    upsell_opportunity: UpsellResult | None = None
+    dialect_sensitivity: DialectSensitivityResult | None = None
+    compliance_risk: ComplianceRiskResult | None = None
+    role: RoleClassifierResult | None = None
+    predictive: PredictiveResult | None = None
+    # Fas 4 enrichment (already present but typed here for documentation)
+    agent_performance: dict[str, Any] | None = None
+    qa: dict[str, Any] | None = None
+    agent_assessment: dict[str, Any] | None = None
+    agent_assessment_local: dict[str, Any] | None = None
+    customer_metrics: dict[str, Any] | None = None
+    pii_redaction: dict[str, Any] | None = None
+    alerts: list[dict[str, Any]] | None = None
+    llm_judge: dict[str, Any] | None = None
+
+
 class PipelineResponse(BaseModel):
     """Response from the full call analysis pipeline.
 
@@ -258,6 +492,10 @@ class PipelineResponse(BaseModel):
     "agent_performance", "qa"/"compliance_qa", "agent_assessment", "customer_metrics",
     "agent_assessment_local" etc.). This makes the new call-center features
     available over the API as required by the plan.
+
+    Fas 5: `analyzer_results` provides a typed view of the same data for
+    documentation and type-safe consumers. `results` stays `dict[str, Any]`
+    for backward compatibility.
     """
 
     sentiment_results: list[dict[str, Any]]
@@ -275,6 +513,84 @@ class PipelineResponse(BaseModel):
     results: dict[str, Any] = Field(
         default_factory=dict,
         description="Complete analyzer results (Fas4: agent_performance, qa, agent_assessment, customer_metrics, ...). Use this for new call center features.",
+    )
+    analyzer_results: AnalyzerResults | None = Field(
+        None,
+        description="Typed view of `results` (Fas 5). Null when no analyzers ran or for backward-compatible clients.",
+    )
+
+
+def _safe_parse(model_cls: type[BaseModel], data: Any) -> Any | None:
+    """Best-effort parse of an analyzer output dict into a typed model.
+
+    Returns None on failure so that one malformed analyzer output does not
+    break the whole response.
+    """
+    if data is None:
+        return None
+    try:
+        return model_cls.model_validate(data)
+    except Exception:  # noqa: BLE001 — graceful degradation for typed view
+        return None
+
+
+def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
+    """Build a typed `AnalyzerResults` from the raw `report.results` dict.
+
+    Each analyzer field is parsed best-effort; unparseable fields are left as
+    None so the frontend can gracefully skip them.
+    """
+    if not results:
+        return AnalyzerResults()
+
+    # emotion + aspect are lists
+    emotion_raw = results.get("emotion")
+    emotion: list[EmotionSegmentResult] | None = None
+    if isinstance(emotion_raw, list):
+        emotion = [
+            _safe_parse(EmotionSegmentResult, e) for e in emotion_raw if isinstance(e, dict)
+        ]
+        emotion = [e for e in emotion if e is not None] or None
+
+    aspect_raw = results.get("aspect")
+    aspect: list[AspectItem] | None = None
+    if isinstance(aspect_raw, list):
+        aspect = [
+            _safe_parse(AspectItem, a) for a in aspect_raw if isinstance(a, dict)
+        ]
+        aspect = [a for a in aspect if a is not None] or None
+
+    return AnalyzerResults(
+        emotion=emotion,
+        aspect=aspect,
+        trajectory=_safe_parse(TrajectoryResult, results.get("trajectory")),
+        root_cause=_safe_parse(RootCauseResult, results.get("root_cause")),
+        actionable_coaching=_safe_parse(CoachingResult, results.get("actionable_coaching")),
+        customer_effort=_safe_parse(CustomerEffortResult, results.get("customer_effort")),
+        active_listening=_safe_parse(ActiveListeningResult, results.get("active_listening")),
+        empathy=_safe_parse(EmpathyResult, results.get("empathy")),
+        resolution_probability=_safe_parse(
+            ResolutionProbabilityResult, results.get("resolution_probability")
+        ),
+        multi_turn_journey=_safe_parse(
+            MultiTurnJourneyResult, results.get("multi_turn_journey")
+        ),
+        upsell_opportunity=_safe_parse(UpsellResult, results.get("upsell_opportunity")),
+        dialect_sensitivity=_safe_parse(
+            DialectSensitivityResult, results.get("dialect_sensitivity")
+        ),
+        compliance_risk=_safe_parse(ComplianceRiskResult, results.get("compliance_risk")),
+        role=_safe_parse(RoleClassifierResult, results.get("role")),
+        predictive=_safe_parse(PredictiveResult, results.get("predictive")),
+        # Fas 4 enrichment — kept as dict for forward compatibility
+        agent_performance=results.get("agent_performance"),
+        qa=results.get("qa"),
+        agent_assessment=results.get("agent_assessment"),
+        agent_assessment_local=results.get("agent_assessment_local"),
+        customer_metrics=results.get("customer_metrics"),
+        pii_redaction=results.get("pii_redaction"),
+        alerts=results.get("alerts"),
+        llm_judge=results.get("llm_judge"),
     )
 
 

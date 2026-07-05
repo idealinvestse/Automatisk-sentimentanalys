@@ -11,20 +11,23 @@ callcenter:
     - customer_effort
     - compliance_risk
     - active_listening
-  optional:
     - empathy
-    - insights
     - trajectory
+    - root_cause
+    - actionable_coaching
+    - summary
+    - topics
+    - aspect
+    - resolution_probability
+    - predictive
+    - multi_turn_journey
+    - insights
+  optional:
     - llm_judge
     - upsell_opportunity
-    - resolution_probability
-    - root_cause
-    - predictive
-    - actionable_coaching
-    - multi_turn_journey
     - spoken_normalizer
-  disabled:
     - dialect_sensitivity
+  disabled: []
 
 call:
   default_selected:
@@ -35,6 +38,9 @@ call:
     - trajectory
     - summary
     - topics
+    - aspect
+    - root_cause
+    - multi_turn_journey
   disabled:
     - llm_judge
 
@@ -46,6 +52,9 @@ sales:
     - upsell_opportunity
     - resolution_probability
     - customer_effort
+    - empathy
+    - active_listening
+    - actionable_coaching
   disabled:
     - compliance_risk
 
@@ -60,6 +69,9 @@ complaint:
     - compliance_risk
     - active_listening
     - customer_effort
+    - actionable_coaching
+    - multi_turn_journey
+    - predictive
   disabled:
     - upsell_opportunity
 
@@ -70,6 +82,8 @@ teknisk_support:
     - topics
     - summary
     - root_cause
+    - aspect
+    - resolution_probability
   disabled:
     - upsell_opportunity
     - llm_judge
@@ -83,6 +97,9 @@ support:
     - empathy
     - resolution_probability
     - insights
+    - active_listening
+    - actionable_coaching
+    - root_cause
 
 default:
   default_selected: null  # null = run all registered analyzers (backward compatible)

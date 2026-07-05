@@ -202,6 +202,70 @@ export default function TestLabPage() {
                   {actionableProblem}
                 </div>
               ) : null}
+
+              {/* Fas 5: Analyzer output summary */}
+              {report?.analyzer_results ? (
+                <div className="flex flex-col gap-2 rounded-md border p-3">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Analyzer-resultat (typed view)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(report.analyzer_results)
+                      .filter(([, v]) => v !== null && v !== undefined)
+                      .map(([key]) => (
+                        <Badge key={key} variant="secondary" className="text-xs">
+                          {key}
+                        </Badge>
+                      ))}
+                  </div>
+                  {report.analyzer_results.emotion && Array.isArray(report.analyzer_results.emotion) && (
+                    <p className="text-xs text-muted-foreground">
+                      Känslolabels: {report.analyzer_results.emotion.map((e) => e.primary).join(", ")}
+                    </p>
+                  )}
+                  {report.analyzer_results.aspect && Array.isArray(report.analyzer_results.aspect) && (
+                    <p className="text-xs text-muted-foreground">
+                      Aspekter: {report.analyzer_results.aspect.map((a) => a.aspect).join(", ")}
+                    </p>
+                  )}
+                  {report.analyzer_results.trajectory && (
+                    <p className="text-xs text-muted-foreground">
+                      Trajectory: lutning {report.analyzer_results.trajectory.customer_sentiment_slope}, {report.analyzer_results.trajectory.escalation_events} eskalationer
+                    </p>
+                  )}
+                  {report.analyzer_results.root_cause?.top_root_cause && (
+                    <p className="text-xs text-muted-foreground">
+                      Rotorsak: {report.analyzer_results.root_cause.top_root_cause}
+                    </p>
+                  )}
+                  {report.analyzer_results.actionable_coaching?.top_recommendation && (
+                    <p className="text-xs text-muted-foreground">
+                      Coaching: {report.analyzer_results.actionable_coaching.top_recommendation}
+                    </p>
+                  )}
+                  {report.analyzer_results.customer_effort && (
+                    <p className="text-xs text-muted-foreground">
+                      CES: {Math.round(report.analyzer_results.customer_effort.overall_ces)}/100
+                    </p>
+                  )}
+                  {report.analyzer_results.empathy && (
+                    <p className="text-xs text-muted-foreground">
+                      Empati: {Math.round(report.analyzer_results.empathy.overall_empathy)}/100
+                    </p>
+                  )}
+                  {report.analyzer_results.resolution_probability && (
+                    <p className="text-xs text-muted-foreground">
+                      Lösningsgrad: {Math.round(report.analyzer_results.resolution_probability.resolution_probability)}%
+                    </p>
+                  )}
+                  {report.analyzer_results.upsell_opportunity && report.analyzer_results.upsell_opportunity.count > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Upsell-möjligheter: {report.analyzer_results.upsell_opportunity.count}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground">
                   Fullständigt svar (JSON)

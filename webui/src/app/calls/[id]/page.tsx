@@ -14,6 +14,23 @@ import { RiskBadge, SentimentBadge } from "@/components/status-badges";
 import { CallAlertsSection } from "@/components/call-alerts-section";
 import { LlmJudgePanel } from "@/components/llm-judge-panel";
 import { TranscriptView } from "@/components/transcript-view";
+import {
+  EmotionCard,
+  AspectCard,
+  TrajectoryCard,
+  RootCauseCard,
+  CoachingCard,
+  CustomerEffortCard,
+  ActiveListeningCard,
+  EmpathyCard,
+  ResolutionProbabilityCard,
+  JourneyCard,
+  UpsellCard,
+  RoleMetricsCard,
+  PredictiveCard,
+  ComplianceRiskCard,
+  SummaryCard,
+} from "@/components/analyzer-cards";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { buildCallDetail } from "@/lib/real-data";
 
@@ -118,6 +135,30 @@ export default function CallDetailPage() {
               </Card>
 
               <LlmJudgePanel result={detail.llmJudge} />
+
+              {/* Fas 5: Analyzer cards — agent coaching + core analyzers */}
+              <div className="flex flex-col gap-4">
+                <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">
+                  Analysdetaljer
+                </h2>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <EmotionCard emotion={detail.emotion} />
+                  <AspectCard aspects={detail.aspects} />
+                  <TrajectoryCard trajectory={detail.trajectory} />
+                  <RootCauseCard rootCause={detail.rootCause} />
+                  <CoachingCard coaching={detail.coaching} />
+                  <CustomerEffortCard effort={detail.customerEffort} />
+                  <ActiveListeningCard listening={detail.activeListening} />
+                  <EmpathyCard empathy={detail.empathy} />
+                  <ResolutionProbabilityCard resolution={detail.resolutionProbability} />
+                  <JourneyCard journey={detail.journey} />
+                  <UpsellCard upsell={detail.upsell} />
+                  <RoleMetricsCard role={detail.roleMetrics} />
+                  <PredictiveCard predictive={detail.predictive} />
+                  <ComplianceRiskCard compliance={detail.complianceRisk} />
+                  <SummaryCard summary={(realCall?.report.summary as Record<string, unknown> | null) ?? null} />
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col gap-4">

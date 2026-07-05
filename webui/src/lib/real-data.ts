@@ -275,6 +275,166 @@ export function extractQa(report: PipelineReport): CallQa | null {
 }
 
 // ---------------------------------------------------------------------------
+// Fas 5: Typed analyzer extraction (uses analyzer_results when available,
+// falls back to raw results dict for backward compatibility)
+// ---------------------------------------------------------------------------
+
+import type {
+  EmotionSegmentResult,
+  AspectItem,
+  TrajectoryResult,
+  RootCauseResult,
+  CoachingResult,
+  CustomerEffortResult,
+  ActiveListeningResult,
+  EmpathyResult,
+  ResolutionProbabilityResult,
+  MultiTurnJourneyResult,
+  UpsellResult,
+  DialectSensitivityResult,
+  ComplianceRiskResult,
+  RoleClassifierResult,
+  PredictiveResult,
+} from "@/lib/api/client";
+
+/** Extract emotion labels per segment. Returns [] if analyzer didn't run. */
+export function extractEmotion(report: PipelineReport): EmotionSegmentResult[] {
+  const typed = report.analyzer_results?.emotion;
+  if (typed) return typed;
+  const raw = report.results?.emotion;
+  if (!Array.isArray(raw)) return [];
+  return raw as EmotionSegmentResult[];
+}
+
+/** Extract aspect-based sentiment items. Returns [] if analyzer didn't run. */
+export function extractAspects(report: PipelineReport): AspectItem[] {
+  const typed = report.analyzer_results?.aspect;
+  if (typed) return typed;
+  const raw = report.results?.aspect;
+  if (!Array.isArray(raw)) return [];
+  return raw as AspectItem[];
+}
+
+/** Extract trajectory result. Returns null if analyzer didn't run. */
+export function extractTrajectory(report: PipelineReport): TrajectoryResult | null {
+  const typed = report.analyzer_results?.trajectory;
+  if (typed) return typed;
+  const raw = report.results?.trajectory;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as TrajectoryResult;
+}
+
+/** Extract root cause result. Returns null if analyzer didn't run. */
+export function extractRootCause(report: PipelineReport): RootCauseResult | null {
+  const typed = report.analyzer_results?.root_cause;
+  if (typed) return typed;
+  const raw = report.results?.root_cause;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as RootCauseResult;
+}
+
+/** Extract actionable coaching result. Returns null if analyzer didn't run. */
+export function extractCoaching(report: PipelineReport): CoachingResult | null {
+  const typed = report.analyzer_results?.actionable_coaching;
+  if (typed) return typed;
+  const raw = report.results?.actionable_coaching;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as CoachingResult;
+}
+
+/** Extract customer effort score. Returns null if analyzer didn't run. */
+export function extractCustomerEffort(report: PipelineReport): CustomerEffortResult | null {
+  const typed = report.analyzer_results?.customer_effort;
+  if (typed) return typed;
+  const raw = report.results?.customer_effort;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as CustomerEffortResult;
+}
+
+/** Extract active listening result. Returns null if analyzer didn't run. */
+export function extractActiveListening(report: PipelineReport): ActiveListeningResult | null {
+  const typed = report.analyzer_results?.active_listening;
+  if (typed) return typed;
+  const raw = report.results?.active_listening;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as ActiveListeningResult;
+}
+
+/** Extract empathy result (per-segment + overall). Returns null if not run. */
+export function extractEmpathy(report: PipelineReport): EmpathyResult | null {
+  const typed = report.analyzer_results?.empathy;
+  if (typed) return typed;
+  const raw = report.results?.empathy;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as EmpathyResult;
+}
+
+/** Extract resolution probability. Returns null if analyzer didn't run. */
+export function extractResolutionProbability(
+  report: PipelineReport,
+): ResolutionProbabilityResult | null {
+  const typed = report.analyzer_results?.resolution_probability;
+  if (typed) return typed;
+  const raw = report.results?.resolution_probability;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as ResolutionProbabilityResult;
+}
+
+/** Extract multi-turn journey. Returns null if analyzer didn't run. */
+export function extractJourney(report: PipelineReport): MultiTurnJourneyResult | null {
+  const typed = report.analyzer_results?.multi_turn_journey;
+  if (typed) return typed;
+  const raw = report.results?.multi_turn_journey;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as MultiTurnJourneyResult;
+}
+
+/** Extract upsell opportunities. Returns null if analyzer didn't run. */
+export function extractUpsell(report: PipelineReport): UpsellResult | null {
+  const typed = report.analyzer_results?.upsell_opportunity;
+  if (typed) return typed;
+  const raw = report.results?.upsell_opportunity;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as UpsellResult;
+}
+
+/** Extract dialect sensitivity. Returns null if analyzer didn't run. */
+export function extractDialect(report: PipelineReport): DialectSensitivityResult | null {
+  const typed = report.analyzer_results?.dialect_sensitivity;
+  if (typed) return typed;
+  const raw = report.results?.dialect_sensitivity;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as DialectSensitivityResult;
+}
+
+/** Extract detailed compliance risk. Returns null if analyzer didn't run. */
+export function extractComplianceRisk(report: PipelineReport): ComplianceRiskResult | null {
+  const typed = report.analyzer_results?.compliance_risk;
+  if (typed) return typed;
+  const raw = report.results?.compliance_risk;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as ComplianceRiskResult;
+}
+
+/** Extract role classifier extended metrics. Returns null if not run. */
+export function extractRoleMetrics(report: PipelineReport): RoleClassifierResult | null {
+  const typed = report.analyzer_results?.role;
+  if (typed) return typed;
+  const raw = report.results?.role;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as unknown as RoleClassifierResult;
+}
+
+/** Extract predictive risk details. Returns null if analyzer didn't run. */
+export function extractPredictive(report: PipelineReport): PredictiveResult | null {
+  const typed = report.analyzer_results?.predictive;
+  if (typed) return typed;
+  const risks = report.risks;
+  if (!risks || typeof risks !== "object") return null;
+  return risks as unknown as PredictiveResult;
+}
+
+// ---------------------------------------------------------------------------
 // Call detail extraction (combines all above for /calls/[id])
 // ---------------------------------------------------------------------------
 
@@ -286,6 +446,22 @@ export interface RealCallDetail {
   llmJudge: LlmJudgeResult | null;
   emotionTimeline: EmotionPoint[];
   evidenceQuotes: string[];
+  // Fas 5: typed analyzer outputs
+  emotion: EmotionSegmentResult[];
+  aspects: AspectItem[];
+  trajectory: TrajectoryResult | null;
+  rootCause: RootCauseResult | null;
+  coaching: CoachingResult | null;
+  customerEffort: CustomerEffortResult | null;
+  activeListening: ActiveListeningResult | null;
+  empathy: EmpathyResult | null;
+  resolutionProbability: ResolutionProbabilityResult | null;
+  journey: MultiTurnJourneyResult | null;
+  upsell: UpsellResult | null;
+  dialect: DialectSensitivityResult | null;
+  complianceRisk: ComplianceRiskResult | null;
+  roleMetrics: RoleClassifierResult | null;
+  predictive: PredictiveResult | null;
 }
 
 /** Build a full call detail object from a RealCall (transcript + report). */
@@ -320,6 +496,22 @@ export function buildCallDetail({ transcript, report }: RealCall): RealCallDetai
     llmJudge,
     emotionTimeline,
     evidenceQuotes: evidenceQuotes.slice(0, 10),
+    // Fas 5: typed analyzer outputs
+    emotion: extractEmotion(report),
+    aspects: extractAspects(report),
+    trajectory: extractTrajectory(report),
+    rootCause: extractRootCause(report),
+    coaching: extractCoaching(report),
+    customerEffort: extractCustomerEffort(report),
+    activeListening: extractActiveListening(report),
+    empathy: extractEmpathy(report),
+    resolutionProbability: extractResolutionProbability(report),
+    journey: extractJourney(report),
+    upsell: extractUpsell(report),
+    dialect: extractDialect(report),
+    complianceRisk: extractComplianceRisk(report),
+    roleMetrics: extractRoleMetrics(report),
+    predictive: extractPredictive(report),
   };
 }
 
