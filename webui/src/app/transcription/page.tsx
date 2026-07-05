@@ -38,14 +38,17 @@ export default function TranscriptionPage() {
   const { status, logs, progress, done, connect, disconnect, clearLogs } =
     useTranscriptionSocket();
   const [jobIdInput, setJobIdInput] = React.useState("");
-  const [audioPath, setAudioPath] = React.useState("");
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const logEndRef = React.useRef<HTMLDivElement>(null);
 
   const transcribeMutation = useMutation({
     mutationFn: async () => {
-      if (!audioPath.trim()) throw new ApiError("Ange sökväg till ljudfil");
+      if (!selectedFile) throw new ApiError("Välj en ljudfil att ladda upp");
+      // Upload file first
+      const uploadResult = await apiClient.upload(selectedFile);
+      // Then transcribe using the returned path
       const req: TranscribeRequest = {
-        audio_path: audioPath.trim(),
+        audio_path: uploadResult.audio_path,
         backend: "faster",
         model: "kb-whisper-large",
         language: "sv",
@@ -56,7 +59,7 @@ export default function TranscriptionPage() {
     },
     onSuccess: () => {
       notifySuccess("Transkribering startad");
-      setAudioPath("");
+      setSelectedFile(null);
     },
     onError: (err) => notifyApiError(err, "Transkriberingsfel: "),
   });
@@ -127,30 +130,34 @@ export default function TranscriptionPage() {
             Starta transkribering
           </CardTitle>
           <CardDescription>
-            Transkribera en ljudfil på servern (sökvägen måste vara tillgänglig för backend).
+            Ladda upp en ljudfil (wav, mp3, m4a, flac, ogg, webm) för transkribering.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="audio-path" className="text-xs font-medium text-muted-foreground">
-              Sökväg till ljudfil
+            <label htmlFor="audio-file" className="text-xs font-medium text-muted-foreground">
+              Välj ljudfil
             </label>
             <Input
-              id="audio-path"
-              placeholder="t.ex. samples/audio/sv/call1.wav"
-              value={audioPath}
-              onChange={(e) => setAudioPath(e.target.value)}
+              id="audio-file"
+              type="file"
+              accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.opus"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
               disabled={transcribeMutation.isPending}
-              className="font-mono text-xs"
             />
+            {selectedFile && (
+              <p className="text-xs text-muted-foreground">
+                Vald fil: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
           </div>
           <Button
             onClick={() => transcribeMutation.mutate()}
-            disabled={transcribeMutation.isPending || !audioPath.trim()}
+            disabled={transcribeMutation.isPending || !selectedFile}
             className="w-fit gap-1.5"
           >
             <Upload className="size-4" />
-            {transcribeMutation.isPending ? "Startar..." : "Starta transkribering"}
+            {transcribeMutation.isPending ? "Startar..." : "Ladda upp och transkribera"}
           </Button>
         </CardContent>
       </Card>

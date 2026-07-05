@@ -1,11 +1,13 @@
-"""ASR transcription routers (/transcribe, /batch_transcribe)."""
+"""ASR transcription routers (/transcribe, /batch_transcribe, /upload)."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile
 
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
@@ -21,6 +23,7 @@ from ..schemas import (
     TranscribeJobStatus,
     TranscribeRequest,
     TranscribeResponse,
+    UploadResponse,
 )
 from ..transcription_events import JOB_HEADER, get_hub
 from ..transcription_jobs import TranscriptionJob, get_job_registry
@@ -69,6 +72,73 @@ async def cancel_transcription_job(job_id: str, request: Request) -> TranscribeJ
     hub.log(job_id=job_id, level="WARNING", msg="Jobb avbrutet av klient")
     hub.status(job_id=job_id, is_running=False)
     return TranscribeJobCancelResponse(job_id=job_id, cancelled=True, timestamp=utc_now_iso())
+
+
+@router.post("/upload", response_model=UploadResponse)
+async def upload_audio_file(file: UploadFile, request: Request) -> UploadResponse:
+    """Upload an audio file to the server for transcription.
+
+    The file is saved under API_MEDIA_ROOT/uploads/ with a unique filename.
+    Returns the validated server-side path that can be used with POST /transcribe.
+
+    Supports common audio formats: wav, mp3, m4a, flac, ogg, webm.
+    """
+    from ..settings import get_api_settings
+
+    settings = get_api_settings()
+
+    # Validate media root is configured
+    if not settings.media_root:
+        raise HTTPException(
+            status_code=500,
+            detail="Server not configured for file uploads (API_MEDIA_ROOT not set)",
+        )
+
+    # Validate file extension
+    allowed_extensions = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".opus"}
+    file_ext = Path(file.filename or "").suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file format: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+        )
+
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path(settings.media_root) / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate unique filename (timestamp + original name)
+    import time
+
+    timestamp = int(time.time())
+    safe_filename = f"{timestamp}_{file.filename}"
+    safe_filename = safe_filename.replace(" ", "_").replace("/", "_")
+    file_path = upload_dir / safe_filename
+
+    # Save file
+    try:
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+    except Exception as e:
+        logger.error("Failed to save uploaded file: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+    # Validate the saved file exists and is under media root
+    try:
+        validated_path = resolve_and_validate_audio_paths([str(file_path)])[0]
+    except ValueError as e:
+        # Clean up if validation fails
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=400, detail=f"File validation failed: {str(e)}")
+
+    return UploadResponse(
+        audio_path=validated_path,
+        filename=file.filename or "unknown",
+        size_bytes=len(contents),
+        timestamp=utc_now_iso(),
+    )
 
 
 @router.post("/transcribe", response_model=TranscribeResponse)

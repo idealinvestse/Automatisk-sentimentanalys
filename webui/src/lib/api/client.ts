@@ -327,6 +327,14 @@ export interface BatchTranscribeResponse {
   timestamp: string;
 }
 
+/** Response shape of POST /upload. */
+export interface UploadResponse {
+  audio_path: string;
+  filename: string;
+  size_bytes: number;
+  timestamp: string;
+}
+
 /** Request shape of POST /batch_transcribe. */
 export interface BatchTranscribeRequest {
   audio_paths?: string[];
@@ -564,6 +572,30 @@ export class ApiClient {
   /** Transcribe multiple audio files (POST /batch_transcribe). */
   batchTranscribe<T = BatchTranscribeResponse>(req: BatchTranscribeRequest) {
     return this.post<T>("/batch_transcribe", req, 600_000); // 10 minute timeout for batches
+  }
+
+  /** Upload an audio file (POST /upload). */
+  async upload<T = UploadResponse>(file: File): Promise<T> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${this.baseUrl}/upload`, {
+      method: "POST",
+      headers: this.headers(), // Don't set Content-Type for FormData (browser does it with boundary)
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let detail: unknown;
+      try {
+        detail = await response.json();
+      } catch {
+        detail = await response.text();
+      }
+      throw new ApiError(`Upload failed: ${response.status}`, response.status, detail);
+    }
+
+    return (await response.json()) as T;
   }
 
   /** ws:// or wss:// URL for the live transcription event stream. */

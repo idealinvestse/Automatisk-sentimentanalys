@@ -645,6 +645,20 @@ class BatchTranscribeResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# /upload
+# ---------------------------------------------------------------------------
+
+
+class UploadResponse(BaseModel):
+    """Response from POST /upload."""
+
+    audio_path: str = Field(..., description="Validated server-side path to uploaded file")
+    filename: str = Field(..., description="Original filename from upload")
+    size_bytes: int = Field(..., description="File size in bytes")
+    timestamp: str
+
+
+# ---------------------------------------------------------------------------
 # /batch_analyze_conversation
 # ---------------------------------------------------------------------------
 
