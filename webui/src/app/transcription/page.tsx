@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { useTranscriptionSocket } from "@/hooks/use-transcription-socket";
-import { apiClient, ApiError, type TranscribeRequest } from "@/lib/api/client";
+import { useCallsStore } from "@/lib/store/calls";
+import { apiClient, ApiError, type TranscribeRequest, type PipelineReport } from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { WsConnectionStatus } from "@/lib/transcription-events";
@@ -40,6 +41,7 @@ export default function TranscriptionPage() {
   const [jobIdInput, setJobIdInput] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const logEndRef = React.useRef<HTMLDivElement>(null);
+  const addRealCall = useCallsStore((state) => state.addRealCall);
 
   const transcribeMutation = useMutation({
     mutationFn: async () => {
@@ -55,10 +57,51 @@ export default function TranscriptionPage() {
         word_timestamps: true,
         vad: true,
       };
-      return apiClient.transcribe(req);
+      const transcribeResult = await apiClient.transcribe(req);
+
+      // Convert transcript to segments format for analyzePipeline
+      const transcript = transcribeResult.transcript as Record<string, unknown>;
+      const rawSegments = transcript.segments as Array<{ speaker: string; text: string; start: number; end?: number }> | undefined;
+      // Normalize speaker values to "Agent" or "Kund" and ensure end value
+      const segments = (rawSegments || []).map((s) => {
+        const speakerLower = s.speaker.toLowerCase();
+        const normalizedSpeaker: "Agent" | "Kund" =
+          speakerLower.includes("agent") || speakerLower.includes("agent") ? "Agent" : "Kund";
+        return {
+          speaker: normalizedSpeaker,
+          text: s.text,
+          start: s.start,
+          end: s.end ?? s.start + 1,
+        };
+      });
+
+      // Calculate duration from segments
+      const durationS = segments.length > 0 ? segments[segments.length - 1].end : 0;
+
+      // Run pipeline analysis
+      const report = await apiClient.analyzePipeline<PipelineReport>(segments, { profile: "callcenter" });
+
+      // Save to store
+      const call = {
+        transcript: {
+          id: `real-${Date.now()}`,
+          title: selectedFile.name,
+          meta: {
+            agent: "Okänd",
+            customer: "Okänd",
+            duration_s: durationS,
+            category: "uppladdad",
+          },
+          segments,
+        },
+        report,
+      };
+      addRealCall(call);
+
+      return transcribeResult;
     },
     onSuccess: () => {
-      notifySuccess("Transkribering startad");
+      notifySuccess("Transkribering och analys klar - samtal sparat i dashboard");
       setSelectedFile(null);
     },
     onError: (err) => notifyApiError(err, "Transkriberingsfel: "),
