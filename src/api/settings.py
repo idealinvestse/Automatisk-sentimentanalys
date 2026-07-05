@@ -25,6 +25,8 @@ class APISettings:
     production: bool
     require_auth: bool
     require_media_root: bool
+    max_upload_size_mb: int
+    upload_retention_days: int
 
     @property
     def auth_enabled(self) -> bool:
@@ -83,6 +85,10 @@ def get_api_settings() -> APISettings:
         api_key = defaults.get("api_key")
     rate_env = os.getenv("API_RATE_LIMIT_RPM")
     rate_limit = int(rate_env) if rate_env is not None else int(defaults.get("rate_limit_rpm") or 0)
+    max_upload_env = os.getenv("API_MAX_UPLOAD_SIZE_MB")
+    max_upload = int(max_upload_env) if max_upload_env is not None else 200
+    retention_env = os.getenv("API_UPLOAD_RETENTION_DAYS")
+    retention = int(retention_env) if retention_env is not None else 7
     return APISettings(
         api_key=api_key or None,
         cors_origins=origins,
@@ -98,5 +104,7 @@ def get_api_settings() -> APISettings:
         trusted_proxy=_env_bool("API_TRUSTED_PROXY"),
         production=_env_bool("API_PRODUCTION"),
         require_auth=_env_bool("API_REQUIRE_AUTH"),
+        max_upload_size_mb=max_upload,
+        upload_retention_days=retention,
         require_media_root=_env_bool("API_REQUIRE_MEDIA_ROOT"),
     )

@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
@@ -46,6 +48,27 @@ def _cancel_check(request: Request, job_id: str | None) -> bool:
     return get_job_registry(request.app).is_cancelled(job_id)
 
 
+def _cleanup_old_uploads(upload_dir: Path, retention_days: int) -> None:
+    """Clean up uploaded files older than retention_days."""
+    if not upload_dir.exists():
+        return
+
+    cutoff_time = datetime.now() - timedelta(days=retention_days)
+    cleaned = 0
+
+    try:
+        for file_path in upload_dir.iterdir():
+            if file_path.is_file():
+                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                if file_mtime < cutoff_time:
+                    file_path.unlink()
+                    cleaned += 1
+        if cleaned > 0:
+            logger.info("Cleaned up %d old upload(s) from %s", cleaned, upload_dir)
+    except Exception as e:
+        logger.warning("Failed to clean up old uploads: %s", e)
+
+
 @router.get("/transcription/jobs", response_model=TranscribeJobListResponse)
 async def list_transcription_jobs(request: Request, limit: int = 20) -> TranscribeJobListResponse:
     """List recent transcription jobs (newest first)."""
@@ -82,6 +105,8 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
     Returns the validated server-side path that can be used with POST /transcribe.
 
     Supports common audio formats: wav, mp3, m4a, flac, ogg, webm.
+    Maximum file size: API_MAX_UPLOAD_SIZE_MB (default 200 MB).
+    Old files are cleaned up after API_UPLOAD_RETENTION_DAYS (default 7 days).
     """
     from ..settings import get_api_settings
 
@@ -107,21 +132,38 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
     upload_dir = Path(settings.media_root) / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate unique filename (timestamp + original name)
-    import time
+    # Clean up old uploads (best-effort, runs on upload to avoid startup complexity)
+    _cleanup_old_uploads(upload_dir, settings.upload_retention_days)
 
-    timestamp = int(time.time())
-    safe_filename = f"{timestamp}_{file.filename}"
+    # Generate unique filename (uuid4 + original name)
+    unique_id = uuid.uuid4().hex[:12]
+    safe_filename = f"{unique_id}_{file.filename}"
     safe_filename = safe_filename.replace(" ", "_").replace("/", "_")
     file_path = upload_dir / safe_filename
 
-    # Save file
+    # Save file with streaming read and size check
+    max_size_bytes = settings.max_upload_size_mb * 1024 * 1024
+    total_bytes = 0
+    chunk_size = 64 * 1024  # 64 KB chunks
+
     try:
-        contents = await file.read()
         with open(file_path, "wb") as f:
-            f.write(contents)
+            while chunk := await file.read(chunk_size):
+                total_bytes += len(chunk)
+                if total_bytes > max_size_bytes:
+                    f.close()
+                    file_path.unlink()  # Clean up partial file
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large (max {settings.max_upload_size_mb} MB)",
+                    )
+                f.write(chunk)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Failed to save uploaded file: %s", e)
+        if file_path.exists():
+            file_path.unlink()
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Validate the saved file exists and is under media root
@@ -136,7 +178,7 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
     return UploadResponse(
         audio_path=validated_path,
         filename=file.filename or "unknown",
-        size_bytes=len(contents),
+        size_bytes=total_bytes,
         timestamp=utc_now_iso(),
     )
 
