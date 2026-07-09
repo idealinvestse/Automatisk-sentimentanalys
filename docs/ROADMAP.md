@@ -8,7 +8,7 @@ This document provides a high-level overview of the project's maturity and futur
 
 The project has reached a **mature beta / early production** stage. **Fas 4 (Call Center Backend) is complete** and validated (Fas 1 gate: 509 tests, 86 %+ coverage). Release documentation updated in CHANGELOG, README, API.md, and FAS4_COMPLETION.md.
 
-> **Note:** Test count is a snapshot at Fas 4 sign-off. Current count is **581 test functions across 57 test files** (delta includes Groq integration, transcription presets, dashboard tests, and PII coverage added post-Fas 4). See `pytest --collect-only` for live count.
+> **Note:** Test count is a snapshot at Fas 4 sign-off. Current count is **716+ test functions across 60+ test files** (delta includes Groq integration, transcription jobs/WS, edge API, dashboard tests, and PII coverage added post-Fas 4). See `pytest --collect-only` for live count.
 
 ### Known Gaps / Deferred Items (v0.4.1)
 

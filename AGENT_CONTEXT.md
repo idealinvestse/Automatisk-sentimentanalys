@@ -1,5 +1,5 @@
 # AGENT CONTEXT — Automatisk-sentimentanalys
-**Generated:** 2026-06-27 15:05 CEST via github-project-status skill | Use this file as the single source of truth when continuing development.
+**Generated:** 2026-07-09 | Use this file as the single source of truth when continuing development.
 
 ## 1. What This System Is
 Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkribering (ASR + diarization), intent/ emotion/ aspect-analys, LLM-baserad QA/compliance, PII-redaktion, insikter, agent performance metrics och realtids-dashboard. Byggt för svenska kundtjänstsamtal med stark GDPR-fokus, skalbarhet och self-hosted/VPS-deployment. Mål: ersätta manuell samtalshantering med automatiserad, pålitlig analys som ger actionable insights till QA, coacher och chefer.
@@ -37,9 +37,9 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 ## 3. Architecture & Key Components
 - **Pipeline Core** (src/pipeline.py + src/analysis/registry.py): Orchestrates steps. Steps registered, run in sequence/parallel where safe. Results merged into report. Supports caching via src/caching.py (AggregateCache).
 - **Transcription** (src/transcription/factory.py, faster_whisper.py, whisperx.py etc.): Backend abstraction. Diarization separate. Preprocess for Swedish audio.
-- **Analysis** (src/analysis/, src/sentiment.py, src/intent.py, src/llm_judge.py etc.): Modular, each returns structured dict/Pydantic. LLM judge for advanced QA/evidence.
+- **Analysis** (src/analysis/, src/sentiment.py, src/intent.py, src/analysis/llm_judge.py etc.): Modular, each returns structured dict/Pydantic. LLM judge for advanced QA/evidence.
 - **LLM** (src/llm/): Clients + Analyzers per provider. groq_client.py, mistral_analyzer.py, openrouter_client.py (nu med dynamic pricing från catalog). Schemas define output strictly. Prompts in prompts.py. PII redaction before LLM calls where configured.
-- **API** (src/api/app.py, routers/, services/): Dependency injection, rate limit, error responses, transcription_jobs, pipeline_cache. WS for streaming transcription events.
+- **API** (src/api/app.py, routers/, services/): Dependency injection, rate limit, error responses, transcription jobs, upload, edge router, pipeline_cache. WS for streaming transcription events (+ ticket endpoint when auth enabled).
 - **Dashboard** (webui/): Next.js App Router pages, React Query hooks, typed API client (`webui/src/lib/api/client.ts`). shadcn/ui primitives + feature components. **Legacy**: `app/archive/nicegui_dashboard/` (Python/NiceGUI) är deprecated men behålls som referens.
 - **Launcher** (launcher/): Process manager, ASR dialog, status panel, env builder, pid store. PowerShell entry for desktop users. **Ny**: Valbar mapp för modeller.
 - **Data Layer**: Local CSV/JSONL + in-memory/demo providers. Caching for expensive aggregations.

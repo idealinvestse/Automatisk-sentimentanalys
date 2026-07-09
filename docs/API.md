@@ -35,7 +35,7 @@ curl -H "X-API-Key: your-secret" http://localhost:8000/analyze \
 | Endpoint | Auth |
 |----------|------|
 | `GET /health` | None |
-| `GET /status/*`, `GET /metrics`, `WS /ws/transcription` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
+| `GET /status/*`, `GET /metrics`, `GET /alerting/status`, `WS /ws/transcription` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
 | All `POST` routes | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
 
 WebSocket clients must send `X-API-Key` as a header (not a query parameter).
@@ -102,8 +102,13 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 
 ### Transcription
 
+- `POST /upload` — upload audio to `API_MEDIA_ROOT` (size limits + retention)
 - `POST /transcribe` — single file ASR
 - `POST /batch_transcribe` — parallel ASR (`audio_paths` or `directory` + `glob`)
+- `GET /transcription/jobs` — list background transcription jobs
+- `GET /transcription/jobs/{job_id}` — job status
+- `POST /transcription/jobs/{job_id}/cancel` — cancel a running job
+- `GET /ws/transcription/ticket` — short-lived ticket for WebSocket auth (when `SENTIMENT_API_KEY` is set)
 - `WS /ws/transcription` — real-time log/progress stream during transcription (`X-API-Key` header when auth enabled). Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`.
 
 ### Conversation
@@ -132,6 +137,25 @@ Shared flags on Fas 4 bodies: `reanalyze`, `use_mistral_llm`, `deep_analysis`, `
 
 - `reanalyze: false` (default) — reuse per-call report cache before aggregate steps
 - `reanalyze: true` — force fresh `analyze_segments` for every call
+
+### Edge AI (offline)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/edge/analyze-text` | Offline sentiment + intent on a single text string |
+| POST | `/edge/analyze-segments` | Offline analysis on pre-transcribed segments (PII redaction for `callcenter`) |
+
+See `docs/EDGE_AI.md`. No external LLM or Fas 4 enrichment.
+
+### Observability & alerting
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/status/processes` | Recent pipeline/transcription status events (filterable by `job_id`, `component`) |
+| GET | `/status/jobs/{job_id}` | Derived job status from event ring buffer |
+| GET | `/status/health/detail` | Detailed health (registered analyzers, ASR backends, cache) |
+| GET | `/alerting/status` | Webhook + circuit breaker status for dashboard/ops |
+| POST | `/alerting/reset-circuit-breaker` | Reset webhook circuit breaker |
 
 ### Scan
 

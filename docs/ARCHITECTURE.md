@@ -47,7 +47,7 @@ Both entry points share the same underlying analysis and transcription engines, 
 │  • Parametrizable via analyzer_configs                      │
 │  • Adapters: sentiment, intent, summary, topics,            │
 │    insights, predictive, aspect (ABSA), emotion,            │
-│    role, trajectory, spoken_normalizer, llm_judge (stub)   │
+│    role, trajectory, spoken_normalizer, llm_judge           │
 ├─────────────────────────────────────────────────────────────┤
 │  Engines                                                    │
 │  • src/sentiment.py – HF transformers sentiment pipeline    │
@@ -137,14 +137,20 @@ src/api/
 ├── schemas.py           # All Pydantic request/response models
 ├── batch.py             # Generic batch runner (replaces duplicated logic)
 ├── helpers.py           # Shared ASR helper
+├── dependencies.py      # DI: shared cache + CallAnalysisPipeline factory
+├── metrics.py           # Prometheus HTTP + pipeline metrics
 └── routers/
     ├── __init__.py
-    ├── health.py        # GET /health
+    ├── health.py        # GET /health, GET /metrics
+    ├── status.py        # GET /status/processes, /status/jobs/{id}, /status/health/detail
     ├── text.py          # POST /analyze
-    ├── transcription.py # POST /transcribe, POST /batch_transcribe
+    ├── transcription.py # POST /upload, /transcribe, /batch_transcribe, /transcription/jobs/*
     ├── conversation.py  # POST /analyze_conversation, POST /batch_analyze_conversation
     ├── pipeline.py      # POST /analyze_pipeline + Fas 4 endpoints
-    └── scan.py          # POST /scan_process
+    ├── scan.py          # POST /scan_process
+    ├── ws_transcription.py  # GET /ws/transcription/ticket, WS /ws/transcription
+    ├── alerting.py      # GET /alerting/status, POST /alerting/reset-circuit-breaker
+    └── edge.py          # POST /edge/analyze-text, /edge/analyze-segments
 ```
 
 Fas 4 endpoints (same `pipeline.py` router):

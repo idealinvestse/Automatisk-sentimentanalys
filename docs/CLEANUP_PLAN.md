@@ -64,7 +64,7 @@
 | # | Åtgärd | Detalj |
 |---|--------|--------|
 | 2.1 | ~~`predictive` duplicering~~ | ✅ Adapter använder `RiskAnalyzer` |
-| 2.2 | Pipeline-refaktor | ✅ Delvis: `_run_local_analysis`, `_run_fas4_enrichment`, `_build_report` (~720 r kvar) |
+| 2.2 | Pipeline-refaktor | ✅ `pipeline.py` ~548 r + `pipeline_steps.py` ~464 r (PIPE-01) |
 | 2.3 | Streamlit-borttagning | ✅ `app/setup_hub.py` borttagen, `streamlit` ur `requirements-desktop.txt`, launcher-dropdown rensad |
 | 2.4 | `alerting.py` docstring | ✅ Beskriver httpx POST + retry + circuit breaker |
 | 2.5 | Analyzer-mall | ✅ `src/analysis/templates/new_analyzer_template.py` + `sentimentanalys new-analyzer` |

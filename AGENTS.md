@@ -70,7 +70,7 @@ the full migration status. `app/archive/nicegui_dashboard/` is the archived lega
 - `app/archive/nicegui_dashboard/` — Archived legacy NiceGUI dashboard (deprecated; use `webui/`).
 - `webui/` — Primary frontend (Next.js 16 + React 19 + TS + Tailwind v4). `npm run dev` / `lint` / `build` / `test:e2e`. See `docs/WEBUI_MODERNIZATION_PLAN.md`.
 - `launcher/` — Windows PowerShell launcher & ASR management.
-- `tests/` — 500+ tests. Run with `pytest`.
+- `tests/` — 716+ tests. Run with `pytest`.
 
 ## Coding Conventions (Python / FastAPI / NiceGUI)
 
