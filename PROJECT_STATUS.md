@@ -1,6 +1,6 @@
 # Projektstatus - Automatisk Sentimentanalys
 
-**Senast uppdaterad:** 2026-06-28  
+**Senast uppdaterad:** 2026-07-09  
 **Version:** 0.4.1 → v0.5 (implementering pågår)
 
 > **Canonical roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md)  
