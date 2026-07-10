@@ -83,13 +83,95 @@ make run-dashboard
 
 ## Testing
 
+Full-stack test strategy for this repo. Goal: maximum confidence per minute spent.
+CI is the floor (fast, deterministic); release/staging covers what CI deliberately skips
+(real ASR, live LLM, live dashboard ↔ API).
+
+### Principles
+
+1. **Risk over coverage** — prefer product-breaking paths (wrong sentiment/intent, PII to LLM, broken pipeline/UI) over chasing % on trivial code.
+2. **Mock expensive, measure quality separately** — ML weights and external LLMs are mocked in the fast suite; real quality is gated by accuracy/eval scripts.
+3. **One primary proof per layer** — unit, golden pipeline, API contract, corpus F1, or UI smoke.
+4. **Extend existing patterns** — golden fixtures, `configs/analyzer_eval.yaml`, Playwright with stubbed backend, jobs in `.github/workflows/ci.yml`.
+
+### Layers (L0–L9)
+
+| Layer | Purpose | Primary proof | When |
+|-------|---------|---------------|------|
+| L0 Lint/types | Static quality | ruff, black, mypy | before commit/PR |
+| L1 Unit | Isolated logic | `tests/test_*.py` (no ML load) | every change in that module |
+| L2 Registry/pipeline | Orchestration + deps | `test_analysis_registry`, `test_pipeline`, `test_insight02_deep_path` | analyzer/pipeline changes |
+| L3 Golden | Call-center domain regression | `test_callcenter_golden` + `tests/fixtures/callcenter_golden/` | profile/heuristic/pipeline changes |
+| L4 API contract | HTTP, auth, error shape | `test_api*`, `tests/contracts/` | API/schema changes |
+| L5 Quality gates | Intent/analyzer F1, sentiment gate | `scripts/benchmark_*`, `eval_sentiment_gate` | corpus/heuristic/model changes |
+| L6 Webui | Routes + critical UI | Playwright `webui/e2e/` | webui changes |
+| L7 Heavy integration | Real ASR/audio | `@pytest.mark.audio` / `src.evaluate audio` | before release |
+| L8 LLM quality | Live provider (cost) | `python -m src.evaluate llm-quality` | before release with LLM on |
+| L9 Staging | Compose + observability | `docker-compose.staging.yml` + smoke script | deploy candidate |
+
+Do **not** put L7/L8 into the PR CI floor — keep them on the release path (see [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) § Release verification).
+
+### When to run what
+
+**A. Daily development (minutes)**
+
+```bash
+make check
+pytest -m "not slow" -q
+# plus targeted files for what you touched, e.g.:
+pytest tests/test_pipeline.py tests/test_callcenter_golden.py -q
+```
+
+| You changed… | Also run |
+|--------------|----------|
+| `@register_analyzer` | registry + relevant quality/heuristic test + one golden scenario |
+| API | `make test-api` (prefer CI’s 90% gate on `src/api`) |
+| Webui | `cd webui && npm run lint && npm run test:e2e` |
+
+**B. Pull request (CI floor)** — already in `.github/workflows/ci.yml`:
+
+1. lint → pytest (3.11/3.12, `src` cov ≥80 %) → api-test (`src/api` cov ≥90 %)
+2. mypy, docker config/build
+3. analyzer-accuracy + finetune-smoke
+4. webui lint/build/e2e
+
+**C. Before merging ML / heuristic PRs (beyond CI)**
+
+```bash
+pytest tests/test_analyzer_quality.py tests/test_callcenter_golden.py -q
+# on corpus changes: same validate + benchmark as CI analyzer-accuracy
+python -m src.evaluate llm-quality   # only if deep-path/LLM routing changed and a key is set
+```
+
+Never lower quality thresholds without documenting why in the PR; prefer growing the corpus first.
+
+**D. Release candidate (full-stack confidence)** — checklist in [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) § Release verification (L7–L9).
+
+### Minimum before merge (by change type)
+
+| Change type | Minimum |
+|-------------|---------|
+| Pure utility | targeted unit tests + fast suite |
+| New/changed analyzer | registry + quality/heuristic or labeled fixture; golden if call-center impact |
+| Pipeline / deep-path | `test_pipeline` + `test_insight02_deep_path` + golden |
+| API | API tests with 90% gate (local or CI) |
+| Corpus / thresholds | validate + benchmark gates |
+| Webui | lint + build + Playwright |
+| Release | L7–L9 |
+
+### Quick commands
+
 ```bash
 make test                 # All tests
 make test-api             # API tests with coverage
+pytest -m "not slow" -q   # Fast local loop
 python -m src.evaluate llm-quality
 ```
 
-### Audio benchmarks (`samples/audio`)
+**Golden mock discipline:** when patching sentiment in pipeline/golden tests, patch
+`SentimentAnalyzer._get_pipeline` (not only `.analyze`) so silent fallback cannot hide regressions.
+
+### Audio benchmarks (`samples/audio`) — L7
 
 The repo ships RAVDESS English speech files under `samples/audio/Actor_*` (1440 `.wav` files).
 A manifest-driven catalog in `samples/audio/manifest.yaml` powers structured ASR and pipeline tests.
@@ -113,6 +195,18 @@ Skip them with `SENTIMENT_SKIP_AUDIO=1` or `pytest -m "not slow"`.
 
 CPU smoke on 3 files typically takes several minutes on first run (model download + ASR).
 GPU significantly speeds up ASR and pipeline scenarios.
+
+### Known gaps (backlog, not PR blockers)
+
+Ordered by risk × cost:
+
+1. Dedicated unit tests for under-tested registry analyzers (aspect, empathy, resolution_probability, summary/topics/insights/predictive wrappers)
+2. Webui component tests (Vitest/RTL) for hooks/API client — keep Playwright thin
+3. Staging live-API smoke outside PR CI (`/health` → `/analyze_pipeline` with fixture segments → `/metrics`)
+4. Edge router/factory and `alerting_state`
+5. Load/concurrency — defer until multi-worker/Redis production pressure
+
+Out of optimal strategy for now: chasing coverage on the omit list (CLI, whisper backends, `secrets_win`); expanding archived NiceGUI tests.
 
 ## Adding New Features
 
@@ -232,7 +326,7 @@ Synthetic data from `scripts/prepare_callcenter_data.py` is for development only
 ## Before Committing / Creating a PR
 
 1. Run `make check`
-2. Run `make test`
+2. Run the minimum suite for your change type (see Testing → Minimum before merge); at least `pytest -m "not slow" -q`
 3. Update relevant documentation (`README.md`, `docs/ROADMAP.md`, `CHANGELOG.md`)
 4. If adding a new analyzer or major feature, consider updating `docs/LLM_AGENT_GUIDE.md`
 
@@ -242,4 +336,5 @@ Synthetic data from `scripts/prepare_callcenter_data.py` is for development only
 - `docs/LLM_AGENT_GUIDE.md` – Detailed guide for agents
 - `docs/LLM_AGENT_QUICKREF.md` – Minimal context quick reference
 - `docs/ROADMAP.md` – Current project status
+- `docs/PRODUCTION_CHECKLIST.md` – Production + release verification (L7–L9)
 - `SECURITY.md` – Security and privacy guidelines

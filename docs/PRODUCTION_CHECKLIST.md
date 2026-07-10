@@ -1,7 +1,7 @@
 # Produktionschecklista
 
 **Skapad:** 2026-06-28 (audit DOC-02)  
-**Uppdaterad:** 2026-07-09 (v0.5 — staging observability + GPU verify)  
+**Uppdaterad:** 2026-07-10 (release verification L7–L9 + länk till test-runbook)  
 **Syfte:** Checklista innan produktionsdrift av Swedish Sentiment API och webui-dashboard.
 
 > **Verifieringsstatus 2026-07-09 (v0.5):** 19 PASS, 0 FAIL, 0 PARTIAL av 23 items.
@@ -131,7 +131,18 @@ docker run --gpus all -p 8000:8000 -v hf_cache:/cache/hf sentimentanalys-gpu
 - [x] **Rate limiting** — `API_RATE_LIMIT_RPM` i `src/api/settings.py:84`. Enforced i `src/api/middleware_rate_limit.py` + registrerad i `app.py:161`.
 - [x] **Redis cache** — `API_USE_REDIS_CACHE` i settings. `src/caching.py` stödjer Redis (rad 44-76) med fallback till file cache.
 - [x] **Backup** — `scripts/backup.py` skapar timestampade tar.gz-arkiv med rotation. Se "Backup-guide" nedan för cron-exempel.
-- [x] **CI gate** — `.github/workflows/ci.yml` jobb `api-test` (rad 65-88) kör `pytest tests/test_api.py` med `--cov-fail-under=90` på `src/api`. Separat `webui`-jobb (rad 99) kör lint+build+e2e.
+- [x] **CI gate** — `.github/workflows/ci.yml` jobb `api-test` (rad 65-88) kör `pytest tests/test_api.py` med `--cov-fail-under=90` på `src/api`. Separat `webui`-jobb (rad 99) kör lint+build+e2e. Full test-runbook (L0–L9, när-kör-vad): [DEVELOPMENT.md](DEVELOPMENT.md) § Testing.
+
+### Release verification (L7–L9)
+
+Körs **utöver** grön CI före deploy-kandidat. CI mockar ML/LLM medvetet — dessa steg ger helstack-förtroende.
+
+- [ ] **L7 ASR/audio smoke** — `python -m src.evaluate audio smoke --device cpu` (eller `cuda` på GPU-host). Vid behov: `pytest -m audio` med `samples/audio` tillgängligt.
+- [ ] **L8 LLM quality** (om deep-path/LLM är på i prod) — `python -m src.evaluate llm-quality` med giltig provider-nyckel.
+- [ ] **L9 Staging observability** — `docker compose -f docker-compose.staging.yml up` + `python scripts/staging_observability_smoke.py --api-base http://localhost:8000` (health/metrics).
+- [ ] **Webui mot live API** — manuell pass via `/testlab` (pipeline + ev. A/B). Playwright i CI stubbar backend och ersätter inte detta.
+- [ ] **Spotcheck** — en svensk call via CLI `analyze-call` och samma flöde i dashboarden.
+- [ ] **Windows launcher** (om installer shippas) — manuell smoke av start/API/dashboard på Windows.
 
 ### Backup-guide
 
@@ -199,6 +210,7 @@ WebSocket ticket-baserad auth (`GET /ws/transcription/ticket` + `?token=` query 
 
 - [SECURITY.md](../SECURITY.md)
 - [docs/API.md](API.md)
+- [docs/DEVELOPMENT.md](DEVELOPMENT.md) — teststrategi / runbook (L0–L9)
 - [docs/ROADMAP.md](ROADMAP.md)
 - [CONTRIBUTING.md](../CONTRIBUTING.md)
 - [.env.example](../.env.example) — miljövariabel-mall

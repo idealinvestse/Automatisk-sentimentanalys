@@ -228,11 +228,20 @@ Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPO
 
 ## 9. Testing Strategy
 
-- Unit tests: `tests/test_*.py`
-- Pipeline tests: `tests/test_pipeline.py`
-- API tests: `tests/test_api*.py` (target ≥90% coverage)
-- LLM quality: `python -m src.evaluate llm-quality`
-- Run full suite: `pytest`
+**Canonical runbook:** [docs/DEVELOPMENT.md](DEVELOPMENT.md) § Testing (layers L0–L9, when-to-run-what, merge minima).
+**Release path (L7–L9):** [docs/PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) § Release verification.
+
+Quick map:
+
+- Unit: `tests/test_*.py` — prefer `pytest -m "not slow"` locally
+- Pipeline / golden: `tests/test_pipeline.py`, `tests/test_callcenter_golden.py`
+- API: `tests/test_api*.py` + `tests/contracts/` (target ≥90% on `src/api`)
+- Quality gates: `scripts/benchmark_intent.py`, `scripts/benchmark_analyzers.py --check-thresholds`
+- Webui: `cd webui && npm run test:e2e` (Playwright; backend stubbed in CI)
+- LLM quality (release, not PR floor): `python -m src.evaluate llm-quality`
+- Full suite: `pytest` / `make test`
+
+When changing analyzers or heuristics, do not skip golden + quality gates. Do not put real ASR or live LLM into PR CI.
 
 ## 10. Quick Reference for Agents
 

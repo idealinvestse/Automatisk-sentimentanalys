@@ -82,7 +82,7 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
   - New LLM provider / model handling: Använd model_catalog.py + uppdatera openrouter_client pricing.
   - Dashboard tab/component: New page in webui/src/app/, hook in webui/src/hooks/, component in webui/src/components/. Använd React Query + typed API client.
   - API endpoint: Router in routers/, service if needed, schema, test.
-- **Testing**: Unit + integration. Mock external (LLM, ASR heavy). Use fixtures. Aim high coverage on src/.
+- **Testing**: Unit + integration. Mock external (LLM, ASR heavy). Use fixtures. Aim high coverage on src/. Canonical runbook: docs/DEVELOPMENT.md § Testing (L0–L9); release L7–L9 in docs/PRODUCTION_CHECKLIST.md.
 - **Docs**: Update ROADMAP/CHANGELOG on releases. Use this AGENT_CONTEXT + PROJECT_STATUS as single source. **Re-run github-project-status skill after significant changes**.
 - **Grok Build**: Använd skills i .grok/skills/ direkt (t.ex. "github-project-status skill" eller "code-review-reflector").
 
