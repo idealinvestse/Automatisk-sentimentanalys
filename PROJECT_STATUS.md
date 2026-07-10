@@ -1,1 +1,1 @@
-- EDGE-01 Edge MVP: Offline CLI added ✅
+- v7 advanced: self-improving loop, voice fingerprint per agent, TTS-synthetic added ✅
