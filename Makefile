@@ -36,8 +36,25 @@ test:  ## Run all tests
 test-verbose:  ## Run tests with verbose output
 	pytest -v
 
-test-api:  ## Run API tests with coverage
-	pytest tests/test_api.py tests/test_api_coverage.py --cov=src/api --cov-fail-under=85
+test-api:  ## Run API tests with coverage (≥90% on src/api)
+	python -m pytest \
+		tests/test_api_smoke.py \
+		tests/test_api.py \
+		tests/test_api_coverage.py \
+		tests/test_api_services.py \
+		tests/test_api_security.py \
+		tests/test_api_upload.py \
+		tests/test_scan_logic.py \
+		tests/test_alerting_router.py \
+		tests/test_transcription_jobs.py \
+		tests/test_transcription_websocket.py \
+		tests/test_ws_ticket_minimal.py \
+		tests/test_path_validation.py \
+		tests/test_router_errors.py \
+		tests/test_batch.py \
+		tests/test_status_api.py \
+		tests/contracts/test_api_error_contract.py \
+		-q --cov=src/api --cov-report=term-missing --cov-fail-under=90
 
 lint:  ## Run ruff linting
 	ruff check .

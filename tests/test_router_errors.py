@@ -61,3 +61,12 @@ class TestRunRoute:
         with pytest.raises(HTTPException) as exc:
             await run_route("GET /test", boom)
         assert exc.value.status_code == 500
+
+    async def test_reraises_http_exception(self) -> None:
+        async def boom() -> None:
+            raise HTTPException(status_code=409, detail="conflict")
+
+        with pytest.raises(HTTPException) as exc:
+            await run_route("POST /jobs/x/cancel", boom)
+        assert exc.value.status_code == 409
+        assert exc.value.detail == "conflict"

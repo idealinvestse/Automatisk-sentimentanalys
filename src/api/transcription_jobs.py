@@ -68,14 +68,26 @@ class TranscriptionJobRegistry:
             if job:
                 job.status = status
 
-    def cancel(self, job_id: str) -> bool:
+    def cancel(self, job_id: str) -> str:
+        """Request cancellation.
+
+        Returns:
+            ``cancelled`` — running job marked cancelled
+            ``already_cancelled`` — idempotent success
+            ``already_finished`` — completed/failed (not cancelled)
+            ``not_found`` — unknown job id
+        """
         with self._lock:
             job = self._jobs.get(job_id)
             if not job:
-                return False
+                return "not_found"
+            if job.status == "cancelled":
+                return "already_cancelled"
+            if job.status in ("completed", "failed"):
+                return "already_finished"
             job.cancel_event.set()
             job.status = "cancelled"
-            return True
+            return "cancelled"
 
     def is_cancelled(self, job_id: str | None) -> bool:
         if not job_id:

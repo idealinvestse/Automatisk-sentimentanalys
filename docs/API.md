@@ -419,9 +419,7 @@ All error JSON bodies include backward-compatible `detail` plus `request_id` (ma
 ## Testing
 
 ```bash
-pytest tests/test_api.py tests/test_api_coverage.py tests/test_api_services.py \
-  tests/test_scan_logic.py tests/contracts/test_api_error_contract.py \
-  --cov=src/api --cov-fail-under=90
+make test-api   # full API suite + ≥90% coverage on src/api
 ```
 
-Coverage target for `src/api/`: **≥ 90%**.
+Coverage target for `src/api/`: **≥ 90%**. See `docs/DEVELOPMENT.md` § Testing for the L0–L9 runbook.

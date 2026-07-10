@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -13,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile
 
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
+from ..error_responses import PUBLIC_ERROR_DETAIL
 from ..helpers import asr_kwargs_from, transcribe_helper
 from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
@@ -89,8 +91,11 @@ async def get_transcription_job(job_id: str, request: Request) -> TranscribeJobS
 async def cancel_transcription_job(job_id: str, request: Request) -> TranscribeJobCancelResponse:
     """Request cancellation of a running transcription job."""
     registry = get_job_registry(request.app)
-    if not registry.cancel(job_id):
+    outcome = registry.cancel(job_id)
+    if outcome == "not_found":
         raise HTTPException(status_code=404, detail="Job not found")
+    if outcome == "already_finished":
+        raise HTTPException(status_code=409, detail="Job already finished")
     hub = get_hub(request.app)
     hub.log(job_id=job_id, level="WARNING", msg="Jobb avbrutet av klient")
     hub.status(job_id=job_id, is_running=False)
@@ -119,13 +124,14 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
             detail="Server not configured for file uploads (API_MEDIA_ROOT not set)",
         )
 
-    # Validate file extension
+    # Validate file extension from basename only (ignore client path components)
     allowed_extensions = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".opus"}
-    file_ext = Path(file.filename or "").suffix.lower()
+    original_name = Path(file.filename or "audio").name
+    file_ext = Path(original_name).suffix.lower()
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+            detail=f"Unsupported file format: {file_ext}. Allowed: {', '.join(sorted(allowed_extensions))}",
         )
 
     # Create uploads directory if it doesn't exist
@@ -135,10 +141,10 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
     # Clean up old uploads (best-effort, runs on upload to avoid startup complexity)
     _cleanup_old_uploads(upload_dir, settings.upload_retention_days)
 
-    # Generate unique filename (uuid4 + original name)
+    # Unique + sanitized filename (uuid prefix; strip traversal / unsafe chars)
     unique_id = uuid.uuid4().hex[:12]
-    safe_filename = f"{unique_id}_{file.filename}"
-    safe_filename = safe_filename.replace(" ", "_").replace("/", "_")
+    safe_stem = re.sub(r"[^\w.\-]+", "_", Path(original_name).stem, flags=re.UNICODE)[:80] or "audio"
+    safe_filename = f"{unique_id}_{safe_stem}{file_ext}"
     file_path = upload_dir / safe_filename
 
     # Save file with streaming read and size check
@@ -164,7 +170,7 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
         logger.error("Failed to save uploaded file: %s", e)
         if file_path.exists():
             file_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_DETAIL) from e
 
     # Validate the saved file exists and is under media root
     try:
@@ -177,7 +183,7 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
 
     return UploadResponse(
         audio_path=validated_path,
-        filename=file.filename or "unknown",
+        filename=original_name,
         size_bytes=total_bytes,
         timestamp=utc_now_iso(),
     )

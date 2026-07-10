@@ -208,7 +208,8 @@ def test_ws_ticket_endpoint_requires_auth_when_enabled(monkeypatch: pytest.Monke
     client = TestClient(create_app())
 
     response = client.get("/ws/transcription/ticket")
-    assert response.status_code == 403
+    assert response.status_code == 401
+    assert "api key" in response.json()["detail"].lower()
 
 
 def test_ws_accepts_valid_ticket_via_query_param(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -257,3 +258,47 @@ def test_ws_accepts_no_auth_when_disabled(monkeypatch: pytest.MonkeyPatch) -> No
     with client.websocket_connect("/ws/transcription") as ws:
         msg = ws.receive_json()
         assert msg["type"] == "connected"
+
+
+def test_ws_rejects_expired_ticket(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Expired tickets are rejected after TTL."""
+    import src.api.routers.ws_transcription as ws_mod
+
+    monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    ticket_response = client.get("/ws/transcription/ticket", headers={"X-API-Key": "secret-key"})
+    ticket = ticket_response.json()["ticket"]
+    ws_mod._tickets[ticket] = 0.0
+
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect(
+        f"/ws/transcription?token={ticket}"
+    ):
+        pass
+
+
+def test_ws_malformed_json_does_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Non-JSON frames are handled without hanging the server session."""
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws/transcription") as ws:
+        assert ws.receive_json()["type"] == "connected"
+        ws.send_text("not-json")
+        # Closing the client context is enough — server must exit cleanly in finally.
+
+
+def test_ws_subscribe_ack(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Client subscribe message is acknowledged with job_id."""
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    with client.websocket_connect("/ws/transcription") as ws:
+        assert ws.receive_json()["type"] == "connected"
+        ws.send_json({"type": "subscribe", "job_id": "job-42"})
+        ack = ws.receive_json()
+        assert ack["type"] == "subscribed"
+        assert ack["job_id"] == "job-42"
