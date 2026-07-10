@@ -520,6 +520,68 @@ class PipelineResponse(BaseModel):
     )
 
 
+class PipelineCompareRequest(BaseModel):
+    """Run the same segments through multiple LLM models for A/B comparison."""
+
+    segments: list[dict[str, Any]] = Field(
+        ...,
+        description="ASR segments with 'text' and optionally 'speaker' keys",
+    )
+    models: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=3,
+        description="OpenRouter model slugs (max 3)",
+    )
+    profile: str = Field("callcenter", description="Analysis profile")
+    selected_analyzers: list[str] | None = None
+    sentiment_model: str | None = None
+    device: str = Field("auto")
+    deep_analysis: bool = Field(True, description="Force deep LLM path for comparison")
+    cost_budget_usd: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Total USD budget across all model runs (default: profile cost_budget_per_call)",
+    )
+    llm_api_key: str | None = None
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq)$")
+    groq_eu_residency: bool = False
+
+    @field_validator("segments")
+    @classmethod
+    def segments_must_not_be_empty(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not v:
+            raise ValueError("segments must not be empty")
+        if len(v) > MAX_SEGMENTS_PER_CALL:
+            raise ValueError(f"segments must have at most {MAX_SEGMENTS_PER_CALL} items")
+        return v
+
+
+class ModelCompareResult(BaseModel):
+    """Single model run in a compare batch."""
+
+    model: str
+    processing_time_s: float
+    llm_cost_usd: float | None = None
+    qa_score: float | None = None
+    sentiment_label: str | None = None
+    llm_trajectory: str | None = None
+    response: PipelineResponse
+
+
+class PipelineCompareResponse(BaseModel):
+    """Side-by-side pipeline results for multiple LLM models."""
+
+    models: list[str]
+    results: dict[str, ModelCompareResult]
+    total_cost_usd: float | None = None
+    total_processing_time_s: float
+    budget_usd: float | None = None
+    budget_exceeded: bool = False
+    timestamp: str
+
+
 def _safe_parse(model_cls: type[BaseModel], data: Any) -> Any | None:
     """Best-effort parse of an analyzer output dict into a typed model.
 

@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
 import { ModelRoutingCard } from "@/components/model-routing-card";
-import { apiClient, ApiError, type PipelineReport } from "@/lib/api/client";
+import { ModelComparePanel } from "@/components/model-compare-panel";
+import { apiClient, ApiError, type PipelineCompareResponse, type PipelineReport } from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { useHealth } from "@/hooks/use-health";
 import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
@@ -54,6 +55,29 @@ export default function TestLabPage() {
     },
     onSuccess: () => notifySuccess("Pipeline-analys klar"),
     onError: (err) => notifyApiError(err, "Pipeline-fel: "),
+  });
+
+  const compareMutation = useMutation<PipelineCompareResponse, ApiError, void>({
+    mutationFn: async () => {
+      const raw = segmentsInput.trim();
+      if (!raw) throw new ApiError("Ange segments som JSON");
+      let segments: unknown;
+      try {
+        segments = JSON.parse(raw);
+      } catch {
+        throw new ApiError("Ogiltig JSON i segments-fältet");
+      }
+      if (!Array.isArray(segments) || segments.length === 0) {
+        throw new ApiError("segments måste vara en icke-tom lista");
+      }
+      const models = (["fast", "balanced", "deep"] as RoutingTier[]).map(tierToModel);
+      return apiClient.comparePipeline(segments, models, {
+        provider,
+        use_mistral_llm: true,
+      });
+    },
+    onSuccess: () => notifySuccess("Modelljämförelse klar"),
+    onError: (err) => notifyApiError(err, "Jämförelse-fel: "),
   });
 
   const report = mutation.data;
@@ -147,11 +171,21 @@ export default function TestLabPage() {
             />
           ) : null}
 
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="gap-1.5">
               <FlaskConical className="size-4" />
               {mutation.isPending ? "Analyserar…" : "Analysera (pipeline)"}
             </Button>
+            {useLlm && provider === "openrouter" ? (
+              <Button
+                variant="outline"
+                onClick={() => compareMutation.mutate()}
+                disabled={compareMutation.isPending || mutation.isPending}
+                className="gap-1.5"
+              >
+                {compareMutation.isPending ? "Jämför…" : "Jämför FAST/BALANCED/DEEP"}
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -278,6 +312,13 @@ export default function TestLabPage() {
           )}
         </CardContent>
       </Card>
+
+      {useLlm && provider === "openrouter" ? (
+        <ModelComparePanel
+          data={compareMutation.data}
+          isLoading={compareMutation.isPending}
+        />
+      ) : null}
     </div>
   );
 }

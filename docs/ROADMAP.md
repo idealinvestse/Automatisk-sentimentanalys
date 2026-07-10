@@ -2,13 +2,13 @@
 
 This document provides a high-level overview of the project's maturity and future direction.
 
-## Current Status (June 2026)
+## Current Status (July 2026)
 
-**Version**: 0.4.1 (v0.5-prep)
+**Version**: 0.5.0
 
-The project has reached a **mature beta / early production** stage. **Fas 4 (Call Center Backend) is complete** and validated (Fas 1 gate: 509 tests, 86 %+ coverage). Release documentation updated in CHANGELOG, README, API.md, and FAS4_COMPLETION.md.
+The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
 
-> **Note:** Test count is a snapshot at Fas 4 sign-off. Current count is **716+ test functions across 60+ test files** (delta includes Groq integration, transcription jobs/WS, edge API, dashboard tests, and PII coverage added post-Fas 4). See `pytest --collect-only` for live count.
+> **Note:** Current test count is **921 test functions** (`pytest --collect-only`). See live count for CI gates.
 
 ### Known Gaps / Deferred Items (v0.4.1)
 
@@ -57,25 +57,24 @@ The project has reached a **mature beta / early production** stage. **Fas 4 (Cal
 - **Privacy by design**: Explicit logging of external LLM calls, PII redaction, no hardcoded secrets.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 
-## Next Priorities (v0.5)
+## Next Priorities (post v0.5)
 
 | Priority | Area | Description |
 |----------|------|-------------|
-| High | **PROD-01 Observability** | Structured JSON logging, pipeline/LLM/cache Prometheus metrics, optional OpenTelemetry tracing |
-| High | **DATA-01 Fine-tuning** | Partial: intent corpus + analyzer CI gates + baselines; nightly model train + real corpus import remain |
-| High | **INSIGHT-02 LLM consolidation** | Skip heuristik-analyzers superseded by deep path; see `docs/ANALYZER_STRATEGY.md` |
-| High | **EDGE-01 Edge MVP** | Offline local inference CLI (`sentimentanalys edge-analyze`) |
-| Medium | **Model routing** | Cost/quality tiers via `src/llm/routing.py` + `model_catalog` |
-| Medium | **Dashboard polish** | Executive Insights tab, model A/B selector, correlation heatmap (see archived `DASHBOARD_EXCELLENCE_PLAN.md`) |
-| Medium | **Production hardening** | `API_PRODUCTION` guards, `Dockerfile.gpu`, prod checklist completion |
+| High | **Real corpus** | Import anonymized production calls via DATA-01 workflow (`data/import/`) |
+| High | **Intent fine-tune** | Train model that beats heuristic + 0.05 macro F1 on `intent_val.jsonl` |
+| Medium | **OTLP tracing** | Replace console OTEL exporter with production OTLP endpoint |
+| Medium | **Dashboard polish** | Correlation heatmap, executive drill-downs |
 | Low | **Fine-tuning UX** | Easier domain adaptation workflow for call center data |
 
-### Completed in v0.5 prep (no longer priorities)
+### Completed in v0.5
 
-- NiceGUI dashboard with Agent Performance, Fas 4 Insights, QA, Search, Alerts, Transcription
-- Pipeline refactoring (PIPE-01)
-- HTTP request metrics middleware
-- Dependency consolidation (DEPS-01)
+- DATA-01 import workflow + baseline eval smoke + CI gates
+- Docker staging (`docker-compose.staging.yml`) with Redis cache + Prometheus
+- Model A/B compare: `POST /analyze_pipeline/compare` + Testlabb panel
+- INSIGHT-02 deep-path skip tests
+- CI: mypy job + staging compose config validation
+- GPU Docker verification script + checklist documentation
 
 ## Long-term Vision
 

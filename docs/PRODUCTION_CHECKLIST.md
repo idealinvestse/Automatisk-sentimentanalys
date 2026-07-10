@@ -1,11 +1,12 @@
 # Produktionschecklista
 
 **Skapad:** 2026-06-28 (audit DOC-02)  
-**Uppdaterad:** 2026-07-03 (D.3 — verifierad mot kodbase av Devin)  
+**Uppdaterad:** 2026-07-09 (v0.5 — staging observability + GPU verify)  
 **Syfte:** Checklista innan produktionsdrift av Swedish Sentiment API och webui-dashboard.
 
-> **Verifieringsstatus 2026-07-03:** 13 PASS, 5 FAIL, 5 PARTIAL av 23 items.
-> Se "Gap"-kommentarer per sektion för detaljer.
+> **Verifieringsstatus 2026-07-09 (v0.5):** 19 PASS, 0 FAIL, 0 PARTIAL av 23 items.
+> Staging stack validerad via `docker-compose.staging.yml` + `scripts/staging_observability_smoke.py`.
+> GPU CUDA smoke verifierad via `scripts/verify_gpu_docker.ps1` (se §3).
 
 ---
 
@@ -28,6 +29,7 @@ scrape_configs:
 ```
 
 - [x] **Tracing** — `src/core/tracing.py` med `OTEL_ENABLED=true` (graceful no-op om `opentelemetry` ej installerat). `span()` context manager för pipeline/ASR-jobb. Exporterar till ConsoleSpanExporter (byt till OTLP exporter för production).
+- [x] **Staging stack (v0.5)** — `docker-compose.staging.yml` med api+webui+redis+prometheus. Smoke: `python scripts/staging_observability_smoke.py --api-base http://localhost:8000`.
 
 ---
 
@@ -51,7 +53,7 @@ scrape_configs:
 ## 3. GPU Docker
 
 - [x] **CUDA Dockerfile** — `Dockerfile.gpu` (NVIDIA CUDA 12.1 + cuDNN 8, Ubuntu 22.04). Torch installeras från `--index-url https://download.pytorch.org/whl/cu121`.
-- [ ] **Kör med GPU** — `docker run --gpus all ...` (verifiera på riktig GPU-host, se steg nedan)
+- [x] **Kör med GPU** — `docker run --gpus all ...` verifierad via `scripts/verify_gpu_docker.ps1` (2026-07-09). Förväntad output: `CUDA available: True` + GPU-namn.
 - [x] **Volumes** — `HF_HOME=/cache/hf` i `Dockerfile.gpu`. `docker-compose.webui.yml` monterar `hf_cache:/cache/hf`.
 - [x] **Torch CUDA** — installeras i `Dockerfile.gpu` (rad 30).
 
@@ -160,19 +162,21 @@ Följande data backas upp:
 
 ---
 
-## 6. Verifieringsresultat (2026-07-03)
+## 6. Verifieringsresultat (2026-07-09)
 
 | Kategori | Pass | Fail | Partial |
 |----------|------|------|---------|
-| Observability | 6 | 0 | 0 |
+| Observability | 7 | 0 | 0 |
 | Secrets | 5 | 0 | 0 |
-| GPU Docker | 3 | 1 | 0 |
+| GPU Docker | 4 | 0 | 0 |
 | Drift & skalning | 4 | 0 | 0 |
-| **Total** | **18** | **1** | **0** |
+| **Total** | **20** | **0** | **0** |
 
-### Kvarstående gaps (måste åtgärdas före produktion):
+### Kvarstående gaps (post v0.5, ej blockerande):
 
-1. **GPU-verifiering** — `Dockerfile.gpu` är byggt men ej testat på riktig GPU-host. Se "GPU-verifieringssteg" ovan för steg-för-steg-guide.
+1. **Windows keyring** — launcher secrets via keyring extra (valfritt för desktop)
+2. **OTLP exporter** — byt från console till produktion OTLP endpoint
+3. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data
 
 ### WebSocket ticket auth (Fas 5 harmonization)
 

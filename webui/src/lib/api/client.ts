@@ -30,6 +30,26 @@ export interface PipelineReport {
   [key: string]: unknown;
 }
 
+export interface ModelCompareResult {
+  model: string;
+  processing_time_s: number;
+  llm_cost_usd?: number | null;
+  qa_score?: number | null;
+  sentiment_label?: string | null;
+  llm_trajectory?: string | null;
+  response: PipelineReport;
+}
+
+export interface PipelineCompareResponse {
+  models: string[];
+  results: Record<string, ModelCompareResult>;
+  total_cost_usd?: number | null;
+  total_processing_time_s: number;
+  budget_usd?: number | null;
+  budget_exceeded: boolean;
+  timestamp: string;
+}
+
 // ---------------------------------------------------------------------------
 // Typed analyzer output interfaces (Fas 5 — mirrors src/api/schemas.py)
 // ---------------------------------------------------------------------------
@@ -482,6 +502,25 @@ export class ApiClient {
     // analyzers) can take 30–60s per call on CPU. Use a generous timeout so
     // the demo transcripts don't get aborted mid-analysis.
     return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options }, 180_000);
+  }
+
+  /** Compare up to 3 LLM models on the same segments (v0.5 model A/B). */
+  comparePipeline(
+    segments: unknown[],
+    models: string[],
+    options: Record<string, unknown> = {},
+  ) {
+    return this.post<PipelineCompareResponse>(
+      "/analyze_pipeline/compare",
+      {
+        segments,
+        models,
+        profile: "callcenter",
+        deep_analysis: true,
+        ...options,
+      },
+      540_000,
+    );
   }
 
   /** Aggregate agent metrics for one agent, computed over the given calls (Fas 4). */

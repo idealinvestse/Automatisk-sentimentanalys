@@ -241,6 +241,91 @@ def test_alerts_endpoint(monkeypatch):
         assert "alerts" in r.json()
 
 
+def _fake_pipeline_report(**overrides):
+    fake = MagicMock()
+    fake.sentiment_results = overrides.get("sentiment_results", [{"label": "positiv", "score": 0.9}])
+    fake.intent_results = overrides.get("intent_results", [])
+    fake.summary = overrides.get("summary", {})
+    fake.topics = overrides.get("topics", {})
+    fake.insights = overrides.get("insights", {})
+    fake.risks = overrides.get("risks", {})
+    fake.processing_time_s = overrides.get("processing_time_s", 0.5)
+    fake.llm = overrides.get("llm", {"meta": {"cost_usd": 0.01}})
+    fake.results = overrides.get("results", {"qa": {"overall_qa_score": 82}})
+    return fake
+
+
+def test_analyze_pipeline_compare_happy(monkeypatch):
+    models = [
+        "mistralai/mistral-small-3.1-24b-instruct",
+        "mistralai/mistral-medium-3.5",
+    ]
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.side_effect = [
+            _fake_pipeline_report(processing_time_s=0.4),
+            _fake_pipeline_report(processing_time_s=0.6, llm={"meta": {"cost_usd": 0.02}}),
+        ]
+        r = client.post(
+            "/analyze_pipeline/compare",
+            json={
+                "segments": [{"text": "Hej", "speaker": "agent"}],
+                "models": models,
+            },
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["models"] == models
+        assert len(data["results"]) == 2
+        assert data["total_processing_time_s"] == 1.0
+        assert inst.analyze_segments.call_count == 2
+
+
+def test_analyze_pipeline_compare_rejects_empty_models():
+    r = client.post(
+        "/analyze_pipeline/compare",
+        json={"segments": [{"text": "Hej"}], "models": []},
+    )
+    assert r.status_code == 422
+
+
+def test_analyze_pipeline_compare_rejects_too_many_models():
+    r = client.post(
+        "/analyze_pipeline/compare",
+        json={
+            "segments": [{"text": "Hej"}],
+            "models": ["a", "b", "c", "d"],
+        },
+    )
+    assert r.status_code == 422
+
+
+def test_analyze_pipeline_compare_budget_flag(monkeypatch):
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments.return_value = _fake_pipeline_report(
+            llm={"meta": {"cost_usd": 0.15}},
+        )
+        r = client.post(
+            "/analyze_pipeline/compare",
+            json={
+                "segments": [{"text": "Hej"}],
+                "models": ["mistralai/mistral-medium-3.5"],
+                "cost_budget_usd": 0.05,
+            },
+        )
+        assert r.status_code == 200
+        assert r.json()["budget_exceeded"] is True
+
+
+def test_analyze_pipeline_compare_requires_segments():
+    r = client.post(
+        "/analyze_pipeline/compare",
+        json={"segments": [], "models": ["mistralai/mistral-medium-3.5"]},
+    )
+    assert r.status_code == 422
+
+
 def test_run_batch_sequential_and_timeout_per_task():
     """Direct test of the batch helper (covers the per-file timeout fix)."""
     from src.api.batch import run_batch

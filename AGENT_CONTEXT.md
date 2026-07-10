@@ -1,5 +1,5 @@
 # AGENT CONTEXT — Automatisk-sentimentanalys
-**Generated:** 2026-07-09 | Use this file as the single source of truth when continuing development.
+**Generated:** 2026-07-09 | **Version:** 0.5.0 | Use this file as the single source of truth when continuing development.
 
 ## 1. What This System Is
 Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkribering (ASR + diarization), intent/ emotion/ aspect-analys, LLM-baserad QA/compliance, PII-redaktion, insikter, agent performance metrics och realtids-dashboard. Byggt för svenska kundtjänstsamtal med stark GDPR-fokus, skalbarhet och self-hosted/VPS-deployment. Mål: ersätta manuell samtalshantering med automatiserad, pålitlig analys som ger actionable insights till QA, coacher och chefer.
@@ -22,11 +22,14 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - Fine-tuning: src/fine_tuning/ + integration in dashboard model selector + live training support.
 - Real-time & Production: WebSocket, persistent alerting state (JSON), multi-worker ready, Docker/VPS support.
 - **LLM Model Management (Ny)**: `src/llm/model_catalog.py` (full OpenRouter scan + save), dynamic pricing i openrouter_client, CLI + Dashboard integration.
+- **Model A/B compare (v0.5)**: `POST /analyze_pipeline/compare` (max 3 models, budget guard) + `webui/src/components/model-compare-panel.tsx` in Testlabb.
+- **DATA-01 import (v0.5)**: `scripts/import_domain_corpus.py`, gitignored `data/import/` slot, runbook in `docs/DEVELOPMENT.md`.
+- **Docker staging (v0.5)**: `docker-compose.staging.yml` (api+webui+redis+prometheus), `scripts/staging_observability_smoke.py`.
 - **Grok Build Optimization**: `.grok/skills/` med 6 custom skills (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) + enhanced AGENTS.md + Grok Build quickstart i README.
 
 **In Progress**:
-- Full production fine-tuning training loop and evaluation.
-- v0.5 release preparation.
+- Real annotated call corpus import (workflow ready, awaiting external data).
+- Intent fine-tune model beating heuristic + 0.05 macro F1.
 
 **Planned**:
 - Expanded finetuning/production models.
@@ -54,12 +57,12 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - src/analysis/registry.py — How to register new analyzers; patterns for graceful handling.
 - src/llm/schemas.py + src/llm/prompts.py — LLM output contracts and prompt engineering.
 - src/llm/openrouter_client.py + src/llm/model_catalog.py — **Ny viktig**: Dynamic pricing + full model scan. Använd refresh_pricing_from_catalog() och load_catalog().
-- src/api/routers/pipeline.py + src/api/schemas.py — API contract for analysis requests.
+- src/api/routers/pipeline.py + src/api/schemas.py — API contract for analysis requests; **v0.5:** `POST /analyze_pipeline/compare`.
 - webui/src/lib/api/client.ts + webui/src/hooks/ — Primary frontend API client + React Query hooks. **Legacy**: app/archive/nicegui_dashboard/ (deprecated, referens endast).
 - launcher/main.py + launcher/process_manager.py — Desktop launcher logic. **Ny**: Storage path settings.
 - pyproject.toml — Dependencies, optional groups (cli, api, dashboard-nicegui, diarize), scripts.
 - configs/ — llm_config.yaml, alerting_config.yaml, qa_scorecards/*.yaml, install_defaults.
-- tests/ — Extensive; run with pytest. Many test_*.py mirroring src/.
+- tests/ — **921** test functions (`pytest --collect-only`); run with pytest. Many test_*.py mirroring src/.
 - **.grok/skills/** — Custom skills (github-project-status, grok-repo-optimizer, github-repo-deep-dive, code-review-reflector, grok-full-launcher, repo-health-check) — använd dessa direkt i Grok Build.
 - docs/LLM_AGENT_GUIDE.md — **Most important for agents**: architecture philosophy, patterns, what to do/not do, security rules.
 
@@ -84,12 +87,9 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Grok Build**: Använd skills i .grok/skills/ direkt (t.ex. "github-project-status skill" eller "code-review-reflector").
 
 ## 6. Open Tasks & Priorities
-- High-priority: v0.5 release + tagging + customer demo.
-- Full production fine-tuning training loop on real callcenter data.
-- Further real-time optimizations and Edge AI expansion.
-- Sync ROADMAP.md with latest TASK numbering.
-- **Ny**: Model picker i dashboard + auto cost-optimized routing baserat på catalog. Uppdatera .gitignore för model_catalog.json.
-- **Städning (2026-06-28)**: Legacy-planer arkiverade i `docs/archive/`; Streamlit borttagen; pipeline refaktorerad (`_run_local_analysis`, `_run_fas4_enrichment`, `_build_report`).
+- **Post v0.5:** Real corpus via DATA-01 import; intent fine-tune; OTLP tracing in production.
+- Model picker + auto cost-optimized routing baserat på catalog.
+- Fas 6 commercialization (post v0.5).
 
 ## 7. Context for Future Agents
 After every change that affects features, re-run the github-project-status skill. We use Swedish/Norwegian localization in UI and prompts. Strong focus on PII/GDPR and graceful degradation. When implementing new analyzer or LLM feature (särskilt model catalog / pricing), se src/llm/model_catalog.py och openrouter_client.py. Dashboard components should use `webui/src/lib/api/client.ts` for backend data (NiceGUI-dashboarden är deprecated). Använd .grok/skills/ för kvalitet, review och launch-hjälp. **Ny regel**: Efter model-relaterade ändringar, kör `sentimentanalys scan-openrouter-models` och uppdatera pricing i client.

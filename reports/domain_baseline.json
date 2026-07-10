@@ -1,12 +1,13 @@
 {
   "profile": "callcenter",
-  "accuracy": 0.72,
-  "f1_macro": 0.70,
+  "accuracy": 0.664,
+  "f1_macro": 0.6639,
   "intent_heuristic_val": {
     "accuracy": 0.7429,
     "f1_macro": 0.7646,
     "testset": "data/intent_val.jsonl"
   },
   "testset": "data/callcenter_val.csv",
-  "note": "Sentiment baseline on synthetic val; intent metrics on deduplicated intent_val.jsonl (2026-06-28 accuracy program)"
+  "evaluated_at": "20260709T143826Z",
+  "note": "Sentiment baseline on synthetic val (500 rows, model backend); intent metrics on deduplicated intent_val.jsonl. Refreshed for v0.5 DATA-01 smoke."
 }

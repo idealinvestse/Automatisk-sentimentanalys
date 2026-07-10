@@ -123,6 +123,10 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 - `POST /analyze_pipeline` — full `CallAnalysisPipeline` on pre-transcribed segments  
   Response `results` includes Fas 4 fields: `agent_performance`, `qa` / `compliance_qa`, `agent_assessment`, `customer_metrics`, `alerts`, etc.
 
+- `POST /analyze_pipeline/compare` — run the same segments through up to 3 LLM models (A/B comparison)  
+  Request: `segments`, `models` (max 3 slugs), optional `cost_budget_usd`.  
+  Response: per-model `results` with QA score, sentiment, cost, latency, and full `PipelineResponse`.
+
 ### Fas 4 (call center)
 
 | Method | Path | Purpose |

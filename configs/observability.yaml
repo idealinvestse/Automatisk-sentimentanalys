@@ -1,9 +1,0 @@
-observability:
-  enabled: true
-  service_name: "automatisk-sentimentanalys"
-  environment: "${ENV:development}"
-  sampling_rate: 1.0
-  otlp_endpoint: "http://localhost:4318"
-  prometheus_port: 8001
-  log_level: "INFO"
-  pii_redaction: true

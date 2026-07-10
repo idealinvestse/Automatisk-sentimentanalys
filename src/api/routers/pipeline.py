@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -27,6 +27,9 @@ from ..schemas import (
     AlertsResponse,
     HotTopicsRequest,
     HotTopicsResponse,
+    ModelCompareResult,
+    PipelineCompareRequest,
+    PipelineCompareResponse,
     PipelineRequest,
     PipelineResponse,
     QAScoreRequest,
@@ -35,6 +38,7 @@ from ..schemas import (
     SemanticSearchResponse,
     build_analyzer_results,
 )
+from ...profiles import resolve_profile
 from ..services.pipeline_cache import resolve_reports
 
 logger = logging.getLogger(__name__)
@@ -109,6 +113,144 @@ async def analyze_pipeline(
         )
 
     return await run_route("analyze_pipeline", _do)
+
+
+def _report_to_pipeline_response(report: Any) -> PipelineResponse:
+    return PipelineResponse(
+        sentiment_results=report.sentiment_results,
+        intent_results=[
+            {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
+        ],
+        summary=report.summary,
+        topics=report.topics,
+        insights=report.insights,
+        risks=report.risks,
+        processing_time_s=report.processing_time_s,
+        timestamp=utc_now_iso(),
+        llm=report.llm,
+        results=report.results,
+        analyzer_results=build_analyzer_results(report.results),
+    )
+
+
+def _extract_llm_cost(report: Any) -> float | None:
+    llm = report.llm if isinstance(report.llm, dict) else {}
+    meta = llm.get("meta") if isinstance(llm, dict) else None
+    if isinstance(meta, dict):
+        cost = meta.get("cost_usd") or meta.get("cost")
+        if cost is not None:
+            try:
+                return float(cost)
+            except (TypeError, ValueError):
+                return None
+    results = report.results if isinstance(report.results, dict) else {}
+    judge = results.get("llm_judge")
+    if isinstance(judge, dict):
+        cost = judge.get("total_cost_usd") or judge.get("cost_usd")
+        if cost is not None:
+            try:
+                return float(cost)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _resolve_compare_budget(req: PipelineCompareRequest) -> float:
+    if req.cost_budget_usd is not None:
+        return req.cost_budget_usd
+    _, spec = resolve_profile(profile=req.profile)
+    llm_cfg = spec.get("llm") or {}
+    return float(llm_cfg.get("cost_budget_per_call", 0.08))
+
+
+@router.post("/analyze_pipeline/compare", response_model=PipelineCompareResponse)
+async def analyze_pipeline_compare(
+    req: PipelineCompareRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> PipelineCompareResponse:
+    """Run the same segments through up to 3 LLM models for side-by-side comparison."""
+    logger.info(
+        "Pipeline compare on %d segment(s), models=%s",
+        len(req.segments),
+        req.models,
+    )
+    budget = _resolve_compare_budget(req)
+    per_model_budget = budget / max(len(req.models), 1)
+    results: dict[str, ModelCompareResult] = {}
+    total_cost = 0.0
+    total_time = 0.0
+    budget_exceeded = False
+
+    async def _do() -> PipelineCompareResponse:
+        nonlocal total_cost, total_time, budget_exceeded
+        for model in req.models:
+            if budget_exceeded:
+                break
+            pipe = create_pipeline(
+                cache=cache,
+                profile=req.profile,
+                sentiment_model=req.sentiment_model,
+                device=req.device,
+                use_mistral_llm=True,
+                llm_model=model,
+                deep_analysis=req.deep_analysis,
+                llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
+                provider=req.provider,
+                groq_eu_residency=req.groq_eu_residency,
+            )
+            report = await asyncio.to_thread(
+                pipe.analyze_segments,
+                req.segments,
+                req.selected_analyzers,
+            )
+            response = _report_to_pipeline_response(report)
+            cost = _extract_llm_cost(report) or 0.0
+            total_cost += cost
+            total_time += report.processing_time_s
+            if total_cost > budget:
+                budget_exceeded = True
+            qa = (report.results or {}).get("qa") or (report.results or {}).get(
+                "compliance_qa", {}
+            )
+            qa_score = qa.get("overall_qa_score") if isinstance(qa, dict) else None
+            sentiment_label = None
+            if report.sentiment_results:
+                first = report.sentiment_results[0]
+                if isinstance(first, dict):
+                    sentiment_label = first.get("label")
+            llm_traj = None
+            if isinstance(report.llm, dict):
+                traj = report.llm.get("trajectory")
+                if isinstance(traj, dict):
+                    llm_traj = traj.get("trend") or traj.get("summary")
+            results[model] = ModelCompareResult(
+                model=model,
+                processing_time_s=report.processing_time_s,
+                llm_cost_usd=cost if cost else None,
+                qa_score=float(qa_score) if qa_score is not None else None,
+                sentiment_label=sentiment_label,
+                llm_trajectory=str(llm_traj) if llm_traj is not None else None,
+                response=response,
+            )
+            if cost > per_model_budget:
+                logger.warning(
+                    "Model %s cost %.4f exceeds per-model budget %.4f",
+                    model,
+                    cost,
+                    per_model_budget,
+                )
+        return PipelineCompareResponse(
+            models=req.models,
+            results=results,
+            total_cost_usd=round(total_cost, 6) if total_cost else None,
+            total_processing_time_s=round(total_time, 3),
+            budget_usd=budget,
+            budget_exceeded=budget_exceeded,
+            timestamp=utc_now_iso(),
+        )
+
+    return await run_route("analyze_pipeline_compare", _do)
 
 
 @router.post("/agent_performance/{agent_id}", response_model=AgentPerformanceResponse)

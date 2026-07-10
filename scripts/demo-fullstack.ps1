@@ -124,6 +124,11 @@ Write-Host "[5/5] Running smoke test..." -ForegroundColor Yellow
 Set-Location "$RepoRoot\webui"
 npm run test:e2e
 
+Write-Host ""
+Write-Host "Docker staging (optional production-like stack):" -ForegroundColor Cyan
+Write-Host "  docker compose -f docker-compose.staging.yml up --build" -ForegroundColor White
+Write-Host "  python scripts/staging_observability_smoke.py --api-key staging-local-dev-key" -ForegroundColor Gray
+
 # Summary
 Write-Host ""
 Write-Host "=== Demo Complete ===" -ForegroundColor Cyan

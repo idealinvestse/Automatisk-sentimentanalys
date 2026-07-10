@@ -147,6 +147,12 @@ htmlcov/
 # Agent / tool output (local only)
 agent-tools/
 
+# Real domain data (never commit — use scripts/import_domain_corpus.py)
+data/import/*
+!data/import/.gitkeep
+data/*_real.csv
+data/*_real.jsonl
+
 # Generated eval reports
 reports/llm_quality_smoke.json
 reports/llm_human_study_template.md

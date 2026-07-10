@@ -189,15 +189,43 @@ CI runs smoke tests via `configs/finetune.ci.yaml`. Baselines: `reports/finetune
 
 When `models/callcenter-sentiment-lora/` exists, `callcenter` profile uses it automatically.
 
-## Importera riktig domändata (GDPR)
+## Importera riktig domändata (GDPR) — DATA-01 runbook
 
 Never commit real customer audio or transcripts. See [SECURITY.md](../SECURITY.md).
 
-1. Store raw data outside the repo (encrypted volume / secure bucket)
-2. Anonymize PII before labelling (use pipeline PII redaction as reference)
-3. Export CSV with columns `text,label` (negativ/neutral/positiv)
-4. Validate with `python scripts/validate_domain_corpus.py your_val.csv`
-5. Run `python -m src.evaluate --testset your_val.csv --output reports/domain_eval.json`
+### Workflow
+
+1. **Lagring utanför repo** — rådata på krypterad volym eller säker bucket (ej i git)
+2. **PII-redaktion** — kör pipeline-redaktion som referens (`callcenter`-profil, [`src/llm/pii_redactor.py`](../src/llm/pii_redactor.py)); manuell review obligatorisk
+3. **Exportformat**
+   - Sentiment: CSV med kolumner `text,label` (`negativ` / `neutral` / `positiv`)
+   - Intent: JSONL med `{"text": "...", "intent": "..."}` per rad
+4. **Import till repo-slot** (gitignored):
+
+```bash
+python scripts/import_domain_corpus.py --source-dir /secure/path/to/anonymized
+# → data/import/callcenter_val_real.csv
+# → data/import/intent_val_real.jsonl
+```
+
+5. **Validering och baseline**
+
+```bash
+python scripts/validate_domain_corpus.py data/import/callcenter_val_real.csv --min-rows 50
+python scripts/validate_intent_corpus.py data/import/intent_val_real.jsonl --min-rows 20
+python scripts/evaluate_real_corpus.py \
+  --sentiment-csv data/import/callcenter_val_real.csv \
+  --intent-jsonl data/import/intent_val_real.jsonl
+```
+
+6. **Uppdatera baselines** — jämför mot `reports/domain_baseline.json` och `reports/intent_baseline.json`
+
+### Smoke utan riktig data
+
+```bash
+python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500
+python scripts/evaluate_real_corpus.py --sentiment-csv data/callcenter_val.csv
+```
 
 Synthetic data from `scripts/prepare_callcenter_data.py` is for development only.
 

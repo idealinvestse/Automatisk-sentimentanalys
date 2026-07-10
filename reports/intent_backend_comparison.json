@@ -5,7 +5,7 @@
     "n_samples": 70,
     "accuracy": 0.7429,
     "f1_macro": 0.7646,
-    "latency_ms_p50": 0.017,
+    "latency_ms_p50": 0.019,
     "latency_total_s": 0.001,
     "per_class": {
       "account_update": {
