@@ -318,9 +318,38 @@ def run_llm_holistic(
     ctx: PipelineLLMContext,
 ) -> dict[str, Any]:
     """Route to the correct LLM analyzer based on provider."""
+    if not _llm_credentials_available(ctx):
+        return {
+            "llm_used": False,
+            "meta": {
+                "llm_used": False,
+                "llm_fallback_reason": "missing_api_key",
+                "provider": ctx.provider,
+            },
+            "fallback": True,
+        }
     if ctx.provider == "groq":
         return run_groq_holistic(segments, results, ctx)
     return run_mistral_holistic(segments, results, ctx)
+
+
+def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
+    """True when a provider API key is available (ctx override or env/file)."""
+    if ctx.llm_api_key:
+        return True
+    if ctx.provider == "groq":
+        try:
+            from .llm.groq_client import get_groq_api_key
+
+            return bool(get_groq_api_key())
+        except Exception:
+            return False
+    try:
+        from .llm.openrouter_client import get_openrouter_api_key
+
+        return bool(get_openrouter_api_key())
+    except Exception:
+        return False
 
 
 def run_fas4_enrichment(
@@ -447,8 +476,24 @@ def _run_fas4_enrichment_body(
     with degrading_phase("pipeline", "qa_scoring", results=results, result_key="qa"):
         from .compliance_qa import score_call_with_default_scorecard
 
-        use_llm_qa = bool(
-            ctx.use_mistral_llm or (results.get("llm") or {}).get("meta", {}).get("llm_used")
+        llm_meta = (results.get("llm") or {}).get("meta") or {}
+        llm_used = bool(llm_meta.get("llm_used"))
+        fallback_reason = str(llm_meta.get("llm_fallback_reason") or "")
+        creds_ok = _llm_credentials_available(ctx)
+        # Avoid OpenRouter retry storms: no LLM QA without credentials, and no
+        # second attempt after holistic already failed for missing/invalid auth.
+        use_llm_qa = creds_ok and (
+            llm_used
+            or (
+                ctx.use_mistral_llm
+                and fallback_reason
+                not in {
+                    "missing_api_key",
+                    "ccp_failed",
+                    "llm_error",
+                    "llm_error_or_disabled",
+                }
+            )
         )
         qa_analyzer: Any | None = None
         if use_llm_qa:

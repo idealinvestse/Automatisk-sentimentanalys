@@ -165,7 +165,13 @@ def get_openrouter_api_key(override: str | None = None) -> str | None:
 
 # Lazy / optional dependency handling (pattern matched from src/transcription/whisperx.py and factory.py)
 try:
-    from openai import APIError, APITimeoutError, OpenAI, RateLimitError  # type: ignore
+    from openai import (  # type: ignore
+        APIError,
+        APITimeoutError,
+        AuthenticationError,
+        OpenAI,
+        RateLimitError,
+    )
 
     _HAS_OPENAI = True
 except Exception:  # pragma: no cover - import guard
@@ -173,6 +179,7 @@ except Exception:  # pragma: no cover - import guard
     APIError = Exception  # type: ignore
     RateLimitError = Exception  # type: ignore
     APITimeoutError = Exception  # type: ignore
+    AuthenticationError = Exception  # type: ignore
     _HAS_OPENAI = False
 
 
@@ -387,6 +394,13 @@ class OpenRouterClient:
         if not messages:
             raise ValueError("messages list must be non-empty")
 
+        if not self.api_key:
+            raise LLMError(
+                "OPENROUTER_API_KEY is not set — skipping OpenRouter call (fail-fast). "
+                "Set the env var or pass api_key. Caller should fallback to local analysis.",
+                details={"task": task_name, "reason": "missing_api_key"},
+            )
+
         model = model or self.default_model
         client = self._ensure_openai()
 
@@ -504,7 +518,18 @@ class OpenRouterClient:
                     error_code="llm_rate_limited",
                 )
                 time.sleep(wait)
+            except AuthenticationError as e:
+                # Auth failures are never transient — do not burn retries
+                last_exc = e
+                logger.error("OpenRouter authentication failure (no retry): %s", e)
+                break
             except (APITimeoutError, APIError) as e:
+                # AuthenticationError subclasses APIError on some SDK versions; guard status
+                status = getattr(e, "status_code", None)
+                if status in (401, 403) or "Missing Authentication" in str(e):
+                    last_exc = e
+                    logger.error("OpenRouter auth/forbidden (no retry): %s", e)
+                    break
                 last_exc = e
                 wait = (2**attempt) * 0.8
                 logger.warning(
