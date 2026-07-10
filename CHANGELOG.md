@@ -1,2 +1,4 @@
 ### Added
-- EDGE-01: Offline edge-analyze CLI
+- Predictive churn-risk
+- Agent leaderboard gamification
+- Topic modeling & root-cause analysis
