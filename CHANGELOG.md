@@ -1,5 +1,2 @@
-# Changelog
-
-## [Unreleased]
-### Changed
-- INSIGHT-02: Prioritera LLM-judge över heuristiker
+### Added
+- EDGE-01: Offline edge-analyze CLI

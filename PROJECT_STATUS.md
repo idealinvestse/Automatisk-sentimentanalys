@@ -1,2 +1,1 @@
-# Updated status
-- INSIGHT-02 LLM consolidation: Started (LLM as primary analyzer)
+- EDGE-01 Edge MVP: Offline CLI added ✅
