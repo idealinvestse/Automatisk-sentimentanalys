@@ -345,39 +345,47 @@ export function extractDerivedCallSentiment(
   };
 }
 
+/** True when analyzer returned honest-degradation unavailable marker. */
+function isUnavailableResult(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "status" in value &&
+    (value as { status?: string }).status === "unavailable"
+  );
+}
+
 /** Extract trajectory result. Returns null if analyzer didn't run or unavailable. */
 export function extractTrajectory(report: PipelineReport): TrajectoryResult | null {
   const typed = report.analyzer_results?.trajectory;
-  if (typed && typeof typed === "object" && "status" in typed && (typed as { status?: string }).status === "unavailable") {
-    return null;
-  }
-  if (typed && typeof typed === "object" && !("status" in typed && (typed as { status?: string }).status === "unavailable")) {
-    // Prefer typed when it looks like TrajectoryResult
+  if (isUnavailableResult(typed)) return null;
+  if (typed && typeof typed === "object") {
     if ("customer_sentiment_slope" in (typed as object) || "sentiment_trend" in (typed as object)) {
       return typed as TrajectoryResult;
     }
   }
   const raw = report.results?.trajectory;
-  if (!raw || typeof raw !== "object") return null;
-  if ((raw as { status?: string }).status === "unavailable") return null;
+  if (!raw || typeof raw !== "object" || isUnavailableResult(raw)) return null;
   return raw as unknown as TrajectoryResult;
 }
 
-/** Extract root cause result. Returns null if analyzer didn't run. */
+/** Extract root cause result. Returns null if analyzer didn't run or unavailable. */
 export function extractRootCause(report: PipelineReport): RootCauseResult | null {
   const typed = report.analyzer_results?.root_cause;
+  if (isUnavailableResult(typed)) return null;
   if (typed) return typed;
   const raw = report.results?.root_cause;
-  if (!raw || typeof raw !== "object") return null;
+  if (!raw || typeof raw !== "object" || isUnavailableResult(raw)) return null;
   return raw as unknown as RootCauseResult;
 }
 
-/** Extract actionable coaching result. Returns null if analyzer didn't run. */
+/** Extract actionable coaching result. Returns null if analyzer didn't run or unavailable. */
 export function extractCoaching(report: PipelineReport): CoachingResult | null {
   const typed = report.analyzer_results?.actionable_coaching;
+  if (isUnavailableResult(typed)) return null;
   if (typed) return typed;
   const raw = report.results?.actionable_coaching;
-  if (!raw || typeof raw !== "object") return null;
+  if (!raw || typeof raw !== "object" || isUnavailableResult(raw)) return null;
   return raw as unknown as CoachingResult;
 }
 
@@ -399,12 +407,13 @@ export function extractActiveListening(report: PipelineReport): ActiveListeningR
   return raw as unknown as ActiveListeningResult;
 }
 
-/** Extract empathy result (per-segment + overall). Returns null if not run. */
+/** Extract empathy result (per-segment + overall). Returns null if not run or unavailable. */
 export function extractEmpathy(report: PipelineReport): EmpathyResult | null {
   const typed = report.analyzer_results?.empathy;
+  if (isUnavailableResult(typed)) return null;
   if (typed) return typed;
   const raw = report.results?.empathy;
-  if (!raw || typeof raw !== "object") return null;
+  if (!raw || typeof raw !== "object" || isUnavailableResult(raw)) return null;
   return raw as unknown as EmpathyResult;
 }
 

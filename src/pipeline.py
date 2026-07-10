@@ -216,48 +216,76 @@ class CallAnalysisPipeline:
                 profile_name=self.profile,
             )
 
+        from .analysis.ccp import select_analyzers_runtime
+        from .analysis.registry import resolve_analyzers_for_profile
+
+        prior = resolve_analyzers_for_profile(
+            self.profile, explicit_selected=selected_analyzers
+        )
+        n_segs = len(redacted_segments or [])
+        # Living routing: YAML is prior. Explicit caller selection wins as the prior base;
+        # segment-count trim/expand still applies so short calls stay lean.
+        pre_selected = select_analyzers_runtime(prior, segment_count=n_segs)
+
         with span("run_analyzers", profile=self.profile):
             status.phase(
                 "pipeline",
                 "run_analyzers",
                 "Kör analyzer-registry",
-                segment_count=len(redacted_segments),
+                segment_count=n_segs,
             )
+            skip_llm = should_use_any_llm(redacted_segments or [], self._llm_context())
+            allow_heur = getattr(self, "allow_heuristic_superseded", False)
             results = run_registry_analyzers(
                 redacted_segments,
                 profile=self.profile,
-                selected_analyzers=selected_analyzers,
+                selected_analyzers=pre_selected,
                 analyzer_configs=self._build_analyzer_configs(),
                 async_mode=self.async_analyzers,
                 transcript=transcript,
-                skip_llm_superseded=should_use_any_llm(
-                    redacted_segments or [], self._llm_context()
-                ),
-                allow_heuristic_superseded=getattr(self, "allow_heuristic_superseded", False),
+                skip_llm_superseded=skip_llm,
+                allow_heuristic_superseded=allow_heur,
             )
 
-        # Living routing note (YAML = prior; runtime features recorded for audit)
-        try:
-            from .analysis.ccp import select_analyzers_runtime
-            from .analysis.registry import resolve_analyzers_for_profile
+        # Second pass: expand from intent/risk signals discovered in pass 1
+        runtime = select_analyzers_runtime(
+            prior,
+            segment_count=n_segs,
+            intent_results=results.get("intent"),
+            compliance_risk=results.get("compliance_risk"),
+            predictive=results.get("predictive"),
+        )
+        already = set(pre_selected or [])
+        extras = [name for name in runtime if name not in already]
+        if extras:
+            status.phase(
+                "pipeline",
+                "run_analyzers_routing",
+                "Living routing — extra analyzers",
+                analyzers=extras,
+            )
+            extra_results = run_registry_analyzers(
+                redacted_segments,
+                profile=self.profile,
+                selected_analyzers=extras,
+                analyzer_configs=self._build_analyzer_configs(),
+                async_mode=self.async_analyzers,
+                transcript=transcript,
+                skip_llm_superseded=skip_llm,
+                allow_heuristic_superseded=allow_heur,
+            )
+            for key, value in extra_results.items():
+                if key not in results:
+                    results[key] = value
 
-            prior = resolve_analyzers_for_profile(
-                self.profile, explicit_selected=selected_analyzers
-            )
-            runtime = select_analyzers_runtime(
-                prior,
-                segment_count=len(redacted_segments or []),
-                intent_results=results.get("intent"),
-                compliance_risk=results.get("compliance_risk"),
-                predictive=results.get("predictive"),
-            )
-            results["analyzer_routing"] = {
-                "profile_prior": prior,
-                "runtime_selected": runtime,
-                "segment_count": len(redacted_segments or []),
-            }
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("analyzer_routing metadata skipped: %s", exc)
+        results["analyzer_routing"] = {
+            "profile_prior": prior,
+            "pre_selected": pre_selected,
+            "runtime_selected": runtime,
+            "extras_run": extras,
+            "segment_count": n_segs,
+            "applied": True,
+        }
 
         if pii_log is not None and (pii_log.total_redacted > 0 or pii_log.error):
             results["pii_redaction"] = pii_log.model_dump()

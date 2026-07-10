@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -142,6 +143,39 @@ def test_living_routing_short_call_trims():
     runtime = select_analyzers_runtime(prior, segment_count=2)
     assert "summary" not in runtime
     assert "sentiment" in runtime
+
+
+def test_living_routing_applied_in_pipeline_metadata(monkeypatch):
+    """Living routing must drive selection (applied=True), not only audit metadata."""
+    pipe = CallAnalysisPipeline(profile="callcenter", use_mistral_llm=False, deep_analysis=False)
+
+    captured: dict[str, Any] = {}
+
+    def fake_run_registry(segments, **kwargs):  # type: ignore[no-untyped-def]
+        captured.setdefault("selected_calls", []).append(kwargs.get("selected_analyzers"))
+        return {
+            "sentiment": [{"label": "neutral", "score": 0.5}],
+            "intent": [{"intent": "info", "confidence": 0.9}],
+            "negation": [],
+            "compliance_risk": {"overall_risk_level": "low"},
+        }
+
+    monkeypatch.setattr("src.pipeline.run_registry_analyzers", fake_run_registry)
+    monkeypatch.setattr(
+        "src.pipeline.apply_early_pii_redaction",
+        lambda segments, profile_name=None: (segments, None),
+    )
+
+    segs = [
+        Segment(start=0, end=1, text="hej", speaker="a"),
+        Segment(start=1, end=2, text="hej igen", speaker="b"),
+    ]
+    _redacted, results, _pii = pipe._run_local_analysis(segs, selected_analyzers=None)
+    assert results["analyzer_routing"]["applied"] is True
+    # Short call: first pass should be trimmed (no summary/topics from a fat prior)
+    first = captured["selected_calls"][0]
+    assert "sentiment" in first
+    assert "summary" not in first
 
 
 def test_living_routing_long_call_adds_summary():

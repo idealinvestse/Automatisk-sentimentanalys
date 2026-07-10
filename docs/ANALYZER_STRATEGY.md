@@ -22,7 +22,7 @@ Implemented in `src/pipeline_steps.py`:
 - `should_use_any_llm()` — profile + segment count + explicit flags
 - **CCP gate** (`src/analysis/ccp.py`): `pii_clean`, `min_segment_quality`, `sentiment_negation_sanity` — failed CCP blocks LLM
 - When LLM runs, superseded locals stay skipped; `override_provenance` records supersessions
-- Living routing (`select_analyzers_runtime`) adjusts analyzer set from call features; YAML = priors
+- Living routing (`select_analyzers_runtime` in `CallAnalysisPipeline._run_local_analysis`): two-pass — segment-count trim/expand first, then extras from intent/risk; YAML = priors; `results["analyzer_routing"].applied=True`
 
 ## Honest degradation
 

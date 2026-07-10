@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Living routing now **applies** analyzer selection (two-pass) instead of audit-only metadata
+- WebUI treats honest-degradation `unavailable` markers as null for empathy/root_cause/coaching (not only trajectory)
+
 ### Added
 - **Analysfunktioner (7 ranked ideas, 2026-07-10)** — Shared `EvidenceSpan` contract; honest degradation (`unavailable` for superseded fields); `override_provenance` on LLM merge; aspect-evidence platform (`aspect_claims`, `derived_call_sentiment`); CCP gate + living routing; Quality OS scaffolding (`src/quality/`, `scripts/evaluate_preference_gate.py`); partial analysis `POST /analyze_pipeline/partial`. Plan: `docs/plans/2026-07-10-analysfunktioner-implementation-plan.md`.
 
