@@ -1,0 +1,76 @@
+# Fas 5 — Docker staging stack (production-like)
+#
+# Usage:
+#   1. Copy .env.example to .env and set SENTIMENT_API_KEY, OPENROUTER_API_KEY (optional)
+#   2. docker compose -f docker-compose.staging.yml up --build
+#   Web UI:     http://localhost:3000
+#   API docs:   http://localhost:8000/docs
+#   Prometheus: http://localhost:9090
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/cache/hf
+      - app_outputs:/app/outputs
+    env_file:
+      - .env
+    environment:
+      - HF_HOME=/cache/hf
+      - API_CORS_ORIGINS=http://localhost:3000
+      - API_USE_REDIS_CACHE=true
+      - REDIS_URL=redis://redis:6379/0
+      - API_CACHE_DIR=/tmp/aggregates
+      - SENTIMENT_JSON_LOGS=1
+      - OTEL_ENABLED=true
+      - API_PRODUCTION=true
+      - API_REQUIRE_AUTH=false
+      - API_REQUIRE_MEDIA_ROOT=false
+      - SENTIMENT_API_KEY=staging-local-dev-key
+      - API_MEDIA_ROOT=/tmp/media
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  webui:
+    build: ./webui
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docs/examples/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  hf_cache:
+  app_outputs:
