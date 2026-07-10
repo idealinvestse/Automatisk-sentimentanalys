@@ -26,6 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import type {
   EmotionSegmentResult,
   AspectItem,
+  DerivedCallSentiment,
   TrajectoryResult,
   RootCauseResult,
   CoachingResult,
@@ -134,7 +135,13 @@ export function EmotionCard({ emotion }: { emotion: EmotionSegmentResult[] }) {
 // AspectCard — aspect-based sentiment analysis
 // ---------------------------------------------------------------------------
 
-export function AspectCard({ aspects }: { aspects: AspectItem[] }) {
+export function AspectCard({
+  aspects,
+  derivedSentiment,
+}: {
+  aspects: AspectItem[];
+  derivedSentiment?: DerivedCallSentiment | null;
+}) {
   if (aspects.length === 0) return null;
 
   return (
@@ -142,27 +149,47 @@ export function AspectCard({ aspects }: { aspects: AspectItem[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Target className="size-4" />
-          Aspektbaserad Sentiment (ABSA)
+          Aspekt-evidens (claim charts)
         </CardTitle>
         <CardDescription>
-          Sentiment per aspekt (fakturering_pris, agent_attityd, teknisk_lösning, etc.).
+          Primär produktenhet: aspekter med citat. Call-sentiment är härlett aggregat.
+          {derivedSentiment && (
+            <>
+              {" "}
+              Härlett: <strong>{derivedSentiment.label}</strong> (
+              {derivedSentiment.score.toFixed(2)}, {derivedSentiment.aspect_count} aspekter)
+            </>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {aspects.slice(0, 10).map((a, i) => (
-          <div key={i} className="flex flex-col gap-1 rounded-md border p-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium capitalize">{a.aspect.replace(/_/g, " ")}</span>
-              <Badge variant={sentimentBadgeVariant(a.sentiment)}>{a.sentiment}</Badge>
+        {aspects.slice(0, 10).map((a, i) => {
+          const quote =
+            a.evidence_spans?.[0]?.text ||
+            a.evidence ||
+            null;
+          return (
+            <div key={i} className="flex flex-col gap-1 rounded-md border p-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium capitalize">
+                  {a.aspect.replace(/_/g, " ")}
+                </span>
+                <div className="flex items-center gap-1">
+                  {a.source && (
+                    <Badge variant="outline">{a.source === "llm_refined" ? "LLM" : "ABSA"}</Badge>
+                  )}
+                  <Badge variant={sentimentBadgeVariant(a.sentiment)}>{a.sentiment}</Badge>
+                </div>
+              </div>
+              {quote && (
+                <span className="text-xs text-muted-foreground italic">&ldquo;{quote}&rdquo;</span>
+              )}
+              {a.speaker && (
+                <span className="text-xs text-muted-foreground">Talare: {a.speaker}</span>
+              )}
             </div>
-            {a.evidence && (
-              <span className="text-xs text-muted-foreground italic">&ldquo;{a.evidence}&rdquo;</span>
-            )}
-            {a.speaker && (
-              <span className="text-xs text-muted-foreground">Talare: {a.speaker}</span>
-            )}
-          </div>
-        ))}
+          );
+        })}
         {aspects.length > 10 && (
           <span className="text-xs text-muted-foreground">+{aspects.length - 10} fler aspekter…</span>
         )}

@@ -127,6 +127,7 @@ async def run_registry_analyzers_async(
     analyzer_configs: dict[str, dict[str, Any]],
     transcript: Any | None = None,
     skip_llm_superseded: bool = False,
+    allow_heuristic_superseded: bool = False,
 ) -> dict[str, Any]:
     """Async registry execution for FastAPI routes."""
     ctx = AnalysisContext(transcript=transcript, segments=segments)
@@ -136,6 +137,7 @@ async def run_registry_analyzers_async(
         selected=resolved,
         analyzer_configs=analyzer_configs,
         skip_llm_superseded=skip_llm_superseded,
+        allow_heuristic_superseded=allow_heuristic_superseded,
     )
 
 
@@ -148,6 +150,7 @@ def run_registry_analyzers(
     async_mode: bool = False,
     transcript: Any | None = None,
     skip_llm_superseded: bool = False,
+    allow_heuristic_superseded: bool = False,
 ) -> dict[str, Any]:
     """Run the analyzer registry on segments (sync entry point)."""
     ctx = AnalysisContext(transcript=transcript, segments=segments)
@@ -158,6 +161,7 @@ def run_registry_analyzers(
         analyzer_configs=analyzer_configs,
         async_mode=async_mode,
         skip_llm_superseded=skip_llm_superseded,
+        allow_heuristic_superseded=allow_heuristic_superseded,
     )
 
 
@@ -387,22 +391,58 @@ def _run_fas4_enrichment_body(
         )
 
     llm_result: dict[str, Any] = {}
-    if should_use_any_llm(segments or [], ctx):
-        with phase_timer("pipeline", "llm_holistic", provider=ctx.provider):
-            llm_result = run_llm_holistic(segments or [], results, ctx)
-        results["llm"] = llm_result
-        if llm_result.get("meta", {}).get("llm_used"):
-            logger.info(
-                "Pipeline used %s LLM for holistic analysis (model=%s, cached=%s)",
-                ctx.provider,
-                llm_result.get("meta", {}).get("model"),
-                llm_result.get("meta", {}).get("cached"),
+    deep_wanted = should_use_any_llm(segments or [], ctx)
+    if deep_wanted:
+        from .analysis.ccp import ccp_result_to_dict, evaluate_deep_path_ccps
+
+        ccp = evaluate_deep_path_ccps(segments or [], results)
+        results["deep_path_ccp"] = ccp_result_to_dict(ccp)
+        if not ccp.passed:
+            logger.warning(
+                "Deep path blocked by CCP failure: %s — discarding LLM call",
+                ccp.failed_names(),
             )
+            llm_result = {
+                "llm_used": False,
+                "meta": {
+                    "llm_used": False,
+                    "llm_fallback_reason": "ccp_failed",
+                    "ccp_failed": ccp.failed_names(),
+                },
+            }
+            results["llm"] = llm_result
+        else:
+            with phase_timer("pipeline", "llm_holistic", provider=ctx.provider):
+                llm_result = run_llm_holistic(segments or [], results, ctx)
+            results["llm"] = llm_result
+            if llm_result.get("meta", {}).get("llm_used"):
+                logger.info(
+                    "Pipeline used %s LLM for holistic analysis (model=%s, cached=%s)",
+                    ctx.provider,
+                    llm_result.get("meta", {}).get("model"),
+                    llm_result.get("meta", {}).get("cached"),
+                )
+                from .analysis.provenance import apply_llm_overrides_with_provenance
+
+                apply_llm_overrides_with_provenance(results, llm_result)
 
     llm_assess = (results.get("llm") or {}).get("agent_assessment")
     if llm_assess and isinstance(llm_assess, dict) and llm_assess.get("empathy_score") is not None:
-        results["agent_assessment"] = llm_assess
+        if results.get("agent_assessment") is not llm_assess:
+            results["agent_assessment"] = llm_assess
         logger.debug("Merged LLM agent_assessment into results (hybrid coaching available)")
+
+    # Aspect-evidence platform + honest degradation markers
+    from .analysis.aspect_platform import attach_aspect_platform
+    from .analysis.deep_path import inject_unavailable_markers
+
+    attach_aspect_platform(results)
+    llm_used = bool((results.get("llm") or {}).get("meta", {}).get("llm_used"))
+    inject_unavailable_markers(
+        results,
+        deep_path_active=deep_wanted,
+        llm_used=llm_used,
+    )
 
     with degrading_phase("pipeline", "qa_scoring", results=results, result_key="qa"):
         from .compliance_qa import score_call_with_default_scorecard

@@ -69,6 +69,7 @@ class CallAnalysisPipeline:
         groq_eu_residency: bool = False,
         cache: Any | None = None,
         async_analyzers: bool = False,
+        allow_heuristic_superseded: bool = False,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -77,6 +78,7 @@ class CallAnalysisPipeline:
         self.device = device
         self.profile = profile
         self.asr_backend = asr_backend
+        self.allow_heuristic_superseded = allow_heuristic_superseded
         self.asr_model = asr_model
         self.use_mistral_llm = use_mistral_llm
         self.llm_model = llm_model
@@ -231,10 +233,42 @@ class CallAnalysisPipeline:
                 skip_llm_superseded=should_use_any_llm(
                     redacted_segments or [], self._llm_context()
                 ),
+                allow_heuristic_superseded=getattr(self, "allow_heuristic_superseded", False),
             )
+
+        # Living routing note (YAML = prior; runtime features recorded for audit)
+        try:
+            from .analysis.ccp import select_analyzers_runtime
+            from .analysis.registry import resolve_analyzers_for_profile
+
+            prior = resolve_analyzers_for_profile(
+                self.profile, explicit_selected=selected_analyzers
+            )
+            runtime = select_analyzers_runtime(
+                prior,
+                segment_count=len(redacted_segments or []),
+                intent_results=results.get("intent"),
+                compliance_risk=results.get("compliance_risk"),
+                predictive=results.get("predictive"),
+            )
+            results["analyzer_routing"] = {
+                "profile_prior": prior,
+                "runtime_selected": runtime,
+                "segment_count": len(redacted_segments or []),
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("analyzer_routing metadata skipped: %s", exc)
 
         if pii_log is not None and (pii_log.total_redacted > 0 or pii_log.error):
             results["pii_redaction"] = pii_log.model_dump()
+
+        # Aspect platform + honest markers even when Fas4 enrichment is skipped
+        from .analysis.aspect_platform import attach_aspect_platform
+        from .analysis.deep_path import inject_unavailable_markers
+
+        attach_aspect_platform(results)
+        deep_active = should_use_any_llm(redacted_segments or [], self._llm_context())
+        inject_unavailable_markers(results, deep_path_active=deep_active, llm_used=False)
 
         return redacted_segments, results, pii_log
 
@@ -399,6 +433,98 @@ class CallAnalysisPipeline:
             proc_time=proc_time,
             diarization=None,
         )
+
+    def analyze_segments_partial(
+        self,
+        segments: list[dict[str, Any]],
+        *,
+        previous_results: dict[str, Any] | None = None,
+        selected_analyzers: list[str] | None = None,
+        reconcile: bool = False,
+    ) -> CallAnalysisReport:
+        """Incremental / partial analysis path (streaming-friendly).
+
+        Runs local core analyzers on the current segment window, merges with
+        ``previous_results``, and optionally reconciles with holistic LLM when
+        ``reconcile=True`` (hangup / every N seconds). Full WS-first product
+        rewrite is deferred — see docs/plans/2026-07-10-analysfunktioner-implementation-plan.md.
+        """
+        t0 = time.time()
+        # Prefer slim local set for partial updates
+        partial_selected = selected_analyzers or [
+            "sentiment",
+            "intent",
+            "emotion",
+            "negation",
+            "aspect",
+            "compliance_risk",
+            "role",
+        ]
+        typed_segments: list[Segment] = []
+        for s in segments:
+            try:
+                start = float(s.get("start", 0.0) or 0.0)
+                end = float(s.get("end", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                start = 0.0
+                end = 0.0
+            typed_segments.append(
+                Segment(
+                    start=start,
+                    end=end,
+                    text=str(s.get("text", "")),
+                    speaker=s.get("speaker"),
+                    avg_confidence=s.get("avg_confidence"),
+                    confidence=s.get("confidence") or s.get("avg_confidence"),
+                    low_confidence=bool(s.get("low_confidence", False)),
+                )
+            )
+
+        typed_segments, results, _pii = self._run_local_analysis(
+            typed_segments,
+            selected_analyzers=partial_selected,
+        )
+
+        merged = dict(previous_results or {})
+        for key, value in results.items():
+            if key in {"aspect", "sentiment", "emotion", "intent", "negation"} and isinstance(
+                value, list
+            ):
+                prev_list = merged.get(key) if isinstance(merged.get(key), list) else []
+                merged[key] = list(prev_list) + list(value)
+            else:
+                merged[key] = value
+
+        from .analysis.aspect_platform import attach_aspect_platform
+
+        attach_aspect_platform(merged)
+        merged["partial"] = {
+            "incremental": True,
+            "segment_count": len(typed_segments),
+            "reconciled": False,
+        }
+
+        llm_result: dict[str, Any] = merged.get("llm") if isinstance(merged.get("llm"), dict) else {}
+        if reconcile:
+            llm_result = self.reconcile_partial_with_holistic(typed_segments, merged)
+            merged["partial"]["reconciled"] = True
+
+        proc_time = round(time.time() - t0, 2)
+        return self._build_report(
+            segments=typed_segments,
+            results=merged,
+            llm_result=llm_result or {},
+            proc_time=proc_time,
+            diarization=None,
+        )
+
+    def reconcile_partial_with_holistic(
+        self,
+        segments: list[Segment],
+        results: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Periodic / hangup reconciliation: run Fas4 + LLM deep path on accumulated state."""
+        return self._run_fas4_enrichment(segments, results)
 
     # ------------------------------------------------------------------
     # Fas 4.3: Explicit batch aggregation integration (Insights Aggregator)

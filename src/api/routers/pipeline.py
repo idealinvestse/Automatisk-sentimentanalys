@@ -28,6 +28,7 @@ from ..schemas import (
     HotTopicsRequest,
     HotTopicsResponse,
     ModelCompareResult,
+    PartialPipelineRequest,
     PipelineCompareRequest,
     PipelineCompareResponse,
     PipelineRequest,
@@ -113,6 +114,58 @@ async def analyze_pipeline(
         )
 
     return await run_route("analyze_pipeline", _do)
+
+
+@router.post("/analyze_pipeline/partial", response_model=PipelineResponse)
+async def analyze_pipeline_partial(
+    req: PartialPipelineRequest,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
+) -> PipelineResponse:
+    """Incremental local analysis with optional holistic LLM reconciliation."""
+    logger.info(
+        "Running partial pipeline on %d segment(s) reconcile=%s",
+        len(req.segments),
+        req.reconcile,
+    )
+    pipe = create_pipeline(
+        cache=cache,
+        profile=req.profile,
+        sentiment_model=req.sentiment_model,
+        device=req.device,
+        use_mistral_llm=req.use_mistral_llm,
+        llm_model=req.llm_model,
+        deep_analysis=req.deep_analysis,
+        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
+        provider=req.provider,
+        groq_eu_residency=req.groq_eu_residency,
+    )
+
+    async def _do() -> PipelineResponse:
+        report = await asyncio.to_thread(
+            pipe.analyze_segments_partial,
+            req.segments,
+            previous_results=req.previous_results,
+            selected_analyzers=req.selected_analyzers,
+            reconcile=req.reconcile,
+        )
+        return PipelineResponse(
+            sentiment_results=report.sentiment_results,
+            intent_results=[
+                {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
+            ],
+            summary=report.summary,
+            topics=report.topics,
+            insights=report.insights,
+            risks=report.risks,
+            processing_time_s=report.processing_time_s,
+            timestamp=utc_now_iso(),
+            llm=report.llm,
+            results=report.results,
+            analyzer_results=build_analyzer_results(report.results),
+        )
+
+    return await run_route("analyze_pipeline_partial", _do)
 
 
 def _report_to_pipeline_response(report: Any) -> PipelineResponse:

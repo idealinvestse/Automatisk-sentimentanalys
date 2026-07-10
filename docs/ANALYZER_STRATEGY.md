@@ -1,62 +1,78 @@
 # Analyzer Strategy
 
-**Purpose:** Define which analyzers run in local vs. deep (LLM) paths. Canonical reference for INSIGHT-02 consolidation.
+**Purpose:** Define which analyzers run in local vs. deep (LLM) paths. Canonical reference for INSIGHT-02 consolidation and 2026-07-10 analysfunktioner directions.
 
 > **Do not add new thin heuristik-analyzers** without checking overlap with the holistic LLM path (`ConversationMistralAnalyzer` / `GroqAnalyzer`).
+> **Null före bluff:** superseded fields are `status: unavailable` when deep path is off — not quality-2 heuristics.
 
 ## Tiers
 
 | Tier | Analyzers | When |
 |------|-----------|------|
-| **Core local** | `sentiment`, `intent`, `role`, `negation`, `compliance_risk` | Always (fast, offline-capable) |
-| **Local enrichment** | `customer_effort`, `active_listening`, `resolution_probability`, `upsell_opportunity`, `predictive` | When `deep_analysis=false` or LLM unavailable |
-| **LLM superseded** | `empathy`, `trajectory`, `insights`, `root_cause`, `actionable_coaching` | Skipped when deep path active (`should_use_any_llm`) |
-| **Deep path** | Holistic LLM (`results["llm"]`) + optional `llm_judge` | `deep_analysis`, `use_mistral_llm`, or callcenter profile with ≥6 segments |
+| **Core local** | `sentiment`, `intent`, `role`, `emotion`, `negation`, `compliance_risk` | Always (fast, offline-capable) |
+| **Deterministic sensors** | `customer_effort`, `active_listening`, `aspect` | Default callcenter slim profile |
+| **Local enrichment (optional)** | `summary`, `topics`, `resolution_probability`, `upsell_opportunity`, `predictive`, `multi_turn_journey` | Explicit select / living routing |
+| **LLM superseded** | `empathy`, `trajectory`, `insights`, `root_cause`, `actionable_coaching` | Skipped locally by default; filled by deep path or marked unavailable |
+| **Deep path** | Holistic LLM (`results["llm"]`) + optional `llm_judge` | `deep_analysis`, `use_mistral_llm`, or callcenter profile with ≥6 segments **and** CCP pass |
 
 ## Deep path decision
 
 Implemented in `src/pipeline_steps.py`:
 
 - `should_use_any_llm()` — profile + segment count + explicit flags
-- When true, `run_registry_analyzers()` receives `skip_llm_superseded=True`
-- LLM output merges into report; dashboard prefers LLM trajectory/empathy when present
+- **CCP gate** (`src/analysis/ccp.py`): `pii_clean`, `min_segment_quality`, `sentiment_negation_sanity` — failed CCP blocks LLM
+- When LLM runs, superseded locals stay skipped; `override_provenance` records supersessions
+- Living routing (`select_analyzers_runtime`) adjusts analyzer set from call features; YAML = priors
+
+## Honest degradation
+
+- Default: do not run LLM-superseded analyzers unless `allow_heuristic_superseded=True`
+- `inject_unavailable_markers()` writes `{status: unavailable, reason: requires_deep_path}` for empathy/trajectory/insights/root_cause/actionable_coaching when LLM did not produce them
+- Dashboard/API should show “kräver deep path” for unavailable fields
+
+## Aspect-evidence platform
+
+- Primary product unit: `results["aspect_claims"]` (prefer `llm.refined_aspects`, else local ABSA)
+- Secondary: `results["derived_call_sentiment"]` aggregated from aspect claims
+- Shared `EvidenceSpan` (`src/analysis/evidence.py` / `src/llm/schemas.py`) on aspect + compliance + LLM overrides
 
 ## Profile defaults (`configs/analyzer_profiles.yaml`)
 
-**callcenter `default_selected`:** sentiment, intent, role, emotion, negation, compliance_risk, customer_effort, active_listening
+**callcenter `default_selected`:** sentiment, intent, role, emotion, negation, compliance_risk, customer_effort, active_listening, aspect
 
-**callcenter `optional`:** empathy, insights, trajectory, llm_judge, upsell_opportunity, resolution_probability, root_cause, predictive, actionable_coaching, multi_turn_journey, spoken_normalizer (ASR filler cleanup; feeds sentiment/intent when enabled)
-
-**callcenter `disabled`:** `dialect_sensitivity` (low precision; enable explicitly if needed)
-
-When LLM runs, superseded optional analyzers are skipped automatically. Without LLM, enable them explicitly via `selected_analyzers` or profile config.
+**callcenter `optional`:** summary, topics, resolution_probability, predictive, multi_turn_journey, empathy, trajectory, root_cause, actionable_coaching, insights, llm_judge, upsell_opportunity, spoken_normalizer, dialect_sensitivity
 
 ## Intent backend selection (DATA-01)
 
 - **Default:** `heuristic` in `IntentAnalyzer` (phrase boosts + disambiguation rules).
 - **Benchmark:** `scripts/benchmark_intent.py --val-file data/intent_val.jsonl` (macro F1 primary).
 - **Model A/B:** `scripts/compare_intent_backends.py`; switch to `model` only if macro F1 ≥ heuristic + 0.05 (`configs/analyzer_eval.yaml`).
-- **Training data:** `scripts/prepare_intent_data.py` → balanced `intent_train.jsonl` / `intent_val.jsonl` (no duplicates).
-- **`spoken_normalizer`:** remains optional until ASR-noisy benchmark shows ≥+2pp sentiment gain on val set.
+- **Quality OS:** MQM + preference gate scaffolding in `src/quality/` + `configs/quality_mqm.yaml` + `scripts/evaluate_preference_gate.py` (empty corpus = CI skip; wire real labels via DATA-01).
 
 ## Overlap matrix
 
 | Local analyzer | LLM equivalent | Merge rule |
 |----------------|----------------|------------|
-| `trajectory` | `llm.trajectory`, `emotion_trajectory` | Dashboard prefers LLM |
+| `trajectory` | `llm.trajectory`, `emotion_trajectory` | LLM + override_provenance |
 | `empathy` | `agent_assessment.empathy_score` | LLM overwrites when set |
 | `insights` | `actionable_summary`, `root_cause` | LLM preferred |
 | `root_cause` | `llm.root_cause` | Skip local when deep path |
 | `actionable_coaching` | `agent_assessment` coaching fields | Skip local when deep path |
-| `aspect` (optional) | `refined_aspects` | LLM preferred when both run |
+| `aspect` (sensor) | `refined_aspects` | Prefer refined → `aspect_claims` |
+
+## Partial / streaming path
+
+- `CallAnalysisPipeline.analyze_segments_partial` + `POST /analyze_pipeline/partial`
+- Incremental local merge; `reconcile=True` runs Fas4/LLM holistic reconciliation
+- Full WS-first product rewrite deferred (see implementation plan)
 
 ## Adding new analysis
 
 1. Prefer extending holistic LLM tasks in `src/llm/mistral_analyzer.py` for reasoning-heavy features
-2. Use registry analyzers only for fast, deterministic, offline signals
+2. Use registry analyzers only for fast, deterministic, offline signals with `EvidenceSpan` where claims are made
 3. Register in `configs/analyzer_profiles.yaml` under `optional` first; promote to `default_selected` after evaluation
 4. Run `sentimentanalys new-analyzer` for boilerplate
 
 ## Historical note
 
-Replaces `docs/PROPOSED_ANALYZERS.md` (2026-06-27 research list). New analyzer proposals should justify why LLM path is insufficient.
+Replaces `docs/PROPOSED_ANALYZERS.md` (2026-06-27 research list). Ideation 2026-07-10: `docs/ideation/2026-07-10-analysfunktioner-ideation.html` → plan `docs/plans/2026-07-10-analysfunktioner-implementation-plan.md`.

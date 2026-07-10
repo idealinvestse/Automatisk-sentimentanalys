@@ -1,0 +1,33 @@
+# Quality OS — MQM typology + preference gate (scaffolding)
+# Real annotated corpus: DATA-01 via scripts/import_domain_corpus.py
+# Do not invent production labels for CI.
+
+mqm:
+  # Expected JSONL path once corpus exists (one MqmAnnotation per line)
+  corpus_path: data/quality/mqm_annotations.jsonl
+  error_types:
+    - aspect_wrong
+    - aspect_missed
+    - intent_wrong
+    - emotion_wrong
+    - span_mismatch
+    - coaching_hallucination
+    - root_cause_wrong
+    - other
+
+preference_gate:
+  pairs_path: data/quality/preference_pairs.jsonl
+  min_win_rate: 0.55
+  min_pairs: 10
+  # Release gate applies to deep path / coaching; core local keeps F1 in analyzer_eval.yaml
+  applies_to:
+    - deep_path
+    - actionable_coaching
+    - refined_aspects
+
+data01_integration:
+  import_script: scripts/import_domain_corpus.py
+  intent_val: data/intent_val.jsonl
+  note: >
+    Preference and MQM files are empty until annotators land. evaluate_preference_gate.py
+    exits 0 with a skip message when corpus is missing (CI-safe scaffold).

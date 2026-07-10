@@ -306,8 +306,13 @@ export function extractEmotion(report: PipelineReport): EmotionSegmentResult[] {
   return raw as EmotionSegmentResult[];
 }
 
-/** Extract aspect-based sentiment items. Returns [] if analyzer didn't run. */
+/** Prefer aspect_claims (claim charts); fall back to local ABSA aspect list. */
 export function extractAspects(report: PipelineReport): AspectItem[] {
+  const claims = (report.analyzer_results as { aspect_claims?: AspectItem[] } | undefined)
+    ?.aspect_claims;
+  if (claims && claims.length > 0) return claims;
+  const rawClaims = report.results?.aspect_claims;
+  if (Array.isArray(rawClaims) && rawClaims.length > 0) return rawClaims as AspectItem[];
   const typed = report.analyzer_results?.aspect;
   if (typed) return typed;
   const raw = report.results?.aspect;
@@ -315,12 +320,46 @@ export function extractAspects(report: PipelineReport): AspectItem[] {
   return raw as AspectItem[];
 }
 
-/** Extract trajectory result. Returns null if analyzer didn't run. */
+export function extractDerivedCallSentiment(
+  report: PipelineReport,
+): { label: string; score: number; aspect_count: number; by_aspect: Record<string, number>; source: string } | null {
+  const typed = (report.analyzer_results as { derived_call_sentiment?: unknown } | undefined)
+    ?.derived_call_sentiment;
+  if (typed && typeof typed === "object") {
+    return typed as {
+      label: string;
+      score: number;
+      aspect_count: number;
+      by_aspect: Record<string, number>;
+      source: string;
+    };
+  }
+  const raw = report.results?.derived_call_sentiment;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as {
+    label: string;
+    score: number;
+    aspect_count: number;
+    by_aspect: Record<string, number>;
+    source: string;
+  };
+}
+
+/** Extract trajectory result. Returns null if analyzer didn't run or unavailable. */
 export function extractTrajectory(report: PipelineReport): TrajectoryResult | null {
   const typed = report.analyzer_results?.trajectory;
-  if (typed) return typed;
+  if (typed && typeof typed === "object" && "status" in typed && (typed as { status?: string }).status === "unavailable") {
+    return null;
+  }
+  if (typed && typeof typed === "object" && !("status" in typed && (typed as { status?: string }).status === "unavailable")) {
+    // Prefer typed when it looks like TrajectoryResult
+    if ("customer_sentiment_slope" in (typed as object) || "sentiment_trend" in (typed as object)) {
+      return typed as TrajectoryResult;
+    }
+  }
   const raw = report.results?.trajectory;
   if (!raw || typeof raw !== "object") return null;
+  if ((raw as { status?: string }).status === "unavailable") return null;
   return raw as unknown as TrajectoryResult;
 }
 
@@ -449,6 +488,13 @@ export interface RealCallDetail {
   // Fas 5: typed analyzer outputs
   emotion: EmotionSegmentResult[];
   aspects: AspectItem[];
+  derivedCallSentiment: {
+    label: string;
+    score: number;
+    aspect_count: number;
+    by_aspect: Record<string, number>;
+    source: string;
+  } | null;
   trajectory: TrajectoryResult | null;
   rootCause: RootCauseResult | null;
   coaching: CoachingResult | null;
@@ -499,6 +545,7 @@ export function buildCallDetail({ transcript, report }: RealCall): RealCallDetai
     // Fas 5: typed analyzer outputs
     emotion: extractEmotion(report),
     aspects: extractAspects(report),
+    derivedCallSentiment: extractDerivedCallSentiment(report),
     trajectory: extractTrajectory(report),
     rootCause: extractRootCause(report),
     coaching: extractCoaching(report),

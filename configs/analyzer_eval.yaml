@@ -24,3 +24,10 @@ labeled_fixtures:
   role: tests/fixtures/analyzer_labeled/role_labeled.jsonl
   compliance: tests/fixtures/analyzer_labeled/compliance_labeled.jsonl
   min_accuracy: 0.60
+
+# Quality OS (MQM + preference) — see configs/quality_mqm.yaml
+# Core local keeps F1 gates above; deep path / coaching use preference gate when corpus exists.
+preference_gate:
+  config: configs/quality_mqm.yaml
+  script: scripts/evaluate_preference_gate.py
+

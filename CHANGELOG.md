@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Analysfunktioner (7 ranked ideas, 2026-07-10)** — Shared `EvidenceSpan` contract; honest degradation (`unavailable` for superseded fields); `override_provenance` on LLM merge; aspect-evidence platform (`aspect_claims`, `derived_call_sentiment`); CCP gate + living routing; Quality OS scaffolding (`src/quality/`, `scripts/evaluate_preference_gate.py`); partial analysis `POST /analyze_pipeline/partial`. Plan: `docs/plans/2026-07-10-analysfunktioner-implementation-plan.md`.
+
 ### Fixed
 - **Återställ trunkerade filer efter felaktiga remote-commits (2026-07-10)** — Commits `779d7be`–`6ea2d81` ersatte `src/analysis/registry.py` och `src/edge/local_inference.py` med stubs och lade till icke-fungerande v0.6.1-scaffolds (`src/gamification/`, `src/predictive/churn_risk.py`, `src/topic_modeling/root_cause.py`, m.fl.). Registry och local_inference återställda; scaffolds borttagna. Version förblir **0.5.0**.
+
+### Changed
+- **callcenter profile** — slimmed `default_selected` to core local + deterministic sensors (aspect, CES, active_listening); superseded analyzers optional + unavailable without deep path.
 
 ## [0.5.0] - 2026-07-09
 

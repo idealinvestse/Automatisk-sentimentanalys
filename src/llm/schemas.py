@@ -40,7 +40,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class EvidenceSpan(BaseModel):
-    """A concrete span of text (with optional speaker) used as evidence for a claim."""
+    """A concrete span of text (with optional speaker/timing) used as evidence for a claim.
+
+    Shared contract across local analyzers (aspect, compliance) and LLM overrides.
+    ``text`` is the quote; optional timing fields enable UI jump-to-segment.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -51,6 +55,13 @@ class EvidenceSpan(BaseModel):
     turn_index: int | None = Field(
         default=None, description="0-based turn number in the conversation."
     )
+    segment_id: int | None = Field(
+        default=None, description="0-based segment index in the transcript (alias of turn when 1:1)."
+    )
+    start: float | None = Field(
+        default=None, description="Audio start time in seconds (if known)."
+    )
+    end: float | None = Field(default=None, description="Audio end time in seconds (if known).")
 
 
 class EmotionTrajectoryPoint(BaseModel):
@@ -193,6 +204,29 @@ class AgentAssessment(BaseModel):
     )
 
 
+class OverrideProvenance(BaseModel):
+    """Audit record when an LLM field supersedes a local analyzer signal."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str = Field(..., description="Result key overridden, e.g. agent_assessment, trajectory.")
+    local_source: str | None = Field(
+        None, description="Local analyzer or result key that was superseded."
+    )
+    reason: str = Field(
+        ...,
+        description="Why the LLM override was applied (e.g. deep_path_holistic, ccp_passed).",
+    )
+    evidence_spans: list[EvidenceSpan] = Field(
+        default_factory=list, description="Spans justifying the override decision."
+    )
+    channel_diversity_ok: bool = Field(
+        True,
+        description="False if local and LLM channels share the same lexical failure mode.",
+    )
+    notes: str | None = Field(None, description="Optional diversity / policy notes.")
+
+
 class CallLLMOutput(BaseModel):
     """Top-level structured response from Mistral for a full callcenter conversation.
 
@@ -217,6 +251,10 @@ class CallLLMOutput(BaseModel):
     )
     emotion_trajectory: list[EmotionTrajectoryPoint] = Field(
         default_factory=list, description="Granular emotion points (can feed plots)."
+    )
+    override_provenance: list[OverrideProvenance] = Field(
+        default_factory=list,
+        description="Audit trail of local→LLM supersessions (populated by pipeline merge).",
     )
 
     meta: dict[str, Any] = Field(

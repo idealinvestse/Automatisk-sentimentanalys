@@ -26,6 +26,7 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from .base import Analyzer
+from .evidence import evidence_to_dict, make_evidence_span
 from .registry import register_analyzer
 from .sentiment import SentimentAnalyzer  # reuse the existing sentiment logic
 
@@ -174,12 +175,21 @@ class AspectAnalyzer(Analyzer):
 
             for aspect in matched_aspects:
                 evidence = self._extract_evidence(text, aspect)
+                span = make_evidence_span(
+                    evidence,
+                    speaker_role=getattr(seg, "speaker", None),
+                    turn_index=seg_idx,
+                    segment_id=seg_idx,
+                    start=getattr(seg, "start", None),
+                    end=getattr(seg, "end", None),
+                )
                 results.append(
                     {
                         "aspect": aspect,
                         "sentiment": sent.get("label", "neutral"),
                         "score": float(sent.get("score", 0.0)),
                         "evidence": evidence,
+                        "evidence_spans": [evidence_to_dict(span)],
                         "start": seg.start,
                         "end": seg.end,
                         "speaker": getattr(seg, "speaker", None),

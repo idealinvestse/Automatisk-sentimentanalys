@@ -403,6 +403,7 @@ def run_analyzers(
     async_mode: bool = False,
     validation_mode: ValidationMode | None = None,
     skip_llm_superseded: bool = False,
+    allow_heuristic_superseded: bool = False,
 ) -> dict[str, Any]:
     """Execute analyzers in topological order, respecting dependencies."""
     ensure_analyzers_loaded()
@@ -410,7 +411,9 @@ def run_analyzers(
 
     from .deep_path import filter_superseded
 
-    selected = filter_superseded(selected, skip=skip_llm_superseded)
+    # Honest degradation: skip quality-2 superseded locals unless explicitly allowed.
+    should_skip = (not allow_heuristic_superseded) or skip_llm_superseded
+    selected = filter_superseded(selected, skip=should_skip)
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)
@@ -461,6 +464,7 @@ async def run_analyzers_async(
     *,
     validation_mode: ValidationMode | None = None,
     skip_llm_superseded: bool = False,
+    allow_heuristic_superseded: bool = False,
 ) -> dict[str, Any]:
     """Async execution with parallel levels."""
     ensure_analyzers_loaded()
@@ -468,7 +472,8 @@ async def run_analyzers_async(
 
     from .deep_path import filter_superseded
 
-    selected = filter_superseded(selected, skip=skip_llm_superseded)
+    should_skip = (not allow_heuristic_superseded) or skip_llm_superseded
+    selected = filter_superseded(selected, skip=should_skip)
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)

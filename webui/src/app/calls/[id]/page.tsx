@@ -143,7 +143,10 @@ export default function CallDetailPage() {
                 </h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <EmotionCard emotion={detail.emotion} />
-                  <AspectCard aspects={detail.aspects} />
+                  <AspectCard
+                    aspects={detail.aspects}
+                    derivedSentiment={detail.derivedCallSentiment}
+                  />
                   <TrajectoryCard trajectory={detail.trajectory} />
                   <RootCauseCard rootCause={detail.rootCause} />
                   <CoachingCard coaching={detail.coaching} />

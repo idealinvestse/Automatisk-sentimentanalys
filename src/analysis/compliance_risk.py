@@ -18,6 +18,7 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from .base import Analyzer
+from .evidence import evidence_to_dict, make_evidence_span
 from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,15 @@ class ComplianceRiskAnalyzer(Analyzer):
             if risks:
                 if "over_promise" in risks or "data_request" in risks:
                     high_risk_count += 1
+                quote = seg.text[:120] if seg.text else ""
+                span = make_evidence_span(
+                    quote,
+                    speaker_role=str(speaker) if speaker else None,
+                    turn_index=idx,
+                    segment_id=idx,
+                    start=getattr(seg, "start", None),
+                    end=getattr(seg, "end", None),
+                )
                 flagged.append(
                     {
                         "segment_index": idx,
@@ -102,7 +112,8 @@ class ComplianceRiskAnalyzer(Analyzer):
                         "start": getattr(seg, "start", 0),
                         "end": getattr(seg, "end", 0),
                         "risks": risks,
-                        "evidence": seg.text[:120] if seg.text else "",
+                        "evidence": quote,
+                        "evidence_spans": [evidence_to_dict(span)],
                         "severity": (
                             "high"
                             if "over_promise" in risks or "data_request" in risks

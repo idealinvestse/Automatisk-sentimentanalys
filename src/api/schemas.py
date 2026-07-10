@@ -7,7 +7,7 @@ file/directory existence, device string format, etc.).
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -251,6 +251,45 @@ class PipelineRequest(BaseModel):
         return v
 
 
+class PartialPipelineRequest(BaseModel):
+    """Incremental / partial analysis (streaming-friendly local path)."""
+
+    segments: list[dict[str, Any]] = Field(
+        ...,
+        description="New or windowed ASR segments since last partial update",
+    )
+    previous_results: dict[str, Any] | None = Field(
+        None,
+        description="Prior partial results to merge (aspect/sentiment lists append)",
+    )
+    profile: str = Field("callcenter")
+    selected_analyzers: list[str] | None = None
+    reconcile: bool = Field(
+        False,
+        description="If true, run holistic LLM reconciliation (hangup / periodic)",
+    )
+    sentiment_model: str | None = None
+    device: str = Field("auto")
+    use_mistral_llm: bool = False
+    llm_model: str | None = None
+    deep_analysis: bool = False
+    llm_api_key: str | None = Field(
+        None,
+        description="Deprecated: prefer X-OpenRouter-Key header.",
+    )
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq)$")
+    groq_eu_residency: bool = False
+
+    @field_validator("segments")
+    @classmethod
+    def segments_must_not_be_empty(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not v:
+            raise ValueError("segments must not be empty")
+        if len(v) > MAX_SEGMENTS_PER_CALL:
+            raise ValueError(f"segments must have at most {MAX_SEGMENTS_PER_CALL} items")
+        return v
+
+
 # ---------------------------------------------------------------------------
 # Typed analyzer output models (Fas 5 — full analyzer surface in API/UI)
 # These mirror the dict shapes returned by each analyzer in src/analysis/.
@@ -268,15 +307,40 @@ class EmotionSegmentResult(BaseModel):
 
 
 class AspectItem(BaseModel):
-    """One aspect-based sentiment item from the `aspect` analyzer."""
+    """One aspect-based sentiment item from the `aspect` analyzer or claim chart."""
 
     aspect: str
     sentiment: str = Field(..., description="positive | negative | neutral")
     score: float = 0.0
     evidence: str | None = None
+    evidence_spans: list[dict[str, Any]] | None = Field(
+        None, description="Shared EvidenceSpan dicts (quote + optional timing)"
+    )
     start: float | None = None
     end: float | None = None
     speaker: str | None = None
+    source: str | None = Field(None, description="local_absa | llm_refined")
+    related_to: list[str] | None = None
+
+
+class DerivedCallSentiment(BaseModel):
+    """Call-level sentiment derived from aspect claims (secondary to aspects)."""
+
+    label: str = "neutral"
+    score: float = 0.0
+    aspect_count: int = 0
+    by_aspect: dict[str, float] = Field(default_factory=dict)
+    source: str = "derived_from_aspects"
+
+
+class UnavailableResult(BaseModel):
+    """Honest degradation marker when deep path is required."""
+
+    status: Literal["unavailable"] = "unavailable"
+    reason: str = "requires_deep_path"
+    analyzer: str | None = None
+    message: str | None = None
+    value: Any = None
 
 
 class TrajectoryResult(BaseModel):
@@ -461,12 +525,16 @@ class AnalyzerResults(BaseModel):
 
     emotion: list[EmotionSegmentResult] | None = None
     aspect: list[AspectItem] | None = None
-    trajectory: TrajectoryResult | None = None
-    root_cause: RootCauseResult | None = None
-    actionable_coaching: CoachingResult | None = None
+    aspect_claims: list[AspectItem] | None = Field(
+        None, description="Primary product unit: aspect claim charts with evidence"
+    )
+    derived_call_sentiment: DerivedCallSentiment | None = None
+    trajectory: TrajectoryResult | UnavailableResult | None = None
+    root_cause: RootCauseResult | UnavailableResult | None = None
+    actionable_coaching: CoachingResult | UnavailableResult | None = None
     customer_effort: CustomerEffortResult | None = None
     active_listening: ActiveListeningResult | None = None
-    empathy: EmpathyResult | None = None
+    empathy: EmpathyResult | UnavailableResult | None = None
     resolution_probability: ResolutionProbabilityResult | None = None
     multi_turn_journey: MultiTurnJourneyResult | None = None
     upsell_opportunity: UpsellResult | None = None
@@ -483,6 +551,10 @@ class AnalyzerResults(BaseModel):
     pii_redaction: dict[str, Any] | None = None
     alerts: list[dict[str, Any]] | None = None
     llm_judge: dict[str, Any] | None = None
+    override_provenance: list[dict[str, Any]] | None = None
+    deep_path_ccp: dict[str, Any] | None = None
+    degradation: dict[str, Any] | None = None
+    partial: dict[str, Any] | None = None
 
 
 class PipelineResponse(BaseModel):
@@ -622,15 +694,34 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
         ]
         aspect = [a for a in aspect if a is not None] or None
 
+    claims_raw = results.get("aspect_claims")
+    aspect_claims: list[AspectItem] | None = None
+    if isinstance(claims_raw, list):
+        aspect_claims = [
+            _safe_parse(AspectItem, a) for a in claims_raw if isinstance(a, dict)
+        ]
+        aspect_claims = [a for a in aspect_claims if a is not None] or None
+
+    def _parse_or_unavailable(model_cls: type[BaseModel], raw: Any) -> Any | None:
+        if isinstance(raw, dict) and raw.get("status") == "unavailable":
+            return _safe_parse(UnavailableResult, raw)
+        return _safe_parse(model_cls, raw)
+
     return AnalyzerResults(
         emotion=emotion,
         aspect=aspect,
-        trajectory=_safe_parse(TrajectoryResult, results.get("trajectory")),
-        root_cause=_safe_parse(RootCauseResult, results.get("root_cause")),
-        actionable_coaching=_safe_parse(CoachingResult, results.get("actionable_coaching")),
+        aspect_claims=aspect_claims,
+        derived_call_sentiment=_safe_parse(
+            DerivedCallSentiment, results.get("derived_call_sentiment")
+        ),
+        trajectory=_parse_or_unavailable(TrajectoryResult, results.get("trajectory")),
+        root_cause=_parse_or_unavailable(RootCauseResult, results.get("root_cause")),
+        actionable_coaching=_parse_or_unavailable(
+            CoachingResult, results.get("actionable_coaching")
+        ),
         customer_effort=_safe_parse(CustomerEffortResult, results.get("customer_effort")),
         active_listening=_safe_parse(ActiveListeningResult, results.get("active_listening")),
-        empathy=_safe_parse(EmpathyResult, results.get("empathy")),
+        empathy=_parse_or_unavailable(EmpathyResult, results.get("empathy")),
         resolution_probability=_safe_parse(
             ResolutionProbabilityResult, results.get("resolution_probability")
         ),
@@ -653,6 +744,10 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
         pii_redaction=results.get("pii_redaction"),
         alerts=results.get("alerts"),
         llm_judge=results.get("llm_judge"),
+        override_provenance=results.get("override_provenance"),
+        deep_path_ccp=results.get("deep_path_ccp"),
+        degradation=results.get("degradation"),
+        partial=results.get("partial"),
     )
 
 

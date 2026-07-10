@@ -46,6 +46,7 @@ from .schemas import (
     CallLLMOutput,
     EmotionTrajectoryPoint,
     EvidenceSpan,
+    OverrideProvenance,
     RootCause,
     Trajectory,
 )
@@ -66,6 +67,7 @@ __all__ = [
     "AgentAssessment",
     "EmotionTrajectoryPoint",
     "EvidenceSpan",
+    "OverrideProvenance",
     "LLM_OUTPUT_JSON_SCHEMA",
     "GROQ_MODELS",
     "GROQ_DEFAULT_MODEL",

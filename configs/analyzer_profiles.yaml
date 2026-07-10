@@ -1,28 +1,31 @@
 # Analyzer profiles — see docs/ANALYZER_STRATEGY.md
-# Note: empathy, trajectory, insights, root_cause, actionable_coaching are auto-skipped when LLM deep path runs.
+# Honest degradation: empathy/trajectory/root_cause/actionable_coaching/insights
+# are optional and return unavailable without deep path (not quality-2 heuristics).
 
 callcenter:
   default_selected:
+    # Core local
     - sentiment
     - intent
     - role
     - emotion
     - negation
-    - customer_effort
     - compliance_risk
+    # Deterministic sensors
+    - customer_effort
     - active_listening
+    - aspect
+  optional:
+    - summary
+    - topics
+    - resolution_probability
+    - predictive
+    - multi_turn_journey
     - empathy
     - trajectory
     - root_cause
     - actionable_coaching
-    - summary
-    - topics
-    - aspect
-    - resolution_probability
-    - predictive
-    - multi_turn_journey
     - insights
-  optional:
     - llm_judge
     - upsell_opportunity
     - spoken_normalizer
@@ -35,10 +38,11 @@ call:
     - intent
     - role
     - emotion
-    - trajectory
+    - aspect
     - summary
     - topics
-    - aspect
+  optional:
+    - trajectory
     - root_cause
     - multi_turn_journey
   disabled:
@@ -49,11 +53,13 @@ sales:
     - sentiment
     - intent
     - role
+    - customer_effort
+    - active_listening
+    - aspect
     - upsell_opportunity
     - resolution_probability
-    - customer_effort
+  optional:
     - empathy
-    - active_listening
     - actionable_coaching
   disabled:
     - compliance_risk
@@ -62,16 +68,18 @@ complaint:
   default_selected:
     - sentiment
     - intent
-    - trajectory
     - negation
-    - empathy
-    - root_cause
     - compliance_risk
     - active_listening
     - customer_effort
+    - aspect
+    - predictive
+  optional:
+    - trajectory
+    - empathy
+    - root_cause
     - actionable_coaching
     - multi_turn_journey
-    - predictive
   disabled:
     - upsell_opportunity
 
@@ -81,9 +89,10 @@ teknisk_support:
     - intent
     - topics
     - summary
-    - root_cause
     - aspect
     - resolution_probability
+  optional:
+    - root_cause
   disabled:
     - upsell_opportunity
     - llm_judge
@@ -94,10 +103,12 @@ support:
     - intent
     - role
     - customer_effort
-    - empathy
-    - resolution_probability
-    - insights
     - active_listening
+    - aspect
+    - resolution_probability
+  optional:
+    - empathy
+    - insights
     - actionable_coaching
     - root_cause
 

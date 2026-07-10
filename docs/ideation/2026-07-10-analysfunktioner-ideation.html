@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ideation: analysfunktioner — 2026-07-10</title>
+<style>
+  :root { --bg:#0f1419; --fg:#e7ecf1; --muted:#9aa7b5; --card:#1a222c; --line:#2a3542; --accent:#6db3f2; --ok:#7dcea0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.55 system-ui,Segoe UI,sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:920px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  h1 { font-size:1.75rem; margin:0 0 .35rem; }
+  h2 { font-size:1.25rem; margin:2.2rem 0 .75rem; border-bottom:1px solid var(--line); padding-bottom:.35rem; }
+  h3 { font-size:1.05rem; margin:0 0 .4rem; }
+  .meta { color:var(--muted); font-size:.9rem; margin-bottom:1.5rem; }
+  .meta span { margin-right:1rem; }
+  .axes li, .jump a { color:var(--accent); }
+  .jump { display:flex; flex-wrap:wrap; gap:.5rem 1rem; margin:0 0 1.25rem; padding:0; list-style:none; font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:1rem 1.1rem; margin:0 0 1rem; }
+  .pill { display:inline-block; font-size:.75rem; color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:.1rem .45rem; margin-right:.35rem; }
+  .basis { font-size:.9rem; color:var(--muted); border-left:3px solid var(--accent); padding-left:.75rem; margin:.6rem 0; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; border-bottom:1px solid var(--line); padding:.45rem .35rem; vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  footer { margin-top:3rem; color:var(--muted); font-size:.8rem; }
+  code { font-size:.88em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ideation: analysfunktioner</h1>
+  <div class="meta">
+    <span>Datum: <time datetime="2026-07-10">2026-07-10</time></span>
+    <span>Topic: analysfunktioner</span>
+    <span>Focus: förbättringar och nya features i analyslagret</span>
+    <span>Mode: repo-grounded</span>
+  </div>
+
+  <h2 id="grounding">Grounding Context</h2>
+  <p><strong>Codebase:</strong> Svenskt call center-intelligence (v0.5 beta): FastAPI + registry (~23 analyzers) + selektiv LLM deep path (Mistral/Groq) + Next.js webui. Hybrid local-first; INSIGHT-02 hoppar över thin heuristics när deep path körs. Profiler i <code>configs/analyzer_profiles.yaml</code>.</p>
+  <p><strong>Learnings:</strong> Registry + graceful degradation är styrka. Quality report (2026-06-28): sentiment/intent ~4; emotion/role/enrichment ojämna (2–3); ~15 analyzers utan tester; saknad annoterad produktionskorpus (DATA-01). Strategi: lägg inte till fler thin heuristics utan motivering mot LLM.</p>
+  <p><strong>External:</strong> Gong/Chorus/CallRail har flyttat till summaries + sentiment + CRM; gapet är aspect-level evidens, disagreement-hantering och outcome-kopplad eval. ABSA + LLM-as-judge är etablerad prior art.</p>
+  <p><em>Note:</em> Tre generation-tier ideation-agenter + basis-verifier nådde API-gräns; pain/inversion/leverage fylldes av orchestrator; filtrering är orchestrator-only (degraded).</p>
+
+  <h2 id="axes">Topic Axes</h2>
+  <ul class="axes">
+    <li><strong>core-local</strong> — sentiment, intent, role, emotion, negation, compliance</li>
+    <li><strong>enrichment</strong> — heuristiska enrichments, ABSA, topics, journey</li>
+    <li><strong>llm-deep</strong> — deep path, consolidation, llm_judge, holistiska tasks</li>
+    <li><strong>quality-eval</strong> — benchmarks, schemas, kalibrering, täckning</li>
+    <li><strong>pipeline-product</strong> — profiler, orkestrering, webui, edge, Fas4</li>
+  </ul>
+
+  <h2 id="ideas">Ranked Ideas</h2>
+  <ul class="jump">
+    <li><a href="#i1">1. Aspekt-evidensplattform</a></li>
+    <li><a href="#i2">2. Ärlig degradering</a></li>
+    <li><a href="#i3">3. Kvalitets-OS</a></li>
+    <li><a href="#i4">4. Override-provenance</a></li>
+    <li><a href="#i5">5. Styrd deep path</a></li>
+    <li><a href="#i6">6. Streaming-first</a></li>
+    <li><a href="#i7">7. EvidenceSpan-kontrakt</a></li>
+  </ul>
+
+  <article class="card" id="i1">
+    <h3>1. Aspekt-evidensplattform</h3>
+    <span class="pill">pipeline-product</span>
+    <span class="pill">Conf 88%</span>
+    <span class="pill">Complexity Medium</span>
+    <p>Gör aspect-spans med obligatoriska citat till primär produktenhet (API, rapport, dashboard). Call-sentiment blir härledd aggregat. Local ABSA (<code>aspect.py</code> keyword triggers) är snabb sensor; LLM <code>refined_aspects</code> producerar “claim charts” per aspekt. Webui-kort och Fas4-sök utgår från aspekter, inte snittsentiment.</p>
+    <div class="basis"><strong>basis:</strong> direct: quality report local aspect=3 / LLM refined_aspects=5; <code>src/llm/schemas.py</code> AspectItem med evidence; ANALYZER_STRATEGY overlap “LLM preferred”. external: Gong topic/aspect intelligence; patent claim-chart practice.</div>
+    <p><strong>rationale:</strong> Marknadsgapet och er starkaste LLM-output pekar samma håll — men rapportcentrum är fortfarande call-level sentiment.</p>
+    <p><strong>downsides:</strong> Kräver UI/API-omläggning; keyword-ABSA false positives syns mer när aspekter är first-class.</p>
+  </article>
+
+  <article class="card" id="i2">
+    <h3>2. Ärlig degradering — null före bluff</h3>
+    <span class="pill">enrichment</span>
+    <span class="pill">Conf 90%</span>
+    <span class="pill">Complexity Low</span>
+    <p>När deep path är avstängd: returnera explicita <code>null</code>/<code>unavailable</code> för superseded-fält (empathy, trajectory, root_cause, coaching) istället för quality-2-heuristik. Amputera callcenter-default från ~18 analyzers till core local + deterministiska sensorer (CES, active_listening, negation). Dashboard visar “kräver deep path”.</p>
+    <div class="basis"><strong>basis:</strong> direct: ANALYZER_STRATEGY “Do not add new thin heuristik-analyzers”; quality report empathy/root_cause/upsell=2; deep_path redan skippar dem när LLM finns men ersätter med svaga heuristik när den saknas; callcenter default_selected ~18.</div>
+    <p><strong>rationale:</strong> INSIGHT-02 halvfärdig — konsolidering när LLM finns, men “fake LLM” när den saknas underminerar förtroende.</p>
+    <p><strong>downsides:</strong> Tommare offline-rapporter; sälj/edge måste omformulera värdeerbjudandet.</p>
+  </article>
+
+  <article class="card" id="i3">
+    <h3>3. Kvalitets-OS — MQM + preferens-gate + riktig korpus</h3>
+    <span class="pill">quality-eval</span>
+    <span class="pill">Conf 85%</span>
+    <span class="pill">Complexity High</span>
+    <p>Bygg ett sammanhållet kvalitetslager: (1) DATA-01 verklig annoterad korpus, (2) MQM-lik feltypologi (aspect/intent/emotion-fel med span+severity), (3) human preference som release-gate för deep path/coaching medan F1 behålls för core local. Fixtures styr inte längre LLM-produktbeslut.</p>
+    <div class="basis"><strong>basis:</strong> direct: ROADMAP High “Real corpus”; evaluate.py “Human preference study recommended”; analyzer_eval.yaml nästan enbart F1; ~15 analyzers utan tester. external: MQM/DQF error typology; PASTEL LLM-as-judge ABSA.</div>
+    <p><strong>rationale:</strong> Utan detta optimerar ni mot syntetisk F1 medan Gong-gapet (evidens, coaching) förblir omätt — högst hävstång enligt egen assessment.</p>
+    <p><strong>downsides:</strong> Kräver annoteringsbudget och processdisciplin; lång lead time innan payoff.</p>
+  </article>
+
+  <article class="card" id="i4">
+    <h3>4. Override-provenance &amp; kanaldiversitet</h3>
+    <span class="pill">llm-deep</span>
+    <span class="pill">Conf 78%</span>
+    <span class="pill">Complexity Medium</span>
+    <p>Varje LLM-fält som ersätter local output måste bära <code>override_provenance</code> (vilken local signal, varför överskriden, evidence span). Policy: keyword-emotion och LLM-emotion får inte dela samma lexical failure mode utan diversitetskrav. Supersession loggas som auditerbar händelse.</p>
+    <div class="basis"><strong>basis:</strong> direct: deep_path LLM_SUPERSEDED set; emotion.py hybrid keyword+sentiment; INSIGHT-02. reasoned: samma lexical blinda fläck i emotion och ABSA-triggers. external: I&amp;C diversity / defense-in-depth.</div>
+    <p><strong>rationale:</strong> Produktifierar hybrid som förtroendearkitektur — säljbart till GDPR-känsliga call centers.</p>
+    <p><strong>downsides:</strong> Schema- och prompt-komplexitet; mer loggvolym.</p>
+  </article>
+
+  <article class="card" id="i5">
+    <h3>5. Styrd deep path — CCP + levande routing</h3>
+    <span class="pill">pipeline-product</span>
+    <span class="pill">Conf 75%</span>
+    <span class="pill">Complexity Medium</span>
+    <p>Namngivna Critical Control Points före LLM (PII-clean, min segment quality, negation/sentiment sanity). Missad CCP → deep-output kasseras/eskaleras. Komplettera statisk YAML med runtime-val av analyzer-set från samtalsdrag (längd, intent-mix, risk). YAML blir priors.</p>
+    <div class="basis"><strong>basis:</strong> direct: should_use_any_llm redan segment/flag-gate; profiles.py statiska PROFILE_SPECS; cost/latency guards i Fas3. external: HACCP CCP; building FDD rule→deep diagnosis.</div>
+    <p><strong>rationale:</strong> Gör LLM-spend till styrd process med corrective actions istället för feature-flag-spaghetti.</p>
+    <p><strong>downsides:</strong> Risk för över-engineering; behöver tydliga CCP-trösklar och tester.</p>
+  </article>
+
+  <article class="card" id="i6">
+    <h3>6. Streaming-first partial analysis</h3>
+    <span class="pill">pipeline-product</span>
+    <span class="pill">Conf 70%</span>
+    <span class="pill">Complexity High</span>
+    <p>Vänd default: inkrementell segment-analys (WS) är huvudvägen; holistisk LLM är periodisk reconciliation vid hangup/var N sek. Tvingar fram vilka analyzers som överlever latensbudget; batch-zoo dör naturligt.</p>
+    <div class="basis"><strong>basis:</strong> direct: AGENT_CONTEXT real-time WS; assessment ~30–60s per demo-call; registry batch-topologisk. reasoned: latensconstraint kollapsar “fler analyzers”.</div>
+    <p><strong>rationale:</strong> Exponerar verkligt produktvärde under live-coaching/supervisor-vy.</p>
+    <p><strong>downsides:</strong> Stor arkitekturinsats; holistiska fält blir snapshots med race conditions.</p>
+  </article>
+
+  <article class="card" id="i7">
+    <h3>7. Delad EvidenceSpan-kontrakt</h3>
+    <span class="pill">core-local</span>
+    <span class="pill">Conf 72%</span>
+    <span class="pill">Complexity Low</span>
+    <p>Inför ett gemensamt <code>EvidenceSpan</code> (segment_id, start/end, quote, speaker) som obligatoriskt fält för sentiment-adjustments, emotion, aspect, compliance, llm_judge och LLM-overrides. En schema-version; UI renderar samma citatkomponent överallt.</p>
+    <div class="basis"><strong>basis:</strong> direct: aspect redan har evidence; trajectory evidence snippets; schema validation warn/strict; historiska fältnamns-buggar i quality report. reasoned: utan gemensam kontrakt kan aspect-plattform och provenance inte komponera.</div>
+    <p><strong>rationale:</strong> Låg kostnad, hög compounding — möjliggör idé 1 och 4.</p>
+    <p><strong>downsides:</strong> Migrering av befintliga analyzer-schemas; tillfällig warn-mode.</p>
+  </article>
+
+  <h2 id="rejections">Rejection Summary</h2>
+  <table>
+    <thead><tr><th>Idea</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Intent fine-tune (standalone)</td><td>Already covered — ROADMAP High / DATA-01</td></tr>
+      <tr><td>Noll-LLM som huvudväg</td><td>Interesting stress-test; contradicts hybrid strategy as primary bet</td></tr>
+      <tr><td>Kamerafällor-narrativ</td><td>Metaphor without new move beyond EDGE docs</td></tr>
+      <tr><td>Regeldomstol</td><td>Largely exists as compliance_qa YAML scorecards</td></tr>
+      <tr><td>RFI-excision PII SLA</td><td>Incremental on existing early PII redaction</td></tr>
+      <tr><td>Emotion-modell alone</td><td>Subsumed by provenance + quality OS</td></tr>
+      <tr><td>Analyzer-testmatrix alone</td><td>Tactical; fold into quality OS</td></tr>
+      <tr><td>Building FDD alone</td><td>Folded into CCP + routing</td></tr>
+      <tr><td>Genannotering alone</td><td>Folded into override-provenance</td></tr>
+      <tr><td>spoken_normalizer A/B alone</td><td>Below ambition floor as standalone</td></tr>
+      <tr><td>~20 övriga råkandidater</td><td>Duplicates / weaker variants of survivors</td></tr>
+    </tbody>
+  </table>
+
+  <footer class="composition-signal">Composed 2026-07-10T21:45Z by ce-ideate from focus «analysfunktioner» · run 7c254390 · ~34 raw → 7 survivors</footer>
+</main>
+</body>
+</html>

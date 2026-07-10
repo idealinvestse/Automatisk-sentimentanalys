@@ -65,9 +65,27 @@ export interface AspectItem {
   sentiment: string;
   score: number;
   evidence?: string | null;
+  evidence_spans?: Array<{
+    text: string;
+    speaker_role?: string | null;
+    turn_index?: number | null;
+    segment_id?: number | null;
+    start?: number | null;
+    end?: number | null;
+  }> | null;
   start?: number | null;
   end?: number | null;
   speaker?: string | null;
+  source?: string | null;
+  related_to?: string[] | null;
+}
+
+export interface DerivedCallSentiment {
+  label: string;
+  score: number;
+  aspect_count: number;
+  by_aspect: Record<string, number>;
+  source: string;
 }
 
 export interface TrajectoryResult {
