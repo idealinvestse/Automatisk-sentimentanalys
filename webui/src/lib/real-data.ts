@@ -11,7 +11,13 @@
  * `app/archive/nicegui_dashboard/services/demo_provider.py::reports_to_table_rows()`.
  */
 
-import type { PipelineReport } from "@/lib/api/client";
+import type {
+  PipelineReport,
+  DeepPathCCP,
+  DegradationInfo,
+  AnalyzerRouting,
+  OverrideProvenanceEntry,
+} from "@/lib/api/client";
 import type { DemoTranscript } from "@/lib/demo-transcripts";
 import type { CallRow, RiskLevel, SentimentLabel } from "@/lib/mock-data";
 
@@ -482,6 +488,84 @@ export function extractPredictive(report: PipelineReport): PredictiveResult | nu
   return risks as unknown as PredictiveResult;
 }
 
+function trustFromResults(results: Record<string, unknown> | undefined): {
+  degradation: DegradationInfo | null;
+  deepPathCCP: DeepPathCCP | null;
+  analyzerRouting: AnalyzerRouting | null;
+  overrideProvenance: OverrideProvenanceEntry[];
+} {
+  const r = results ?? {};
+  return {
+    degradation: (r.degradation as DegradationInfo | undefined) ?? null,
+    deepPathCCP: (r.deep_path_ccp as DeepPathCCP | undefined) ?? null,
+    analyzerRouting: (r.analyzer_routing as AnalyzerRouting | undefined) ?? null,
+    overrideProvenance: (r.override_provenance as OverrideProvenanceEntry[] | undefined) ?? [],
+  };
+}
+
+/** Extract honest-degradation metadata from pipeline results. */
+export function extractDegradation(report: PipelineReport): DegradationInfo | null {
+  const typed = report.analyzer_results?.degradation;
+  if (typed) return typed;
+  const raw = report.results?.degradation;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as DegradationInfo;
+}
+
+/** Extract deep-path CCP gate result. */
+export function extractDeepPathCCP(report: PipelineReport): DeepPathCCP | null {
+  const typed = report.analyzer_results?.deep_path_ccp;
+  if (typed) return typed;
+  const raw = report.results?.deep_path_ccp;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as DeepPathCCP;
+}
+
+/** Extract living analyzer routing audit. */
+export function extractAnalyzerRouting(report: PipelineReport): AnalyzerRouting | null {
+  const typed = report.analyzer_results?.analyzer_routing;
+  if (typed) return typed;
+  const raw = report.results?.analyzer_routing;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as AnalyzerRouting;
+}
+
+/** Extract LLM override provenance entries. */
+export function extractOverrideProvenance(report: PipelineReport): OverrideProvenanceEntry[] {
+  const typed = report.analyzer_results?.override_provenance;
+  if (typed && Array.isArray(typed)) return typed;
+  const raw = report.results?.override_provenance;
+  if (!Array.isArray(raw)) return [];
+  return raw as OverrideProvenanceEntry[];
+}
+
+/** Combined trust-surface payload for Call Detail / Testlabb. */
+export function extractTrustSurface(report: PipelineReport): {
+  degradation: DegradationInfo | null;
+  deepPathCCP: DeepPathCCP | null;
+  analyzerRouting: AnalyzerRouting | null;
+  overrideProvenance: OverrideProvenanceEntry[];
+} {
+  const fromTyped = report.analyzer_results
+    ? {
+        degradation: report.analyzer_results.degradation ?? null,
+        deepPathCCP: report.analyzer_results.deep_path_ccp ?? null,
+        analyzerRouting: report.analyzer_results.analyzer_routing ?? null,
+        overrideProvenance: report.analyzer_results.override_provenance ?? [],
+      }
+    : null;
+  if (
+    fromTyped &&
+    (fromTyped.degradation ||
+      fromTyped.deepPathCCP ||
+      fromTyped.analyzerRouting ||
+      fromTyped.overrideProvenance.length > 0)
+  ) {
+    return fromTyped;
+  }
+  return trustFromResults(report.results);
+}
+
 // ---------------------------------------------------------------------------
 // Call detail extraction (combines all above for /calls/[id])
 // ---------------------------------------------------------------------------
@@ -517,6 +601,12 @@ export interface RealCallDetail {
   complianceRisk: ComplianceRiskResult | null;
   roleMetrics: RoleClassifierResult | null;
   predictive: PredictiveResult | null;
+  trust: {
+    degradation: DegradationInfo | null;
+    deepPathCCP: DeepPathCCP | null;
+    analyzerRouting: AnalyzerRouting | null;
+    overrideProvenance: OverrideProvenanceEntry[];
+  };
 }
 
 /** Build a full call detail object from a RealCall (transcript + report). */
@@ -568,6 +658,7 @@ export function buildCallDetail({ transcript, report }: RealCall): RealCallDetai
     complianceRisk: extractComplianceRisk(report),
     roleMetrics: extractRoleMetrics(report),
     predictive: extractPredictive(report),
+    trust: extractTrustSurface(report),
   };
 }
 

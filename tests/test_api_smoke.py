@@ -59,8 +59,32 @@ def test_openapi_has_core_paths() -> None:
     r = client.get("/openapi.json")
     assert r.status_code == 200
     paths = r.json().get("paths", {})
-    for path in ("/health", "/analyze", "/analyze_pipeline"):
+    for path in ("/health", "/analyze", "/analyze_pipeline", "/analyze_pipeline/partial"):
         assert path in paths
+
+
+def test_analyze_pipeline_partial_happy_mocked() -> None:
+    fake_report = MagicMock()
+    fake_report.sentiment_results = [{"label": "neutral", "score": 0.5}]
+    fake_report.intent_results = []
+    fake_report.summary = {}
+    fake_report.topics = {}
+    fake_report.insights = {}
+    fake_report.risks = {}
+    fake_report.processing_time_s = 0.05
+    fake_report.llm = {}
+    fake_report.results = {"partial": {"incremental": True, "reconciled": False}}
+
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
+        inst = mock_pipe.return_value
+        inst.analyze_segments_partial.return_value = fake_report
+        r = client.post(
+            "/analyze_pipeline/partial",
+            json={"segments": [{"text": "Hej", "start": 0, "end": 1}]},
+        )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["results"]["partial"]["incremental"] is True
 
 
 def test_analyze_happy_mocked(monkeypatch: pytest.MonkeyPatch) -> None:

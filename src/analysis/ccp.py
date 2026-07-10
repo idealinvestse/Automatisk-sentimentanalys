@@ -45,8 +45,9 @@ def evaluate_deep_path_ccps(
     segments: list[Any],
     results: dict[str, Any],
     *,
-    min_segments: int = 3,
-    min_avg_chars: float = 8.0,
+    min_segments: int = 6,
+    min_avg_chars: float = 12.0,
+    require_sentiment: bool = True,
 ) -> CCPResult:
     """Named CCPs that must pass before LLM deep output is accepted."""
     checks: list[CCPCheck] = []
@@ -86,17 +87,23 @@ def evaluate_deep_path_ccps(
         )
     )
 
-    # CCP-3: Sentiment / negation sanity (both present or neither required yet)
+    # CCP-3: Sentiment / negation sanity — sentiment must exist when deep path runs
     sent = results.get("sentiment")
     neg = results.get("negation")
     sanity_ok = True
-    sanity_detail = "Sentiment/negation present or not yet run"
-    if isinstance(sent, list) and sent and isinstance(neg, list) and len(neg) == len(sent):
-        # Flag pathological all-identical empty sentiment
-        labels = [s.get("label") if isinstance(s, dict) else None for s in sent]
-        if all(l is None for l in labels):
+    sanity_detail = "Sentiment/negation present"
+    if require_sentiment:
+        if not isinstance(sent, list) or len(sent) == 0:
             sanity_ok = False
-            sanity_detail = "Sentiment labels all missing"
+            sanity_detail = "Sentiment missing or empty — core local path required before LLM"
+        elif isinstance(sent, list) and sent:
+            labels = [s.get("label") if isinstance(s, dict) else None for s in sent]
+            if all(l is None for l in labels):
+                sanity_ok = False
+                sanity_detail = "Sentiment labels all missing"
+    if sanity_ok and isinstance(sent, list) and sent and isinstance(neg, list):
+        if len(neg) != len(sent):
+            sanity_detail = f"Negation length mismatch ({len(neg)} vs {len(sent)}) — warning only"
     checks.append(
         CCPCheck(
             name="sentiment_negation_sanity",

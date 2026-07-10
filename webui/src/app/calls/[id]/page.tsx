@@ -30,6 +30,7 @@ import {
   PredictiveCard,
   ComplianceRiskCard,
   SummaryCard,
+  TrustSurfaceCard,
 } from "@/components/analyzer-cards";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { buildCallDetail } from "@/lib/real-data";
@@ -165,6 +166,7 @@ export default function CallDetailPage() {
             </div>
 
             <div className="flex flex-col gap-4">
+              <TrustSurfaceCard trust={detail.trust} />
               {detail.qa && (
                 <Card>
                   <CardHeader>

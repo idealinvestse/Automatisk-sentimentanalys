@@ -21,6 +21,20 @@ def _clear_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     get_api_settings.cache_clear()
 
 
+def test_event_hub_redis_backend_property() -> None:
+    class FakeRedis:
+        def publish(self, channel: str, message: str) -> int:
+            return 1
+
+    hub = TranscriptionEventHub(redis_client=FakeRedis())
+    assert hub.backend == "redis"
+
+
+def test_event_hub_memory_backend_default() -> None:
+    hub = TranscriptionEventHub()
+    assert hub.backend == "memory"
+
+
 def test_event_hub_log_and_progress() -> None:
     hub = TranscriptionEventHub()
     received: list[dict] = []

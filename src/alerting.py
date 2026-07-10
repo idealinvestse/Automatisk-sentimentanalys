@@ -346,19 +346,7 @@ class AlertEngine:
                             EvidenceSpan(text=f"{key}={val}", speaker_role=None, turn_index=None)
                         )
 
-                # Optional LLM for better actions/recommendations (document when used)
-                actions = rule.get("actions", []).copy()
-                if self.mistral_analyzer and "escalation" in rule["id"].lower():
-                    try:
-                        # Selective, low cost
-                        # NOTE: actual prompt construction deferred — see LLM_PROVIDERS.md
-                        # for available Mistral/Groq clients. Kept as placeholder for v0.5.
-                        actions.append("llm_suggested_coaching")
-                        logger.info(
-                            "Mistral used for alert action enhancement (rule %s)", rule["id"]
-                        )
-                    except Exception:
-                        pass
+                actions = list(rule.get("actions", []))
 
                 alert = Alert(
                     rule_id=rule["id"],

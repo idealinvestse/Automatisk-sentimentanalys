@@ -25,6 +25,7 @@ import {
   PredictiveCard,
   ComplianceRiskCard,
   SummaryCard,
+  TrustSurfaceCard,
 } from "@/components/analyzer-cards";
 import { RiskBadge, SentimentBadge } from "@/components/status-badges";
 import { useDemoReports } from "@/hooks/use-demo-reports";
@@ -125,6 +126,7 @@ export default function AnalysisPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <TrustSurfaceCard trust={detail.trust} />
             <EmotionCard emotion={detail.emotion} />
             <AspectCard
               aspects={detail.aspects}

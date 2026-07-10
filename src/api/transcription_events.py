@@ -2,11 +2,15 @@
 
 Fas 3 WebSocket – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
 Thread-safe emit from batch workers; async broadcast to subscribers.
+
+When Redis is available (``API_USE_REDIS_CACHE``), events are published on a
+shared channel so all uvicorn workers deliver live logs to subscribers.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,6 +21,7 @@ from fastapi import WebSocket
 logger = logging.getLogger(__name__)
 
 JOB_HEADER = "X-Transcription-Job-Id"
+_REDIS_CHANNEL = "ws:transcription:events"
 
 
 @dataclass
@@ -28,13 +33,63 @@ class _WsConnection:
 class TranscriptionEventHub:
     """Broadcast transcription log/progress events to WebSocket subscribers."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, redis_client: Any | None = None) -> None:
         self._connections: list[_WsConnection] = []
         self._lock = asyncio.Lock()
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._redis = redis_client
+        self._listener_task: asyncio.Task[None] | None = None
+
+    @property
+    def backend(self) -> str:
+        return "redis" if self._redis is not None else "memory"
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
+
+    async def start_redis_listener(self) -> None:
+        """Subscribe to cross-worker events (no-op without Redis)."""
+        if self._redis is None or self._listener_task is not None:
+            return
+
+        async def _listen() -> None:
+            pubsub = self._redis.pubsub(ignore_subscribe_messages=True)
+            try:
+                pubsub.subscribe(_REDIS_CHANNEL)
+                while True:
+                    msg = await asyncio.to_thread(pubsub.get_message, timeout=1.0)
+                    if not msg or msg.get("type") != "message":
+                        await asyncio.sleep(0.05)
+                        continue
+                    raw = msg.get("data")
+                    if isinstance(raw, bytes):
+                        raw = raw.decode("utf-8")
+                    try:
+                        event = json.loads(raw)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    await self._broadcast(event, from_redis=True)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.warning("Redis transcription listener stopped: %s", exc)
+            finally:
+                try:
+                    pubsub.unsubscribe(_REDIS_CHANNEL)
+                    pubsub.close()
+                except Exception:
+                    pass
+
+        self._listener_task = asyncio.create_task(_listen())
+
+    async def stop_redis_listener(self) -> None:
+        if self._listener_task is not None:
+            self._listener_task.cancel()
+            try:
+                await self._listener_task
+            except asyncio.CancelledError:
+                pass
+            self._listener_task = None
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -56,6 +111,18 @@ class TranscriptionEventHub:
         """Schedule broadcast from sync or async context (e.g. thread pool workers)."""
         event.setdefault("ts", datetime.now().isoformat(timespec="seconds"))
         self._forward_to_status(event)
+
+        if self._redis is not None:
+            try:
+                self._redis.publish(_REDIS_CHANNEL, json.dumps(event, default=str))
+            except Exception as exc:
+                logger.warning("Redis publish failed, local-only broadcast: %s", exc)
+                self._schedule_local_broadcast(event)
+            return
+
+        self._schedule_local_broadcast(event)
+
+    def _schedule_local_broadcast(self, event: dict[str, Any]) -> None:
         loop = self._loop
         if loop is None:
             try:
@@ -74,7 +141,7 @@ class TranscriptionEventHub:
             return event.get("type") in ("connected", "pong", "subscribed")
         return bool(event_job == conn.job_id)
 
-    async def _broadcast(self, event: dict[str, Any]) -> None:
+    async def _broadcast(self, event: dict[str, Any], *, from_redis: bool = False) -> None:
         async with self._lock:
             targets = list(self._connections)
         dead: list[WebSocket] = []
@@ -185,6 +252,10 @@ def get_hub(app: Any) -> TranscriptionEventHub:
     """Return the shared hub from FastAPI app state."""
     hub = getattr(app.state, "transcription_events", None)
     if hub is None:
-        hub = TranscriptionEventHub()
+        redis_client = None
+        cache = getattr(app.state, "cache", None)
+        if cache is not None:
+            redis_client = getattr(cache, "redis_client", None)
+        hub = TranscriptionEventHub(redis_client=redis_client)
         app.state.transcription_events = hub
     return hub

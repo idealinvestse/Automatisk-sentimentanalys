@@ -106,6 +106,10 @@ class TranscribeRequest(AsrParamsMixin):
         None,
         description="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD). Overrides legacy boolean when set.",
     )
+    run_partial_analysis: bool = Field(
+        False,
+        description="After ASR, run incremental partial pipeline on transcript segments (local path)",
+    )
 
     @field_validator("audio_path")
     @classmethod
@@ -116,6 +120,10 @@ class TranscribeRequest(AsrParamsMixin):
 class TranscribeResponse(BaseModel):
     transcript: dict[str, Any]
     timestamp: str
+    partial_analysis: dict[str, Any] | None = Field(
+        None,
+        description="Incremental partial pipeline snapshot when run_partial_analysis=true",
+    )
 
 
 class TranscribeJobStatus(BaseModel):
@@ -555,6 +563,7 @@ class AnalyzerResults(BaseModel):
     deep_path_ccp: dict[str, Any] | None = None
     degradation: dict[str, Any] | None = None
     partial: dict[str, Any] | None = None
+    analyzer_routing: dict[str, Any] | None = None
 
 
 class PipelineResponse(BaseModel):
@@ -748,6 +757,7 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
         deep_path_ccp=results.get("deep_path_ccp"),
         degradation=results.get("degradation"),
         partial=results.get("partial"),
+        analyzer_routing=results.get("analyzer_routing"),
     )
 
 

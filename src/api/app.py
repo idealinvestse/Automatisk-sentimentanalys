@@ -83,7 +83,8 @@ def _init_app_state(application: FastAPI) -> None:
     application.state.alerting_state = AlertingStateManager()
     application.state.alerting_state.sync_to_engine(application.state.alert_engine)
     if not hasattr(application.state, "transcription_events"):
-        application.state.transcription_events = TranscriptionEventHub()
+        redis_client = getattr(application.state.cache, "redis_client", None)
+        application.state.transcription_events = TranscriptionEventHub(redis_client=redis_client)
     if not hasattr(application.state, "transcription_jobs"):
         application.state.transcription_jobs = TranscriptionJobRegistry()
     if not hasattr(application.state, "ws_tickets"):
@@ -126,8 +127,9 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     app.state.alert_engine = AlertEngine()
     app.state.alerting_state = AlertingStateManager()
     app.state.alerting_state.sync_to_engine(app.state.alert_engine)
-    hub = TranscriptionEventHub()
+    hub = TranscriptionEventHub(redis_client=app.state.cache.redis_client)
     hub.bind_loop(asyncio.get_running_loop())
+    await hub.start_redis_listener()
     app.state.transcription_events = hub
     app.state.transcription_jobs = TranscriptionJobRegistry()
     app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
@@ -135,11 +137,13 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     reporter = get_status_reporter()
     reporter.phase("api", "startup", "Swedish Sentiment API started", auth=settings.auth_enabled)
     logger.info(
-        "Swedish Sentiment API starting up (auth=%s, ws_tickets=%s)",
+        "Swedish Sentiment API starting up (auth=%s, ws_tickets=%s, transcription_events=%s)",
         settings.auth_enabled,
         app.state.ws_tickets.backend,
+        hub.backend,
     )
     yield
+    await hub.stop_redis_listener()
     reporter.phase("api", "shutdown", "Swedish Sentiment API shutting down")
     logger.info("Swedish Sentiment API shutting down")
 

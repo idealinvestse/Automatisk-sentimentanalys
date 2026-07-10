@@ -259,6 +259,51 @@ export interface AnalyzerResults {
   pii_redaction?: Record<string, unknown> | null;
   alerts?: Array<Record<string, unknown>> | null;
   llm_judge?: Record<string, unknown> | null;
+  override_provenance?: OverrideProvenanceEntry[] | null;
+  deep_path_ccp?: DeepPathCCP | null;
+  degradation?: DegradationInfo | null;
+  partial?: PartialAnalysisMeta | null;
+  analyzer_routing?: AnalyzerRouting | null;
+}
+
+export interface CCPCheck {
+  name: string;
+  passed: boolean;
+  detail: string;
+  corrective_action?: string | null;
+}
+
+export interface DeepPathCCP {
+  passed: boolean;
+  checks: CCPCheck[];
+  failed?: string[];
+}
+
+export interface DegradationInfo {
+  mode: string;
+  deep_path_active: boolean;
+  llm_used: boolean;
+}
+
+export interface AnalyzerRouting {
+  profile_prior?: string[];
+  pre_selected?: string[];
+  runtime_selected?: string[];
+  extras_run?: string[];
+  segment_count?: number;
+  applied?: boolean;
+}
+
+export interface OverrideProvenanceEntry {
+  field: string;
+  source?: string | null;
+  evidence_spans?: Array<{ text: string; speaker_role?: string | null }>;
+}
+
+export interface PartialAnalysisMeta {
+  incremental?: boolean;
+  reconciled?: boolean;
+  [key: string]: unknown;
 }
 
 /** Response shape of POST /agent_performance/{agent_id} (Fas 4). */
@@ -520,6 +565,31 @@ export class ApiClient {
     // analyzers) can take 30–60s per call on CPU. Use a generous timeout so
     // the demo transcripts don't get aborted mid-analysis.
     return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options }, 180_000);
+  }
+
+  analyzePipelinePartial<T = PipelineReport>(
+    segments: unknown[],
+    options: {
+      previous_results?: Record<string, unknown> | null;
+      reconcile?: boolean;
+      profile?: string;
+      deep_analysis?: boolean;
+      use_mistral_llm?: boolean;
+      [key: string]: unknown;
+    } = {},
+  ) {
+    const { previous_results, reconcile = false, profile = "callcenter", ...rest } = options;
+    return this.post<T>(
+      "/analyze_pipeline/partial",
+      {
+        segments,
+        profile,
+        previous_results: previous_results ?? null,
+        reconcile,
+        ...rest,
+      },
+      180_000,
+    );
   }
 
   /** Compare up to 3 LLM models on the same segments (v0.5 model A/B). */

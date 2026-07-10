@@ -172,3 +172,5 @@ class TestAlertConditions:
             }
         )
         assert any(a.rule_id == "high_escalation_risk" for a in alerts)
+        for alert in alerts:
+            assert "llm_suggested_coaching" not in alert.recommended_actions

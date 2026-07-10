@@ -17,6 +17,9 @@ import {
   ArrowUpCircle,
   MessageSquare,
   Users,
+  Shield,
+  GitBranch,
+  History,
   Sparkles,
 } from "lucide-react";
 
@@ -39,6 +42,11 @@ import type {
   ComplianceRiskResult,
   RoleClassifierResult,
   PredictiveResult,
+  DeepPathCCP,
+  DegradationInfo,
+  AnalyzerRouting,
+  OverrideProvenanceEntry,
+  PipelineReport,
 } from "@/lib/api/client";
 
 // ---------------------------------------------------------------------------
@@ -1004,6 +1012,156 @@ export function SummaryCard({ summary }: { summary: Record<string, unknown> | nu
             ))}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TrustSurfaceCard — CCP, degradation, routing, provenance (gap-plan Wave 1)
+// ---------------------------------------------------------------------------
+
+export interface TrustSurfaceData {
+  degradation: DegradationInfo | null;
+  deepPathCCP: DeepPathCCP | null;
+  analyzerRouting: AnalyzerRouting | null;
+  overrideProvenance: OverrideProvenanceEntry[];
+}
+
+export function TrustSurfaceCard({ trust }: { trust: TrustSurfaceData | null }) {
+  if (!trust) return null;
+  const { degradation, deepPathCCP, analyzerRouting, overrideProvenance } = trust;
+  const showDegradation =
+    degradation &&
+    (degradation.mode === "honest" || (!degradation.llm_used && degradation.deep_path_active === false));
+  const hasCCP = deepPathCCP && deepPathCCP.checks.length > 0;
+  const hasRouting = analyzerRouting && (analyzerRouting.runtime_selected?.length ?? 0) > 0;
+  const hasProvenance = overrideProvenance.length > 0;
+  if (!showDegradation && !hasCCP && !hasRouting && !hasProvenance) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="size-4" />
+          Trust & routing
+        </CardTitle>
+        <CardDescription>
+          Varför deep path kördes eller hoppades över, samt vilka analyzers som valdes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {showDegradation ? (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium text-warning-text">
+              <AlertTriangle className="size-4 shrink-0" />
+              Honest degradation
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Deep path: {degradation.deep_path_active ? "begärd" : "av"} · LLM använd:{" "}
+              {degradation.llm_used ? "ja" : "nej"} · Vissa fält kan vara{" "}
+              <code>unavailable</code> (kräver deep path).
+            </p>
+          </div>
+        ) : null}
+
+        {hasCCP ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Deep-path CCP</span>
+              <Badge variant={deepPathCCP.passed ? "success" : "destructive"}>
+                {deepPathCCP.passed ? "Godkänd" : "Underkänd"}
+              </Badge>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {deepPathCCP.checks.map((check) => (
+                <div
+                  key={check.name}
+                  className="flex items-start justify-between gap-2 rounded-md border p-2 text-xs"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{check.name}</span>
+                    <span className="text-muted-foreground">{check.detail}</span>
+                    {check.corrective_action ? (
+                      <span className="text-warning-text">{check.corrective_action}</span>
+                    ) : null}
+                  </div>
+                  {check.passed ? (
+                    <CheckCircle2 className="size-4 shrink-0 text-success" />
+                  ) : (
+                    <XCircle className="size-4 shrink-0 text-destructive" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {hasRouting ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <GitBranch className="size-3.5" />
+              Analyzer routing
+              {analyzerRouting.applied ? (
+                <Badge variant="secondary" className="text-xs">
+                  applied
+                </Badge>
+              ) : null}
+            </div>
+            {analyzerRouting.profile_prior && analyzerRouting.profile_prior.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs text-muted-foreground">Prior:</span>
+                {analyzerRouting.profile_prior.map((a) => (
+                  <Badge key={`prior-${a}`} variant="outline" className="text-xs">
+                    {a}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+            {analyzerRouting.runtime_selected && analyzerRouting.runtime_selected.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs text-muted-foreground">Runtime:</span>
+                {analyzerRouting.runtime_selected.map((a) => (
+                  <Badge key={`rt-${a}`} variant="secondary" className="text-xs">
+                    {a}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+            {analyzerRouting.extras_run && analyzerRouting.extras_run.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                <span className="text-xs text-muted-foreground">Extras:</span>
+                {analyzerRouting.extras_run.map((a) => (
+                  <Badge key={`ex-${a}`} variant="outline" className="text-xs">
+                    {a}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {hasProvenance ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <History className="size-3.5" />
+              LLM override provenance
+            </div>
+            {overrideProvenance.slice(0, 6).map((entry, i) => (
+              <div key={`${entry.field}-${i}`} className="rounded-md border p-2 text-xs">
+                <span className="font-medium">{entry.field}</span>
+                {entry.source ? (
+                  <span className="text-muted-foreground"> · {entry.source}</span>
+                ) : null}
+                {entry.evidence_spans && entry.evidence_spans.length > 0 ? (
+                  <p className="mt-1 text-muted-foreground">
+                    &ldquo;{entry.evidence_spans[0]?.text}&rdquo;
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

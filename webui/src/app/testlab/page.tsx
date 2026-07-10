@@ -14,6 +14,8 @@ import { EmptyState } from "@/components/empty-state";
 import { ModelRoutingCard } from "@/components/model-routing-card";
 import { ModelComparePanel } from "@/components/model-compare-panel";
 import { apiClient, ApiError, type PipelineCompareResponse, type PipelineReport } from "@/lib/api/client";
+import { extractTrustSurface } from "@/lib/real-data";
+import { TrustSurfaceCard } from "@/components/analyzer-cards";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { useHealth } from "@/hooks/use-health";
 import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
@@ -30,6 +32,9 @@ export default function TestLabPage() {
   const [useLlm, setUseLlm] = React.useState(false);
   const [provider, setProvider] = React.useState<"openrouter" | "groq">("openrouter");
   const [routingTier, setRoutingTier] = React.useState<RoutingTier>("balanced");
+  const [partialMode, setPartialMode] = React.useState(false);
+  const [reconcile, setReconcile] = React.useState(false);
+  const [partialPrevious, setPartialPrevious] = React.useState<Record<string, unknown> | null>(null);
 
   const mutation = useMutation<PipelineReport, ApiError, void>({
     mutationFn: async () => {
@@ -46,6 +51,16 @@ export default function TestLabPage() {
       }
       const segArr = segments as unknown[];
       const effectiveTier = resolveEffectiveTier(routingTier, segArr.length, useLlm);
+      if (partialMode) {
+        return apiClient.analyzePipelinePartial(segments, {
+          previous_results: partialPrevious,
+          reconcile,
+          use_mistral_llm: useLlm,
+          deep_analysis: useLlm,
+          provider,
+          llm_model: useLlm ? tierToModel(effectiveTier) : undefined,
+        });
+      }
       return apiClient.analyzePipeline(segments, {
         use_mistral_llm: useLlm,
         deep_analysis: useLlm,
@@ -53,7 +68,15 @@ export default function TestLabPage() {
         llm_model: useLlm ? tierToModel(effectiveTier) : undefined,
       });
     },
-    onSuccess: () => notifySuccess("Pipeline-analys klar"),
+    onSuccess: (data) => {
+      notifySuccess(partialMode ? "Partial pipeline klar" : "Pipeline-analys klar");
+      if (partialMode && !reconcile) {
+        setPartialPrevious((data.results as Record<string, unknown>) ?? null);
+      }
+      if (reconcile) {
+        setPartialPrevious(null);
+      }
+    },
     onError: (err) => notifyApiError(err, "Pipeline-fel: "),
   });
 
@@ -126,6 +149,16 @@ export default function TestLabPage() {
               <Checkbox checked={useLlm} onCheckedChange={(v) => setUseLlm(v === true)} />
               Använd LLM deep analysis
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={partialMode} onCheckedChange={(v) => setPartialMode(v === true)} />
+              Partial path (<code>/analyze_pipeline/partial</code>)
+            </label>
+            {partialMode ? (
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={reconcile} onCheckedChange={(v) => setReconcile(v === true)} />
+                Reconcile (holistic LLM)
+              </label>
+            ) : null}
             {useLlm ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">LLM-provider</span>
@@ -174,8 +207,23 @@ export default function TestLabPage() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="gap-1.5">
               <FlaskConical className="size-4" />
-              {mutation.isPending ? "Analyserar…" : "Analysera (pipeline)"}
+              {mutation.isPending
+                ? "Analyserar…"
+                : partialMode
+                  ? reconcile
+                    ? "Reconcile (partial)"
+                    : "Kör partial"
+                  : "Analysera (pipeline)"}
             </Button>
+            {partialMode && partialPrevious ? (
+              <Button
+                variant="outline"
+                onClick={() => setPartialPrevious(null)}
+                disabled={mutation.isPending}
+              >
+                Nollställ partial state
+              </Button>
+            ) : null}
             {useLlm && provider === "openrouter" ? (
               <Button
                 variant="outline"
@@ -297,6 +345,17 @@ export default function TestLabPage() {
                       Upsell-möjligheter: {report.analyzer_results.upsell_opportunity.count}
                     </p>
                   )}
+                </div>
+              ) : null}
+
+              {report ? <TrustSurfaceCard trust={extractTrustSurface(report)} /> : null}
+
+              {report?.results?.partial && typeof report.results.partial === "object" ? (
+                <div className="rounded-md border p-3 text-xs">
+                  <span className="font-medium">Partial metadata</span>
+                  <pre className="mt-2 overflow-auto text-muted-foreground">
+                    {JSON.stringify(report.results.partial, null, 2)}
+                  </pre>
                 </div>
               ) : null}
 

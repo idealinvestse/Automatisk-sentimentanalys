@@ -34,6 +34,8 @@ class TestEmotionAnalyzer:
         )
         out = EmotionAnalyzer().analyze(ctx)
         assert out[0]["primary"] in ("frustration", "ilska")
+        assert out[0].get("evidence_spans")
+        assert out[0]["evidence_spans"][0]["text"]
 
     def test_neutral_when_no_markers(self) -> None:
         ctx = AnalysisContext(
@@ -53,6 +55,7 @@ class TestNegationAnalyzer:
         out = NegationAnalyzer().analyze(ctx)
         assert out[0]["has_negation"] is True
         assert out[0]["negation_count"] >= 1
+        assert out[0].get("evidence_spans")
 
     def test_list_validation_per_item(self) -> None:
         raw = [

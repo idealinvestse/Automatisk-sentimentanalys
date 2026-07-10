@@ -13,6 +13,7 @@ from typing import Any
 
 from ..core.models import AnalysisContext
 from .base import Analyzer
+from .evidence import evidence_to_dict, make_evidence_span
 from .registry import register_analyzer
 
 logger = logging.getLogger(__name__)
@@ -83,11 +84,42 @@ class EmotionAnalyzer(Analyzer):
             if not scores:
                 scores = {"neutral": 0.9}
             primary = max(scores, key=scores.get)
+            # Evidence: keyword hit or sentiment-derived signal
+            evidence_spans: list[dict[str, Any]] = []
+            for emotion, regex in EMOTION_REGEX.items():
+                m = regex.search(text)
+                if m and scores.get(emotion, 0) >= 0.5:
+                    evidence_spans.append(
+                        evidence_to_dict(
+                            make_evidence_span(
+                                m.group(0),
+                                speaker_role=getattr(seg, "speaker", None),
+                                turn_index=idx,
+                                segment_id=idx,
+                                start=getattr(seg, "start", None),
+                                end=getattr(seg, "end", None),
+                            )
+                        )
+                    )
+                    break
+            if not evidence_spans and label in _NEGATIVE_SENTIMENT:
+                evidence_spans.append(
+                    evidence_to_dict(
+                        make_evidence_span(
+                            (seg.text or "")[:120],
+                            speaker_role=getattr(seg, "speaker", None),
+                            turn_index=idx,
+                            segment_id=idx,
+                        )
+                    )
+                )
             out.append(
                 {
                     "primary": primary,
                     "scores": scores,
+                    "confidence": round(float(scores.get(primary, 0.0)), 3),
                     "speaker": getattr(seg, "speaker", None),
+                    "evidence_spans": evidence_spans[:3],
                 }
             )
         return out

@@ -20,7 +20,12 @@
 Implemented in `src/pipeline_steps.py`:
 
 - `should_use_any_llm()` — profile + segment count + explicit flags
-- **CCP gate** (`src/analysis/ccp.py`): `pii_clean`, `min_segment_quality`, `sentiment_negation_sanity` — failed CCP blocks LLM
+- **CCP gate** (`src/analysis/ccp.py`): `pii_clean`, `min_segment_quality` (≥6 segments, avg ≥12 chars), `sentiment_negation_sanity` — failed CCP blocks LLM
+- **WebUI trust surface**: `TrustSurfaceCard` shows `degradation`, `deep_path_ccp`, `analyzer_routing`, `override_provenance` (Call Detail, Testlabb, Analysis)
+- **Redis transcription hub**: `TranscriptionEventHub` publishes to `ws:transcription:events` when Redis available; in-memory fallback
+- **EvidenceSpan (core)**: emotion + negation emit spans; aspect/compliance already covered
+- **Edge MVP**: offline sentiment + intent + negation + aspect (`src/edge/local_inference.py`)
+- **Transcription hook**: `run_partial_analysis` on `POST /transcribe` runs incremental partial path after ASR
 - When LLM runs, superseded locals stay skipped; `override_provenance` records supersessions
 - Living routing (`select_analyzers_runtime` in `CallAnalysisPipeline._run_local_analysis`): two-pass — segment-count trim/expand first, then extras from intent/risk; YAML = priors; `results["analyzer_routing"].applied=True`
 

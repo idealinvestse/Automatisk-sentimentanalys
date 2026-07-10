@@ -409,11 +409,16 @@ def run_analyzers(
     ensure_analyzers_loaded()
     effective_validation: ValidationMode = validation_mode or "warn"  # type: ignore[assignment]
 
-    from .deep_path import filter_superseded
+    from .deep_path import filter_honest_degradation, filter_superseded
 
-    # Honest degradation: skip quality-2 superseded locals unless explicitly allowed.
-    should_skip = (not allow_heuristic_superseded) or skip_llm_superseded
-    selected = filter_superseded(selected, skip=should_skip)
+    if skip_llm_superseded:
+        selected = filter_superseded(selected, skip=True)
+    else:
+        selected = filter_honest_degradation(
+            selected,
+            deep_path_active=False,
+            allow_heuristic_superseded=allow_heuristic_superseded,
+        )
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)
@@ -470,10 +475,16 @@ async def run_analyzers_async(
     ensure_analyzers_loaded()
     effective_validation: ValidationMode = validation_mode or "warn"  # type: ignore[assignment]
 
-    from .deep_path import filter_superseded
+    from .deep_path import filter_honest_degradation, filter_superseded
 
-    should_skip = (not allow_heuristic_superseded) or skip_llm_superseded
-    selected = filter_superseded(selected, skip=should_skip)
+    if skip_llm_superseded:
+        selected = filter_superseded(selected, skip=True)
+    else:
+        selected = filter_honest_degradation(
+            selected,
+            deep_path_active=False,
+            allow_heuristic_superseded=allow_heuristic_superseded,
+        )
     registered = set(_ANALYZER_REGISTRY.keys())
     to_run = _resolve_to_run(registered, selected)
     active_analyzers = get_analyzers_for_run(to_run, analyzer_configs)

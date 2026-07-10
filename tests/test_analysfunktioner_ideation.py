@@ -133,9 +133,29 @@ def test_ccp_fails_on_pii_error():
 
 
 def test_ccp_passes_clean_call():
-    segs = [Segment(start=0, end=1, text="detta är ett längre segment", speaker="a")] * 4
-    ccp = evaluate_deep_path_ccps(segs, {})
+    segs = [Segment(start=0, end=1, text="detta är ett längre segment med text", speaker="a")] * 6
+    ccp = evaluate_deep_path_ccps(
+        segs,
+        {"sentiment": [{"label": "neutral", "score": 0.5}] * 6, "negation": [{}] * 6},
+    )
     assert ccp.passed
+
+
+def test_ccp_fails_short_call():
+    segs = [Segment(start=0, end=1, text="kort", speaker="a")] * 3
+    ccp = evaluate_deep_path_ccps(
+        segs,
+        {"sentiment": [{"label": "neutral", "score": 0.5}] * 3},
+    )
+    assert not ccp.passed
+    assert "min_segment_quality" in ccp.failed_names()
+
+
+def test_ccp_fails_missing_sentiment():
+    segs = [Segment(start=0, end=1, text="detta är ett längre segment med text", speaker="a")] * 6
+    ccp = evaluate_deep_path_ccps(segs, {})
+    assert not ccp.passed
+    assert "sentiment_negation_sanity" in ccp.failed_names()
 
 
 def test_living_routing_short_call_trims():

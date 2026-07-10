@@ -220,10 +220,43 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
                 file=fname,
             )
             hub.progress(job_id=job_id, processed=1, total=1, current_file=fname, progress=1.0)
+            partial_snapshot: dict[str, Any] | None = None
+            if req.run_partial_analysis and tr.get("segments"):
+                from ..dependencies import create_pipeline
+
+                pipe = create_pipeline(
+                    cache=request.app.state.cache,
+                    profile="callcenter",
+                    use_mistral_llm=False,
+                    deep_analysis=False,
+                )
+                partial_report = await asyncio.to_thread(
+                    pipe.analyze_segments_partial,
+                    tr["segments"],
+                    reconcile=False,
+                )
+                partial_snapshot = {
+                    "sentiment_count": len(partial_report.sentiment_results or []),
+                    "partial": partial_report.results.get("partial"),
+                    "analyzer_routing": partial_report.results.get("analyzer_routing"),
+                    "degradation": partial_report.results.get("degradation"),
+                }
+                hub.emit(
+                    {
+                        "type": "partial_analysis",
+                        "job_id": job_id,
+                        "segment_count": n_seg,
+                        "sentiment_count": partial_snapshot["sentiment_count"],
+                    }
+                )
             hub.done(job_id=job_id, ok=1, failed=0)
             if job_id:
                 registry.complete(job_id, status="completed")
-            return TranscribeResponse(transcript=tr, timestamp=utc_now_iso())
+            return TranscribeResponse(
+                transcript=tr,
+                timestamp=utc_now_iso(),
+                partial_analysis=partial_snapshot,
+            )
         except asyncio.CancelledError:
             hub.log(job_id=job_id, level="WARNING", msg="Avbruten", file=fname)
             hub.done(job_id=job_id, ok=0, failed=0)

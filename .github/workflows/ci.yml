@@ -114,6 +114,25 @@ jobs:
       - name: Validate staging compose config
         run: docker compose -f docker-compose.staging.yml config
 
+  staging-smoke:
+    needs: docker
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Preference gate scaffold (skip when empty)
+        run: python scripts/evaluate_preference_gate.py
+
+      - name: Staging observability smoke (optional — requires running stack)
+        run: python scripts/staging_observability_smoke.py --api-base http://localhost:8000
+        continue-on-error: true
+
   mypy:
     needs: lint
     runs-on: ubuntu-latest

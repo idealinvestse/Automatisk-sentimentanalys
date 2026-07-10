@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -10,6 +12,8 @@ class EdgeSegmentResult(BaseModel):
     sentiment_label: str | None = None
     sentiment_score: float | None = None
     intent: str | None = None
+    has_negation: bool | None = None
+    aspects: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class EdgeAnalysisResult(BaseModel):
@@ -25,3 +29,7 @@ class EdgeAnalysisResult(BaseModel):
             "No Fas 4 aggregate endpoints",
         ]
     )
+
+
+EdgeSegmentResult.model_rebuild()
+EdgeAnalysisResult.model_rebuild()
