@@ -64,6 +64,7 @@ from .routers import (
 from .settings import get_api_settings, validate_production_settings
 from .transcription_events import JOB_HEADER, TranscriptionEventHub
 from .transcription_jobs import TranscriptionJobRegistry
+from .ws_tickets import TicketStore
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,10 @@ def _init_app_state(application: FastAPI) -> None:
         application.state.transcription_events = TranscriptionEventHub()
     if not hasattr(application.state, "transcription_jobs"):
         application.state.transcription_jobs = TranscriptionJobRegistry()
+    if not hasattr(application.state, "ws_tickets"):
+        application.state.ws_tickets = TicketStore(
+            redis_client=application.state.cache.redis_client,
+        )
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -125,10 +130,15 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     hub.bind_loop(asyncio.get_running_loop())
     app.state.transcription_events = hub
     app.state.transcription_jobs = TranscriptionJobRegistry()
+    app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
     init_app_info(version="0.4.1")
     reporter = get_status_reporter()
     reporter.phase("api", "startup", "Swedish Sentiment API started", auth=settings.auth_enabled)
-    logger.info("Swedish Sentiment API starting up (auth=%s)", settings.auth_enabled)
+    logger.info(
+        "Swedish Sentiment API starting up (auth=%s, ws_tickets=%s)",
+        settings.auth_enabled,
+        app.state.ws_tickets.backend,
+    )
     yield
     reporter.phase("api", "shutdown", "Swedish Sentiment API shutting down")
     logger.info("Swedish Sentiment API shutting down")

@@ -39,11 +39,12 @@
 
 1. Riktig anonymiserad korpus (1000+ samtal) via DATA-01 import-slot
 2. Intent fine-tune modell som slår heuristic + 0.05 macro F1
-3. OpenTelemetry OTLP exporter i produktion
+3. Svensk ASR-pack + L7–L9 release-verifiering före pilot
 4. Fas 6 commercialization
 
 ## Kvar (medveten skuld)
 
 - Real annotated call corpus (väntar på extern data)
-- Multi-worker WebSocket ticket store (Redis)
+- Svensk audio under `samples/audio/sv/` (kataloger finns, inga wav)
+- WS event hub fortfarande process-lokal (tickets är Redis-redo via `TicketStore`)
 - Windows keyring för launcher secrets

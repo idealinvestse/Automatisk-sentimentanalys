@@ -20,43 +20,53 @@ export interface DemoReportsResult {
   isError: boolean;
   /** Number of calls that failed to analyze (partial failure is still useful to show). */
   errorCount: number;
+  /** True when dashboard is driven by stored/live calls (not canned demos). */
+  usingLiveData: boolean;
 }
 
 /**
- * Runs the real backend pipeline (`POST /analyze_pipeline`) against the
- * canned demo transcripts and maps the results to `CallRow`s. This replaces
- * the static `MOCK_CALLS` array with numbers computed by the actual
- * sentiment/intent/QA analyzers (see docs/WEBUI_MODERNIZATION_PLAN.md §6).
+ * Dashboard data source for overview / agents / insights / analytics.
  *
- * Each call is cached individually by React Query, so navigating between
- * `/`, `/analytics`, `/agents` and `/insights` re-uses the same in-flight or
- * cached analysis instead of re-running the (expensive) pipeline per page.
+ * Prefer persisted real calls (uploads / testlab / transcription) from
+ * localStorage. Only fall back to canned demo transcripts when the store
+ * is empty — so a pilot with real traffic is not mixed with synthetic demos.
  *
- * Merges demo calls with real calls stored in localStorage (from user uploads).
+ * Force demos with ``NEXT_PUBLIC_FORCE_DEMO_DATA=true`` (local UX demos).
  */
 export function useDemoReports(): DemoReportsResult {
   const realCalls = useCallsStore((state) => state.realCalls);
+  const forceDemo =
+    typeof process !== "undefined" &&
+    process.env.NEXT_PUBLIC_FORCE_DEMO_DATA === "true";
+  const usingLiveData = !forceDemo && realCalls.length > 0;
+  const runDemos = forceDemo || realCalls.length === 0;
 
   const queries = useQueries({
-    queries: DEMO_TRANSCRIPTS.map((transcript: DemoTranscript) => ({
-      queryKey: ["analyze_pipeline", "demo", transcript.id],
-      queryFn: () => apiClient.analyzePipeline<PipelineReport>(transcript.segments, { profile: "callcenter" }),
-      staleTime: 5 * 60_000,
-      retry: 1,
-    })),
+    queries: runDemos
+      ? DEMO_TRANSCRIPTS.map((transcript: DemoTranscript) => ({
+          queryKey: ["analyze_pipeline", "demo", transcript.id],
+          queryFn: () =>
+            apiClient.analyzePipeline<PipelineReport>(transcript.segments, {
+              profile: "callcenter",
+            }),
+          staleTime: 5 * 60_000,
+          retry: 1,
+        }))
+      : [],
   });
 
-  const isLoading = queries.some((q) => q.isLoading);
-  const isFetched = queries.every((q) => q.isFetched);
-  const errorCount = queries.filter((q) => q.isError).length;
-  const isError = queries.length > 0 && errorCount === queries.length;
+  const isLoading = usingLiveData ? false : queries.some((q) => q.isLoading);
+  const isFetched = usingLiveData ? true : queries.every((q) => q.isFetched);
+  const errorCount = usingLiveData ? 0 : queries.filter((q) => q.isError).length;
+  const isError = !usingLiveData && queries.length > 0 && errorCount === queries.length;
 
-  const demoReports: RealCall[] = queries
-    .map((q, i) => (q.data ? { transcript: DEMO_TRANSCRIPTS[i], report: q.data } : null))
-    .filter((c): c is RealCall => c !== null);
+  const demoReports: RealCall[] = runDemos
+    ? queries
+        .map((q, i) => (q.data ? { transcript: DEMO_TRANSCRIPTS[i], report: q.data } : null))
+        .filter((c): c is RealCall => c !== null)
+    : [];
 
-  // Merge demo calls with real calls (real calls first)
-  const allReports: RealCall[] = [...realCalls, ...demoReports];
+  const allReports: RealCall[] = usingLiveData ? realCalls : demoReports;
 
   return {
     calls: reportsToCallRows(allReports),
@@ -65,5 +75,6 @@ export function useDemoReports(): DemoReportsResult {
     isFetched,
     isError,
     errorCount,
+    usingLiveData,
   };
 }

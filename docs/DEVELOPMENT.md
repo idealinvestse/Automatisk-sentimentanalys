@@ -200,11 +200,13 @@ GPU significantly speeds up ASR and pipeline scenarios.
 
 Ordered by risk × cost:
 
-1. Dedicated unit tests for under-tested registry analyzers (aspect, empathy, resolution_probability, summary/topics/insights/predictive wrappers)
-2. Webui component tests (Vitest/RTL) for hooks/API client — keep Playwright thin
-3. Staging live-API smoke outside PR CI (`/health` → `/analyze_pipeline` with fixture segments → `/metrics`)
-4. Edge router/factory and `alerting_state`
-5. Load/concurrency — defer until multi-worker/Redis production pressure
+1. Real anonymized call corpus (DATA-01) — import slot ready, awaiting external data
+2. Intent fine-tune model under `models/intent_classifier` (must beat heuristic +0.05 F1)
+3. Swedish ASR audio pack under `samples/audio/sv/` (dirs exist, no wav yet)
+4. Webui Vitest/RTL for hooks/API client — keep Playwright thin
+5. Staging live-API smoke as mandatory pre-deploy step
+6. WS event hub Redis pub/sub (tickets already Redis-capable via `TicketStore`)
+7. Load/concurrency — defer until multi-worker pressure
 
 Out of optimal strategy for now: chasing coverage on the omit list (CLI, whisper backends, `secrets_win`); expanding archived NiceGUI tests.
 

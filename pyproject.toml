@@ -67,6 +67,7 @@ api = [
     "prometheus-client>=0.20.0",
     "opentelemetry-api>=1.24.0",
     "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.24.0",
 ]
 llm = [
     "openai>=1.30.0",

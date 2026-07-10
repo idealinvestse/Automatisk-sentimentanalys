@@ -87,7 +87,8 @@ Svenskt Call Center Intelligence-system för automatisk sentimentanalys, transkr
 - **Grok Build**: Använd skills i .grok/skills/ direkt (t.ex. "github-project-status skill" eller "code-review-reflector").
 
 ## 6. Open Tasks & Priorities
-- **Post v0.5:** Real corpus via DATA-01 import; intent fine-tune; OTLP tracing in production.
+- **Post v0.5:** Real corpus via DATA-01 import; intent fine-tune; Swedish ASR pack + L7–L9 release gates.
+- Done recently: Redis-capable WS tickets (`src/api/ws_tickets.py`), OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` set, dashboard prefers live/stored calls over demos.
 - Model picker + auto cost-optimized routing baserat på catalog.
 - Fas 6 commercialization (post v0.5).
 

@@ -28,9 +28,9 @@ scrape_configs:
     # bearer_token: "your-SENTIMENT_API_KEY"  # om auth aktiverat
 ```
 
-- [x] **Tracing** — `src/core/tracing.py` med `OTEL_ENABLED=true` (graceful no-op om `opentelemetry` ej installerat). `span()` context manager för pipeline/ASR-jobb. Exporterar till ConsoleSpanExporter (byt till OTLP exporter för production).
+- [x] **Tracing** — `src/core/tracing.py` med `OTEL_ENABLED=true`. OTLP HTTP exporter när `OTEL_EXPORTER_OTLP_ENDPOINT` är satt (annars ConsoleSpanExporter). Kräver `opentelemetry-exporter-otlp-proto-http` (ingår i `[api]`).
 - [x] **Staging stack (v0.5)** — `docker-compose.staging.yml` med api+webui+redis+prometheus. Smoke: `python scripts/staging_observability_smoke.py --api-base http://localhost:8000`.
-
+- [x] **WS tickets multi-worker** — `src/api/ws_tickets.py`: Redis-backed ticket store när `API_USE_REDIS_CACHE=true` (annars in-memory). Event hub är fortfarande process-lokal.
 ---
 
 ## 2. Secrets
@@ -186,13 +186,14 @@ Följande data backas upp:
 ### Kvarstående gaps (post v0.5, ej blockerande):
 
 1. **Windows keyring** — launcher secrets via keyring extra (valfritt för desktop)
-2. **OTLP exporter** — byt från console till produktion OTLP endpoint
-3. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data
+2. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data (A1)
+3. **Svensk ASR-pack** — `samples/audio/sv/*` saknar ljudfiler; L7 kräver lokal audio (A3)
+4. **Intent fine-tune** — ingen `models/intent_classifier` ännu; kör `scripts/train_intent.py` + `compare_intent_backends.py` (A2)
+5. **WS event hub** — fortfarande in-process; tickets är Redis-delade men live-events delas inte mellan workers
 
 ### WebSocket ticket auth (Fas 5 harmonization)
 
-WebSocket ticket-baserad auth (`GET /ws/transcription/ticket` + `?token=` query param) använder in-memory ticket-store (`_tickets` dict i `src/api/routers/ws_transcription.py`). **Begränsning:** Fungerar endast med single uvicorn-worker. För multi-worker deployment måste tickets flyttas till `AggregateCache` (Redis) eller liknande distribuerad cache. För nu, kör med `--workers 1` eller dokumentera detta som known limitation.
-
+WebSocket tickets lagras via `TicketStore` (`src/api/ws_tickets.py`). Med `API_USE_REDIS_CACHE=true` + `REDIS_URL` delas tickets mellan uvicorn-workers. Utan Redis används in-memory (single-worker). **Kvar:** `TranscriptionEventHub` är process-lokal — multi-worker live-loggar kräver pub/sub i ett senare steg.
 ### Åtgärdade i denna session:
 
 - ✅ `.env.example` skapad med alla 25+ env vars

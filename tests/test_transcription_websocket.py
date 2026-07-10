@@ -262,15 +262,15 @@ def test_ws_accepts_no_auth_when_disabled(monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_ws_rejects_expired_ticket(monkeypatch: pytest.MonkeyPatch) -> None:
     """Expired tickets are rejected after TTL."""
-    import src.api.routers.ws_transcription as ws_mod
-
     monkeypatch.setenv("SENTIMENT_API_KEY", "secret-key")
     get_api_settings.cache_clear()
     client = TestClient(create_app())
 
     ticket_response = client.get("/ws/transcription/ticket", headers={"X-API-Key": "secret-key"})
     ticket = ticket_response.json()["ticket"]
-    ws_mod._tickets[ticket] = 0.0
+    from src.api.ws_tickets import get_ticket_store
+
+    get_ticket_store(client.app).force_expire(ticket)
 
     with pytest.raises(WebSocketDisconnect), client.websocket_connect(
         f"/ws/transcription?token={ticket}"

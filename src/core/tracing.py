@@ -12,7 +12,13 @@ _initialized = False
 
 
 def init_tracing(service_name: str | None = None) -> None:
-    """Initialize OTEL tracer when ``OTEL_ENABLED=true``."""
+    """Initialize OTEL tracer when ``OTEL_ENABLED=true``.
+
+    Exporters:
+    - If ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set, use OTLP HTTP exporter
+      (requires ``opentelemetry-exporter-otlp-proto-http``).
+    - Otherwise fall back to console exporter.
+    """
     global _tracer, _initialized
     if _initialized:
         return
@@ -29,9 +35,32 @@ def init_tracing(service_name: str | None = None) -> None:
 
     name = service_name or os.getenv("OTEL_SERVICE_NAME", "sentiment-api")
     provider = TracerProvider(resource=Resource.create({"service.name": str(name)}))
-    provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+
+    endpoint = (os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or "").strip()
+    exporter: Any = None
+    if endpoint:
+        try:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter,
+            )
+
+            exporter = OTLPSpanExporter(endpoint=endpoint)
+        except ImportError:
+            # Optional dependency — keep console so tracing still works locally.
+            exporter = ConsoleSpanExporter()
+    else:
+        exporter = ConsoleSpanExporter()
+
+    provider.add_span_processor(BatchSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
     _tracer = trace.get_tracer(str(name))
+
+
+def reset_tracing_for_tests() -> None:
+    """Allow tests to re-run init_tracing."""
+    global _tracer, _initialized
+    _tracer = None
+    _initialized = False
 
 
 @contextmanager

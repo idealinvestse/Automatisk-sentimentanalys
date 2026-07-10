@@ -35,6 +35,7 @@ class TestInitTracing:
 
     def test_enabled_with_mocked_otel(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OTEL_ENABLED", "true")
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
         monkeypatch.setenv("OTEL_SERVICE_NAME", "sentiment-test")
 
         mock_trace = MagicMock()
@@ -48,9 +49,7 @@ class TestInitTracing:
                 "opentelemetry.sdk.resources": MagicMock(
                     Resource=MagicMock(create=MagicMock(return_value=MagicMock()))
                 ),
-                "opentelemetry.sdk.trace": MagicMock(
-                    TracerProvider=MagicMock(),
-                ),
+                "opentelemetry.sdk.trace": MagicMock(TracerProvider=MagicMock()),
                 "opentelemetry.sdk.trace.export": MagicMock(
                     BatchSpanProcessor=MagicMock(),
                     ConsoleSpanExporter=MagicMock(),
@@ -60,6 +59,37 @@ class TestInitTracing:
             importlib.reload(tracing_module)
             tracing_module.init_tracing()
             assert tracing_module._tracer is mock_tracer
+
+    def test_enabled_with_otlp_endpoint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OTEL_ENABLED", "true")
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
+
+        mock_trace = MagicMock()
+        mock_tracer = MagicMock()
+        mock_trace.get_tracer.return_value = mock_tracer
+        mock_otlp = MagicMock()
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "opentelemetry": MagicMock(trace=mock_trace),
+                "opentelemetry.sdk.resources": MagicMock(
+                    Resource=MagicMock(create=MagicMock(return_value=MagicMock()))
+                ),
+                "opentelemetry.sdk.trace": MagicMock(TracerProvider=MagicMock()),
+                "opentelemetry.sdk.trace.export": MagicMock(
+                    BatchSpanProcessor=MagicMock(),
+                    ConsoleSpanExporter=MagicMock(),
+                ),
+                "opentelemetry.exporter.otlp.proto.http.trace_exporter": MagicMock(
+                    OTLPSpanExporter=mock_otlp,
+                ),
+            },
+        ):
+            importlib.reload(tracing_module)
+            tracing_module.init_tracing("otlp-svc")
+            assert tracing_module._tracer is mock_tracer
+            mock_otlp.assert_called_once()
 
     def test_import_error_is_noop(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OTEL_ENABLED", "true")
