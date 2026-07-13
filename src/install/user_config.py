@@ -58,6 +58,7 @@ def load_user_config(
     *,
     portable: bool | None = None,
     create_if_missing: bool = False,
+    persist_healed: bool = True,
 ) -> UserConfig:
     root = (app_root or Path.cwd()).resolve()
     defaults = load_yaml_dict(install_defaults_path(root))
@@ -89,6 +90,19 @@ def load_user_config(
         merged.portable_mode = user_path == portable_user_config_path(root) or bool(
             merged.portable_mode
         )
+
+    from .paths_util import heal_app_root, migrate_legacy_dashboard_settings
+
+    configured = Path(merged.paths.app_root)
+    healed = heal_app_root(configured, preferred=root)
+    changed = False
+    if healed != configured.resolve():
+        merged.paths.app_root = str(healed)
+        changed = True
+    if migrate_legacy_dashboard_settings(merged):
+        changed = True
+    if changed and persist_healed and user_path.is_file():
+        save_user_config(merged, path=user_path)
     return merged
 
 
@@ -143,7 +157,7 @@ def config_to_env(cfg: UserConfig) -> dict[str, str]:
     if dash.api_base_url:
         env["SENTIMENT_API_BASE_URL"] = dash.api_base_url
     if dash.storage_secret:
-        env["NICEGUI_STORAGE_SECRET"] = dash.storage_secret
+        env["DASHBOARD_STORAGE_SECRET"] = dash.storage_secret
     if dash.dev_mode:
         env["SENTIMENT_DEV_MODE"] = "1"
 

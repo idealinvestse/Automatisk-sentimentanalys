@@ -1,4 +1,4 @@
-"""Tkinter settings dialog — replaces Streamlit Setup Hub."""
+"""Tkinter settings dialog for launcher-managed user_config.yaml."""
 
 from __future__ import annotations
 
@@ -452,7 +452,7 @@ class SettingsDialog(tk.Toplevel):
                 "api_host": _s("services.api_host"),
                 "api_port": _i("services.api_port", 8000),
                 "dashboard_enabled": _b("services.dashboard_enabled"),
-                "dashboard_port": _i("services.dashboard_port", 8080),
+                "dashboard_port": _i("services.dashboard_port", 3000),
                 "dashboard_ui": _s("services.dashboard_ui"),  # type: ignore[typeddict-item]
             }
         )

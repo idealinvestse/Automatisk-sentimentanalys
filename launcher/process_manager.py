@@ -1,4 +1,4 @@
-"""Start/stop API and NiceGUI dashboard child processes."""
+"""Start/stop API and Next.js webui child processes."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from .pid_store import clear_pid_file, get_pid_info, save_pid, service_log_paths
 from .process_util import is_port_open, is_process_running, resolve_connect_host
 
 _START_TIMEOUT_SEC = 30.0
+_DASHBOARD_PROD_START_TIMEOUT_SEC = 300.0
 _LOG_TAIL_CHARS = 1500
 _TICK_INTERVAL_SEC = 0.25
 
@@ -87,9 +88,11 @@ def _wait_for_service(
     *,
     log: EventLog | None = None,
     on_tick: Callable[[float, bool, bool], None] | None = None,
+    timeout_sec: float | None = None,
 ) -> None:
     endpoint = _service_endpoint(cfg, name)
     phase = f"{name}.wait_port"
+    timeout = _START_TIMEOUT_SEC if timeout_sec is None else timeout_sec
     if endpoint is None:
         time.sleep(0.5)
         if not is_process_running(proc.pid):
@@ -100,14 +103,14 @@ def _wait_for_service(
     connect_host = resolve_connect_host(host)
     if log:
         log.info(
-            f"Waiting for {connect_host}:{port} (bind {host}, timeout {_START_TIMEOUT_SEC:.0f}s)",
+            f"Waiting for {connect_host}:{port} (bind {host}, timeout {timeout:.0f}s)",
             phase=phase,
         )
 
-    deadline = time.monotonic() + _START_TIMEOUT_SEC
+    deadline = time.monotonic() + timeout
     last_logged_sec = -1.0
     while time.monotonic() < deadline:
-        elapsed = _START_TIMEOUT_SEC - (deadline - time.monotonic())
+        elapsed = timeout - (deadline - time.monotonic())
         port_open = is_port_open(host, port, timeout=0.2)
         alive = is_process_running(proc.pid)
         if on_tick:
@@ -152,9 +155,9 @@ def _wait_for_service(
     stop_service(cfg, name, log=log)
     _, err_path = service_log_paths(cfg, name)
     if log:
-        log.error(f"Timeout after {_START_TIMEOUT_SEC:.0f}s waiting for {host}:{port}", phase=phase)
+        log.error(f"Timeout after {timeout:.0f}s waiting for {host}:{port}", phase=phase)
     raise RuntimeError(
-        f"{name} did not listen on {host}:{port} within {_START_TIMEOUT_SEC:.0f}s. See {err_path}"
+        f"{name} did not listen on {host}:{port} within {timeout:.0f}s. See {err_path}"
     )
 
 
@@ -242,7 +245,7 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
             log.error(dep_error, phase="dashboard.start")
         raise RuntimeError(dep_error)
     dashboard_ui = getattr(cfg.services, "dashboard_ui", "webui") or "webui"
-    if dashboard_ui not in {"webui", "next", "nextjs"}:
+    if dashboard_ui != "webui":
         if log:
             log.warn(
                 f"DASHBOARD_UI={dashboard_ui!r} stöds inte. Startar webui istället.",
@@ -255,14 +258,19 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
         "PORT": str(port),
         "WEBUI_PORT": str(port),
     }
-    cmd = [str(py), "-m", "app.dashboard_launcher"]
+    cmd = [str(py), "-m", "launcher.dashboard_spawn"]
     if log:
         log.info(f"Command: {' '.join(cmd)} (ui={dashboard_ui})", phase="dashboard.start")
     proc = _popen_service(cfg, "dashboard", cmd, extra_env=extra_env)
     pid_path = save_pid(cfg, "dashboard", proc.pid, cmd)
     if log:
         log.info(f"Spawned pid {proc.pid}", phase="dashboard.start")
-    _wait_for_service(cfg, "dashboard", proc, log=log)
+    wait_timeout = (
+        _START_TIMEOUT_SEC
+        if cfg.runtime.dashboard.dev_mode
+        else _DASHBOARD_PROD_START_TIMEOUT_SEC
+    )
+    _wait_for_service(cfg, "dashboard", proc, log=log, timeout_sec=wait_timeout)
     if log:
         log.info(
             f"Dashboard ready at http://localhost:{cfg.services.dashboard_port}",

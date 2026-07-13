@@ -198,6 +198,38 @@ def ensure_ffmpeg(root: Path, cfg: UserConfig) -> str | None:
     return str(ffmpeg_exe)
 
 
+def ensure_webui_deps(root: Path, *, progress: ProgressCallback = None) -> str:
+    """Ensure Node/npm are available and install webui dependencies when missing."""
+    missing: list[str] = []
+    if shutil.which("node") is None:
+        missing.append("node")
+    if shutil.which("npm") is None:
+        missing.append("npm")
+    if missing:
+        raise RuntimeError(
+            f"Dashboard-beroenden saknas ({', '.join(missing)}). "
+            "Installera Node.js (inkl. npm), sedan: cd webui && npm install"
+        )
+
+    webui_dir = root / "webui"
+    package_json = webui_dir / "package.json"
+    if not package_json.is_file():
+        raise RuntimeError(f"webui/package.json saknas under {root}")
+
+    node_modules = webui_dir / "node_modules"
+    if node_modules.is_dir():
+        return f"webui deps already present ({node_modules})"
+
+    npm = shutil.which("npm")
+    assert npm is not None
+    if progress:
+        progress("Installing webui npm dependencies")
+    lockfile = webui_dir / "package-lock.json"
+    cmd = [npm, "ci"] if lockfile.is_file() else [npm, "install"]
+    subprocess.run(cmd, check=True, cwd=str(webui_dir))
+    return f"Installed webui dependencies via {' '.join(cmd)}"
+
+
 def ensure_user_config(root: Path) -> UserConfig:
     """Ensure user_config.yaml exists with app_root set."""
     cfg = load_user_config(root, create_if_missing=True)
@@ -215,10 +247,11 @@ def run_provision(
     install_packages: bool = True,
     download_ffmpeg: bool = True,
     download_asr: bool = True,
+    install_webui: bool = True,
     init_config: bool = True,
     progress: ProgressCallback = None,
 ) -> ProvisionReport:
-    """Install venv, pip packages, ffmpeg, ASR assets, and optional user config."""
+    """Install venv, pip packages, ffmpeg, ASR assets, webui npm deps, and optional user config."""
     report = ProvisionReport()
     root = cfg.resolved_app_root()
 
@@ -291,5 +324,13 @@ def run_provision(
                 report.add(f"asr_{step.name}", step.ok, step.message, step.detail)
         except Exception as exc:
             report.add("asr_assets", False, "ASR setup failed", str(exc))
+
+    if install_webui and cfg.services.dashboard_enabled:
+        log("Checking Node.js and installing webui dependencies")
+        try:
+            detail = ensure_webui_deps(root, progress=log)
+            report.add("webui", True, "Webui dependencies ready", detail)
+        except Exception as exc:
+            report.add("webui", False, "Webui setup failed", str(exc))
 
     return report

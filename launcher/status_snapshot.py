@@ -20,7 +20,7 @@ from .env_builder import resolve_python
 from .pid_store import get_pid_info, service_log_paths
 from .process_util import is_port_open, is_process_running, resolve_connect_host
 
-API_VERSION = "0.4.0"
+API_VERSION = "0.5.0"
 _HEALTH_TIMEOUT_SEC = 0.5
 
 

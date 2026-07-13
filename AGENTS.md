@@ -59,7 +59,7 @@ in `src/api/` without backend changes.
 - `src/pipeline.py` + `src/analysis/registry.py` — Core orchestration. New analysis steps go here.
 - `src/llm/` — LLM clients & analyzers (add new provider here).
 - `webui/` — Primary frontend (Next.js). `npm run dev` / `lint` / `build` / `test:e2e`.
-- `launcher/` — Windows PowerShell launcher & ASR management.
+- `launcher/` — Windows Tkinter kontrollpanel (`python -m launcher.main`) + Typer CLI (`launcher.ps1` / `sentimentanalys-launcher`) för start/stop av API & webui, ASR, provision och doctor.
 - `tests/` — Unit + integration tests. Run with `pytest`. Full runbook: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Release path: [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md).
 
 ## Coding Conventions (Python / FastAPI / Next.js)

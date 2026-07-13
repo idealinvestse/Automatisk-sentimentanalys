@@ -32,7 +32,7 @@ classifiers = [
 [project.scripts]
 sentimentanalys = "src.cli:app"
 sentimentanalys-launcher = "launcher.cli:main"
-sentimentanalys-dashboard = "app.dashboard_launcher:main"
+sentimentanalys-dashboard = "launcher.dashboard_spawn:main"
 sentimentanalys-download-asr = "src.install.asr_assets:main"
 
 # Full pyproject.toml migration – 2026-06-28 audit

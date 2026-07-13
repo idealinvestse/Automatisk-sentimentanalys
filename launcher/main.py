@@ -34,6 +34,23 @@ def _app_root() -> Path:
     return detect_app_root()
 
 
+def _format_service_error(name: str, message: str) -> str:
+    """Make common dependency failures actionable for the user."""
+    lower = message.lower()
+    hints: list[str] = []
+    if "node" in lower or "npm" in lower:
+        hints.append("Installera Node.js LTS (inkl. npm) från https://nodejs.org")
+        hints.append("Kör sedan: cd webui && npm install")
+    elif "node_modules" in lower or "package.json" in lower or "webui" in lower:
+        hints.append("Kontrollera att mappen webui/ finns i app-roten")
+        hints.append("Kör: cd webui && npm install")
+    elif "uvicorn" in lower or "fastapi" in lower:
+        hints.append("Kör «Installera / Reparera allt» eller: pip install -e \".[api]\"")
+    if not hints:
+        return message
+    return message + "\n\nNästa steg:\n• " + "\n• ".join(hints)
+
+
 class LauncherApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
@@ -44,7 +61,7 @@ class LauncherApp(tk.Tk):
         log_path = launcher_activity_log_path(self.cfg)
         self.event_log = EventLog(log_path=log_path)
         self._busy = False
-        self._action_buttons: list[ttk.Button] = []
+        self._busy_buttons: list[ttk.Button] = []
 
         self._scroll = ScrollableFrame(self)
         self._scroll.pack(fill=tk.BOTH, expand=True)
@@ -57,40 +74,69 @@ class LauncherApp(tk.Tk):
         self.status_panel.pack(fill=tk.X)
 
         self._build_buttons(self._scroll.inner)
-        self.event_log.phase("launcher", "Launcher started")
+        self.event_log.phase("launcher", "Launcher startad")
         self.status_panel.activity.load_all()
         self._refresh_status()
         self._schedule_poll_log()
         self._schedule_auto_refresh()
 
-    def _build_buttons(self, parent: tk.Misc) -> None:
-        pad = {"padx": 12, "pady": 4}
-        frame = ttk.Frame(parent)
-        frame.pack(fill=tk.X, **pad)
-
-        specs: list[tuple[str, object]] = [
-            ("Start API", lambda: self._run_service_action("api", "start")),
-            ("Stop API", lambda: self._run_service_action("api", "stop")),
-            ("Start Dashboard", lambda: self._run_service_action("dashboard", "start")),
-            ("Stop Dashboard", lambda: self._run_service_action("dashboard", "stop")),
-            ("Inställningar…", self._open_settings),
-            ("Doctor / Health check", self._run_doctor),
-            ("Hantera ASR / Transkribering", self._open_asr_manager),
-            ("Open CLI (PowerShell)", self._open_cli),
-            ("Open outputs folder", self._open_outputs),
-            ("Open logs folder", self._open_logs),
-            ("Installera / Reparera allt", self._provision),
-        ]
-        for label, cmd in specs:
+    def _add_section(
+        self,
+        parent: tk.Misc,
+        title: str,
+        specs: list[tuple[str, object, bool]],
+    ) -> None:
+        frame = ttk.LabelFrame(parent, text=title, padding=8)
+        frame.pack(fill=tk.X, padx=12, pady=(8, 4))
+        for label, cmd, busy_sensitive in specs:
             btn = ttk.Button(frame, text=label, command=cmd)
             btn.pack(fill=tk.X, pady=2)
-            if "Start" in label or "Stop" in label:
-                self._action_buttons.append(btn)
+            if busy_sensitive:
+                self._busy_buttons.append(btn)
+
+    def _build_buttons(self, parent: tk.Misc) -> None:
+        self._add_section(
+            parent,
+            "Tjänster",
+            [
+                ("Starta API", lambda: self._run_service_action("api", "start"), True),
+                ("Stoppa API", lambda: self._run_service_action("api", "stop"), True),
+                (
+                    "Starta Dashboard",
+                    lambda: self._run_service_action("dashboard", "start"),
+                    True,
+                ),
+                (
+                    "Stoppa Dashboard",
+                    lambda: self._run_service_action("dashboard", "stop"),
+                    True,
+                ),
+            ],
+        )
+        self._add_section(
+            parent,
+            "Verktyg",
+            [
+                ("Inställningar…", self._open_settings, False),
+                ("Doctor / hälsokontroll", self._run_doctor, True),
+                ("Hantera ASR / transkribering", self._open_asr_manager, True),
+                ("Öppna CLI (PowerShell)", self._open_cli, False),
+                ("Öppna outputs-mapp", self._open_outputs, False),
+                ("Öppna logs-mapp", self._open_logs, False),
+            ],
+        )
+        self._add_section(
+            parent,
+            "Underhåll",
+            [
+                ("Installera / reparera allt", self._provision, True),
+            ],
+        )
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
         state = tk.DISABLED if busy else tk.NORMAL
-        for btn in self._action_buttons:
+        for btn in self._busy_buttons:
             btn.configure(state=state)
 
     def _schedule_poll_log(self) -> None:
@@ -127,12 +173,15 @@ class LauncherApp(tk.Tk):
             except Exception as exc:
                 msg = str(exc)
                 self.event_log.error(msg, phase=f"{name}.{action}")
-                self.after(0, lambda m=msg, n=name: messagebox.showerror(n.upper(), m))
+                shown = _format_service_error(name, msg)
+                title = "API" if name == "api" else "Dashboard"
+                self.after(0, lambda m=shown, t=title: messagebox.showerror(t, m))
             finally:
                 self.after(0, self._on_action_done)
 
         self._set_busy(True)
-        self.event_log.phase(f"{name}.{action}", f"{action.capitalize()} {name}")
+        action_sv = "Startar" if action == "start" else "Stoppar"
+        self.event_log.phase(f"{name}.{action}", f"{action_sv} {name}")
         threading.Thread(target=work, daemon=True).start()
 
     def _on_action_done(self) -> None:
@@ -143,7 +192,7 @@ class LauncherApp(tk.Tk):
         if self._busy:
             return
         self._set_busy(True)
-        self.event_log.phase("doctor", "Running health checks")
+        self.event_log.phase("doctor", "Kör hälsokontroller")
 
         def work() -> None:
             report = run_preflight(self.cfg)
@@ -178,7 +227,7 @@ class LauncherApp(tk.Tk):
             on_provision=self._provision,
             on_open_asr=self._open_asr_manager,
         )
-        self.event_log.info("Opened settings dialog", phase="launcher")
+        self.event_log.info("Öppnade inställningar", phase="launcher")
 
     def _open_asr_manager(self) -> None:
         if self._busy:
@@ -190,13 +239,13 @@ class LauncherApp(tk.Tk):
             self.event_log,
             on_complete=self._refresh_status,
         )
-        self.event_log.info("Opened ASR manager", phase="launcher")
+        self.event_log.info("Öppnade ASR-hanterare", phase="launcher")
 
     def _open_cli(self) -> None:
         from .cli import open_cli_cmd
 
         open_cli_cmd()
-        self.event_log.info("Opened PowerShell CLI", phase="launcher")
+        self.event_log.info("Öppnade PowerShell CLI", phase="launcher")
 
     def _open_folder(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
@@ -217,13 +266,14 @@ class LauncherApp(tk.Tk):
 
         profile = self.cfg.install_profile.value
         if not messagebox.askyesno(
-            "Installera / Reparera",
+            "Installera / reparera",
             (
                 f"Detta laddar ner och installerar allt som behövs för profil '{profile}':\n\n"
                 "• Python virtual environment (.venv)\n"
-                "• Pip-paket (API, dashboard m.m.)\n"
+                "• Pip-paket (API m.m.)\n"
                 "• faster-whisper, whisperx och transkriberingsmodeller\n"
                 "• ffmpeg (om det saknas)\n"
+                "• Node.js-beroenden för webui (npm install)\n"
                 "• user_config.yaml (om den saknas)\n\n"
                 "Kräver internetanslutning. Fortsätt?"
             ),
@@ -254,12 +304,12 @@ class LauncherApp(tk.Tk):
                     self._refresh_status()
                     if report.ok:
                         messagebox.showinfo(
-                            "Installera / Reparera",
+                            "Installera / reparera",
                             "Alla komponenter installerades.",
                         )
                     else:
                         messagebox.showwarning(
-                            "Installera / Reparera",
+                            "Installera / reparera",
                             "Vissa steg misslyckades. Se aktivitetsloggen.",
                         )
 
@@ -270,12 +320,15 @@ class LauncherApp(tk.Tk):
 
                 def failed() -> None:
                     self._set_busy(False)
-                    messagebox.showerror("Installera / Reparera", msg)
+                    messagebox.showerror(
+                        "Installera / reparera",
+                        _format_service_error("provision", msg),
+                    )
 
                 self.after(0, failed)
 
         self._set_busy(True)
-        self.event_log.phase("provision", f"Installing profile '{profile}'")
+        self.event_log.phase("provision", f"Installerar profil '{profile}'")
         threading.Thread(target=work, daemon=True).start()
 
 

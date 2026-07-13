@@ -14,4 +14,4 @@ if (-not (Test-Path $py)) {
 
 & $py -m launcher.cli configure --init
 & $py -m launcher.cli doctor
-Write-Host "Post-install complete. Launch Sentimentanalys.bat or Setup Hub."
+Write-Host "Post-install complete. Launch Sentimentanalys.bat or: python -m launcher.main"

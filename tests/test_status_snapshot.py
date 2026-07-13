@@ -145,7 +145,7 @@ def test_service_status_text(cfg: UserConfig) -> None:
             llm_enabled=False,
             openrouter_configured=False,
             huggingface_configured=False,
-            api_version="0.4.0",
+            api_version="0.5.0",
             asr_summary="not checked",
             asr_ready=False,
         )

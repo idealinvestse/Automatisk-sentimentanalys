@@ -9,6 +9,7 @@ from app.services.data_services import (
     get_demo_transcripts,
     get_overall_sentiment,
 )
+from launcher.dashboard_spawn import resolve_dashboard_ui as resolve_spawn_ui
 
 
 def _fast_demo_reports() -> list[dict]:
@@ -20,10 +21,15 @@ class TestDashboardLauncher:
     def test_resolve_dashboard_ui_default(self, monkeypatch):
         monkeypatch.delenv("DASHBOARD_UI", raising=False)
         assert resolve_dashboard_ui() == "webui"
+        assert resolve_spawn_ui() == "webui"
 
     def test_resolve_dashboard_ui_explicit(self, monkeypatch):
         monkeypatch.setenv("DASHBOARD_UI", "webui")
         assert resolve_dashboard_ui() == "webui"
+
+    def test_compat_shim_matches_spawn(self, monkeypatch):
+        monkeypatch.setenv("DASHBOARD_UI", "webui")
+        assert resolve_dashboard_ui() == resolve_spawn_ui()
 
 
 class TestDataServicesDashboard:

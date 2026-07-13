@@ -1,21 +1,9 @@
-"""Data services for the NiceGUI Call Center Dashboard MVP (Fas 5.0).
+"""Legacy Python demo/KPI helpers used by unit tests (not the Next.js webui runtime).
 
-This module provides:
-- Realistic canned Swedish call center demo transcripts (4-6 short conversations).
-- generate_demo_reports(...) that runs the *real* CallAnalysisPipeline (lru_cache)
-  (profile="callcenter") on them and returns serializable dicts (r.to_dict()).
-- Filter, KPI, summary and enrichment helpers that power the enhanced dashboard + Call Detail View.
-- Support for user-uploaded full CallAnalysisReport JSON (single or list).
-- Graceful fallbacks when Fas3/4 fields (llm, qa, agent_performance, alerts, results) are absent.
+Primary product UI is `webui/`. Keep these pure functions for test coverage and as a
+reference contract for TypeScript mappers under `webui/src/lib/`.
 
-Design notes for migratability (per plan):
-- All helpers take/return plain serializable data (dicts, lists, primitives).
-- No UI state here (pure functions + cached).
-- Future React: these become API response mappers / React Query hooks or utils.
-- "Always show evidence" from backend (spans, quotes, local or llm) is respected by callers.
-- Performance: heavy pipeline runs are cached by st.cache_data; transcripts are small & deterministic.
-
-Usage in dashboard:
+Usage:
     from app.services.data_services import (
         get_demo_transcripts, generate_demo_reports,
         extract_call_summary, get_overall_sentiment, compute_kpis,

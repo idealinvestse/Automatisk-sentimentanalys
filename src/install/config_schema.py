@@ -1,4 +1,4 @@
-"""Pydantic schema for launcher and setup hub user configuration."""
+"""Pydantic schema for launcher and installer user configuration."""
 
 from __future__ import annotations
 

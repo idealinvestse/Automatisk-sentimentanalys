@@ -119,3 +119,15 @@ def test_config_to_env_includes_runtime(config_env: Path) -> None:
     assert env["API_CORS_ORIGINS"] == "http://localhost"
     assert env["ALERT_WEBHOOK_URL"] == "https://example.com/hook"
     assert env["SENTIMENT_DEV_MODE"] == "1"
+
+
+def test_config_to_env_dashboard_storage_secret(config_env: Path) -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(
+        paths={"app_root": str(config_env)},
+        runtime={"dashboard": {"storage_secret": "dash-secret"}},
+    )
+    env = config_to_env(cfg)
+    assert env["DASHBOARD_STORAGE_SECRET"] == "dash-secret"
+    assert "NICEGUI_STORAGE_SECRET" not in env

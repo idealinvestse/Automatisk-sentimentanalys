@@ -1,6 +1,6 @@
 # Build portable Windows ZIP with bundled Python embed + venv + app
 param(
-    [string]$Version = "0.4.1",
+    [string]$Version = "0.5.0",
     [ValidateSet("minimal", "cli", "api", "full")]
     [string]$Profile = "full",
     [string]$OutDir = "dist",
@@ -25,6 +25,18 @@ foreach ($item in $copyItems) {
     }
 }
 
+Write-Host "==> Stage webui (source only; run npm install on target)"
+$webuiSrc = Join-Path $Root "webui"
+$webuiDst = Join-Path $StageApp "webui"
+if (Test-Path $webuiSrc) {
+    New-Item -ItemType Directory -Path $webuiDst -Force | Out-Null
+    robocopy $webuiSrc $webuiDst /E /XD node_modules .next .turbo coverage dist /XF *.log /NFL /NDL /NJH /NJS /nc /ns /np
+    if ($LASTEXITCODE -ge 8) {
+        throw "Failed to copy webui/ (robocopy exit $LASTEXITCODE)"
+    }
+    $global:LASTEXITCODE = 0
+}
+
 New-Item -ItemType Directory -Path (Join-Path $StageApp "cache\hf") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $StageApp "cache\llm") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $StageApp "outputs") -Force | Out-Null
@@ -39,6 +51,10 @@ paths:
   app_root: .
   hf_cache: cache/hf
   outputs: outputs
+runtime:
+  dashboard:
+    api_base_url: "http://127.0.0.1:8000"
+    dev_mode: false
 '@ | Set-Content (Join-Path $StageApp "user_data\user_config.yaml") -Encoding UTF8
 
 Write-Host "==> Download Python embed ($PythonVersion)"

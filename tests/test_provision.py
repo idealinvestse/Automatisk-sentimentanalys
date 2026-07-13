@@ -84,6 +84,7 @@ def test_run_provision_reports_pip_failure(tmp_path: Path) -> None:
             InstallProfile.minimal,
             ensure_virtualenv=False,
             download_ffmpeg=False,
+            install_webui=False,
             init_config=True,
         )
 
@@ -115,6 +116,7 @@ def test_run_provision_downloads_ffmpeg_when_missing(tmp_path: Path, monkeypatch
             InstallProfile.cli,
             ensure_virtualenv=False,
             install_packages=False,
+            install_webui=False,
             init_config=True,
         )
 
@@ -191,6 +193,58 @@ def test_ensure_user_config_sets_app_root(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / "configs" / "install_defaults.yaml").write_text("version: 1\n", encoding="utf-8")
     cfg = ensure_user_config(tmp_path)
     assert cfg.paths.app_root == str(tmp_path.resolve())
+
+
+def test_ensure_webui_deps_skips_when_node_modules_present(tmp_path: Path) -> None:
+    from src.install.provision import ensure_webui_deps
+
+    webui = tmp_path / "webui"
+    (webui / "node_modules").mkdir(parents=True)
+    (webui / "package.json").write_text("{}", encoding="utf-8")
+
+    with patch("src.install.provision.subprocess.run") as mock_run:
+        detail = ensure_webui_deps(tmp_path)
+
+    assert "already present" in detail
+    mock_run.assert_not_called()
+
+
+def test_ensure_webui_deps_runs_npm_install(tmp_path: Path) -> None:
+    from src.install.provision import ensure_webui_deps
+
+    webui = tmp_path / "webui"
+    webui.mkdir()
+    (webui / "package.json").write_text("{}", encoding="utf-8")
+
+    with (
+        patch("src.install.provision.shutil.which", side_effect=lambda name: f"/bin/{name}"),
+        patch("src.install.provision.subprocess.run") as mock_run,
+    ):
+        detail = ensure_webui_deps(tmp_path)
+
+    assert "npm" in detail
+    mock_run.assert_called_once()
+    assert mock_run.call_args.kwargs["cwd"] == str(webui)
+
+
+def test_run_provision_includes_webui_step(tmp_path: Path) -> None:
+    (tmp_path / "configs").mkdir()
+    (tmp_path / "configs" / "install_defaults.yaml").write_text("version: 1\n", encoding="utf-8")
+    cfg = UserConfig(paths={"app_root": str(tmp_path)})
+
+    with patch("src.install.provision.ensure_webui_deps", return_value="ok") as mock_webui:
+        report = run_provision(
+            cfg,
+            InstallProfile.minimal,
+            ensure_virtualenv=False,
+            install_packages=False,
+            download_ffmpeg=False,
+            download_asr=False,
+            init_config=True,
+        )
+
+    mock_webui.assert_called_once()
+    assert any(step.name == "webui" and step.ok for step in report.steps)
 
 
 def test_extras_for_profile_dev_includes_diarize() -> None:

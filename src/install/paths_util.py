@@ -9,6 +9,69 @@ from pathlib import Path
 from .config_schema import UserConfig
 
 _CONFIG_ENV = "SENTIMENT_USER_CONFIG"
+_LEGACY_DASHBOARD_PORTS = frozenset({8080, 8501})
+
+
+def looks_like_app_root(path: Path) -> bool:
+    """True when *path* contains a shippable project tree (pyproject + launcher/src)."""
+    root = path.resolve()
+    if not (root / "pyproject.toml").is_file():
+        return False
+    return (root / "launcher").is_dir() or (root / "src").is_dir()
+
+
+def find_app_root_near(path: Path) -> Path | None:
+    """Resolve project root at *path* or one nested child (workspace layout)."""
+    root = path.resolve()
+    if looks_like_app_root(root):
+        return root
+    if not root.is_dir():
+        return None
+    nested_named = root / "Automatisk-sentimentanalys"
+    if looks_like_app_root(nested_named):
+        return nested_named
+    candidates: list[Path] = []
+    try:
+        children = list(root.iterdir())
+    except OSError:
+        return None
+    for child in children:
+        if child.is_dir() and looks_like_app_root(child):
+            candidates.append(child)
+    if not candidates:
+        return None
+    with_launcher = [c for c in candidates if (c / "launcher").is_dir()]
+    return sorted(with_launcher or candidates, key=lambda p: p.name.lower())[0]
+
+
+def heal_app_root(configured: Path, *, preferred: Path | None = None) -> Path:
+    """Return a usable app root, preferring *preferred* when *configured* is wrong."""
+    configured = configured.resolve()
+    if looks_like_app_root(configured):
+        return configured
+    if preferred is not None:
+        preferred = preferred.resolve()
+        if looks_like_app_root(preferred):
+            return preferred
+        found_preferred = find_app_root_near(preferred)
+        if found_preferred is not None:
+            return found_preferred
+    found = find_app_root_near(configured)
+    if found is not None:
+        return found
+    return preferred.resolve() if preferred is not None else configured
+
+
+def migrate_legacy_dashboard_settings(cfg: UserConfig) -> bool:
+    """Normalize Streamlit/NiceGUI-era dashboard port/ui. Returns True if changed."""
+    changed = False
+    if cfg.services.dashboard_port in _LEGACY_DASHBOARD_PORTS:
+        cfg.services.dashboard_port = 3000
+        changed = True
+    if cfg.services.dashboard_ui != "webui":
+        cfg.services.dashboard_ui = "webui"
+        changed = True
+    return changed
 
 
 def portable_user_config_path(app_root: Path) -> Path:

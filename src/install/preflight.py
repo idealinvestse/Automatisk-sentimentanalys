@@ -141,6 +141,40 @@ def _check_secrets(report: PreflightReport, cfg: UserConfig, *, require_openrout
     )
 
 
+def _check_webui(report: PreflightReport, cfg: UserConfig) -> None:
+    if not cfg.services.dashboard_enabled:
+        return
+    node_ok = shutil.which("node") is not None
+    npm_ok = shutil.which("npm") is not None
+    report.add(
+        "node",
+        node_ok,
+        "Node.js available" if node_ok else "Node.js not found (required for webui)",
+        shutil.which("node") or "Install Node.js LTS",
+    )
+    report.add(
+        "npm",
+        npm_ok,
+        "npm available" if npm_ok else "npm not found",
+        shutil.which("npm") or "Install Node.js (includes npm)",
+    )
+    root = cfg.resolved_app_root()
+    package_json = root / "webui" / "package.json"
+    report.add(
+        "webui_package",
+        package_json.is_file(),
+        "webui/package.json present" if package_json.is_file() else "webui/package.json missing",
+        str(package_json),
+    )
+    node_modules = root / "webui" / "node_modules"
+    report.add(
+        "webui_node_modules",
+        node_modules.is_dir(),
+        "webui/node_modules present" if node_modules.is_dir() else "webui/node_modules missing",
+        "cd webui && npm install" if not node_modules.is_dir() else str(node_modules),
+    )
+
+
 def run_preflight(
     cfg: UserConfig | None = None,
     *,
@@ -171,6 +205,7 @@ def run_preflight(
     need_or = require_openrouter if require_openrouter is not None else cfg.llm.enabled
     _check_secrets(report, cfg, require_openrouter=need_or)
     _check_api_deps(report, cfg)
+    _check_webui(report, cfg)
 
     venv_py = app_root / ".venv" / "Scripts" / "python.exe"
     if venv_py.is_file():

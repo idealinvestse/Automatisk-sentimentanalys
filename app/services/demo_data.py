@@ -1,17 +1,7 @@
-"""Demo data service for NiceGUI MVP dashboard.
+"""Legacy demo data helpers used by unit tests and as a reference for webui demo shapes.
 
-Provides realistic Swedish call center conversation examples (canned transcripts)
-and a cached generator that runs the real CallAnalysisPipeline to produce
-full CallAnalysisReport dicts. This ensures the UI always displays *evidence-based*
-output from the actual backend (Fas 1-4 local engines + optional LLM).
-
-Why this approach (per harmonized plan):
-- Delivers "snabbt värde" immediately: dashboard shows real agent_performance,
-  qa/compliance, alerts, local assessments without needing API server or LLM key.
-- st.cache_data ensures we only pay the (one-time) model load + inference cost.
-- Data shapes are identical to what /analyze_pipeline and analyze_segments return.
-- Easy to extend with more scenarios or load from files later.
-- Prepares for React migration: the returned dicts are the contract.
+Primary product UI is Next.js `webui/`. These helpers remain for Python tests and
+parity with `webui/src/lib/demo-transcripts.ts` / related mappers.
 
 Usage:
     from app.services.demo_data import get_demo_reports, DEMO_CALLS
@@ -23,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import logging
 
-# Ensure project root on path when run from the dashboard launcher
+# Ensure project root on path when run as a helper module
 import sys
 from functools import lru_cache
 from pathlib import Path

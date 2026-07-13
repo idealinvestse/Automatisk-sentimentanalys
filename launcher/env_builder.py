@@ -1,4 +1,4 @@
-"""Build environment for child processes (API, CLI, Streamlit)."""
+"""Build environment for child processes (API, CLI, webui)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 
 from src.install.config_schema import UserConfig
-from src.install.paths_util import augment_path, resolve_ffmpeg
+from src.install.paths_util import (
+    augment_path,
+    find_app_root_near,
+    looks_like_app_root,
+    resolve_ffmpeg,
+)
 from src.install.secrets_win import apply_secrets_to_env
 from src.install.user_config import config_to_env, load_user_config
 
@@ -16,8 +21,19 @@ def detect_app_root() -> Path:
     """Resolve application root from env or launcher package location."""
     override = os.environ.get("SENTIMENT_APP_ROOT", "").strip()
     if override:
-        return Path(override).resolve()
-    return Path(__file__).resolve().parents[1]
+        override_path = Path(override).resolve()
+        if looks_like_app_root(override_path):
+            return override_path
+        found = find_app_root_near(override_path)
+        if found is not None:
+            return found
+    package_root = Path(__file__).resolve().parents[1]
+    if looks_like_app_root(package_root):
+        return package_root
+    found = find_app_root_near(package_root)
+    if found is not None:
+        return found
+    return package_root
 
 
 def _windows_user_env_var(name: str) -> str | None:
@@ -38,6 +54,8 @@ def _windows_user_env_var(name: str) -> str | None:
 def bootstrap_launcher_env(app_root: Path | None = None) -> Path:
     """Apply runtime env for launcher and child processes (Windows-friendly)."""
     root = (app_root or detect_app_root()).resolve()
+    cfg = load_user_config(root)
+    root = cfg.resolved_app_root()
     os.environ["SENTIMENT_APP_ROOT"] = str(root)
     os.environ["PYTHONPATH"] = str(root)
 
@@ -46,7 +64,6 @@ def bootstrap_launcher_env(app_root: Path | None = None) -> Path:
     ):
         os.environ["FFMPEG_PATH"] = persisted
 
-    cfg = load_user_config(root)
     os.environ["PATH"] = augment_path(cfg, os.environ.get("PATH", ""))
     if ffmpeg := resolve_ffmpeg(cfg):
         os.environ.setdefault("FFMPEG_PATH", ffmpeg)

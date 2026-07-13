@@ -29,7 +29,7 @@ Most useful targets:
 | `make format`      | Auto-format code                         |
 | `make lint`        | Run ruff linting                         |
 | `make run-api`     | Start FastAPI development server         |
-| `make run-dashboard` | Start Streamlit dashboard              |
+| `make run-dashboard` | Start Next.js webui (`webui/`, port 3000) |
 | `make clean`       | Remove cache and build artifacts         |
 
 ## Code Quality
@@ -76,9 +76,13 @@ make run-api
 uvicorn src.api:app --reload
 ```
 
-### Dashboard
+### Dashboard (Next.js webui)
 ```bash
 make run-dashboard
+# or
+cd webui && npm run dev
+# Windows launcher (Tkinter):
+python -m launcher.main
 ```
 
 ## Testing

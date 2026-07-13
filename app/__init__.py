@@ -1,1 +1,1 @@
-"""App package for shared dashboard helpers and the webui launcher."""
+"""App package for shared demo helpers and dashboard launch compatibility shims."""
