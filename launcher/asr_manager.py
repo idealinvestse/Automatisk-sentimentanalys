@@ -23,6 +23,7 @@ def asr_status_for_config(cfg: UserConfig) -> AsrStatus:
     return collect_asr_status(
         model=cfg.asr.model,
         hf_home=cfg.resolved_hf_home(),
+        python=resolve_python(cfg),
     )
 
 

@@ -8,6 +8,7 @@ log_level: INFO
 
 paths:
   app_root: ""
+  # data_root: "E:/SentimentData"  # optional absolute disk/folder for models & caches
   hf_cache: cache/hf
   llm_cache: cache/llm
   outputs: outputs

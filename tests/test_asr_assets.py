@@ -40,29 +40,65 @@ def test_install_asr_packages_runs_pip_when_missing(tmp_path):
     mock_run.assert_called_once()
 
 
+def test_is_module_installed_checks_other_python(tmp_path: Path) -> None:
+    from src.install.asr_assets import is_module_installed
+
+    other = tmp_path / "python.exe"
+    other.write_text("", encoding="utf-8")
+    with patch("src.install.asr_assets.subprocess.run") as mock_run:
+        mock_run.return_value = type("R", (), {"returncode": 0})()
+        assert is_module_installed("faster_whisper", other) is True
+    assert mock_run.call_args.args[0][0] == str(other)
+
+
+@patch("src.install.asr_assets._ensure_interpreter_site_packages")
 @patch("src.install.asr_assets._download_faster_whisper")
 @patch("src.install.asr_assets.is_module_installed", return_value=True)
-def test_download_asr_models_faster(_mock_installed, mock_fw, tmp_path):
+def test_download_asr_models_faster(_mock_installed, mock_fw, _mock_site, tmp_path):
     mock_fw.return_value = None
     report = download_asr_models(backends=["faster"], hf_home=tmp_path)
     assert report.ok
     mock_fw.assert_called_once()
 
 
+@patch("src.install.asr_assets._ensure_interpreter_site_packages")
 @patch("src.install.asr_assets._download_whisperx")
 @patch("src.install.asr_assets.is_module_installed", return_value=True)
-def test_download_asr_models_whisperx(_mock_installed, mock_wx, tmp_path):
+def test_download_asr_models_whisperx(_mock_installed, mock_wx, _mock_site, tmp_path):
     mock_wx.return_value = None
     report = download_asr_models(backends=["whisperx"], language="sv", hf_home=tmp_path)
     assert report.ok
     mock_wx.assert_called_once()
 
 
+@patch("src.install.asr_assets._ensure_interpreter_site_packages")
 @patch("src.install.asr_assets.is_module_installed", return_value=False)
-def test_download_asr_models_reports_missing_package(_mock_installed, tmp_path):
+def test_download_asr_models_reports_missing_package(_mock_installed, _mock_site, tmp_path):
     report = download_asr_models(backends=["whisperx"], hf_home=tmp_path)
     assert not report.ok
     assert "whisperx" in report.steps[0].detail
+
+
+def test_configure_hf_cache_disables_xet(tmp_path, monkeypatch):
+    import os
+
+    monkeypatch.delenv("HF_HUB_DISABLE_XET", raising=False)
+    configure_hf_cache(tmp_path)
+    assert os.environ["HF_HUB_DISABLE_XET"] == "1"
+
+
+@patch("src.install.asr_assets.download_asr_models")
+@patch("src.install.asr_assets.install_asr_packages")
+def test_ensure_asr_assets_passes_python(mock_install, mock_download, tmp_path):
+    mock_install.return_value = AsrAssetReport()
+    mock_install.return_value.add("asr_packages", True, "ok")
+    mock_download.return_value = AsrAssetReport()
+    mock_download.return_value.add("model_faster", True, "ok")
+    py = tmp_path / "python.exe"
+    py.write_text("", encoding="utf-8")
+
+    ensure_asr_assets(tmp_path, python=py, install_packages=True, download_models=True)
+    assert mock_download.call_args.kwargs["python"] == py
 
 
 def test_hf_repo_cached_detects_snapshot(tmp_path):

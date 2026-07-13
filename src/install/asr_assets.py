@@ -102,14 +102,15 @@ def collect_asr_status(
     *,
     model: str = "kb-whisper-large",
     hf_home: Path | None = None,
+    python: Path | None = None,
 ) -> AsrStatus:
     """Inspect ASR package installation and default model cache."""
     repo_id = resolve_model_name(model)
     cache_root = hf_home or Path(os.environ.get("HF_HOME", "cache/hf"))
     return AsrStatus(
-        faster_whisper_installed=is_module_installed("faster_whisper"),
-        whisperx_installed=is_module_installed("whisperx"),
-        huggingface_hub_installed=is_module_installed("huggingface_hub"),
+        faster_whisper_installed=is_module_installed("faster_whisper", python),
+        whisperx_installed=is_module_installed("whisperx", python),
+        huggingface_hub_installed=is_module_installed("huggingface_hub", python),
         model_name=repo_id,
         hf_cache_dir=str(cache_root.resolve()),
         kb_model_cached=hf_repo_cached(repo_id, cache_root),
@@ -122,8 +123,48 @@ def _log(progress: ProgressCallback, message: str) -> None:
         progress(message)
 
 
-def is_module_installed(module: str) -> bool:
+def is_module_installed(module: str, python: Path | None = None) -> bool:
+    """Return True if *module* can be imported by *python* (default: current interpreter)."""
+    if python is not None and Path(python).resolve() != Path(sys.executable).resolve():
+        result = subprocess.run(
+            [
+                str(python),
+                "-c",
+                "import importlib.util, sys; "
+                f"sys.exit(0 if importlib.util.find_spec({module!r}) is not None else 1)",
+            ],
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
     return importlib.util.find_spec(module) is not None
+
+
+def _ensure_interpreter_site_packages(python: Path) -> None:
+    """Make *python*'s site-packages importable in this process (launcher → venv)."""
+    if Path(python).resolve() == Path(sys.executable).resolve():
+        return
+    result = subprocess.run(
+        [
+            str(python),
+            "-c",
+            "import site; "
+            "paths = list(site.getsitepackages()); "
+            "usp = site.getusersitepackages(); "
+            "paths.append(usp if isinstance(usp, str) else ''); "
+            "print('\\0'.join(p for p in paths if p))",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return
+    for entry in result.stdout.split("\0"):
+        path = entry.strip()
+        if path and path not in sys.path:
+            sys.path.insert(0, path)
+    importlib.invalidate_caches()
 
 
 def configure_hf_cache(hf_home: Path | None) -> None:
@@ -135,6 +176,8 @@ def configure_hf_cache(hf_home: Path | None) -> None:
     os.environ.setdefault("HF_HOME", path_str)
     os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(hf_home / "hub"))
     os.environ.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
+    # Xet CDN signed URLs often 403 for public KBLab weights; prefer classic Hub fetch.
+    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 
 def install_asr_packages(
@@ -154,7 +197,7 @@ def install_asr_packages(
             ("whisperx", "whisperx>=3.1.1"),
             ("huggingface_hub", "huggingface-hub>=0.23.0"),
         )
-        if not is_module_installed(mod)
+        if not is_module_installed(mod, interpreter)
     ]
 
     if not missing:
@@ -254,6 +297,19 @@ def _download_whisperx(
     del align_model, metadata
 
 
+def _format_download_error(exc: BaseException) -> str:
+    text = str(exc)
+    lower = text.lower()
+    if "403" in text or "access denied" in lower or "cannot access content" in lower:
+        return (
+            f"{text}\n\nTips: sätt HF_TOKEN via launcher (set-secret) eller miljövariabel, "
+            "eller kör om efter att HF_HUB_DISABLE_XET=1 (sätts automatiskt vid provision)."
+        )
+    if "not enough space" in lower or "os error 112" in lower:
+        return f"{text}\n\nTips: frigör diskutrymme (särskilt C:) eller flytta HF-cachen till D:."
+    return text
+
+
 def download_asr_models(
     *,
     backends: list[str] | None = None,
@@ -262,11 +318,14 @@ def download_asr_models(
     language: str = "sv",
     revision: str | None = "strict",
     hf_home: Path | None = None,
+    python: Path | None = None,
     progress: ProgressCallback = None,
 ) -> AsrAssetReport:
     """Pre-download model weights for the selected ASR backends."""
     report = AsrAssetReport()
     configure_hf_cache(hf_home)
+    interpreter = python or Path(sys.executable)
+    _ensure_interpreter_site_packages(interpreter)
 
     selected = [
         b.strip().lower() for b in (backends or list(DEFAULT_PREFETCH_BACKENDS)) if b.strip()
@@ -279,7 +338,7 @@ def download_asr_models(
         step_name = f"model_{backend}"
         try:
             if backend == "faster":
-                if not is_module_installed("faster_whisper"):
+                if not is_module_installed("faster_whisper", interpreter):
                     raise ImportError("faster-whisper ej installerat")
                 _download_faster_whisper(
                     model_name=model,
@@ -288,7 +347,7 @@ def download_asr_models(
                     progress=progress,
                 )
             elif backend == "transformers":
-                if not is_module_installed("transformers"):
+                if not is_module_installed("transformers", interpreter):
                     raise ImportError("transformers ej installerat")
                 _download_transformers(
                     model_name=model,
@@ -296,7 +355,7 @@ def download_asr_models(
                     progress=progress,
                 )
             elif backend == "whisperx":
-                if not is_module_installed("whisperx"):
+                if not is_module_installed("whisperx", interpreter):
                     raise ImportError("whisperx ej installerat")
                 _download_whisperx(
                     model_name=model,
@@ -309,7 +368,12 @@ def download_asr_models(
             report.add(step_name, True, f"Modell hämtad ({backend})")
         except Exception as exc:
             logger.warning("ASR model download failed for %s: %s", backend, exc)
-            report.add(step_name, False, f"Modellnedladdning misslyckades ({backend})", str(exc))
+            report.add(
+                step_name,
+                False,
+                f"Modellnedladdning misslyckades ({backend})",
+                _format_download_error(exc),
+            )
 
     return report
 
@@ -332,6 +396,13 @@ def ensure_asr_assets(
     combined = AsrAssetReport()
     interpreter = python or Path(sys.executable)
 
+    try:
+        from .secrets_win import apply_secrets_to_env
+
+        apply_secrets_to_env(root)
+    except Exception:
+        logger.debug("Could not apply secrets before ASR download", exc_info=True)
+
     if install_packages:
         pkg_report = install_asr_packages(root, interpreter, progress=progress)
         combined.steps.extend(pkg_report.steps)
@@ -346,6 +417,7 @@ def ensure_asr_assets(
             language=language,
             revision=revision,
             hf_home=hf_home,
+            python=interpreter,
             progress=progress,
         )
         combined.steps.extend(model_report.steps)

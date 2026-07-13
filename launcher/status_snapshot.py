@@ -182,7 +182,7 @@ def collect_snapshot(
     app_root = cfg.resolved_app_root()
     py = resolve_python(cfg)
     secrets = secret_status(app_root)
-    asr = collect_asr_status(model=cfg.asr.model, hf_home=cfg.resolved_hf_home())
+    asr = collect_asr_status(model=cfg.asr.model, hf_home=cfg.resolved_hf_home(), python=py)
     collected = datetime.now(UTC).astimezone().isoformat(timespec="milliseconds")
 
     system = SystemSnapshot(

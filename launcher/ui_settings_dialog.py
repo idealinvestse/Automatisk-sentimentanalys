@@ -104,6 +104,42 @@ class SettingsDialog(tk.Toplevel):
         parent.columnconfigure(1, weight=1)
         return entry
 
+    def _labeled_path_entry(
+        self,
+        parent: tk.Misc,
+        label: str,
+        key: str,
+        *,
+        row: int,
+        mustexist: bool = False,
+    ) -> ttk.Entry:
+        """Entry with a folder browser for absolute paths on any drive."""
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky=tk.NW, pady=2)
+        var = tk.StringVar()
+        self._vars[key] = var
+        self._add_trace(var)
+        row_frame = ttk.Frame(parent)
+        row_frame.grid(row=row, column=1, sticky=tk.EW, pady=2)
+        parent.columnconfigure(1, weight=1)
+        entry = ttk.Entry(row_frame, textvariable=var, width=40)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        def browse() -> None:
+            initial = var.get().strip() or str(self._app_root)
+            chosen = filedialog.askdirectory(
+                parent=self,
+                title=label,
+                initialdir=initial if Path(initial).is_dir() else str(self._app_root),
+                mustexist=mustexist,
+            )
+            if chosen:
+                var.set(str(Path(chosen)))
+
+        ttk.Button(row_frame, text="Bläddra…", command=browse, width=10).pack(
+            side=tk.LEFT, padx=(6, 0)
+        )
+        return entry
+
     def _labeled_combo(
         self,
         parent: tk.Misc,
@@ -184,22 +220,106 @@ class SettingsDialog(tk.Toplevel):
 
     def _build_paths_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
+        ttk.Label(
+            inner,
+            text=(
+                "Datarot styr var modeller och cache lagras. "
+                "Ange t.ex. E:\\SentimentData — relativa sökvägar nedan "
+                "läggs under dataroten (annars under app-roten). "
+                "Absolut sökväg i ett fält överskrider dataroten."
+            ),
+            wraplength=520,
+            foreground="#4b5563",
+        ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
+
+        self._labeled_path_entry(inner, "Datarot (disk/mapp)", "paths.data_root", row=1)
+        ttk.Button(
+            inner,
+            text="Använd datarot för HF/LLM/outputs (relativa standardvärden)",
+            command=self._apply_data_root_defaults,
+        ).grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
+
+        self._resolved_paths_var = tk.StringVar(value="")
+        ttk.Label(inner, textvariable=self._resolved_paths_var, foreground="#6b7280", wraplength=520).grid(
+            row=3, column=0, columnspan=2, sticky=tk.W, pady=(0, 8)
+        )
+
         fields = (
-            ("outputs", "Outputs"),
-            ("hf_cache", "HF-cache (HF_HOME)"),
+            ("hf_cache", "HF-cache / modeller (HF_HOME)"),
             ("llm_cache", "LLM-cache"),
+            ("outputs", "Outputs"),
             ("logs", "Loggar (valfritt)"),
             ("incoming_calls", "Inkommande samtal (valfritt)"),
             ("state_dir", "State (valfritt)"),
         )
         for i, (key, label) in enumerate(fields):
-            self._labeled_entry(inner, label, f"paths.{key}", row=i)
+            self._labeled_path_entry(inner, label, f"paths.{key}", row=4 + i)
+
         ttk.Label(inner, text="App root", foreground="#6b7280").grid(
-            row=len(fields), column=0, sticky=tk.W, pady=(8, 0)
+            row=4 + len(fields), column=0, sticky=tk.W, pady=(8, 0)
         )
-        ttk.Label(inner, textvariable=tk.StringVar(value=str(self._app_root))).grid(
-            row=len(fields), column=1, sticky=tk.W
+        ttk.Label(inner, text=str(self._app_root)).grid(
+            row=4 + len(fields), column=1, sticky=tk.W, pady=(8, 0)
         )
+
+        for key in (
+            "paths.data_root",
+            "paths.hf_cache",
+            "paths.llm_cache",
+            "paths.outputs",
+            "paths.logs",
+        ):
+            if key in self._vars:
+                self._vars[key].trace_add("write", lambda *_a: self._refresh_resolved_paths_preview())
+        self._refresh_resolved_paths_preview()
+
+    def _apply_data_root_defaults(self) -> None:
+        data_root = self._vars["paths.data_root"].get().strip()
+        if not data_root:
+            messagebox.showinfo(
+                "Datarot",
+                "Välj först en datarot (t.ex. E:\\SentimentData).",
+                parent=self,
+            )
+            return
+        self._vars["paths.hf_cache"].set("cache/hf")
+        self._vars["paths.llm_cache"].set("cache/llm")
+        self._vars["paths.outputs"].set("outputs")
+        self._refresh_resolved_paths_preview()
+        self._dirty = True
+        messagebox.showinfo(
+            "Datarot",
+            (
+                "Relativa standardvärden satta. Efter sparning används t.ex.:\n"
+                f"{Path(data_root) / 'cache' / 'hf'}"
+            ),
+            parent=self,
+        )
+
+    def _refresh_resolved_paths_preview(self) -> None:
+        if not hasattr(self, "_resolved_paths_var"):
+            return
+        try:
+            draft = self._draft.model_copy(deep=True)
+            draft.paths = draft.paths.model_copy(
+                update={
+                    "data_root": self._vars.get("paths.data_root", tk.StringVar()).get().strip(),
+                    "hf_cache": self._vars.get("paths.hf_cache", tk.StringVar(value="cache/hf")).get()
+                    or "cache/hf",
+                    "llm_cache": self._vars.get("paths.llm_cache", tk.StringVar(value="cache/llm")).get()
+                    or "cache/llm",
+                    "outputs": self._vars.get("paths.outputs", tk.StringVar(value="outputs")).get()
+                    or "outputs",
+                }
+            )
+            self._resolved_paths_var.set(
+                "Löses till:\n"
+                f"• HF: {draft.resolved_hf_home()}\n"
+                f"• LLM: {draft.resolved_llm_cache()}\n"
+                f"• Outputs: {draft.resolved_outputs()}"
+            )
+        except Exception:
+            self._resolved_paths_var.set("")
 
     def _build_services_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
@@ -360,6 +480,7 @@ class SettingsDialog(tk.Toplevel):
             "device": d.device,
             "log_level": d.log_level,
             "paths.outputs": d.paths.outputs,
+            "paths.data_root": d.paths.data_root,
             "paths.hf_cache": d.paths.hf_cache,
             "paths.llm_cache": d.paths.llm_cache,
             "paths.logs": d.paths.logs,
@@ -438,6 +559,7 @@ class SettingsDialog(tk.Toplevel):
         updated.paths = updated.paths.model_copy(
             update={
                 "outputs": _s("paths.outputs"),
+                "data_root": _s("paths.data_root"),
                 "hf_cache": _s("paths.hf_cache"),
                 "llm_cache": _s("paths.llm_cache"),
                 "logs": _s("paths.logs"),

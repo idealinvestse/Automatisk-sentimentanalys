@@ -7,6 +7,7 @@ portable_mode: false
 log_level: INFO
 
 paths:
+  # data_root: "E:/SentimentData"   # optional: disk/folder for models & caches
   hf_cache: cache/hf
   llm_cache: cache/llm
   outputs: outputs

@@ -52,5 +52,53 @@ def test_config_to_env() -> None:
     assert env["HF_HOME"].endswith("cache\\hf") or env["HF_HOME"].endswith("cache/hf")
 
 
+def test_resolve_data_path_relative_under_app_root(tmp_path: Path) -> None:
+    cfg = UserConfig(paths={"app_root": str(tmp_path), "hf_cache": "cache/hf"})
+    assert cfg.resolved_hf_home() == (tmp_path / "cache" / "hf").resolve()
+
+
+def test_resolve_data_path_under_data_root(tmp_path: Path) -> None:
+    data = tmp_path / "E_drive" / "SentimentData"
+    data.mkdir(parents=True)
+    cfg = UserConfig(
+        paths={
+            "app_root": str(tmp_path / "app"),
+            "data_root": str(data),
+            "hf_cache": "cache/hf",
+            "llm_cache": "cache/llm",
+            "outputs": "outputs",
+        }
+    )
+    assert cfg.resolved_data_root() == data.resolve()
+    assert cfg.resolved_hf_home() == (data / "cache" / "hf").resolve()
+    assert cfg.resolved_llm_cache() == (data / "cache" / "llm").resolve()
+    assert cfg.resolved_outputs() == (data / "outputs").resolve()
+
+
+def test_resolve_data_path_absolute_overrides_data_root(tmp_path: Path) -> None:
+    data = tmp_path / "data"
+    data.mkdir()
+    abs_hf = tmp_path / "other" / "models"
+    abs_hf.mkdir(parents=True)
+    cfg = UserConfig(
+        paths={
+            "app_root": str(tmp_path),
+            "data_root": str(data),
+            "hf_cache": str(abs_hf),
+        }
+    )
+    assert cfg.resolved_hf_home() == abs_hf.resolve()
+
+
+def test_config_to_env_includes_data_root(tmp_path: Path) -> None:
+    data = tmp_path / "data"
+    data.mkdir()
+    cfg = UserConfig(paths={"app_root": str(tmp_path), "data_root": str(data)})
+    env = config_to_env(cfg)
+    assert env["SENTIMENT_DATA_ROOT"] == str(data.resolve())
+    assert env["HF_HOME"] == str((data / "cache" / "hf").resolve())
+    assert "SENTIMENT_LLM_CACHE" in env
+
+
 def test_install_profile_enum() -> None:
     assert InstallProfile.full.value == "full"

@@ -71,6 +71,11 @@ def configure_cmd(
     sentiment_profile: str | None = typer.Option(None, "--sentiment-profile"),
     device: str | None = typer.Option(None, "--device"),
     api_port: int | None = typer.Option(None, "--api-port"),
+    data_root: Path | None = typer.Option(
+        None,
+        "--data-root",
+        help="Absolut sökväg/disk för modeller och cache (HF, LLM, outputs)",
+    ),
     portable: bool | None = typer.Option(None, "--portable/--no-portable"),
     export_path: Path | None = typer.Option(None, "--export", help="Export config JSON bundle"),
     import_path: Path | None = typer.Option(
@@ -98,6 +103,11 @@ def configure_cmd(
         cfg.device = device  # type: ignore[assignment]
     if api_port is not None:
         cfg.services.api_port = api_port
+    if data_root is not None:
+        resolved = data_root.expanduser().resolve()
+        if not resolved.is_absolute():
+            raise typer.BadParameter("--data-root måste vara en absolut sökväg")
+        cfg.paths.data_root = str(resolved)
     if portable is not None:
         cfg.portable_mode = portable
     if not cfg.paths.app_root:
@@ -105,6 +115,8 @@ def configure_cmd(
 
     path = save_user_config(cfg)
     console.print(f"[green]Saved {path}[/green]")
+    if cfg.paths.data_root:
+        console.print(f"[dim]HF_HOME → {cfg.resolved_hf_home()}[/dim]")
 
     if export_path:
         bundle = {"config": cfg.model_dump(mode="json")}

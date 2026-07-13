@@ -20,9 +20,10 @@ class InstallProfile(StrEnum):
 
 
 class PathsConfig(BaseModel):
-    """Filesystem paths (absolute or relative to app root)."""
+    """Filesystem paths (absolute or relative to data_root / app root)."""
 
     app_root: str = ""
+    data_root: str = ""  # optional absolute root for bulky data (models, caches)
     hf_cache: str = "cache/hf"
     llm_cache: str = "cache/llm"
     outputs: str = "outputs"
@@ -132,6 +133,23 @@ class UserConfig(BaseModel):
             return Path(self.paths.app_root).resolve()
         return Path.cwd().resolve()
 
+    def resolved_data_root(self) -> Path:
+        """Base directory for relative bulky paths (models/caches/outputs)."""
+        raw = (self.paths.data_root or "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+        return self.resolved_app_root()
+
+    def resolve_data_path(self, value: str) -> Path:
+        """Resolve a path: absolute as-is, else under data_root (or app_root)."""
+        raw = (value or "").strip()
+        if not raw:
+            return self.resolved_data_root()
+        path = Path(raw).expanduser()
+        if path.is_absolute():
+            return path.resolve()
+        return (self.resolved_data_root() / path).resolve()
+
     def resolved_user_data_dir(self) -> Path:
         if self.portable_mode:
             return self.resolved_app_root() / "user_data"
@@ -144,9 +162,14 @@ class UserConfig(BaseModel):
 
     def resolved_logs_dir(self) -> Path:
         if self.paths.logs:
-            return Path(self.paths.logs).resolve()
+            return self.resolve_data_path(self.paths.logs)
         return self.resolved_user_data_dir() / "logs"
 
     def resolved_hf_home(self) -> Path:
-        root = self.resolved_app_root()
-        return (root / self.paths.hf_cache).resolve()
+        return self.resolve_data_path(self.paths.hf_cache)
+
+    def resolved_llm_cache(self) -> Path:
+        return self.resolve_data_path(self.paths.llm_cache)
+
+    def resolved_outputs(self) -> Path:
+        return self.resolve_data_path(self.paths.outputs)

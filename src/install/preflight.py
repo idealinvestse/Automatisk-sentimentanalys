@@ -199,8 +199,11 @@ def run_preflight(
         _check_torch_cuda(report)
     _check_disk(report, cfg.resolved_hf_home())
     _check_writable(report, cfg.resolved_hf_home(), "hf_cache")
-    _check_writable(report, app_root / cfg.paths.outputs, "outputs")
+    _check_writable(report, cfg.resolved_outputs(), "outputs")
     _check_writable(report, cfg.resolved_logs_dir(), "logs")
+    if cfg.paths.data_root.strip():
+        _check_writable(report, cfg.resolved_data_root(), "data_root")
+        _check_disk(report, cfg.resolved_data_root())
 
     need_or = require_openrouter if require_openrouter is not None else cfg.llm.enabled
     _check_secrets(report, cfg, require_openrouter=need_or)

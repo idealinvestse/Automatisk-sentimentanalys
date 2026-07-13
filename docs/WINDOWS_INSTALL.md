@@ -85,6 +85,14 @@ pip install -e ".[api]"
 - `python -m launcher.main` – Configuration hub
 - `launcher.ps1` – Advanced CLI launcher
 
+**Datarot (modeller / cache på valfri disk):** I launchern → *Inställningar* → *Sökvägar*, sätt **Datarot** till t.ex. `E:\SentimentData` (Bläddra…). Relativa fält som `cache/hf` läggs då under den disken. CLI:
+
+```powershell
+.\launcher.ps1 configure --data-root E:\SentimentData
+```
+
+Starta om API efter byte av datarot, och kör *Installera / reparera* eller ASR-hanteraren för att ladda ner modeller till den nya platsen.
+
 ### API as Windows Service (NSSM)
 
 See older instructions for running the API as a background service.

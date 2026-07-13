@@ -122,8 +122,13 @@ def config_to_env(cfg: UserConfig) -> dict[str, str]:
     """Environment variables for child processes (API, CLI, dashboard)."""
     env: dict[str, str] = {}
     env["HF_HOME"] = str(cfg.resolved_hf_home())
+    env["HUGGINGFACE_HUB_CACHE"] = str(cfg.resolved_hf_home() / "hub")
+    env["SENTIMENT_LLM_CACHE"] = str(cfg.resolved_llm_cache())
+    env["SENTIMENT_OUTPUTS"] = str(cfg.resolved_outputs())
     env["SENTIMENT_APP_ROOT"] = str(cfg.resolved_app_root())
     env["SENTIMENT_USER_DATA"] = str(cfg.resolved_user_data_dir())
+    if cfg.paths.data_root.strip():
+        env["SENTIMENT_DATA_ROOT"] = str(cfg.resolved_data_root())
     env["SENTIMENT_LOG_LEVEL"] = cfg.log_level
     env["LOG_LEVEL"] = cfg.log_level
     if cfg.llm.enabled:

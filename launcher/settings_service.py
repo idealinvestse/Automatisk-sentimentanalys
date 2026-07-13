@@ -128,6 +128,15 @@ def validate_draft(
     if draft.services.api_port == draft.services.dashboard_port:
         issues.append(ValidationIssue("services", "API-port och dashboard-port måste vara olika."))
 
+    data_root = (draft.paths.data_root or "").strip()
+    if data_root and not Path(data_root).expanduser().is_absolute():
+        issues.append(
+            ValidationIssue(
+                "paths.data_root",
+                "Datarot måste vara en absolut sökväg (t.ex. E:\\SentimentData).",
+            )
+        )
+
     if (
         check_ports
         and draft.services.api_enabled
@@ -200,6 +209,10 @@ def restart_hints(before: UserConfig, after: UserConfig) -> list[str]:
             services.append("api")
         if "dashboard" not in services:
             services.append("dashboard")
+    path_keys = ("data_root", "hf_cache", "llm_cache", "outputs", "logs")
+    if any(getattr(before.paths, k) != getattr(after.paths, k) for k in path_keys):
+        if "api" not in services:
+            services.append("api")
     return services
 
 

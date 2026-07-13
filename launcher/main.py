@@ -255,7 +255,7 @@ class LauncherApp(tk.Tk):
             subprocess.run(["xdg-open", str(path)], check=False)
 
     def _open_outputs(self) -> None:
-        self._open_folder(self.cfg.resolved_app_root() / self.cfg.paths.outputs)
+        self._open_folder(self.cfg.resolved_outputs())
 
     def _open_logs(self) -> None:
         self._open_folder(self.cfg.resolved_logs_dir())
