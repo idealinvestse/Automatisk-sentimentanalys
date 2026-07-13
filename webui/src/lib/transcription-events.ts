@@ -1,7 +1,6 @@
 /**
  * Event shapes for /ws/transcription, mirroring src/api/transcription_events.py
- * (TranscriptionEventHub.log/progress/status/done) and the reference client
- * app/nicegui_dashboard/services/transcription_ws_client.py.
+ * (TranscriptionEventHub.log/progress/status/done).
  */
 
 export interface BaseEvent {

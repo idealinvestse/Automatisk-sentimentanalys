@@ -29,7 +29,7 @@
      `--warning` itself is tuned as a *light* badge fill (with dark
      `--warning-foreground` text on top), so it is too washed out for use
      as its own foreground color against the page background - see
-     docs/WEBUI_MODERNIZATION_PLAN.md contrast checklist. */
+     contrast checklist. */
   --warning-text: oklch(0.48 0.15 70);
   --destructive: oklch(0.5 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);

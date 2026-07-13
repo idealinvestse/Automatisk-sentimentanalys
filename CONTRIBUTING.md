@@ -20,7 +20,7 @@ Agents should follow the patterns described in `LLM_AGENT_GUIDE.md` (especially 
    ```
 2. **Install development dependencies** (single source of truth in `pyproject.toml`):
    ```bash
-   pip install -e ".[dev,api,dashboard-nicegui,diarize]"
+   pip install -e ".[dev,api,diarize]"
    ```
 3. Make your changes following the guidelines in `docs/LLM_AGENT_GUIDE.md`.
 4. **Run tests and linting**:

@@ -1,14 +1,10 @@
 /**
- * Canned Swedish call-center demo transcripts, ported 1:1 from the reference
- * dataset used by the legacy dashboard
- * (`app/services/data_services.py::DEMO_TRANSCRIPTS`).
+ * Canned Swedish call-center demo transcripts, ported from
+ * `app/services/data_services.py::DEMO_TRANSCRIPTS`.
  *
  * These are sent as-is to the real backend (`POST /analyze_pipeline` and the
- * Fas 4 aggregate endpoints), so the numbers shown in the UI (sentiment, QA
- * score, risk, hot topics, agent metrics) come from the real
- * `CallAnalysisPipeline`, not hardcoded mock values. Only the *conversations*
- * are synthetic/demo data — see docs/WEBUI_MODERNIZATION_PLAN.md §6
- * ("Datakälla"-frågan) for the background on this decision.
+ * Fas 4 aggregate endpoints), so the numbers shown in the UI come from
+ * `CallAnalysisPipeline`, not hardcoded mock values.
  */
 
 export interface DemoSegment {

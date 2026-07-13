@@ -275,8 +275,7 @@ export default function TranscriptionPage() {
 
       <p className="text-xs text-muted-foreground">
         Obs: webbläsarens WebSocket-API kan inte skicka <code>X-API-Key</code>-headern, så denna
-        vy fungerar just nu bara mot en backend utan API-nyckel/auth (se
-        docs/WEBUI_MODERNIZATION_PLAN.md, Fas 3).
+        vy fungerar just nu bara mot en backend utan API-nyckel/auth.
       </p>
     </div>
   );

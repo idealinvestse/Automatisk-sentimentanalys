@@ -3,7 +3,7 @@ export interface NavItem {
   label: string;
   /** Lucide icon name, kept as string to avoid importing every icon eagerly. */
   icon: string;
-  /** Mirrors the legacy NiceGUI tab this route replaces (for migration tracking). */
+  /** Optional display hint for the route. */
   legacyTab?: string;
 }
 

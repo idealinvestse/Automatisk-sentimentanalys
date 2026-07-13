@@ -39,7 +39,7 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 | **PII Protection**          | ✅ Done    | Early redaction in pipeline for `callcenter` profile |
 | **REST API (v0.4.1)**       | ✅ Done    | Full FastAPI + 5 Fas 4 endpoints, auth, rate limit, caching |
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
-| **Dashboard**               | ✅ Done    | Next.js webui (`webui/`) — primär; NiceGUI (`app/archive/nicegui_dashboard/`) deprecated |
+| **Dashboard**               | ✅ Done    | Next.js webui (`webui/`) — sole dashboard |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
 | **HTTP Metrics (OBS-01)**     | ✅ Done    | `http_requests_total`, `http_request_duration_seconds` in `src/api/metrics.py` |
 | **Pipeline Refactoring**      | ✅ Done    | PIPE-01: `pipeline_steps.py`; `pipeline.py` < 550 LOC |

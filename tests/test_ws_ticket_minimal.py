@@ -1,7 +1,7 @@
 """Minimal WebSocket smoke without full pipeline import (Fas 6 hardening).
 
 Uses a stub FastAPI app that only exercises connect/ping. Auth rejection is
-covered by tests/test_transcription_websocket.py against the real router.
+covered by webui e2e / API WS tests against the real router.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def test_ws_accepts_no_auth() -> None:
 
 
 def test_ws_connect_with_token_query_still_works_in_stub() -> None:
-    """Stub accepts any token; real rejection is in test_transcription_websocket."""
+    """Stub accepts any token; auth rejection belongs to full API WS tests."""
     client = TestClient(create_minimal_app())
     with client.websocket_connect("/api/ws/transcription?token=any") as ws:
         assert ws.receive_json()["type"] == "connected"

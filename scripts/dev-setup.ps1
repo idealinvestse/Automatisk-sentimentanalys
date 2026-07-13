@@ -29,10 +29,10 @@ python -m pip install -U pip
 
 $extrasMap = @{
     minimal = "min,install"
-    cli     = "min,cli,asr,api,dashboard-nicegui,install"
+    cli     = "min,cli,asr,api,install"
     api     = "min,asr,api,install"
-    full    = "min,cli,asr,api,dashboard-nicegui,llm,training,install"
-    dev     = "min,cli,asr,api,dashboard-nicegui,llm,training,install,dev,diarize"
+    full    = "min,cli,asr,api,llm,training,install"
+    dev     = "min,cli,asr,api,llm,training,install,dev,diarize"
 }
 
 $extras = $extrasMap[$Profile]

@@ -1,14 +1,9 @@
 /**
  * Maps real `/analyze_pipeline` responses (run against the canned
  * `DEMO_TRANSCRIPTS`) into the same `CallRow` shape the UI already renders
- * for mock data (`src/lib/mock-data.ts`). This is the "riktig data"
- * drop-in replacement referenced in docs/WEBUI_MODERNIZATION_PLAN.md §6:
- * the conversations are still synthetic/demo, but every number shown
- * (sentiment, QA score, risk, alerts) is computed by the real backend
- * pipeline instead of being hardcoded.
- *
- * Mirrors `get_overall_sentiment()` and
- * `app/archive/nicegui_dashboard/services/demo_provider.py::reports_to_table_rows()`.
+ * for mock data (`src/lib/mock-data.ts`). Conversations are still synthetic
+ * demo data, but every number shown (sentiment, QA score, risk, alerts) is
+ * computed by the real backend pipeline instead of being hardcoded.
  */
 
 import type {

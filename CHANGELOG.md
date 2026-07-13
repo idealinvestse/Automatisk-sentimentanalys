@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **NiceGUI legacy dashboard** — `app/archive/nicegui_dashboard/`, `dashboard-nicegui` extra, NiceGUI-only tests, and `docker-compose.nicegui.yml`. Primary UI is `webui/` only; launcher starts Next.js.
+- **Documentation debt** — historical FAS/audit/plan docs, `docs/archive/`, agent IDE folders (`.grok/`, `.windsurf/`, `.devin/`), notebooks, and non-CI report artifacts. Canonical docs remain under `docs/` + root README/AGENTS/SECURITY/CHANGELOG/CONTRIBUTING.
+
 ### Fixed
 - Living routing now **applies** analyzer selection (two-pass) instead of audit-only metadata
 - WebUI treats honest-degradation `unavailable` markers as null for empathy/root_cause/coaching (not only trajectory)
 
 ### Added
 - **Gap-plan kodutfyllnad (2026-07-10)** — WebUI trust surface (CCP, degradation, routing, provenance); strengthened CCP (`min_segments=6`, sentiment required); `EvidenceSpan` on emotion/negation; `filter_honest_degradation` wired in sync+async registry; Redis pub/sub `TranscriptionEventHub`; Testlabb partial path UI; `data/quality/` slots + CI preference-gate hook; edge negation+aspect; transcription `run_partial_analysis` hook; removed fake `llm_suggested_coaching` alert action.
-- **Analysfunktioner (7 ranked ideas, 2026-07-10)** — Shared `EvidenceSpan` contract; honest degradation (`unavailable` for superseded fields); `override_provenance` on LLM merge; aspect-evidence platform (`aspect_claims`, `derived_call_sentiment`); CCP gate + living routing; Quality OS scaffolding (`src/quality/`, `scripts/evaluate_preference_gate.py`); partial analysis `POST /analyze_pipeline/partial`. Plan: `docs/plans/2026-07-10-analysfunktioner-implementation-plan.md`.
+- **Analysfunktioner (7 ranked ideas, 2026-07-10)** — Shared `EvidenceSpan` contract; honest degradation (`unavailable` for superseded fields); `override_provenance` on LLM merge; aspect-evidence platform (`aspect_claims`, `derived_call_sentiment`); CCP gate + living routing; Quality OS scaffolding (`src/quality/`, `scripts/evaluate_preference_gate.py`); partial analysis `POST /analyze_pipeline/partial`.
 
 ### Fixed
 - **Återställ trunkerade filer efter felaktiga remote-commits (2026-07-10)** — Commits `779d7be`–`6ea2d81` ersatte `src/analysis/registry.py` och `src/edge/local_inference.py` med stubs och lade till icke-fungerande v0.6.1-scaffolds (`src/gamification/`, `src/predictive/churn_risk.py`, `src/topic_modeling/root_cause.py`, m.fl.). Registry och local_inference återställda; scaffolds borttagna. Version förblir **0.5.0**.
@@ -42,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Återställ trunkerade filer efter felaktig merge (2026-07-09)** — Commits `90ea865`–`118a368` ersatte `src/pipeline.py`, `README.md`, `PROJECT_STATUS.md` och `CHANGELOG.md` med placeholders och bröt `CallAnalysisPipeline`. Återställda från senaste fungerande version; dokumentation synkad mot kodbasen.
 
 ### Added (v0.5 prep, included in release)
-- **Next.js webui — primär dashboard** — `webui/` (Next.js 16 + React 19 + TS + Tailwind v4 + TanStack Query). Fas 1–4 migrerade med riktig pipeline-data: Översikt, Analys & Trender, Agentprestanda, Fas 4 Insikter (hot topics + larmpanel), Executive Insights (aggregerade KPI:er), Samtalsdetalj (virtualiserad transkript, QA, LLM judge, per-call larm), Transkribering (WS), Testlabb. Se `docs/WEBUI_MODERNIZATION_PLAN.md`.
+- **Next.js webui — primär dashboard** — `webui/` (Next.js 16 + React 19 + TS + Tailwind v4 + TanStack Query). Fas 1–4 migrerade med riktig pipeline-data.
 - **Virtualiserad transkriptvy** — `TranscriptView`-komponent med `@tanstack/react-virtual` (`useVirtualizer`) i `/calls/[id]`. Renderar endast synliga rader (+overscan) med dynamic row measurement — klarar transkript med hundratals/tusentals segment utan prestandaförlust.
 - **Model routing-väljare i Testlabb** — `ModelRoutingCard`-komponent med FAST/BALANCED/DEEP-tier-knappar som mappar till `llm_model` i pipeline-requesten. Visar kostnad/M tokens, latency-band och kvalitetsbetyg. `resolveEffectiveTier()` speglar `select_model()`-override-logiken (deep_analysis/segment-antal). Speglar `src/llm/routing.py`.
 - **Edge AI REST API + webui-sida** — Ny FastAPI-router `src/api/routers/edge.py` med `POST /edge/analyze-text` och `POST /edge/analyze-segments` som exponerar `src/edge/local_inference.py` (offline sentiment + heuristic intent + PII-redaction) över REST. Ny `/edge`-sida i webui med text/segments-input, resultatvy med sentiment + intent per segment, begränsnings-lista och offline-badge. 5 nya API-tester.
@@ -61,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Domain corpus tools** — `scripts/validate_domain_corpus.py`, expanded `prepare_callcenter_data.py`.
 
 ### Deprecated
-- **NiceGUI dashboard** (`app/archive/nicegui_dashboard/`) — ersatt av `webui/` (Next.js). Behålls som referens, underhålls inte längre. Se `docs/WEBUI_MODERNIZATION_PLAN.md` för migreringsstatus.
+- **NiceGUI dashboard** — ersatt av `webui/` (Next.js); removed in later cleanup.
 - **Emotion analyzer** — removed broad `hur`/`vad` förvirring markers.
 - **callcenter profile** — `dialect_sensitivity` disabled by default.
 - **LLM quality eval** — schema pass rate + deep-path eligibility in `evaluate llm-quality`.

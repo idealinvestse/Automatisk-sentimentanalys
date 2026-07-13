@@ -213,25 +213,6 @@ class TestSpokenNormalizer:
         assert "alltså" not in text
 
 
-class TestCallDetailMarkdown:
-    def test_build_insights_reads_llm_fields(self) -> None:
-        from app.archive.nicegui_dashboard.components.call_detail import _build_insights_markdown
-
-        report = {
-            "llm": {
-                "root_cause": {"primary_cause": "Missad validering tidigt"},
-                "actionable_summary": {
-                    "problem": "Faktura",
-                    "recommendations_for_qa": ["Coacha empati"],
-                },
-            },
-            "results": {},
-        }
-        md = _build_insights_markdown(report)
-        assert "Missad validering" in md
-        assert "Coacha empati" in md
-
-
 class TestIntentBenchmarkSmoke:
     def test_heuristic_holdout_subset(self) -> None:
         import json

@@ -241,17 +241,19 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
         if log:
             log.error(dep_error, phase="dashboard.start")
         raise RuntimeError(dep_error)
-    dashboard_ui = getattr(cfg.services, "dashboard_ui", "nicegui") or "nicegui"
-    if dashboard_ui != "nicegui":
+    dashboard_ui = getattr(cfg.services, "dashboard_ui", "webui") or "webui"
+    if dashboard_ui not in {"webui", "next", "nextjs"}:
         if log:
             log.warn(
-                f"DASHBOARD_UI={dashboard_ui!r} stöds inte längre. Startar NiceGUI istället.",
+                f"DASHBOARD_UI={dashboard_ui!r} stöds inte. Startar webui istället.",
                 phase="dashboard.start",
             )
-        dashboard_ui = "nicegui"
+        dashboard_ui = "webui"
+    port = int(getattr(cfg.services, "dashboard_port", 3000) or 3000)
     extra_env = {
         "DASHBOARD_UI": dashboard_ui,
-        "NICEGUI_PORT": str(cfg.services.dashboard_port),
+        "PORT": str(port),
+        "WEBUI_PORT": str(port),
     }
     cmd = [str(py), "-m", "app.dashboard_launcher"]
     if log:

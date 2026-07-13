@@ -25,7 +25,7 @@ export interface AgentPerformanceRow {
 /**
  * Fetches real aggregate agent metrics via `POST /agent_performance/{agent_id}`
  * (Fas 4) for every unique agent found in `calls`/`reports`, one request per
- * agent (mirrors `fetch_agent_performance()` in the legacy NiceGUI dashboard).
+ * agent metrics from the FastAPI backend.
  *
  * Per-agent call count / sentiment / QA score are always derived locally from
  * the already-fetched CallRows (cheap, always available); only the

@@ -17,13 +17,11 @@ const MAX_DELAY_MS = 30_000;
 const MAX_LOGS = 300;
 
 /**
- * Client for GET /ws/transcription, mirroring the reconnect/backoff behavior
- * of app/nicegui_dashboard/services/transcription_ws_client.py.
+ * Client for GET /ws/transcription with reconnect/backoff.
  *
- * Note: unlike the Python client, browsers cannot set custom headers (e.g.
- * X-API-Key) on a WebSocket handshake, so this only works out of the box
- * when SENTIMENT_API_KEY / auth is disabled on the backend. See
- * docs/WEBUI_MODERNIZATION_PLAN.md for the Fas 3 follow-up on WS auth.
+ * Note: browsers cannot set custom headers (e.g. X-API-Key) on a WebSocket
+ * handshake, so this only works out of the box when SENTIMENT_API_KEY / auth
+ * is disabled on the backend.
  */
 export function useTranscriptionSocket() {
   const [status, setStatus] = React.useState<WsConnectionStatus>("disconnected");

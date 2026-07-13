@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { ApiError } from "@/lib/api/client";
 
 /**
- * Toast helpers mirroring app/nicegui_dashboard/services/ui_helpers.py:
- * notify_success / notify_warning / notify_error / notify_api_error.
+ * Toast helpers: success / warning / error / API error.
  */
 export function notifySuccess(message: string) {
   toast.success(message);

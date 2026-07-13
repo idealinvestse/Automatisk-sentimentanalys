@@ -4,15 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-# NiceGUI plugin is only needed for NiceGUI dashboard tests (deprecated)
-# Load it conditionally to allow API-only tests to run without nicegui installed
-try:
-    import nicegui  # noqa: F401
-
-    pytest_plugins = ["nicegui.testing.plugin"]
-except ImportError:
-    pass
-
 
 @pytest.fixture(autouse=True)
 def _clear_asr_cache() -> None:

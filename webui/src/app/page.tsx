@@ -147,7 +147,7 @@ export default function OverviewPage() {
         Samtalen ovan är kanoniska svenska demo-transkript (se{" "}
         <code>src/lib/demo-transcripts.ts</code>), men sentiment, QA-poäng och risknivå beräknas av
         den riktiga backend-pipelinen via <code>POST /analyze_pipeline</code> — inga hårdkodade
-        siffror. Se docs/WEBUI_MODERNIZATION_PLAN.md §6.
+        siffror.
       </p>
     </div>
   );

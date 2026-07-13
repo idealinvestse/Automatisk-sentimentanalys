@@ -1,10 +1,8 @@
 /**
- * Mock/demo data for UI development, decoupled from the real data-source
- * decision (see docs/WEBUI_MODERNIZATION_PLAN.md, "Datakälla"-frågan).
+ * Mock/demo data for UI development.
  *
- * Shape mirrors `reports_to_table_rows()` in
- * app/nicegui_dashboard/services/demo_provider.py so swapping this out for
- * a real API response later is a drop-in replacement.
+ * Shape matches the CallRow mapping used by `real-data.ts` so swapping
+ * mock rows for pipeline-backed rows is a drop-in replacement.
  */
 
 export type SentimentLabel = "positive" | "neutral" | "negative";

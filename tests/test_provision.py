@@ -20,11 +20,11 @@ from src.install.provision import (
 )
 
 
-def test_extras_for_profile_cli_includes_dashboard() -> None:
+def test_extras_for_profile_cli_includes_api() -> None:
     extras = extras_for_profile(InstallProfile.cli)
-    assert "dashboard-nicegui" in extras
     assert "api" in extras
     assert "install" in extras
+    assert "dashboard-nicegui" not in extras
 
 
 def test_extract_ffmpeg_binaries_from_zip(tmp_path: Path) -> None:

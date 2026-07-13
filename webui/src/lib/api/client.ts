@@ -1,9 +1,7 @@
 /**
  * Typed fetch client for the FastAPI backend.
  *
- * Mirrors app/nicegui_dashboard/services/nicegui_api_client.py so the new
- * web UI talks to the exact same REST endpoints as the legacy NiceGUI
- * dashboard. No backend changes are required to use this client.
+ * Talks to the same REST endpoints as the Python API without backend changes.
  */
 
 const DEFAULT_BASE_URL = "http://localhost:8000";

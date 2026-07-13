@@ -47,7 +47,6 @@ test-api:  ## Run API tests with coverage (≥90% on src/api)
 		tests/test_scan_logic.py \
 		tests/test_alerting_router.py \
 		tests/test_transcription_jobs.py \
-		tests/test_transcription_websocket.py \
 		tests/test_ws_ticket_minimal.py \
 		tests/test_path_validation.py \
 		tests/test_router_errors.py \
@@ -77,10 +76,10 @@ pre-commit:  ## Run pre-commit on all files
 run-api:  ## Start the FastAPI server (development)
 	uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
 
-run-dashboard:  ## Start archived NiceGUI dashboard (legacy; use webui/ instead)
-	python -m app.archive.nicegui_dashboard.main
+run-dashboard:  ## Start Next.js web UI (primary dashboard)
+	cd webui && npm run dev
 
-run-webui:  ## Start Next.js web UI (primary dashboard)
+run-webui:  ## Start Next.js web UI (alias for run-dashboard)
 	cd webui && npm run dev
 
 run-cli-help:  ## Show CLI help

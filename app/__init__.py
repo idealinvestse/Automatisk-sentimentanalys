@@ -1,1 +1,1 @@
-"""App package for dashboard and UI components."""
+"""App package for shared dashboard helpers and the webui launcher."""

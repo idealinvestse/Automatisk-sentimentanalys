@@ -67,9 +67,9 @@ $venvPy = Join-Path $venv "Scripts\python.exe"
 
 $extrasMap = @{
     minimal = "min,install"
-    cli     = "min,cli,asr,api,dashboard-nicegui,install"
+    cli     = "min,cli,asr,api,install"
     api     = "min,asr,api,install"
-    full    = "min,cli,asr,api,dashboard-nicegui,llm,training,install"
+    full    = "min,cli,asr,api,llm,training,install"
 }
 $extras = $extrasMap[$Profile]
 & $venvPy -m pip install -e ".[$extras]"
