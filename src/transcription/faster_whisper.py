@@ -102,6 +102,7 @@ class FasterWhisperTranscriber:
         preprocess: bool = False,
         preprocess_mode: str | None = None,
         on_chunk_progress: Callable[[int, int], None] | None = None,
+        condition_on_previous_text: bool | None = None,
     ) -> Transcript:
         """Transcribe audio file using faster-whisper."""
         t0 = time.time()
@@ -168,6 +169,10 @@ class FasterWhisperTranscriber:
             LOW_CONF_THRESHOLD = 0.60
             USE_CHUNKING = chunk_length_s and chunk_length_s > 0
             hotwords_str = format_hotwords_for_asr(hotwords)
+            cond_prev_text = (
+                True if condition_on_previous_text is True else False
+            )
+            warnings: list[str] = []
 
             # Fast path: no chunking requested or very short audio
             if not USE_CHUNKING:
@@ -178,6 +183,7 @@ class FasterWhisperTranscriber:
                     "word_timestamps": word_timestamps,
                     "initial_prompt": initial_prompt,
                     "hotwords": hotwords_str,
+                    "condition_on_previous_text": cond_prev_text,
                 }
                 if vad_parameters is not None:
                     transcribe_kwargs["vad_parameters"] = vad_parameters
@@ -248,6 +254,7 @@ class FasterWhisperTranscriber:
                         "word_timestamps": word_timestamps,
                         "initial_prompt": initial_prompt,
                         "hotwords": hotwords_str,
+                        "condition_on_previous_text": cond_prev_text,
                     }
                     if vad_parameters is not None:
                         fallback_kwargs["vad_parameters"] = vad_parameters
@@ -315,25 +322,33 @@ class FasterWhisperTranscriber:
                     chunk_start_time = pos / sr
                     chunk_index += 1
 
-                    # Transcribe the numpy chunk (faster-whisper accepts ndarray)
-                    try:
-                        chunk_kwargs: dict[str, Any] = {
-                            "language": language,
-                            "beam_size": beam_size,
-                            "vad_filter": vad,
-                            "word_timestamps": word_timestamps,
-                            "initial_prompt": initial_prompt,
-                            "hotwords": hotwords_str,
-                        }
-                        if vad_parameters is not None:
-                            chunk_kwargs["vad_parameters"] = vad_parameters
-                        segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
-                    except Exception as ce:
-                        logger.warning(
-                            "Chunk %d transcription failed: %s. Skipping chunk.", chunk_index, ce
-                        )
-                        pos += step
-                        continue
+                    chunk_kwargs: dict[str, Any] = {
+                        "language": language,
+                        "beam_size": beam_size,
+                        "vad_filter": vad,
+                        "word_timestamps": word_timestamps,
+                        "initial_prompt": initial_prompt,
+                        "hotwords": hotwords_str,
+                        "condition_on_previous_text": cond_prev_text,
+                    }
+                    if vad_parameters is not None:
+                        chunk_kwargs["vad_parameters"] = vad_parameters
+
+                    segments_iter: list[Any] = []
+                    attempts = 0
+                    while attempts < 3:
+                        try:
+                            segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
+                            break
+                        except Exception as ce:
+                            attempts += 1
+                            if attempts >= 3:
+                                warnings.append(f"chunk_failed:{chunk_index}")
+                                logger.warning(
+                                    "Chunk %d failed after retries: %s", chunk_index, ce
+                                )
+                                segments_iter = []
+                                break
 
                     for s in segments_iter:
                         words: list[Word] = []  # type: ignore[no-redef]
@@ -414,6 +429,7 @@ class FasterWhisperTranscriber:
                 processing_time=proc,
                 segments=segs,
                 revision=revision,
+                warnings=warnings,
             )
 
             return add_diarization(transcript, audio_path, diarize, num_speakers)
@@ -429,6 +445,7 @@ class FasterWhisperTranscriber:
                 processing_time=proc,
                 segments=segs,
                 revision=revision,
+                warnings=warnings,
             )
             return add_diarization(transcript, audio_path, diarize, num_speakers)
 
