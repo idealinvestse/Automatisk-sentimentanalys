@@ -45,6 +45,14 @@ class AsrParamsMixin(BaseModel):
         None, description="Domain-specific words to boost (callcenter terms etc.)"
     )
     initial_prompt: str | None = Field(None, description="Conditioning prompt for ASR decoder")
+    provider: Literal["local", "cloud"] = Field(
+        "local",
+        description="ASR provider: local (default) | cloud (Deepgram, opt-in)",
+    )
+    cloud_fallback_local: bool = Field(
+        False,
+        description="Fall back to local ASR if cloud fails (default off)",
+    )
 
 
 # ---------------------------------------------------------------------------

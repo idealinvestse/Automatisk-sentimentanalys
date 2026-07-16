@@ -23,7 +23,7 @@ from .lexicon import blend_results_with_lexicon, load_lexicon
 from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
 from .sentiment import analyze_smart
-from .transcription import get_transcriber
+from .transcription.router import AsrRouter
 from .transcription.factory import resolve_preprocess_mode
 
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
@@ -444,6 +444,16 @@ def transcribe_cmd(
         help="ASR backend: faster (default, best Swedish WER via KB-Whisper) | transformers | whisperx (better alignment + integrated diarization)",
     ),
     device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
+    provider: str = typer.Option(
+        "local",
+        "--provider",
+        help="ASR provider: local (default) | cloud (Deepgram, opt-in)",
+    ),
+    cloud_fallback_local: bool = typer.Option(
+        False,
+        "--cloud-fallback-local",
+        help="Fall back to local ASR if cloud fails (default off)",
+    ),
     language: str = typer.Option("sv", help="ASR language code (sv)"),
     beam_size: int = typer.Option(5, min=1, max=10),
     vad: bool = typer.Option(True, help="Enable VAD filter (faster-whisper)"),
@@ -513,12 +523,7 @@ def transcribe_cmd(
     start_all = time.time()
     console.print(f"[cyan]Found {len(files)} audio file(s). Starting transcription...[/cyan]")
 
-    # Initialize transcriber
-    try:
-        transcriber = get_transcriber(backend=backend, model_name=model, device=device)
-    except Exception as e:
-        console.print(f"[red]Failed to initialize ASR transcriber: {e}[/red]")
-        raise typer.Exit(code=2) from e
+    router = AsrRouter()
 
     with Progress(
         SpinnerColumn(),
@@ -543,8 +548,13 @@ def transcribe_cmd(
                     preprocess=preprocess,
                     preprocess_mode=preprocess_mode,
                 )
-                tr_obj = transcriber.transcribe(
-                    audio_path=path,
+                tr_obj = router.transcribe(
+                    path,
+                    provider=provider,
+                    backend=backend,
+                    model_name=model,
+                    device=device,
+                    cloud_fallback_local=cloud_fallback_local,
                     language=language,
                     beam_size=beam_size,
                     vad=vad,

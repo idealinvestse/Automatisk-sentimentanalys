@@ -398,14 +398,13 @@ def test_media_root_rejects_path_outside_sandbox(audio_file, monkeypatch, tmp_pa
 
 def test_helpers_transcribe_helper():
     mock_transcript = MagicMock()
-    mock_transcript.to_dict.return_value = {"segments": []}
-    mock_transcriber = MagicMock()
-    mock_transcriber.transcribe.return_value = mock_transcript
-    with patch("src.api.helpers.get_transcriber", return_value=mock_transcriber):
+    mock_transcript.to_dict.return_value = {"segments": [], "provider": "local"}
+    with patch("src.api.helpers.AsrRouter") as mock_router_cls:
+        mock_router_cls.return_value.transcribe.return_value = mock_transcript
         from src.api.helpers import transcribe_helper
 
         out = transcribe_helper(audio_path="/tmp/x.wav")
-    assert out == {"segments": []}
+    assert out == {"segments": [], "provider": "local"}
 
 
 def test_run_batch_sequential_worker_raises():

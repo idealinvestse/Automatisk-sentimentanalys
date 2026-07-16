@@ -20,8 +20,8 @@ from .pipeline_steps import (
     run_registry_analyzers,
     should_use_any_llm,
 )
-from .transcription import get_transcriber
 from .transcription.factory import resolve_preprocess_mode
+from .transcription.router import AsrRouter
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,8 @@ class CallAnalysisPipeline:
         profile: str = "default",
         asr_backend: str = "faster",
         asr_model: str = "kb-whisper-large",
+        asr_provider: str = "local",
+        cloud_fallback_local: bool = False,
         # --- LLM / Mistral (Fas 3.2) ---
         use_mistral_llm: bool = False,
         llm_model: str | None = None,
@@ -80,6 +82,8 @@ class CallAnalysisPipeline:
         self.asr_backend = asr_backend
         self.allow_heuristic_superseded = allow_heuristic_superseded
         self.asr_model = asr_model
+        self.asr_provider = asr_provider
+        self.cloud_fallback_local = cloud_fallback_local
         self.use_mistral_llm = use_mistral_llm
         self.llm_model = llm_model
         self.deep_analysis = deep_analysis
@@ -338,18 +342,18 @@ class CallAnalysisPipeline:
                 model=self.asr_model,
             )
             try:
-                transcriber = get_transcriber(
-                    backend=self.asr_backend,
-                    model_name=self.asr_model,
-                    device=self.device,
-                )
                 resolved_preprocess_mode = resolve_preprocess_mode(
                     preprocess=preprocess,
                     preprocess_mode=preprocess_mode,
                     profile=self.profile,
                 )
-                transcript = transcriber.transcribe(
-                    audio_path=audio_path,
+                transcript = AsrRouter().transcribe(
+                    audio_path,
+                    provider=self.asr_provider,
+                    backend=self.asr_backend,
+                    model_name=self.asr_model,
+                    device=self.device,
+                    cloud_fallback_local=self.cloud_fallback_local,
                     language=language,
                     diarize=run_diarization,
                     num_speakers=num_speakers,

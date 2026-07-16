@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol, runtime_checkable
 
-from ..transcription import get_transcriber
 from ..transcription.factory import resolve_preprocess_mode
+from ..transcription.router import AsrRouter
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,8 @@ class AsrRequest(Protocol):
     revision: str | None
     diarize: bool
     num_speakers: int | None
+    provider: str
+    cloud_fallback_local: bool
     # Optional on some request models — accessed via getattr with defaults.
     hotwords: list[str] | None
     initial_prompt: str | None
@@ -54,6 +56,8 @@ def asr_kwargs_from(
         "revision": req.revision,
         "diarize": req.diarize,
         "num_speakers": req.num_speakers,
+        "provider": req.provider,
+        "cloud_fallback_local": req.cloud_fallback_local,
         "hotwords": getattr(req, "hotwords", None),
         "initial_prompt": getattr(req, "initial_prompt", None),
         "preprocess": preprocess,
@@ -84,11 +88,13 @@ def transcribe_helper(
     preprocess: bool = False,
     preprocess_mode: str | None = None,
     profile: str | None = None,
+    provider: str = "local",
+    cloud_fallback_local: bool = False,
 ) -> dict[str, Any]:
     """Run ASR transcription and return the result as a plain dict.
 
-    Uses the cached :func:`~src.transcription.get_transcriber` so that model
-    weights are only loaded once per unique (backend, model, device) triple.
+    Routes through :class:`~src.transcription.router.AsrRouter` so provider
+    policy and post-processing apply consistently across entry points.
 
     Args:
         audio_path: Path to the audio file.
@@ -109,14 +115,18 @@ def transcribe_helper(
     Returns:
         Transcription result as a plain dict (via ``Transcript.to_dict()``).
     """
-    transcriber = get_transcriber(backend=backend, model_name=model, device=device)
     resolved_preprocess_mode = resolve_preprocess_mode(
         preprocess=preprocess,
         preprocess_mode=preprocess_mode,
         profile=profile,
     )
-    transcript = transcriber.transcribe(
-        audio_path=audio_path,
+    transcript = AsrRouter().transcribe(
+        audio_path,
+        provider=provider,
+        backend=backend,
+        model_name=model,
+        device=device,
+        cloud_fallback_local=cloud_fallback_local,
         language=language,
         beam_size=beam_size,
         vad=vad,
