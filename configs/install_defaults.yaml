@@ -20,6 +20,9 @@ asr:
   hotwords_file: configs/callcenter_hotwords.txt
   preprocess: false
   preprocess_mode: off  # off | basic | callcenter (v2 bandpass + tuned VAD)
+  provider: local
+  cloud_fallback_local: false
+  cloud_provider: deepgram
 
 llm:
   enabled: false

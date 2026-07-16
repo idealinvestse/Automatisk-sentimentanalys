@@ -40,6 +40,9 @@ class AsrDefaults(BaseModel):
     hotwords_file: str = "configs/callcenter_hotwords.txt"
     preprocess: bool = False
     preprocess_mode: Literal["off", "basic", "callcenter"] = "off"
+    provider: Literal["local", "cloud"] = "local"
+    cloud_fallback_local: bool = False
+    cloud_provider: Literal["deepgram"] = "deepgram"
 
     @field_validator("preprocess_mode", mode="before")
     @classmethod
