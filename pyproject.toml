@@ -103,6 +103,9 @@ diarize = [
     "pyannote.audio>=3.1.0",
     "torchaudio>=2.2.0",
 ]
+cloud-stt = [
+    "httpx>=0.27.0",
+]
 # ASR: faster-whisper + whisperx ingår i [cli]/[api]/[asr]; modeller hämtas via sentimentanalys-download-asr
 
 [tool.ruff]
@@ -166,6 +169,7 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "slow: tests that load ML models or run ASR",
     "audio: tests that require samples/audio files",
+    "cloud_stt: tests that call live Deepgram API (opt-in only)",
 ]
 
 [tool.coverage.run]

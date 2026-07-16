@@ -1,0 +1,18 @@
+{
+  "results": {
+    "channels": [
+      {
+        "alternatives": [
+          {
+            "transcript": "Hej jag behöver hjälp",
+            "words": [
+              {"word": "Hej", "start": 0.0, "end": 0.3, "confidence": 0.9},
+              {"word": "jag", "start": 0.3, "end": 0.5, "confidence": 0.8}
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {"duration": 1.2}
+}

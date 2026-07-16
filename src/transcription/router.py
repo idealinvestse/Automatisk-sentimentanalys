@@ -15,6 +15,7 @@ from .postprocess import filter_hallucinations
 ProviderName = Literal["local", "cloud"]
 
 _VALID_PROVIDERS = frozenset({"local", "cloud"})
+_CLOUD_FALLBACK_ERRORS = frozenset({AsrErrorCode.CLOUD_TIMEOUT, AsrErrorCode.CLOUD_QUOTA})
 
 
 def resolve_asr_provider(provider: str | None) -> ProviderName:
@@ -47,18 +48,66 @@ class AsrRouter:
         resolved = resolve_asr_provider(provider)
 
         if resolved == "cloud":
-            raise TranscriptionError(
-                "Cloud STT (Deepgram) is not configured in this build. "
-                "Use provider='local' or enable cloud-stt (see Task 6).",
-                error_code=AsrErrorCode.CLOUD_AUTH,
-            )
+            try:
+                transcript = self._transcribe_cloud(
+                    audio_path,
+                    cloud_provider=cloud_provider,
+                    **kwargs,
+                )
+            except TranscriptionError as exc:
+                if cloud_fallback_local and exc.error_code in _CLOUD_FALLBACK_ERRORS:
+                    transcript = self._transcribe_local(
+                        audio_path,
+                        backend=backend,
+                        model_name=model_name,
+                        device=device,
+                        **kwargs,
+                    )
+                    return replace(transcript, provider="local")
+                raise
+            transcript = filter_hallucinations(transcript)
+            return replace(transcript, provider=resolved)
 
+        transcript = self._transcribe_local(
+            audio_path,
+            backend=backend,
+            model_name=model_name,
+            device=device,
+            **kwargs,
+        )
+        return replace(transcript, provider=resolved)
+
+    def _transcribe_local(
+        self,
+        audio_path: str,
+        *,
+        backend: str,
+        model_name: str,
+        device: str,
+        **kwargs: object,
+    ) -> Transcript:
         transcriber = get_transcriber(
             backend=backend, model_name=model_name, device=device
         )
         transcript = transcriber.transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
-        transcript = filter_hallucinations(transcript)
-        return replace(transcript, provider=resolved)
+        return filter_hallucinations(transcript)
+
+    def _transcribe_cloud(
+        self,
+        audio_path: str,
+        *,
+        cloud_provider: str,
+        **kwargs: object,
+    ) -> Transcript:
+        if cloud_provider != "deepgram":
+            raise TranscriptionError(
+                f"Unsupported cloud ASR provider '{cloud_provider}'. "
+                "Only 'deepgram' is available.",
+                error_code=AsrErrorCode.CLOUD_AUTH,
+            )
+        from .cloud_deepgram import DeepgramTranscriber
+
+        return DeepgramTranscriber().transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
 
 
 @lru_cache(maxsize=1)
