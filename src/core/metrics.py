@@ -69,6 +69,33 @@ STATUS_EVENTS_TOTAL = (
     if Counter is not None
     else None
 )
+ASR_TRANSCRIPTIONS_TOTAL = (
+    Counter(
+        "asr_transcriptions_total",
+        "ASR transcription requests",
+        ["provider", "backend", "outcome"],
+    )
+    if Counter is not None
+    else None
+)
+ASR_TRANSCRIPTION_DURATION_SECONDS = (
+    Histogram(
+        "asr_transcription_duration_seconds",
+        "ASR transcription latency",
+        ["provider", "backend", "outcome"],
+        buckets=(0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
+    )
+    if Histogram is not None
+    else None
+)
+ASR_CLOUD_EGRESS_TOTAL = (
+    Counter(
+        "asr_cloud_egress_total",
+        "Cloud ASR requests that egress raw audio off-machine",
+    )
+    if Counter is not None
+    else None
+)
 
 
 def record_analyzer_duration(analyzer: str, duration_s: float) -> None:
@@ -104,6 +131,24 @@ def record_status_event(level: str, component: str, error_code: str = "") -> Non
             component=component,
             error_code=error_code or "none",
         ).inc()
+
+
+def record_asr_transcription(
+    provider: str, backend: str, outcome: str, duration_s: float
+) -> None:
+    if ASR_TRANSCRIPTIONS_TOTAL is not None:
+        ASR_TRANSCRIPTIONS_TOTAL.labels(
+            provider=provider, backend=backend, outcome=outcome
+        ).inc()
+    if ASR_TRANSCRIPTION_DURATION_SECONDS is not None:
+        ASR_TRANSCRIPTION_DURATION_SECONDS.labels(
+            provider=provider, backend=backend, outcome=outcome
+        ).observe(duration_s)
+
+
+def record_asr_cloud_egress() -> None:
+    if ASR_CLOUD_EGRESS_TOTAL is not None:
+        ASR_CLOUD_EGRESS_TOTAL.inc()
 
 
 @contextmanager

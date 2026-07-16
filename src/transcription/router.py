@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from functools import lru_cache
 from typing import Literal
 
 from ..core.errors import TranscriptionError
+from ..core.metrics import record_asr_cloud_egress, record_asr_transcription
 from ..core.models import Transcript
 from .error_codes import AsrErrorCode
 from .factory import get_transcriber
@@ -86,11 +88,19 @@ class AsrRouter:
         device: str,
         **kwargs: object,
     ) -> Transcript:
-        transcriber = get_transcriber(
-            backend=backend, model_name=model_name, device=device
-        )
-        transcript = transcriber.transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
-        return filter_hallucinations(transcript)
+        started = time.perf_counter()
+        outcome = "error"
+        try:
+            transcriber = get_transcriber(
+                backend=backend, model_name=model_name, device=device
+            )
+            transcript = transcriber.transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
+            outcome = "success"
+            return filter_hallucinations(transcript)
+        finally:
+            record_asr_transcription(
+                "local", backend, outcome, time.perf_counter() - started
+            )
 
     def _transcribe_cloud(
         self,
@@ -99,15 +109,24 @@ class AsrRouter:
         cloud_provider: str,
         **kwargs: object,
     ) -> Transcript:
-        if cloud_provider != "deepgram":
-            raise TranscriptionError(
-                f"Unsupported cloud ASR provider '{cloud_provider}'. "
-                "Only 'deepgram' is available.",
-                error_code=AsrErrorCode.CLOUD_AUTH,
-            )
-        from .cloud_deepgram import DeepgramTranscriber
+        record_asr_cloud_egress()
+        started = time.perf_counter()
+        outcome = "error"
+        try:
+            if cloud_provider != "deepgram":
+                raise TranscriptionError(
+                    f"Unsupported cloud ASR provider '{cloud_provider}'. "
+                    "Only 'deepgram' is available.",
+                    error_code=AsrErrorCode.CLOUD_AUTH,
+                )
+            from .cloud_deepgram import DeepgramTranscriber
 
-        return DeepgramTranscriber().transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
+            outcome = "success"
+            return DeepgramTranscriber().transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
+        finally:
+            record_asr_transcription(
+                "cloud", cloud_provider, outcome, time.perf_counter() - started
+            )
 
 
 @lru_cache(maxsize=1)
