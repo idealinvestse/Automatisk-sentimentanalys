@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import replace
 from typing import Protocol
 
@@ -59,11 +60,25 @@ def format_hotwords_for_asr(hotwords: list[str] | str | None) -> str | None:
     return " ".join(words) if words else None
 
 
+def _resolve_diarization_backend(diarization_backend: str | None) -> str:
+    """Pick pyannote when HF token is set and pyannote is importable; else heuristic."""
+    if diarization_backend is not None:
+        return diarization_backend
+    token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
+    if token:
+        from ..diarization import _HAS_PYANNOTE
+
+        if _HAS_PYANNOTE:
+            return "pyannote"
+    return "heuristic"
+
+
 def add_diarization(
     transcript: Transcript,
     audio_path: str,
     diarize: bool,
     num_speakers: int | None,
+    diarization_backend: str | None = None,
 ) -> Transcript:
     """Add speaker diarization to a Transcript object if requested.
 
@@ -74,7 +89,8 @@ def add_diarization(
     try:
         from ..diarization import DiarizationPipeline
 
-        dp = DiarizationPipeline(backend="heuristic")
+        backend = _resolve_diarization_backend(diarization_backend)
+        dp = DiarizationPipeline(backend=backend)
         diar_result = dp.diarize(audio_path, num_speakers=num_speakers)
 
         # Convert transcript segments to dicts as expected by assign_speakers_to_segments

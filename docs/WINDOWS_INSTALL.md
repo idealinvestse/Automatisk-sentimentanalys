@@ -36,6 +36,11 @@ pip install -e ".[dev]"
 huggingface-cli login
 ```
 > or set the `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` environment variable.
+> When a token is present and pyannote is installed, diarization uses the pyannote backend automatically; otherwise a lightweight heuristic fallback runs.
+
+> **Call-center preprocessing**: For sentiment profile `callcenter`, set `asr.preprocess_mode: callcenter` in launcher settings (or `preprocess_mode=callcenter` on CLI/API) for telephone-bandpass and tuned VAD. Recommended but not enforced globally.
+
+> **Cloud STT (opt-in)**: Local ASR is the default. To use Deepgram, install `pip install -e ".[cloud-stt]"`, set `DEEPGRAM_API_KEY`, and set `asr.provider: cloud` in config. Raw audio leaves the machine only with this explicit opt-in. See [SECURITY.md](../SECURITY.md).
 
 ## Legacy / Windows-specific Methods
 
@@ -110,6 +115,7 @@ Common variables (can be set in Windows Environment Variables or via `.env`):
 
 - `OPENROUTER_API_KEY`
 - `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN`
+- `DEEPGRAM_API_KEY` or `CLOUD_STT_API_KEY` (cloud STT only; opt-in via `asr.provider=cloud`)
 - `SENTIMENT_API_KEY` (for API authentication)
 - `API_MEDIA_ROOT`
 

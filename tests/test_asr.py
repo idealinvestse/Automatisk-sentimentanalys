@@ -104,6 +104,38 @@ class TestAddDiarization:
         assert out.diarization["backend"] == "failed"
         assert "no model" in out.diarization["error"]
 
+    def test_add_diarization_prefers_pyannote_when_token(self, monkeypatch):
+        from src.transcription.base import add_diarization
+
+        monkeypatch.setenv("HF_TOKEN", "x")
+        transcript = self._sample_transcript()
+        mock_dp = MagicMock()
+        mock_dp.diarize.return_value = MagicMock(num_speakers=2, to_dict=lambda: {"n": 2})
+        mock_dp.assign_speakers_to_segments.return_value = [
+            {"start": 0.0, "end": 1.0, "text": "Hej", "speaker": "S1"}
+        ]
+        with (
+            patch("src.diarization._HAS_PYANNOTE", True),
+            patch("src.diarization.DiarizationPipeline", return_value=mock_dp) as dp_cls,
+        ):
+            add_diarization(transcript, "/tmp/x.wav", diarize=True, num_speakers=2)
+        dp_cls.assert_called_once_with(backend="pyannote")
+
+    def test_add_diarization_uses_heuristic_without_token(self, monkeypatch):
+        from src.transcription.base import add_diarization
+
+        monkeypatch.delenv("HF_TOKEN", raising=False)
+        monkeypatch.delenv("HUGGINGFACE_HUB_TOKEN", raising=False)
+        transcript = self._sample_transcript()
+        mock_dp = MagicMock()
+        mock_dp.diarize.return_value = MagicMock(num_speakers=1, to_dict=lambda: {"n": 1})
+        mock_dp.assign_speakers_to_segments.return_value = [
+            {"start": 0.0, "end": 1.0, "text": "Hej", "speaker": "S1"}
+        ]
+        with patch("src.diarization.DiarizationPipeline", return_value=mock_dp) as dp_cls:
+            add_diarization(transcript, "/tmp/x.wav", diarize=True, num_speakers=2)
+        dp_cls.assert_called_once_with(backend="heuristic")
+
 
 class TestDeviceNormalization:
     def test_auto(self):

@@ -120,6 +120,10 @@ export default function TranscriptionPage() {
           <h1 className="text-xl font-semibold tracking-tight">Transkribering</h1>
           <p className="text-sm text-muted-foreground">
             Live-loggar och jobbstatus från backendens WebSocket (<code>/ws/transcription</code>).
+            Lokal ASR är standard. Moln-STT (Deepgram) kräver explicit{" "}
+            <code>provider: &quot;cloud&quot;</code> och <code>DEEPGRAM_API_KEY</code> i API/config
+            — råljud lämnar då maskinen. För callcenter-ljud, använd{" "}
+            <code>preprocess_mode: &quot;callcenter&quot;</code> i backend-konfigurationen.
           </p>
         </div>
         <Badge variant={STATUS_VARIANT[status]} className="gap-1.5">

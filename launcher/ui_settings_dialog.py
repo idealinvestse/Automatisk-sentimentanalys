@@ -332,20 +332,44 @@ class SettingsDialog(tk.Toplevel):
 
     def _build_asr_tab(self, parent: ttk.Frame) -> None:
         inner = self._scroll_tab(parent)
+        ttk.Label(
+            inner,
+            text=(
+                "Moln-STT (Deepgram) skickar råljud till tredje part. Aktivera endast med "
+                "asr.provider=cloud och DEEPGRAM_API_KEY. Standard är lokal ASR."
+            ),
+            foreground="#b45309",
+            wraplength=520,
+        ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
         self._labeled_combo(
-            inner, "Backend", "asr.backend", ("faster", "transformers", "whisperx"), row=0
+            inner, "ASR-provider", "asr.provider", ("local", "cloud"), row=1
         )
-        self._labeled_entry(inner, "Modell", "asr.model", row=1)
-        self._labeled_combo(
-            inner, "Revision", "asr.revision", ("standard", "strict", "subtitle"), row=2
+        self._labeled_check(
+            inner, "Moln-fallback till lokal", "asr.cloud_fallback_local", row=2
         )
-        self._labeled_entry(inner, "Språk", "asr.language", row=3)
-        self._labeled_entry(inner, "Hotwords-fil", "asr.hotwords_file", row=4)
+        ttk.Label(
+            inner,
+            text=(
+                "För callcenter-profil: använd preprocess_mode=callcenter för "
+                "telefonljud (rekommenderas, tvingas inte globalt)."
+            ),
+            foreground="#6b7280",
+            wraplength=520,
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
         self._labeled_combo(
-            inner, "Preprocess-läge", "asr.preprocess_mode", ("off", "basic", "callcenter"), row=5
+            inner, "Backend", "asr.backend", ("faster", "transformers", "whisperx"), row=4
+        )
+        self._labeled_entry(inner, "Modell", "asr.model", row=5)
+        self._labeled_combo(
+            inner, "Revision", "asr.revision", ("standard", "strict", "subtitle"), row=6
+        )
+        self._labeled_entry(inner, "Språk", "asr.language", row=7)
+        self._labeled_entry(inner, "Hotwords-fil", "asr.hotwords_file", row=8)
+        self._labeled_combo(
+            inner, "Preprocess-läge", "asr.preprocess_mode", ("off", "basic", "callcenter"), row=9
         )
         ttk.Button(inner, text="Öppna ASR-hanterare…", command=self._open_asr_manager).grid(
-            row=6, column=0, sticky=tk.W, pady=12
+            row=10, column=0, sticky=tk.W, pady=12
         )
 
     def _build_llm_tab(self, parent: ttk.Frame) -> None:
@@ -498,6 +522,8 @@ class SettingsDialog(tk.Toplevel):
             "asr.language": d.asr.language,
             "asr.hotwords_file": d.asr.hotwords_file,
             "asr.preprocess_mode": d.asr.preprocess_mode,
+            "asr.provider": d.asr.provider,
+            "asr.cloud_fallback_local": d.asr.cloud_fallback_local,
             "llm.enabled": d.llm.enabled,
             "llm.provider": d.llm.provider,
             "llm.default_model": d.llm.default_model,
@@ -587,6 +613,8 @@ class SettingsDialog(tk.Toplevel):
                 "hotwords_file": _s("asr.hotwords_file"),
                 "preprocess_mode": _s("asr.preprocess_mode"),  # type: ignore[typeddict-item]
                 "preprocess": _s("asr.preprocess_mode") != "off",
+                "provider": _s("asr.provider"),  # type: ignore[typeddict-item]
+                "cloud_fallback_local": _b("asr.cloud_fallback_local"),
             }
         )
         updated.llm = updated.llm.model_copy(

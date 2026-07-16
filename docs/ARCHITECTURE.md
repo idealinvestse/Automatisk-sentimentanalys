@@ -65,9 +65,10 @@ Both entry points share the same underlying analysis and transcription engines, 
 │    prompts, Pydantic schemas (strict json_schema for Mistral) │
 ├─────────────────────────────────────────────────────────────┤
 │  Transcription (src/transcription/)                          │
-│  • FasterWhisperTranscriber                                │
-│  • TransformersTranscriber                                 │
-│  • Cached factory – model loaded once per config           │
+│  • AsrRouter – local (default) or cloud (Deepgram, opt-in)   │
+│  • FasterWhisperTranscriber, TransformersTranscriber         │
+│  • Cached factory – model loaded once per config             │
+│  • add_diarization – pyannote when HF token + importable     │
 ├─────────────────────────────────────────────────────────────┤
 │  Lexicon (src/lexicon.py)                                   │
 │  • Swedish sentiment lexicon loader (CSV/TSV)             │
@@ -185,6 +186,14 @@ The `/scan_process` endpoint previously only wrote its incremental state file af
 ### 8. Lexicon Blending (now profile-aware via analyze_smart)
 
 Core logic still in `src/lexicon.py` (`blend_results_with_lexicon()`, now using LearnedBlender by default for per-class weights). `analyze_smart` now integrates it automatically based on profile defaults (e.g. callcenter/forum get auto lexicon_file + weight; explicit params override). Keeps analyzer flexible while providing "batteries included" for common profiles. CLI/API/ evaluate updated to pass-through. See also new features: hybrid boost on low model confidence, sentence aggregation for mixed text.
+
+### 9. ASR Provider Routing & Diarization
+
+`AsrRouter` (`src/transcription/router.py`) selects between **local** Whisper backends (default) and **cloud** Deepgram (opt-in). Cloud requires explicit `provider=cloud` plus `DEEPGRAM_API_KEY`; audio egress is metered and logged without content.
+
+Speaker diarization (`add_diarization` in `src/transcription/base.py`) auto-selects **pyannote** when `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN` is set and `pyannote.audio` is installed; otherwise **heuristic** (energy/VAD). Install with `pip install -e ".[diarize]"`.
+
+For call-center telephone audio, set `preprocess_mode=callcenter` (recommended with `sentiment_profile=callcenter`; not forced globally).
 
 ## Data Flow
 

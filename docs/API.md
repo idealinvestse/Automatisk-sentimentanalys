@@ -76,6 +76,19 @@ Server-side `OPENROUTER_API_KEY` (env or `configs/openrouter.key`) is always pre
 | `API_TRUSTED_PROXY` | `true` to honor `X-Forwarded-For` for rate limiting (only behind a trusted reverse proxy) |
 | `API_STATE_DIR` | Directory allowed for `/scan_process` `state_file` (defaults to `API_CACHE_DIR`) |
 | `OPENROUTER_API_KEY` | Mistral/OpenRouter for LLM paths |
+| `DEEPGRAM_API_KEY` / `CLOUD_STT_API_KEY` | Deepgram cloud STT (opt-in only; see [SECURITY.md](../SECURITY.md)) |
+| `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` | pyannote diarization models (when `diarize=true`) |
+
+### Cloud STT (opt-in)
+
+Default ASR provider is **local**. Cloud sends raw audio to Deepgram only when:
+
+- Request or config sets `provider: "cloud"`, **and**
+- `DEEPGRAM_API_KEY` (or `CLOUD_STT_API_KEY`) is set.
+
+`cloud_fallback_local` defaults to `false` (no silent fallback). Egress is logged via `asr_cloud_egress_total` without audio/transcript content. See [SECURITY.md](../SECURITY.md).
+
+Transcription endpoints accept `provider`, `cloud_fallback_local`, `diarize`, and `num_speakers` via `AsrParamsMixin`.
 
 ---
 
