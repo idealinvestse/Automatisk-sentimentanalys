@@ -17,7 +17,11 @@ from src.install.config_schema import InstallProfile, UserConfig
 from src.install.preflight import run_preflight
 from src.install.provision import run_provision
 from src.install.secrets_win import delete_secret, set_secret
-from src.install.user_config import load_user_config, save_user_config
+from src.install.user_config import (
+    load_user_config,
+    save_user_config,
+    sync_api_base_url_from_services,
+)
 
 from .asr_manager import asr_status_for_config, run_asr_setup
 from .env_builder import bootstrap_launcher_env, resolve_python, working_directory
@@ -95,6 +99,7 @@ def configure_cmd(
         return
 
     cfg = load_user_config(root, create_if_missing=init)
+    baseline = cfg.model_copy(deep=True)
     if profile is not None:
         cfg.install_profile = profile
     if sentiment_profile is not None:
@@ -112,6 +117,7 @@ def configure_cmd(
         cfg.portable_mode = portable
     if not cfg.paths.app_root:
         cfg.paths.app_root = str(root.resolve())
+    sync_api_base_url_from_services(cfg, baseline=baseline)
 
     path = save_user_config(cfg)
     console.print(f"[green]Saved {path}[/green]")

@@ -39,6 +39,7 @@ class SettingsDialog(tk.Toplevel):
         event_log: EventLog,
         *,
         on_saved: Callable[[], None] | None = None,
+        on_restart_services: Callable[[list[str]], None] | None = None,
         on_provision: Callable[[], None] | None = None,
         on_open_asr: Callable[[], None] | None = None,
     ) -> None:
@@ -52,6 +53,7 @@ class SettingsDialog(tk.Toplevel):
         self._app_root = app_root
         self._event_log = event_log
         self._on_saved = on_saved
+        self._on_restart_services = on_restart_services
         self._on_provision = on_provision
         self._on_open_asr = on_open_asr
 
@@ -774,14 +776,24 @@ class SettingsDialog(tk.Toplevel):
             for kind, backends in result.secrets_saved.items():
                 parts.append(f"{kind}: {', '.join(backends)}")
             msg += "\n\nNycklar sparade:\n" + "\n".join(parts)
-        if result.restart_services:
-            msg += f"\n\nStarta om: {', '.join(result.restart_services)}"
         if result.profile_changed:
             msg += "\n\nInstallationsprofil ändrad — kör Installera/Reparera vid behov."
-        messagebox.showinfo("Inställningar", msg, parent=self)
+
+        restart_now = False
+        if result.restart_services:
+            msg += (
+                f"\n\nStarta om tjänster nu?\n({', '.join(result.restart_services)})"
+            )
+            restart_now = bool(
+                messagebox.askyesno("Inställningar", msg, parent=self)
+            )
+        else:
+            messagebox.showinfo("Inställningar", msg, parent=self)
 
         if self._on_saved:
             self._on_saved()
+        if restart_now and result.restart_services and self._on_restart_services:
+            self._on_restart_services(list(result.restart_services))
 
     def _on_close(self) -> None:
         if self._dirty and not messagebox.askyesno(
@@ -846,6 +858,7 @@ def open_settings_dialog(
     event_log: EventLog,
     *,
     on_saved: Callable[[], None] | None = None,
+    on_restart_services: Callable[[list[str]], None] | None = None,
     on_provision: Callable[[], None] | None = None,
     on_open_asr: Callable[[], None] | None = None,
 ) -> None:
@@ -855,6 +868,7 @@ def open_settings_dialog(
         app_root,
         event_log,
         on_saved=on_saved,
+        on_restart_services=on_restart_services,
         on_provision=on_provision,
         on_open_asr=on_open_asr,
     )

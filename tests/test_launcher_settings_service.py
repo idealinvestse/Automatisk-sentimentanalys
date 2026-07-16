@@ -78,6 +78,129 @@ def test_restart_hints_on_port_change() -> None:
     after.services.api_port = 9000
     hints = restart_hints(before, after)
     assert "api" in hints
+    assert "dashboard" in hints
+
+
+def test_config_to_env_sets_next_public_api_base_url() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(
+        services={"api_host": "127.0.0.1", "api_port": 9001},
+        runtime={"dashboard": {"api_base_url": "http://127.0.0.1:9001"}},
+    )
+    env = config_to_env(cfg)
+    assert env["SENTIMENT_API_BASE_URL"] == "http://127.0.0.1:9001"
+    assert env["NEXT_PUBLIC_API_BASE_URL"] == "http://127.0.0.1:9001"
+
+
+def test_config_to_env_derives_api_base_url_when_empty() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(
+        services={"api_host": "0.0.0.0", "api_port": 8123},
+        runtime={"dashboard": {"api_base_url": ""}},
+    )
+    env = config_to_env(cfg)
+    assert env["NEXT_PUBLIC_API_BASE_URL"] == "http://127.0.0.1:8123"
+    assert env["SENTIMENT_API_BASE_URL"] == "http://127.0.0.1:8123"
+
+
+def test_save_draft_syncs_api_base_url_when_port_changes(
+    config_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from src.install.user_config import load_user_config
+
+    baseline = UserConfig(
+        paths={"app_root": str(config_env)},
+        services={"api_host": "127.0.0.1", "api_port": 8000},
+        runtime={"dashboard": {"api_base_url": "http://127.0.0.1:8000"}},
+    )
+    draft = baseline.model_copy(deep=True)
+    draft.services.api_port = 9000
+    result = save_draft(draft, baseline=baseline, check_ports=False)
+    assert result.path.is_file()
+    loaded = load_user_config(config_env)
+    assert loaded.runtime.dashboard.api_base_url == "http://127.0.0.1:9000"
+    assert "dashboard" in result.restart_services
+
+
+def test_save_draft_preserves_custom_api_base_url_on_port_change(
+    config_env: Path,
+) -> None:
+    from src.install.user_config import load_user_config
+
+    baseline = UserConfig(
+        paths={"app_root": str(config_env)},
+        services={"api_host": "127.0.0.1", "api_port": 8000},
+        runtime={"dashboard": {"api_base_url": "https://api.example.com"}},
+    )
+    draft = baseline.model_copy(deep=True)
+    draft.services.api_port = 9000
+    save_draft(draft, baseline=baseline, check_ports=False)
+    loaded = load_user_config(config_env)
+    assert loaded.runtime.dashboard.api_base_url == "https://api.example.com"
+
+
+def test_config_to_env_mirrors_api_key_to_next_public() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(runtime={"api": {"api_key": "pilot-secret"}})
+    env = config_to_env(cfg)
+    assert env["SENTIMENT_API_KEY"] == "pilot-secret"
+    assert env["NEXT_PUBLIC_API_KEY"] == "pilot-secret"
+
+
+def test_config_to_env_omits_next_public_api_key_when_unset() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(runtime={"api": {"api_key": ""}})
+    env = config_to_env(cfg)
+    assert "SENTIMENT_API_KEY" not in env
+    assert "NEXT_PUBLIC_API_KEY" not in env
+
+
+def test_config_to_env_defaults_cors_for_local_dashboard() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(
+        services={"dashboard_enabled": True, "dashboard_port": 3100},
+        runtime={"api": {"cors_origins": ""}},
+    )
+    env = config_to_env(cfg)
+    origins = {o.strip() for o in env["API_CORS_ORIGINS"].split(",") if o.strip()}
+    assert origins == {"http://localhost:3100", "http://127.0.0.1:3100"}
+
+
+def test_config_to_env_preserves_explicit_cors_origins() -> None:
+    from src.install.user_config import config_to_env
+
+    cfg = UserConfig(
+        services={"dashboard_enabled": True, "dashboard_port": 3100},
+        runtime={"api": {"cors_origins": "https://app.example.com"}},
+    )
+    env = config_to_env(cfg)
+    assert env["API_CORS_ORIGINS"] == "https://app.example.com"
+
+
+def test_save_draft_syncs_cors_when_dashboard_port_changes(
+    config_env: Path,
+) -> None:
+    from src.install.user_config import load_user_config
+
+    baseline = UserConfig(
+        paths={"app_root": str(config_env)},
+        services={"dashboard_port": 3000, "api_port": 8000},
+        runtime={
+            "api": {"cors_origins": "http://localhost:3000,http://127.0.0.1:3000"},
+            "dashboard": {"api_base_url": "http://127.0.0.1:8000"},
+        },
+    )
+    draft = baseline.model_copy(deep=True)
+    draft.services.dashboard_port = 3200
+    save_draft(draft, baseline=baseline, check_ports=False)
+    loaded = load_user_config(config_env)
+    origins = {o.strip() for o in loaded.runtime.api.cors_origins.split(",") if o.strip()}
+    assert origins == {"http://localhost:3200", "http://127.0.0.1:3200"}
 
 
 def test_restart_hints_on_profile_change() -> None:

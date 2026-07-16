@@ -279,6 +279,22 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
     return ProcessInfo(name="dashboard", pid=proc.pid, command=cmd, pid_file=pid_path)
 
 
+def restart_named_services(
+    cfg: UserConfig,
+    names: list[str],
+    *,
+    log: EventLog | None = None,
+) -> None:
+    """Restart launcher-managed services by name (``api`` / ``dashboard``)."""
+    for name in names:
+        if name == "api":
+            start_api(cfg, log=log)
+        elif name == "dashboard":
+            start_dashboard(cfg, log=log)
+        elif log:
+            log.warn(f"Okänd tjänst att starta om: {name}", phase="restart")
+
+
 def service_status(cfg: UserConfig, name: str) -> str:
     from .status_snapshot import service_status_text
 

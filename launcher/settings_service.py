@@ -21,7 +21,12 @@ from src.install.secrets_win import (
     set_secret,
     user_secret_file,
 )
-from src.install.user_config import load_user_config, save_user_config
+from src.install.user_config import (
+    load_user_config,
+    save_user_config,
+    sync_api_base_url_from_services,
+    sync_cors_origins_from_dashboard,
+)
 
 _SENTIMENT_PROFILES = (
     "default",
@@ -194,9 +199,12 @@ def restart_hints(before: UserConfig, after: UserConfig) -> list[str]:
         before.services.api_port != after.services.api_port
         or before.services.api_host != after.services.api_host
     ):
+        # Webui inherits NEXT_PUBLIC_API_BASE_URL at process start — restart both.
         services.append("api")
-    if before.services.dashboard_port != after.services.dashboard_port:
         services.append("dashboard")
+    if before.services.dashboard_port != after.services.dashboard_port:
+        if "dashboard" not in services:
+            services.append("dashboard")
     runtime_before = before.runtime.model_dump()
     runtime_after = after.runtime.model_dump()
     if runtime_before != runtime_after:
@@ -223,6 +231,9 @@ def save_draft(
     pending_secrets: dict[SecretKind, str] | None = None,
     check_ports: bool = True,
 ) -> SaveResult:
+    sync_api_base_url_from_services(draft, baseline=baseline)
+    sync_cors_origins_from_dashboard(draft, baseline=baseline)
+
     issues = validate_draft(draft, pending_secrets=pending_secrets, check_ports=check_ports)
     if issues:
         raise ValueError("; ".join(f"{i.field}: {i.message}" for i in issues))

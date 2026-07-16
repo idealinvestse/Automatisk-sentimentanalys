@@ -98,6 +98,23 @@ pip install -e ".[api]"
 
 Starta om API efter byte av datarot, och kör *Installera / reparera* eller ASR-hanteraren för att ladda ner modeller till den nya platsen.
 
+**Launcher ↔ webui-synk (portar, auth, CORS):** Launchern sätter miljövariabler till
+barnprocesser via `config_to_env`. Du behöver normalt **inte** underhålla
+`webui/.env.local` när du startar via launchern.
+
+| Inställning | Synkas till |
+|-------------|-------------|
+| API-host/port / Dashboard → API URL | `NEXT_PUBLIC_API_BASE_URL` (+ `SENTIMENT_API_BASE_URL`) |
+| API-nyckel (`runtime.api.api_key`) | `SENTIMENT_API_KEY` + `NEXT_PUBLIC_API_KEY` (pilot/LAN) |
+| Tom CORS + dashboard på | `API_CORS_ORIGINS` = `http://localhost:{dashboard_port}` och `http://127.0.0.1:{…}` |
+
+- Byte av API-port uppdaterar automatiskt lokal `api_base_url` om den fortfarande
+  pekade på den gamla adressen; custom/remote URL lämnas orörd.
+- Byte av dashboard-port synkar lokala CORS-defaults på samma sätt.
+- Efter sparade ändringar som kräver omstart frågar GUI:n om tjänster ska
+  startas om nu (API och/eller dashboard).
+- Explicit CORS eller manuell `webui/.env.local` har företräde framför defaults.
+
 ### API as Windows Service (NSSM)
 
 See older instructions for running the API as a background service.
@@ -116,7 +133,9 @@ Common variables (can be set in Windows Environment Variables or via `.env`):
 - `OPENROUTER_API_KEY`
 - `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN`
 - `DEEPGRAM_API_KEY` or `CLOUD_STT_API_KEY` (cloud STT only; opt-in via `asr.provider=cloud`)
-- `SENTIMENT_API_KEY` (for API authentication)
+- `SENTIMENT_API_KEY` (for API authentication; launcher mirrors to `NEXT_PUBLIC_API_KEY` for webui)
+- `NEXT_PUBLIC_API_BASE_URL` (set by launcher from Dashboard → API URL / API-port)
+- `API_CORS_ORIGINS` (empty → launcher fills local dashboard origins)
 - `API_MEDIA_ROOT`
 
 ## Next Steps

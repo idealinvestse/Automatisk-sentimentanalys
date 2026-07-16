@@ -217,6 +217,30 @@ class LauncherApp(tk.Tk):
 
         threading.Thread(target=work, daemon=True).start()
 
+    def _restart_services(self, names: list[str]) -> None:
+        if self._busy or not names:
+            return
+        self.cfg = load_user_config(_app_root())
+
+        def work() -> None:
+            try:
+                from .process_manager import restart_named_services
+
+                restart_named_services(self.cfg, names, log=self.event_log)
+            except Exception as exc:
+                msg = str(exc)
+                self.event_log.error(msg, phase="restart")
+                self.after(
+                    0,
+                    lambda m=msg: messagebox.showerror("Starta om", m),
+                )
+            finally:
+                self.after(0, self._on_action_done)
+
+        self._set_busy(True)
+        self.event_log.phase("restart", f"Startar om: {', '.join(names)}")
+        threading.Thread(target=work, daemon=True).start()
+
     def _open_settings(self) -> None:
         self.cfg = load_user_config(_app_root())
         open_settings_dialog(
@@ -224,6 +248,7 @@ class LauncherApp(tk.Tk):
             _app_root(),
             self.event_log,
             on_saved=self._refresh_status,
+            on_restart_services=self._restart_services,
             on_provision=self._provision,
             on_open_asr=self._open_asr_manager,
         )

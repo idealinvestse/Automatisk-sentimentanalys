@@ -9,6 +9,7 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from src.install.asr_assets import collect_asr_status
@@ -20,8 +21,16 @@ from .env_builder import resolve_python
 from .pid_store import get_pid_info, service_log_paths
 from .process_util import is_port_open, is_process_running, resolve_connect_host
 
-API_VERSION = "0.5.0"
+_PACKAGE_NAME = "automatisk-sentimentanalys"
 _HEALTH_TIMEOUT_SEC = 0.5
+
+
+def package_version() -> str:
+    """Installed distribution version, with a safe fallback for editable/dev trees."""
+    try:
+        return version(_PACKAGE_NAME)
+    except PackageNotFoundError:
+        return "0.0.0-dev"
 
 
 class ServiceState(StrEnum):
@@ -198,7 +207,7 @@ def collect_snapshot(
         llm_enabled=cfg.llm.enabled,
         openrouter_configured=bool(secrets.get("openrouter", {}).get("configured")),
         huggingface_configured=bool(secrets.get("huggingface", {}).get("configured")),
-        api_version=API_VERSION,
+        api_version=package_version(),
         asr_summary=asr.summary(),
         asr_ready=asr.ready,
     )

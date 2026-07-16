@@ -1,7 +1,7 @@
 # Developer setup for Automatisk-sentimentanalys (Windows PowerShell)
 param(
     [ValidateSet("minimal", "cli", "api", "full", "dev")]
-    [string]$Profile = "cli",
+    [string]$Profile = "dev",
     [switch]$Cuda,
     [switch]$InitConfig
 )
@@ -56,3 +56,7 @@ Write-Host "  .\launcher.ps1 doctor"
 Write-Host "  python -m launcher.main          # GUI launcher"
 Write-Host "  python -m launcher.cli start-api"
 Write-Host "  cd webui && npm run dev          # Web UI (primary dashboard)"
+Write-Host "  pytest --tb=no -q                # (included when Profile=dev)"
+if ($Profile -ne "dev") {
+    Write-Host "  Tip: re-run with -Profile dev to install pytest/ruff/mypy"
+}

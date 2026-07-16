@@ -11,6 +11,7 @@ from launcher.status_snapshot import (
     ServiceState,
     check_api_health,
     collect_snapshot,
+    package_version,
     service_status_text,
 )
 from src.install.config_schema import UserConfig
@@ -23,6 +24,11 @@ def cfg(tmp_path: Path) -> UserConfig:
         portable_mode=True,
         services={"api_host": "127.0.0.1", "api_port": 8765, "dashboard_port": 9501},
     )
+
+
+def test_package_version_returns_non_empty_string() -> None:
+    assert isinstance(package_version(), str)
+    assert package_version()
 
 
 def test_check_api_health_resolves_bind_all_host() -> None:
@@ -121,8 +127,8 @@ def test_service_status_text(cfg: UserConfig) -> None:
             name="dashboard",
             state=ServiceState.STOPPED,
             host="127.0.0.1",
-            port=8501,
-            url="http://localhost:8501",
+            port=3000,
+            url="http://localhost:3000",
             pid=None,
             process_alive=False,
             port_open=False,
@@ -145,7 +151,7 @@ def test_service_status_text(cfg: UserConfig) -> None:
             llm_enabled=False,
             openrouter_configured=False,
             huggingface_configured=False,
-            api_version="0.5.0",
+            api_version="0.0.0-dev",
             asr_summary="not checked",
             asr_ready=False,
         )

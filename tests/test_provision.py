@@ -27,6 +27,12 @@ def test_extras_for_profile_cli_includes_api() -> None:
     assert "dashboard-nicegui" not in extras
 
 
+def test_extras_for_profile_dev_includes_pytest_extra() -> None:
+    extras = extras_for_profile(InstallProfile.dev)
+    assert "dev" in extras
+    assert "api" in extras
+
+
 def test_extract_ffmpeg_binaries_from_zip(tmp_path: Path) -> None:
     zip_path = tmp_path / "ffmpeg.zip"
     dest_bin = tmp_path / "bin"
