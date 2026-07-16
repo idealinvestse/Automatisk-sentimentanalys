@@ -99,6 +99,8 @@ class Transcript:
     segments: list[Segment] = field(default_factory=list)
     revision: str | None = None
     diarization: dict[str, Any] | None = None
+    warnings: list[str] = field(default_factory=list)
+    provider: str = "local"
 
     def to_dict(self) -> dict[str, Any]:
         res: dict[str, Any] = {
@@ -108,11 +110,14 @@ class Transcript:
             "duration": self.duration,
             "processing_time": self.processing_time,
             "segments": [s.to_dict() for s in self.segments],
+            "provider": self.provider,
         }
         if self.revision:
             res["revision"] = self.revision
         if self.diarization:
             res["diarization"] = self.diarization
+        if self.warnings:
+            res["warnings"] = self.warnings
         return res
 
     @classmethod
@@ -128,6 +133,8 @@ class Transcript:
             segments=segments,
             revision=data.get("revision"),
             diarization=data.get("diarization"),
+            warnings=list(data.get("warnings") or []),
+            provider=str(data.get("provider", "local")),
         )
 
 
