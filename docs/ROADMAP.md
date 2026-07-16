@@ -26,8 +26,8 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 | Area                        | Status     | Key Components                                      |
 |-----------------------------|------------|-----------------------------------------------------|
 | **Core Sentiment**          | ✅ Done    | `sentiment.py`, lexicon blending, negation handling |
-| **ASR (Speech-to-Text)**    | ✅ Done    | `faster-whisper` (default), Transformers, WhisperX backends + `preprocess.py` |
-| **Speaker Diarization**     | ✅ Done    | `pyannote.audio` + strong heuristic/energy-based fallback in `diarization.py` |
+| **ASR (Speech-to-Text)**    | ✅ Done    | `AsrRouter` (local default), `faster-whisper` / Transformers / WhisperX, opt-in Deepgram, hallucination filter, chunk retry, persistent jobs + metrics |
+| **Speaker Diarization**     | ✅ Done    | `pyannote.audio` when HF token present + heuristic/energy fallback in `diarization.py` |
 | **Call Analysis Pipeline**  | ✅ Done    | `CallAnalysisPipeline` with full orchestration      |
 | **Analysis Registry**       | ✅ Done    | Aspect, Emotion, Role, Trajectory, Intent, Summary, Topics, Spoken Normalizer |
 | **Mistral LLM Integration** | ✅ Done    | Hybrid local + Mistral via OpenRouter, structured output, caching, privacy logging |
@@ -46,6 +46,7 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 
 ### Partially / Recently Added
 
+- **ASR dual-engine hardening (2026-07)** — router, cloud opt-in, decode hardening, persistent jobs, metrics; see `CHANGELOG.md` Unreleased.
 - `diarize` optional dependency group (`pyproject.toml`)
 - Consolidated Quickstart + Hardware Requirements in README
 - `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/ROADMAP.md`
