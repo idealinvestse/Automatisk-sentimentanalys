@@ -146,6 +146,7 @@ htmlcov/
 
 # Agent / tool output (local only)
 agent-tools/
+.superpowers/
 
 # Real domain data (never commit — use scripts/import_domain_corpus.py)
 data/import/*

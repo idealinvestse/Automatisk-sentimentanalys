@@ -56,10 +56,9 @@ class SqliteJobStore:
         return conn
 
     def _init_db(self) -> None:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(self._SCHEMA)
-                conn.commit()
+        with self._lock, self._connect() as conn:
+            conn.execute(self._SCHEMA)
+            conn.commit()
 
     @staticmethod
     def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
@@ -74,9 +73,8 @@ class SqliteJobStore:
 
     def upsert(self, job: Any) -> None:
         cancelled = 1 if job.cancel_event.is_set() or job.status == "cancelled" else 0
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(
+        with self._lock, self._connect() as conn:
+            conn.execute(
                     """
                     INSERT INTO transcription_jobs
                         (job_id, kind, status, created_at, meta_json, cancelled)
@@ -97,21 +95,19 @@ class SqliteJobStore:
                         cancelled,
                     ),
                 )
-                conn.commit()
+            conn.commit()
 
     def get(self, job_id: str) -> dict[str, Any] | None:
-        with self._lock:
-            with self._connect() as conn:
-                row = conn.execute(
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
                     "SELECT * FROM transcription_jobs WHERE job_id = ?",
                     (job_id,),
                 ).fetchone()
         return self._row_to_dict(row) if row else None
 
     def list(self, *, limit: int = 20) -> list[dict[str, Any]]:
-        with self._lock:
-            with self._connect() as conn:
-                rows = conn.execute(
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
                     """
                     SELECT * FROM transcription_jobs
                     ORDER BY created_at DESC
@@ -122,32 +118,29 @@ class SqliteJobStore:
         return [self._row_to_dict(row) for row in rows]
 
     def complete(self, job_id: str, *, status: str = "completed") -> None:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(
-                    "UPDATE transcription_jobs SET status = ? WHERE job_id = ?",
-                    (status, job_id),
-                )
-                conn.commit()
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE transcription_jobs SET status = ? WHERE job_id = ?",
+                (status, job_id),
+            )
+            conn.commit()
 
     def cancel(self, job_id: str) -> None:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute(
+        with self._lock, self._connect() as conn:
+            conn.execute(
                     """
                     UPDATE transcription_jobs
                     SET status = 'cancelled', cancelled = 1
                     WHERE job_id = ?
                     """,
                     (job_id,),
-                )
-                conn.commit()
+            )
+            conn.commit()
 
     def delete(self, job_id: str) -> None:
-        with self._lock:
-            with self._connect() as conn:
-                conn.execute("DELETE FROM transcription_jobs WHERE job_id = ?", (job_id,))
-                conn.commit()
+        with self._lock, self._connect() as conn:
+            conn.execute("DELETE FROM transcription_jobs WHERE job_id = ?", (job_id,))
+            conn.commit()
 
 
 class RedisJobStore:

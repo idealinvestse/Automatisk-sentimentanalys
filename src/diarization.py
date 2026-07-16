@@ -103,7 +103,9 @@ class DiarizationPipeline:
     ) -> None:
         self.backend = backend
         self.device = device
-        self.hf_token = hf_token or os.getenv("HF_TOKEN", "")
+        self.hf_token = (
+            hf_token or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or ""
+        )
         self._pipeline: Any = None
 
         if backend == "pyannote":

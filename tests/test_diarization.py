@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.diarization import DiarizationPipeline, DiarizationResult, SpeakerSegment
 
 
@@ -69,6 +71,18 @@ class TestDiarizationPipeline:
         dp = DiarizationPipeline(backend="heuristic")
         assert dp.backend == "heuristic"
         assert dp._pipeline is None
+
+    def test_hf_token_from_huggingface_hub_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("HF_TOKEN", raising=False)
+        monkeypatch.setenv("HUGGINGFACE_HUB_TOKEN", "hub-token")
+        dp = DiarizationPipeline(backend="heuristic")
+        assert dp.hf_token == "hub-token"
+
+    def test_explicit_hf_token_overrides_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HF_TOKEN", "env-token")
+        monkeypatch.setenv("HUGGINGFACE_HUB_TOKEN", "hub-token")
+        dp = DiarizationPipeline(backend="heuristic", hf_token="explicit")
+        assert dp.hf_token == "explicit"
 
     def test_assign_speakers_to_segments(self):
         dp = DiarizationPipeline()

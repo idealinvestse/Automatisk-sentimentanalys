@@ -169,9 +169,7 @@ class FasterWhisperTranscriber:
             LOW_CONF_THRESHOLD = 0.60
             USE_CHUNKING = chunk_length_s and chunk_length_s > 0
             hotwords_str = format_hotwords_for_asr(hotwords)
-            cond_prev_text = (
-                True if condition_on_previous_text is True else False
-            )
+            cond_prev_text = condition_on_previous_text is True
             warnings: list[str] = []
 
             # Fast path: no chunking requested or very short audio
