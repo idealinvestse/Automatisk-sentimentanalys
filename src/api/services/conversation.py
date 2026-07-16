@@ -66,6 +66,8 @@ def _full_pipeline_analyze(
         profile=_sentiment_profile(req),
         asr_backend=req.backend,
         asr_model=req.model,
+        asr_provider=req.provider,
+        cloud_fallback_local=req.cloud_fallback_local,
         cache=cache,
     )
     report = pipe.analyze_audio(
