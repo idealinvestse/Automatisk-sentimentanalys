@@ -63,6 +63,7 @@ from .routers import (
 )
 from .settings import get_api_settings, validate_production_settings
 from .transcription_events import JOB_HEADER, TranscriptionEventHub
+from .transcription_job_store import create_job_store
 from .transcription_jobs import TranscriptionJobRegistry
 from .ws_tickets import TicketStore
 
@@ -86,7 +87,13 @@ def _init_app_state(application: FastAPI) -> None:
         redis_client = getattr(application.state.cache, "redis_client", None)
         application.state.transcription_events = TranscriptionEventHub(redis_client=redis_client)
     if not hasattr(application.state, "transcription_jobs"):
-        application.state.transcription_jobs = TranscriptionJobRegistry()
+        application.state.transcription_jobs = TranscriptionJobRegistry(
+            store=create_job_store(
+                state_dir=settings.state_dir,
+                use_redis=settings.use_redis_cache,
+                redis_client=getattr(application.state.cache, "redis_client", None),
+            )
+        )
     if not hasattr(application.state, "ws_tickets"):
         application.state.ws_tickets = TicketStore(
             redis_client=application.state.cache.redis_client,
@@ -131,7 +138,13 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     hub.bind_loop(asyncio.get_running_loop())
     await hub.start_redis_listener()
     app.state.transcription_events = hub
-    app.state.transcription_jobs = TranscriptionJobRegistry()
+    app.state.transcription_jobs = TranscriptionJobRegistry(
+        store=create_job_store(
+            state_dir=settings.state_dir,
+            use_redis=settings.use_redis_cache,
+            redis_client=app.state.cache.redis_client,
+        )
+    )
     app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
     init_app_info(version="0.4.1")
     reporter = get_status_reporter()

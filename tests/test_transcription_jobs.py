@@ -7,7 +7,18 @@ from fastapi.testclient import TestClient
 from src.api import app
 from src.api.app import create_app
 from src.api.settings import get_api_settings
+from src.api.transcription_job_store import SqliteJobStore
 from src.api.transcription_jobs import TranscriptionJobRegistry, get_job_registry
+
+
+def test_job_survives_registry_recreate(tmp_path) -> None:
+    db = tmp_path / "jobs.db"
+    store = SqliteJobStore(db)
+    reg1 = TranscriptionJobRegistry(store=store)
+    reg1.register("j1", "transcribe")
+    reg2 = TranscriptionJobRegistry(store=SqliteJobStore(db))
+    assert reg2.get("j1") is not None
+    assert reg2.get("j1").status == "running"
 
 
 def test_job_registry_cancel() -> None:
