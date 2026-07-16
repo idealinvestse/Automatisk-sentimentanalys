@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.core.errors import TranscriptionError
 from src.core.metrics import (
     ASR_CLOUD_EGRESS_TOTAL,
     ASR_TRANSCRIPTIONS_TOTAL,
@@ -72,4 +73,35 @@ def test_router_cloud_increments_egress_counter(monkeypatch, audio_wav):
     with patch("src.transcription.cloud_deepgram.httpx.post", return_value=mock_resp):
         AsrRouter().transcribe(audio_wav, provider="cloud")
     after = ASR_CLOUD_EGRESS_TOTAL._value.get()
+    assert after == before + 1
+
+
+def test_router_cloud_missing_key_does_not_increment_egress(monkeypatch, audio_wav):
+    if ASR_CLOUD_EGRESS_TOTAL is None:
+        pytest.skip("prometheus_client not installed")
+    monkeypatch.delenv("DEEPGRAM_API_KEY", raising=False)
+    monkeypatch.delenv("CLOUD_STT_API_KEY", raising=False)
+    before = ASR_CLOUD_EGRESS_TOTAL._value.get()
+    with pytest.raises(TranscriptionError):
+        AsrRouter().transcribe(audio_wav, provider="cloud")
+    after = ASR_CLOUD_EGRESS_TOTAL._value.get()
+    assert after == before
+
+
+def test_router_cloud_failure_records_error_outcome(monkeypatch, audio_wav):
+    if ASR_TRANSCRIPTIONS_TOTAL is None:
+        pytest.skip("prometheus_client not installed")
+    monkeypatch.setenv("DEEPGRAM_API_KEY", "test-key")
+    before = ASR_TRANSCRIPTIONS_TOTAL.labels(
+        provider="cloud", backend="deepgram", outcome="error"
+    )._value.get()
+    with patch(
+        "src.transcription.cloud_deepgram.DeepgramTranscriber.transcribe",
+        side_effect=TranscriptionError("cloud failed"),
+    ):
+        with pytest.raises(TranscriptionError):
+            AsrRouter().transcribe(audio_wav, provider="cloud")
+    after = ASR_TRANSCRIPTIONS_TOTAL.labels(
+        provider="cloud", backend="deepgram", outcome="error"
+    )._value.get()
     assert after == before + 1

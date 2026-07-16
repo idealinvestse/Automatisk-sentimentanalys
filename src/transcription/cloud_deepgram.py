@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import mimetypes
 import os
 import time
 from pathlib import Path
@@ -12,6 +11,7 @@ from typing import Any
 import httpx
 
 from ..core.errors import TranscriptionError
+from ..core.metrics import record_asr_cloud_egress
 from ..core.models import Segment, Transcript, Word
 from .error_codes import AsrErrorCode
 
@@ -90,8 +90,6 @@ class DeepgramTranscriber:
                 error_code=AsrErrorCode.CLOUD_AUTH,
             )
 
-        logger.info("asr_cloud_egress=true provider=deepgram")
-
         path = Path(audio_path)
         if not path.is_file():
             raise TranscriptionError(
@@ -99,7 +97,6 @@ class DeepgramTranscriber:
                 error_code=AsrErrorCode.PREPROCESS_FAILED,
             )
 
-        content_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
         params = {
             "model": DEEPGRAM_MODEL,
             "language": language,
@@ -109,7 +106,7 @@ class DeepgramTranscriber:
         headers = {"Authorization": f"Token {api_key}"}
 
         t0 = time.time()
-        data = self._post_with_retries(path, content_type, params, headers)
+        data = self._post_with_retries(path, params, headers)
         segments = map_deepgram_response(data)
         duration = (data.get("metadata") or {}).get("duration")
         processing_time = time.time() - t0
@@ -126,7 +123,6 @@ class DeepgramTranscriber:
     def _post_with_retries(
         self,
         path: Path,
-        content_type: str,
         params: dict[str, str],
         headers: dict[str, str],
     ) -> dict[str, Any]:
@@ -137,6 +133,8 @@ class DeepgramTranscriber:
                 time.sleep(_BACKOFF_S[attempt - 1])
 
             try:
+                logger.info("asr_cloud_egress=true provider=deepgram")
+                record_asr_cloud_egress()
                 with path.open("rb") as audio_file:
                     response = httpx.post(
                         DEEPGRAM_LISTEN_URL,
