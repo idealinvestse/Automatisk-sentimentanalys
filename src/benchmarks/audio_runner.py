@@ -8,10 +8,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .audio_catalog import load_catalog
-from .audio_models import AudioRunReport, FileResult, ScenarioId
+from .audio_models import AudioCompareReport, AudioRunReport, CompareFileResult, FileResult, ScenarioId
 from .audio_scenarios import resolve_samples, scenario_requires_ml
 
 logger = logging.getLogger(__name__)
+
+# Deepgram pay-as-you-go placeholder (USD/min); update when contract rates change.
+DEEPGRAM_USD_PER_MINUTE = 0.0043
 
 
 def _preview_text(text: str, max_len: int = 120) -> str:
@@ -33,25 +36,83 @@ def _aggregate_sentiment(scores: list[dict[str, Any]]) -> str | None:
     return None
 
 
+def _transcript_text(transcript: object) -> str:
+    segments = getattr(transcript, "segments", None) or []
+    if segments:
+        return " ".join(
+            (getattr(seg, "text", "") or "").strip() for seg in segments
+        ).strip()
+    return getattr(transcript, "text", "") or ""
+
+
+def _reference_transcript(sample: object) -> str | None:
+    meta = getattr(sample, "metadata", None)
+    if meta is None:
+        return None
+    statement = getattr(meta, "statement_text", None)
+    if statement:
+        return str(statement)
+    extra = getattr(meta, "extra", None) or {}
+    for key in ("reference_transcript", "transcript", "reference"):
+        value = extra.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _normalize_words(text: str) -> list[str]:
+    return [part for part in text.strip().lower().split() if part]
+
+
+def _word_error_rate(reference: str, hypothesis: str) -> float:
+    ref_words = _normalize_words(reference)
+    hyp_words = _normalize_words(hypothesis)
+    if not ref_words:
+        return 0.0
+    rows = len(ref_words) + 1
+    cols = len(hyp_words) + 1
+    dist = [[0] * cols for _ in range(rows)]
+    for i in range(rows):
+        dist[i][0] = i
+    for j in range(cols):
+        dist[0][j] = j
+    for i in range(1, rows):
+        for j in range(1, cols):
+            cost = 0 if ref_words[i - 1] == hyp_words[j - 1] else 1
+            dist[i][j] = min(
+                dist[i - 1][j] + 1,
+                dist[i][j - 1] + 1,
+                dist[i - 1][j - 1] + cost,
+            )
+    return round(dist[rows - 1][cols - 1] / len(ref_words), 4)
+
+
+def _estimate_cloud_cost_usd(duration_s: float | None, provider: str) -> float | None:
+    if provider != "cloud" or duration_s is None:
+        return None
+    return round((duration_s / 60.0) * DEEPGRAM_USD_PER_MINUTE, 6)
+
+
 def _run_asr_on_sample(
     sample_path: str,
     *,
     backend: str,
     device: str,
     language: str,
+    provider: str = "local",
 ) -> tuple[str, float]:
-    from ..transcription import get_transcriber
+    from ..transcription.router import AsrRouter
 
-    transcriber = get_transcriber(backend=backend, device=device)
     start = time.time()
-    result = transcriber.transcribe(audio_path=sample_path, language=language)
+    transcript = AsrRouter().transcribe(
+        sample_path,
+        provider=provider,
+        backend=backend,
+        device=device,
+        language=language,
+    )
     elapsed = time.time() - start
-    segments = getattr(result, "segments", None) or []
-    if segments:
-        text = " ".join((getattr(seg, "text", "") or "").strip() for seg in segments).strip()
-    else:
-        text = getattr(result, "text", "") or ""
-    return text, elapsed
+    return _transcript_text(transcript), elapsed
 
 
 def _run_pipeline_on_sample(
@@ -100,6 +161,7 @@ def run_scenario(
     device: str = "cpu",
     backend: str = "faster",
     language: str | None = None,
+    provider: str = "local",
     dry_run: bool = False,
 ) -> AudioRunReport:
     catalog = load_catalog(audio_root)
@@ -240,6 +302,7 @@ def run_scenario(
                     backend=backend,
                     device=device,
                     language=lang,
+                    provider=provider,
                 )
                 result.latency_s = round(elapsed, 3)
                 result.transcript_preview = _preview_text(transcript)
@@ -305,5 +368,166 @@ def run_scenario(
         backend=backend,
         files=file_results,
         summary=summary,
+        errors=errors,
+    )
+
+
+def run_compare(
+    *,
+    providers: list[str],
+    audio_root: str | None = None,
+    pack_ids: list[str] | None = None,
+    tags: list[str] | None = None,
+    emotions: list[str] | None = None,
+    actors: list[str] | None = None,
+    limit: int | None = None,
+    subset: str | None = None,
+    device: str = "cpu",
+    backend: str = "faster",
+    language: str | None = None,
+    dry_run: bool = False,
+) -> AudioCompareReport:
+    from ..transcription.router import AsrRouter, resolve_asr_provider
+
+    resolved_providers = [resolve_asr_provider(provider) for provider in providers]
+    catalog = load_catalog(audio_root)
+    samples = resolve_samples(
+        catalog,
+        "smoke",
+        pack_ids=pack_ids,
+        tags=tags,
+        emotions=emotions,
+        actors=actors,
+        limit=limit,
+        subset=subset,
+    )
+    active_pack_ids = sorted({s.pack_id for s in samples})
+    start = time.time()
+    results: list[CompareFileResult] = []
+    errors: list[str] = []
+
+    if not samples:
+        errors.append("No audio samples matched the selection.")
+        return AudioCompareReport(
+            timestamp=datetime.now(UTC).isoformat(),
+            providers=resolved_providers,
+            packs=active_pack_ids,
+            n_files=0,
+            n_runs=0,
+            duration_s=0.0,
+            dry_run=dry_run,
+            device=device,
+            backend=backend,
+            results=[],
+            summary={"error": "no_samples"},
+            errors=errors,
+        )
+
+    if dry_run:
+        for provider in resolved_providers:
+            for sample in samples:
+                results.append(
+                    CompareFileResult(
+                        provider=provider,
+                        path=sample.path,
+                        relative_path=sample.relative_path,
+                        pack_id=sample.pack_id,
+                        ok=True,
+                    )
+                )
+        duration = time.time() - start
+        return AudioCompareReport(
+            timestamp=datetime.now(UTC).isoformat(),
+            providers=resolved_providers,
+            packs=active_pack_ids,
+            n_files=len(samples),
+            n_runs=len(results),
+            duration_s=round(duration, 3),
+            dry_run=True,
+            device=device,
+            backend=backend,
+            results=results,
+            summary={
+                "dry_run": True,
+                "providers": resolved_providers,
+                "selected_files": len(samples),
+                "planned_runs": len(results),
+            },
+            errors=errors,
+        )
+
+    router = AsrRouter()
+    for provider in resolved_providers:
+        for sample in samples:
+            pack = catalog.active_packs().get(sample.pack_id)
+            lang = language or (pack.default_asr_language if pack else sample.language)
+            row = CompareFileResult(
+                provider=provider,
+                path=sample.path,
+                relative_path=sample.relative_path,
+                pack_id=sample.pack_id,
+            )
+            try:
+                wall_start = time.time()
+                transcript = router.transcribe(
+                    sample.path,
+                    provider=provider,
+                    backend=backend,
+                    device=device,
+                    language=lang,
+                )
+                latency = time.time() - wall_start
+                text = _transcript_text(transcript)
+                reference = _reference_transcript(sample)
+                row.latency_s = round(latency, 3)
+                row.n_segments = len(getattr(transcript, "segments", None) or [])
+                if reference and text:
+                    row.wer = _word_error_rate(reference, text)
+                row.estimated_cost_usd = _estimate_cloud_cost_usd(
+                    getattr(transcript, "duration", None),
+                    provider,
+                )
+                row.ok = bool(text.strip())
+            except Exception as exc:
+                row.ok = False
+                row.error = str(exc)
+                errors.append(f"{provider}:{sample.relative_path}: {exc}")
+                logger.exception(
+                    "Audio compare failed for %s via %s", sample.relative_path, provider
+                )
+            results.append(row)
+
+    duration = time.time() - start
+    by_provider: dict[str, dict[str, Any]] = {}
+    for provider in resolved_providers:
+        provider_rows = [row for row in results if row.provider == provider]
+        successes = [row for row in provider_rows if row.ok]
+        wers = [row.wer for row in successes if row.wer is not None]
+        latencies = [row.latency_s for row in successes if row.latency_s is not None]
+        costs = [
+            row.estimated_cost_usd
+            for row in successes
+            if row.estimated_cost_usd is not None
+        ]
+        by_provider[provider] = {
+            "n_success": len(successes),
+            "n_failed": len(provider_rows) - len(successes),
+            "mean_wer": round(sum(wers) / len(wers), 4) if wers else None,
+            "mean_latency_s": round(sum(latencies) / len(latencies), 3) if latencies else None,
+            "estimated_cost_usd": round(sum(costs), 6) if costs else None,
+        }
+
+    return AudioCompareReport(
+        timestamp=datetime.now(UTC).isoformat(),
+        providers=resolved_providers,
+        packs=active_pack_ids,
+        n_files=len(samples),
+        n_runs=len(results),
+        duration_s=round(duration, 3),
+        dry_run=False,
+        device=device,
+        backend=backend,
+        results=results,
+        summary={"by_provider": by_provider},
         errors=errors,
     )

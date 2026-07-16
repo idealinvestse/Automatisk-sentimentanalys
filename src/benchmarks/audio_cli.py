@@ -13,7 +13,7 @@ from rich.table import Table
 
 from .audio_catalog import load_catalog
 from .audio_models import SampleFilter, ScenarioId
-from .audio_runner import run_scenario
+from .audio_runner import run_compare, run_scenario
 from .audio_scenarios import SCENARIO_IDS
 
 audio_app = typer.Typer(help="Audio sample benchmarks (samples/audio)")
@@ -30,6 +30,12 @@ def _default_output(scenario: str) -> str:
     ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     os.makedirs("reports", exist_ok=True)
     return f"reports/audio_{scenario}_{ts}.json"
+
+
+def _default_compare_output() -> str:
+    ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    os.makedirs("reports", exist_ok=True)
+    return f"reports/audio_compare_{ts}.json"
 
 
 def _save_report(path: str, payload: dict) -> None:
@@ -178,5 +184,61 @@ def audio_run(
     console.print(f"[cyan]Scenario '{scenario}' complete[/cyan] in {report.duration_s}s")
     for key, value in report.summary.items():
         console.print(f"  {key}: {value}")
+    if report.errors:
+        raise typer.Exit(code=1)
+
+
+@audio_app.command("compare")
+def audio_compare(
+    providers: str = typer.Option(
+        "local,cloud",
+        "--providers",
+        help="Comma-separated ASR providers to compare (local, cloud)",
+    ),
+    pack: str | None = typer.Option(None, "--pack"),
+    tags: str | None = typer.Option(None, "--tags"),
+    emotions: str | None = typer.Option(None, "--emotions"),
+    actors: str | None = typer.Option(None, "--actors"),
+    limit: int | None = typer.Option(3, "--limit"),
+    subset: str | None = typer.Option(None, "--subset"),
+    device: str = typer.Option("cpu", "--device"),
+    backend: str = typer.Option("faster", "--backend"),
+    language: str | None = typer.Option(None, "--language"),
+    output: str | None = typer.Option(None, "--output"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    audio_root: str | None = typer.Option(None, "--audio-root"),
+) -> None:
+    """Compare local vs cloud ASR on the same audio sample subset."""
+    provider_list = _split_csv(providers) or ["local"]
+    report = run_compare(
+        providers=provider_list,
+        audio_root=audio_root,
+        pack_ids=[pack] if pack else None,
+        tags=_split_csv(tags),
+        emotions=_split_csv(emotions),
+        actors=_split_csv(actors),
+        limit=limit,
+        subset=subset,
+        device=device,
+        backend=backend,
+        language=language,
+        dry_run=dry_run,
+    )
+    out = output or _default_compare_output()
+    _save_report(out, report.model_dump())
+    if report.dry_run:
+        console.print(
+            f"[cyan]Compare dry-run:[/cyan] {report.n_files} files x "
+            f"{len(report.providers)} providers = {report.n_runs} planned runs"
+        )
+    else:
+        console.print(
+            f"[cyan]Compare complete:[/cyan] {report.n_runs} runs across "
+            f"{', '.join(report.providers)} in {report.duration_s}s"
+        )
+    for provider, stats in report.summary.get("by_provider", {}).items():
+        console.print(f"  {provider}: {stats}")
+    if report.dry_run:
+        console.print(f"  providers: {', '.join(report.providers)}")
     if report.errors:
         raise typer.Exit(code=1)

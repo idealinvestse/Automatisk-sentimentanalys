@@ -115,6 +115,34 @@ class AudioRunReport(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class CompareFileResult(BaseModel):
+    provider: str
+    path: str
+    relative_path: str
+    pack_id: str
+    latency_s: float | None = None
+    n_segments: int | None = None
+    wer: float | None = None
+    estimated_cost_usd: float | None = None
+    ok: bool = False
+    error: str | None = None
+
+
+class AudioCompareReport(BaseModel):
+    timestamp: str
+    providers: list[str]
+    packs: list[str]
+    n_files: int
+    n_runs: int
+    duration_s: float
+    dry_run: bool = False
+    device: str | None = None
+    backend: str | None = None
+    results: list[CompareFileResult] = Field(default_factory=list)
+    summary: dict[str, Any] = Field(default_factory=dict)
+    errors: list[str] = Field(default_factory=list)
+
+
 class ValidationReport(BaseModel):
     ok: bool
     packs: dict[str, dict[str, Any]] = Field(default_factory=dict)

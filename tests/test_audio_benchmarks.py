@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -48,14 +49,19 @@ def test_smoke_dry_run_selects_three_files(tmp_path):
 
 
 @patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
-@patch("src.transcription.get_transcriber")
-def test_smoke_with_mocked_asr(mock_get_transcriber, _mock_requires_ml, tmp_path):
+@patch("src.transcription.router.AsrRouter.transcribe")
+def test_smoke_with_mocked_asr(mock_transcribe, _mock_requires_ml, tmp_path):
     audio_root, _ = _audio_root(tmp_path)
-    mock_transcriber = MagicMock()
-    mock_segment = MagicMock()
-    mock_segment.text = "Kids are talking by the door"
-    mock_transcriber.transcribe.return_value = MagicMock(segments=[mock_segment], text="")
-    mock_get_transcriber.return_value = mock_transcriber
+    from src.core.models import Segment, Transcript
+
+    mock_transcribe.return_value = Transcript(
+        model="test",
+        backend="faster",
+        language="en",
+        duration=1.0,
+        processing_time=0.1,
+        segments=[Segment(start=0.0, end=1.0, text="Kids are talking by the door")],
+    )
 
     report = run_scenario("smoke", audio_root=audio_root, device="cpu")
 
@@ -77,3 +83,35 @@ def test_list_command_via_evaluate(tmp_path):
     )
     assert result.exit_code == 0
     assert "ravdess_en" in result.output
+
+
+def test_compare_dry_run_local_provider(tmp_path, monkeypatch):
+    audio_root, _ = _audio_root(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    from typer.testing import CliRunner
+
+    from src.evaluate import app
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "audio",
+            "compare",
+            "--dry-run",
+            "--providers",
+            "local",
+            "--limit",
+            "2",
+            "--audio-root",
+            audio_root,
+        ],
+    )
+    assert result.exit_code == 0
+    assert "local" in result.output.lower()
+
+    reports = list((tmp_path / "reports").glob("audio_compare_*.json"))
+    assert reports
+    payload = json.loads(reports[0].read_text(encoding="utf-8"))
+    assert "local" in payload["providers"]
+    assert any(row["provider"] == "local" for row in payload["results"])
