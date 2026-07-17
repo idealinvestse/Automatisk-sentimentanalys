@@ -64,16 +64,32 @@ def _pack_is_active(pack: SamplePack, pack_root: Path) -> bool:
     return False
 
 
+def _expand_glob_braces(pattern: str) -> list[str]:
+    """Expand a single ``{a,b,c}`` group (Python's glob has no brace expansion)."""
+    match = re.search(r"\{([^{}]+)\}", pattern)
+    if not match:
+        return [pattern]
+    options = [part.strip() for part in match.group(1).split(",") if part.strip()]
+    prefix = pattern[: match.start()]
+    suffix = pattern[match.end() :]
+    expanded: list[str] = []
+    for option in options:
+        expanded.extend(_expand_glob_braces(f"{prefix}{option}{suffix}"))
+    return expanded or [pattern]
+
+
 def _discover_pack_files(pack: SamplePack, audio_root: Path) -> list[Path]:
     pack_root = (audio_root / pack.root).resolve()
     if not pack_root.exists():
         return []
-    pattern = str(pack_root / pack.glob)
-    files = [
-        Path(p).resolve()
-        for p in _glob.glob(pattern, recursive=True)
-        if Path(p).is_file() and Path(p).suffix.lower() in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
-    ]
+    allowed = {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
+    files: list[Path] = []
+    for pattern in _expand_glob_braces(str(pack_root / pack.glob)):
+        files.extend(
+            Path(p).resolve()
+            for p in _glob.glob(pattern, recursive=True)
+            if Path(p).is_file() and Path(p).suffix.lower() in allowed
+        )
     return sorted(set(files))
 
 
