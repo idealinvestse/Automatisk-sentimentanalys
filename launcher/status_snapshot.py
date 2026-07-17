@@ -150,12 +150,15 @@ def _build_service_snapshot(cfg: UserConfig, name: str) -> ServiceSnapshot:
         health_ok = check_api_health(host, port)
 
     state = ServiceState.STOPPED
+    # Only treat as RUNNING when our tracked process is alive (or API health
+    # confirms our service). A foreign listener (e.g. LM Studio on :3000) is DEGRADED.
     if port_open and process_alive and (health_ok is not False or name != "api"):
         state = (
             ServiceState.RUNNING if (name != "api" or health_ok is True) else ServiceState.LISTENING
         )
-    elif port_open and (health_ok is True or name != "api"):
-        state = ServiceState.RUNNING if health_ok is not False else ServiceState.LISTENING
+    elif port_open and name == "api" and health_ok is True and not process_alive:
+        # Port answers /health but we do not track the PID — foreign/orphan API.
+        state = ServiceState.DEGRADED
     elif port_open:
         state = ServiceState.DEGRADED
     elif process_alive:

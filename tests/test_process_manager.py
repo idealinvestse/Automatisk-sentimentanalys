@@ -32,6 +32,17 @@ def cfg(tmp_path: Path) -> UserConfig:
     )
 
 
+def _port_free_then_open() -> object:
+    """Preflight sees free port; wait loop then sees it open."""
+    calls = {"n": 0}
+
+    def is_open(*_a: object, **_k: object) -> bool:
+        calls["n"] += 1
+        return calls["n"] > 1
+
+    return is_open
+
+
 def test_start_api_spawns_uvicorn_and_tracks_pid(cfg: UserConfig, monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 
@@ -48,8 +59,12 @@ def test_start_api_spawns_uvicorn_and_tracks_pid(cfg: UserConfig, monkeypatch: p
     monkeypatch.setattr("launcher.process_manager.check_api_dependencies", lambda **kw: None)
     monkeypatch.setattr("launcher.process_manager.resolve_python", lambda c: Path("python.exe"))
     monkeypatch.setattr("launcher.process_manager._popen_service", fake_popen)
-    monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: True)
+    monkeypatch.setattr("launcher.process_manager.is_port_open", _port_free_then_open())
     monkeypatch.setattr("launcher.process_manager.is_process_running", lambda pid: True)
+    monkeypatch.setattr(
+        "launcher.process_manager.port_owned_by_pid_tree",
+        lambda *a, **k: True,
+    )
     monkeypatch.setattr("launcher.status_snapshot.check_api_health", lambda *a, **k: True)
 
     info = start_api(cfg)
@@ -78,8 +93,12 @@ def test_start_dashboard_passes_port_env(cfg: UserConfig, monkeypatch: pytest.Mo
     monkeypatch.setattr("launcher.process_manager.check_dashboard_dependencies", lambda **kw: None)
     monkeypatch.setattr("launcher.process_manager.resolve_python", lambda c: Path("python.exe"))
     monkeypatch.setattr("launcher.process_manager._popen_service", fake_popen)
-    monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: True)
+    monkeypatch.setattr("launcher.process_manager.is_port_open", _port_free_then_open())
     monkeypatch.setattr("launcher.process_manager.is_process_running", lambda pid: True)
+    monkeypatch.setattr(
+        "launcher.process_manager.port_owned_by_pid_tree",
+        lambda *a, **k: True,
+    )
 
     info = start_dashboard(cfg)
     assert info.pid == 5151
@@ -89,6 +108,62 @@ def test_start_dashboard_passes_port_env(cfg: UserConfig, monkeypatch: pytest.Mo
     assert env["PORT"] == "3456"
     assert env["WEBUI_PORT"] == "3456"
     assert env["DASHBOARD_UI"] == "webui"
+
+
+def test_start_dashboard_fails_when_port_already_occupied(
+    cfg: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("launcher.process_manager.stop_service", lambda *a, **k: False)
+    monkeypatch.setattr("launcher.process_manager.check_dashboard_dependencies", lambda **kw: None)
+    monkeypatch.setattr("launcher.process_manager.resolve_python", lambda c: Path("python.exe"))
+    monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: True)
+    monkeypatch.setattr(
+        "launcher.process_manager.describe_port_occupant",
+        lambda *a, **k: "LM Studio.exe (pid 19468)",
+    )
+    popen = MagicMock()
+    monkeypatch.setattr("launcher.process_manager._popen_service", popen)
+
+    with pytest.raises(RuntimeError, match=r"3456.*already in use|redan upptagen"):
+        start_dashboard(cfg)
+    popen.assert_not_called()
+
+
+def test_start_api_fails_when_port_already_occupied(
+    cfg: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("launcher.process_manager.stop_service", lambda *a, **k: False)
+    monkeypatch.setattr("launcher.process_manager.check_api_dependencies", lambda **kw: None)
+    monkeypatch.setattr("launcher.process_manager.resolve_python", lambda c: Path("python.exe"))
+    monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: True)
+    monkeypatch.setattr(
+        "launcher.process_manager.describe_port_occupant",
+        lambda *a, **k: "python.exe (pid 10876)",
+    )
+    popen = MagicMock()
+    monkeypatch.setattr("launcher.process_manager._popen_service", popen)
+
+    with pytest.raises(RuntimeError, match=r"8765.*already in use|redan upptagen"):
+        start_api(cfg)
+    popen.assert_not_called()
+
+
+def test_wait_for_service_rejects_foreign_port_while_our_process_alive(
+    cfg: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Port open before our bind must not count as success (LM Studio case)."""
+    proc = MagicMock()
+    proc.pid = 88
+    monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: True)
+    monkeypatch.setattr("launcher.process_manager.is_process_running", lambda pid: True)
+    monkeypatch.setattr(
+        "launcher.process_manager.port_owned_by_pid_tree",
+        lambda host, port, root_pid, **k: False,
+    )
+    monkeypatch.setattr("launcher.process_manager.stop_service", lambda *a, **k: False)
+
+    with pytest.raises(RuntimeError, match=r"not owned by|ägs inte av"):
+        _wait_for_service(cfg, "dashboard", proc, timeout_sec=1.0)
 
 
 def test_stop_service_kills_tracked_pid_on_windows(

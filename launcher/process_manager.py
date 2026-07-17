@@ -17,7 +17,13 @@ from .dashboard_deps import check_dashboard_dependencies
 from .env_builder import build_child_env, resolve_python, working_directory
 from .event_log import EventLog
 from .pid_store import clear_pid_file, get_pid_info, save_pid, service_log_paths
-from .process_util import is_port_open, is_process_running, resolve_connect_host
+from .process_util import (
+    describe_port_occupant,
+    is_port_open,
+    is_process_running,
+    port_owned_by_pid_tree,
+    resolve_connect_host,
+)
 
 _START_TIMEOUT_SEC = 30.0
 _DASHBOARD_PROD_START_TIMEOUT_SEC = 300.0
@@ -81,6 +87,24 @@ def _service_endpoint(cfg: UserConfig, name: str) -> tuple[str, int] | None:
     return None
 
 
+def _ensure_port_free(cfg: UserConfig, name: str, *, log: EventLog | None = None) -> None:
+    """Fail fast when the service port is already held by another process."""
+    endpoint = _service_endpoint(cfg, name)
+    if endpoint is None:
+        return
+    host, port = endpoint
+    if not is_port_open(host, port, timeout=0.35):
+        return
+    occupant = describe_port_occupant(host, port) or "unknown process"
+    msg = (
+        f"Port {port} is already in use (redan upptagen) by {occupant}. "
+        f"Stop that process or change the {name} port in Inställningar."
+    )
+    if log:
+        log.error(msg, phase=f"{name}.start")
+    raise RuntimeError(msg)
+
+
 def _wait_for_service(
     cfg: UserConfig,
     name: str,
@@ -113,16 +137,22 @@ def _wait_for_service(
         elapsed = timeout - (deadline - time.monotonic())
         port_open = is_port_open(host, port, timeout=0.2)
         alive = is_process_running(proc.pid)
+        owned = (
+            port_owned_by_pid_tree(host, port, proc.pid)
+            if port_open and alive
+            else False
+        )
         if on_tick:
             on_tick(elapsed, port_open, alive)
         if log and int(elapsed) > int(last_logged_sec):
             last_logged_sec = elapsed
             log.info(
                 f"elapsed {elapsed:.1f}s · port={'open' if port_open else 'closed'} · "
-                f"process={'alive' if alive else 'dead'}",
+                f"process={'alive' if alive else 'dead'} · "
+                f"owned={'yes' if owned else 'no'}",
                 phase=phase,
             )
-        if port_open:
+        if port_open and owned:
             if log:
                 log.info(f"Port {host}:{port} is accepting connections", phase=phase)
             if name == "api":
@@ -136,6 +166,10 @@ def _wait_for_service(
                 elif log:
                     log.warn("Port open but /health did not return ok", phase=f"{name}.health")
             return
+        if port_open and alive and not owned:
+            # Foreign listener while our process is still up — keep waiting briefly
+            # so a slow child can claim the port; fail clearly if it never does.
+            pass
         if not alive:
             _, err_path = service_log_paths(cfg, name)
             detail = _read_log_tail(err_path) or _read_log_tail(service_log_paths(cfg, name)[0])
@@ -154,6 +188,17 @@ def _wait_for_service(
 
     stop_service(cfg, name, log=log)
     _, err_path = service_log_paths(cfg, name)
+    if is_port_open(host, port, timeout=0.2) and not port_owned_by_pid_tree(
+        host, port, proc.pid
+    ):
+        occupant = describe_port_occupant(host, port) or "unknown process"
+        msg = (
+            f"Port {host}:{port} is open but not owned by {name} (pid {proc.pid}) "
+            f"(ägs inte av vår process); occupied by {occupant}. See {err_path}"
+        )
+        if log:
+            log.error(msg, phase=phase)
+        raise RuntimeError(msg)
     if log:
         log.error(f"Timeout after {timeout:.0f}s waiting for {host}:{port}", phase=phase)
     raise RuntimeError(
@@ -198,6 +243,7 @@ def start_api(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessInfo:
     if log:
         log.phase("api.start", "Starting API")
     stop_service(cfg, "api", log=log)
+    _ensure_port_free(cfg, "api", log=log)
     py = resolve_python(cfg)
     child_env = build_child_env(cfg)
     root = working_directory(cfg)
@@ -236,6 +282,7 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
     if log:
         log.phase("dashboard.start", "Starting Dashboard")
     stop_service(cfg, "dashboard", log=log)
+    _ensure_port_free(cfg, "dashboard", log=log)
     py = resolve_python(cfg)
     child_env = build_child_env(cfg)
     root = working_directory(cfg)
