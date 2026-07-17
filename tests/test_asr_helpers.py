@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from src.api.helpers import asr_kwargs_from, transcribe_helper
 from src.api.schemas import TranscribeRequest
 from src.core.models import Transcript
+from src.transcription.base import resolve_model_name
 
 
 def test_transcribe_helper_uses_router():
@@ -34,3 +35,7 @@ def test_transcribe_helper_default_provider_local():
         transcribe_helper("a.wav")
     call_kwargs = R.return_value.transcribe.call_args.kwargs
     assert call_kwargs["provider"] == "local"
+
+
+def test_kb_whisper_medium_alias():
+    assert resolve_model_name("kb-whisper-medium") == "KBLab/kb-whisper-medium"

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 _MODEL_ALIASES = {
     "kb-whisper-large": "KBLab/kb-whisper-large",
+    "kb-whisper-medium": "KBLab/kb-whisper-medium",
     "large-v3": "openai/whisper-large-v3",
 }
 
