@@ -48,6 +48,22 @@ def test_smoke_dry_run_selects_three_files(tmp_path):
     assert report.dry_run is True
 
 
+@patch("torch.cuda.is_available", return_value=False)
+def test_cuda_unavailable_raises_on_cuda_device(_mock_cuda_available):
+    from src.benchmarks.audio_runner import _run_asr_on_sample
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"device=cuda requested but torch\.cuda\.is_available\(\) is False",
+    ):
+        _run_asr_on_sample(
+            "dummy.wav",
+            backend="faster",
+            device="cuda",
+            language="sv",
+        )
+
+
 @patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
 @patch("src.transcription.router.AsrRouter.transcribe")
 def test_smoke_oom_fallback_uses_medium(mock_transcribe, _mock_requires_ml, tmp_path):
