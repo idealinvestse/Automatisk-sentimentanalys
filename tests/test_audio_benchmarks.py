@@ -64,6 +64,22 @@ def test_cuda_unavailable_raises_on_cuda_device(_mock_cuda_available):
         )
 
 
+@patch("torch.cuda.is_available", return_value=False)
+def test_cuda_unavailable_raises_on_pipeline_cuda_device(_mock_cuda_available):
+    from src.benchmarks.audio_runner import _run_pipeline_on_sample
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"device=cuda requested but torch\.cuda\.is_available\(\) is False",
+    ):
+        _run_pipeline_on_sample(
+            "dummy.wav",
+            backend="faster",
+            device="cuda",
+            language="sv",
+        )
+
+
 @patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
 @patch("src.transcription.router.AsrRouter.transcribe")
 def test_smoke_oom_fallback_uses_medium(mock_transcribe, _mock_requires_ml, tmp_path):
@@ -96,6 +112,43 @@ def test_smoke_oom_fallback_uses_medium(mock_transcribe, _mock_requires_ml, tmp_
     )
     assert report.summary.get("oom_fallbacks", 0) >= 1
     assert "kb-whisper-medium" in calls
+
+
+@patch("src.benchmarks.audio_runner._run_sentiment_on_text", return_value="positive")
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.pipeline.CallAnalysisPipeline")
+def test_pipeline_oom_fallback_uses_medium(
+    mock_pipeline_cls, _mock_requires_ml, _mock_sentiment, tmp_path
+):
+    from unittest.mock import MagicMock
+
+    audio_root, _ = _audio_root(tmp_path)
+    models_used: list[str] = []
+
+    def _pipeline_factory(**kwargs):
+        model = kwargs.get("asr_model", "kb-whisper-large")
+        models_used.append(model)
+        instance = MagicMock()
+        if model == "kb-whisper-large":
+            instance.analyze_audio.side_effect = RuntimeError("CUDA out of memory")
+        else:
+            report = MagicMock()
+            report.segments = [{"text": "hej"}]
+            report.diarization = None
+            instance.analyze_audio.return_value = report
+        return instance
+
+    mock_pipeline_cls.side_effect = _pipeline_factory
+    report = run_scenario(
+        "pipeline",
+        audio_root=audio_root,
+        device="cpu",
+        model_name="kb-whisper-large",
+        oom_fallback=True,
+    )
+    assert report.summary.get("oom_fallbacks", 0) >= 1
+    assert "kb-whisper-medium" in models_used
+    assert all(f.metadata.get("model_used") for f in report.files if f.ok)
 
 
 @patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)

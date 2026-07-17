@@ -93,6 +93,38 @@ def _estimate_cloud_cost_usd(duration_s: float | None, provider: str) -> float |
     return round((duration_s / 60.0) * DEEPGRAM_USD_PER_MINUTE, 6)
 
 
+def _require_cuda_if_requested(device: str) -> None:
+    if device == "cuda":
+        import torch
+
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "device=cuda requested but torch.cuda.is_available() is False"
+            )
+
+
+def _pipeline_transcript_text(report: object) -> str:
+    segments = getattr(report, "segments", None) or []
+    texts: list[str] = []
+    for seg in segments:
+        if isinstance(seg, dict):
+            texts.append(str(seg.get("text") or "").strip())
+        else:
+            texts.append(str(getattr(seg, "text", "") or "").strip())
+    return " ".join(texts).strip()
+
+
+def _raise_if_pipeline_swallowed_cuda_oom(report: object) -> None:
+    from ..transcription.oom_fallback import is_cuda_oom_error
+
+    diarization = getattr(report, "diarization", None) or {}
+    if diarization.get("backend") != "failed":
+        return
+    error = str(diarization.get("error") or "")
+    if error and is_cuda_oom_error(RuntimeError(error)):
+        raise RuntimeError(error)
+
+
 def _run_asr_on_sample(
     sample_path: str,
     *,
@@ -106,13 +138,7 @@ def _run_asr_on_sample(
     from ..transcription.oom_fallback import transcribe_with_oom_fallback
     from ..transcription.router import AsrRouter
 
-    if device == "cuda":
-        import torch
-
-        if not torch.cuda.is_available():
-            raise RuntimeError(
-                "device=cuda requested but torch.cuda.is_available() is False"
-            )
+    _require_cuda_if_requested(device)
 
     start = time.time()
     router = AsrRouter()
@@ -143,22 +169,32 @@ def _run_pipeline_on_sample(
     backend: str,
     device: str,
     language: str,
-) -> tuple[bool, str | None]:
+    model_name: str = "kb-whisper-large",
+    oom_fallback: bool = True,
+) -> tuple[bool, str | None, str, bool]:
     from ..pipeline import CallAnalysisPipeline
+    from ..transcription.oom_fallback import transcribe_with_oom_fallback
 
-    pipeline = CallAnalysisPipeline(device=device, asr_backend=backend)
-    report = pipeline.analyze_audio(
-        audio_path=sample_path, language=language, run_diarization=False
+    _require_cuda_if_requested(device)
+
+    def _analyze(model: str):
+        pipeline = CallAnalysisPipeline(
+            device=device, asr_backend=backend, asr_model=model
+        )
+        report = pipeline.analyze_audio(
+            audio_path=sample_path, language=language, run_diarization=False
+        )
+        _raise_if_pipeline_swallowed_cuda_oom(report)
+        return report
+
+    result = transcribe_with_oom_fallback(
+        primary_model=model_name,
+        fallback_model="kb-whisper-medium",
+        allow_fallback=oom_fallback,
+        transcribe_fn=_analyze,
     )
-    segments = report.segments or []
-    texts: list[str] = []
-    for seg in segments:
-        if isinstance(seg, dict):
-            texts.append(str(seg.get("text") or "").strip())
-        else:
-            texts.append(str(getattr(seg, "text", "") or "").strip())
-    text = " ".join(texts).strip()
-    return True, text or None
+    text = _pipeline_transcript_text(result.value)
+    return True, text or None, result.model_used, result.fell_back
 
 
 def _run_sentiment_on_text(text: str, *, device: str) -> str | None:
@@ -346,12 +382,18 @@ def run_scenario(
                     sentiment_pairs.append((sample.expected_sentiment, pred))
 
             elif scenario == "pipeline":
-                ok, pipeline_transcript = _run_pipeline_on_sample(
+                ok, pipeline_transcript, model_used, fell_back = _run_pipeline_on_sample(
                     sample.path,
                     backend=backend,
                     device=device,
                     language=lang,
+                    model_name=model_name,
+                    oom_fallback=oom_fallback,
                 )
+                result.metadata["model_used"] = model_used
+                if fell_back:
+                    result.metadata["oom_fell_back"] = True
+                    oom_fallbacks += 1
                 result.pipeline_ok = ok
                 result.ok = ok
                 result.transcript_preview = _preview_text(pipeline_transcript or "")
@@ -383,6 +425,8 @@ def run_scenario(
         summary["pipeline_success_rate"] = (
             round(pipeline_ok_count / len(samples), 4) if samples else 0.0
         )
+        if oom_fallbacks:
+            summary["oom_fallbacks"] = oom_fallbacks
 
     comparable = [(exp, pred) for exp, pred in sentiment_pairs if exp and pred]
     if comparable:
