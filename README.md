@@ -52,4 +52,6 @@ fliken **Testlabb** som kör `/analyze_pipeline` direkt på JSON-segment.
 Launcher synkar API-port, `NEXT_PUBLIC_API_BASE_URL`, API-nyckel och CORS till webui
 vid start — se [docs/WINDOWS_INSTALL.md](docs/WINDOWS_INSTALL.md).
 
+**Första fem WAV-testet (Windows + GPU):** [docs/FIRST_FIVE_WAV_TEST.md](docs/FIRST_FIVE_WAV_TEST.md) — placera fem demo-`.wav` i `samples/audio/sv/callcenter/`, kör `.\scripts\run_first_five_wav_test.ps1`.
+
 Se [docs/](docs/) och [docs/ROADMAP.md](docs/ROADMAP.md) för mer information.
