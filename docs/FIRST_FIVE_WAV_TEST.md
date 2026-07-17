@@ -7,6 +7,17 @@
 - Optional: `OPENROUTER_API_KEY` in `.env` for step B
 - Subagents: windows-gpu-pilot, asr-smoke-runner, pilot-policy-guard
 
+### RTX 5070 / CUDA PyTorch (Windows)
+
+Default `pip install torch` often gives a **CPU-only** wheel (`2.x+cpu`). For the 5070, install a CUDA build (cu128 works with driver 610+):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+.\.venv\Scripts\python.exe -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+Expect `True` and `NVIDIA GeForce RTX 5070`. Note: `whisperx` may warn about torch≠2.8 — ASR smoke uses `faster-whisper` and is fine.
+
 ## A — ASR smoke
 
 ```powershell
