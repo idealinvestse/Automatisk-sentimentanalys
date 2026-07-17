@@ -253,7 +253,9 @@ def _apply_subset(
                 ):
                     chosen.append(sample)
                     break
-        return chosen or samples[:3]
+        if chosen:
+            return chosen
+        return samples
 
     if subset == "emotion_coverage":
         chosen = []

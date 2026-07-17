@@ -30,4 +30,4 @@ packs:
     parser: sidecar
     default_asr_language: sv
     tags: [swedish, callcenter, priority]
-    enabled: false
+    enabled: true

@@ -1,0 +1,4 @@
+expected_sentiment: negativ
+scenario: billing_complaint
+speakers: 2
+notes: "Demo template — copy to <audio_stem>.meta.yaml; no real customer PII"
