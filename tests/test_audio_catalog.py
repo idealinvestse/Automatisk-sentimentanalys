@@ -84,14 +84,18 @@ def test_smoke_subset_is_deterministic(catalog: AudioCatalog):
     assert len(first) == 3
 
 
-def test_sv_callcenter_disabled_without_files(catalog: AudioCatalog):
+def test_sv_callcenter_active_when_enabled(catalog: AudioCatalog):
+    pack = catalog.manifest.packs["sv_callcenter"]
     active = catalog.active_packs()
-    sv_dir = AUDIO_ROOT / "sv" / "callcenter"
-    has_audio = sv_dir.is_dir() and any(
-        p.suffix.lower() in {".wav", ".mp3", ".flac"} for p in sv_dir.rglob("*") if p.is_file()
-    )
-    if not has_audio:
-        assert "sv_callcenter" not in active
+    if pack.enabled:
+        assert "sv_callcenter" in active
+    else:
+        sv_dir = AUDIO_ROOT / "sv" / "callcenter"
+        has_audio = sv_dir.is_dir() and any(
+            p.suffix.lower() in {".wav", ".mp3", ".flac"} for p in sv_dir.rglob("*") if p.is_file()
+        )
+        if not has_audio:
+            assert "sv_callcenter" not in active
 
 
 def test_validate_ravdess_pack(catalog: AudioCatalog, expected_ravdess_count: int):

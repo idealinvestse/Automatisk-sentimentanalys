@@ -41,6 +41,7 @@ def build_mini_ravdess_catalog(target: Path) -> Path:
     for code in _EMOTION_CODES:
         filename = f"03-01-{code}-01-01-01-01.wav"
         (actor_dir / filename).write_bytes(b"RIFF\x00\x00\x00\x00")
+    (target / "sv" / "callcenter").mkdir(parents=True, exist_ok=True)
     return target
 
 
