@@ -118,6 +118,9 @@ def audio_smoke(
     device: str = typer.Option("cpu", "--device"),
     backend: str = typer.Option("faster", "--backend"),
     language: str | None = typer.Option(None, "--language"),
+    model: str = typer.Option("kb-whisper-large", "--model"),
+    oom_fallback: bool = typer.Option(True, "--oom-fallback/--no-oom-fallback"),
+    limit: int | None = typer.Option(None, "--limit"),
     output: str | None = typer.Option(None, "--output"),
     dry_run: bool = typer.Option(False, "--dry-run"),
     audio_root: str | None = typer.Option(None, "--audio-root"),
@@ -127,9 +130,12 @@ def audio_smoke(
         "smoke",
         audio_root=audio_root,
         pack_ids=[pack] if pack else None,
+        limit=limit,
         device=device,
         backend=backend,
         language=language,
+        model_name=model,
+        oom_fallback=oom_fallback,
         dry_run=dry_run,
     )
     out = output or _default_output("smoke")
@@ -156,6 +162,8 @@ def audio_run(
     device: str = typer.Option("cpu", "--device"),
     backend: str = typer.Option("faster", "--backend"),
     language: str | None = typer.Option(None, "--language"),
+    model: str = typer.Option("kb-whisper-large", "--model"),
+    oom_fallback: bool = typer.Option(True, "--oom-fallback/--no-oom-fallback"),
     output: str | None = typer.Option(None, "--output"),
     dry_run: bool = typer.Option(False, "--dry-run"),
     audio_root: str | None = typer.Option(None, "--audio-root"),
@@ -177,6 +185,8 @@ def audio_run(
         device=device,
         backend=backend,
         language=language,
+        model_name=model,
+        oom_fallback=oom_fallback,
         dry_run=dry_run,
     )
     out = output or _default_output(scenario)

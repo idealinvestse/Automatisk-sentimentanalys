@@ -50,6 +50,40 @@ def test_smoke_dry_run_selects_three_files(tmp_path):
 
 @patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
 @patch("src.transcription.router.AsrRouter.transcribe")
+def test_smoke_oom_fallback_uses_medium(mock_transcribe, _mock_requires_ml, tmp_path):
+    from src.core.models import Segment, Transcript
+
+    audio_root, _ = _audio_root(tmp_path)
+    calls: list[str] = []
+
+    def _side_effect(*args, **kwargs):
+        model = kwargs.get("model_name", "kb-whisper-large")
+        calls.append(model)
+        if model == "kb-whisper-large":
+            raise RuntimeError("CUDA out of memory")
+        return Transcript(
+            model=model,
+            backend="faster",
+            language="sv",
+            duration=1.0,
+            processing_time=0.1,
+            segments=[Segment(start=0.0, end=1.0, text="hej")],
+        )
+
+    mock_transcribe.side_effect = _side_effect
+    report = run_scenario(
+        "smoke",
+        audio_root=audio_root,
+        device="cpu",
+        model_name="kb-whisper-large",
+        oom_fallback=True,
+    )
+    assert report.summary.get("oom_fallbacks", 0) >= 1
+    assert "kb-whisper-medium" in calls
+
+
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.transcription.router.AsrRouter.transcribe")
 def test_smoke_with_mocked_asr(mock_transcribe, _mock_requires_ml, tmp_path):
     audio_root, _ = _audio_root(tmp_path)
     from src.core.models import Segment, Transcript

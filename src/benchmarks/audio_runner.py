@@ -100,19 +100,41 @@ def _run_asr_on_sample(
     device: str,
     language: str,
     provider: str = "local",
-) -> tuple[str, float]:
+    model_name: str = "kb-whisper-large",
+    oom_fallback: bool = True,
+) -> tuple[str, float, str, bool]:
+    from ..transcription.oom_fallback import transcribe_with_oom_fallback
     from ..transcription.router import AsrRouter
 
+    if device == "cuda":
+        import torch
+
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "device=cuda requested but torch.cuda.is_available() is False"
+            )
+
     start = time.time()
-    transcript = AsrRouter().transcribe(
-        sample_path,
-        provider=provider,
-        backend=backend,
-        device=device,
-        language=language,
+    router = AsrRouter()
+
+    def _call(model: str):
+        return router.transcribe(
+            sample_path,
+            provider=provider,
+            backend=backend,
+            device=device,
+            language=language,
+            model_name=model,
+        )
+
+    result = transcribe_with_oom_fallback(
+        primary_model=model_name,
+        fallback_model="kb-whisper-medium",
+        allow_fallback=oom_fallback,
+        transcribe_fn=_call,
     )
     elapsed = time.time() - start
-    return _transcript_text(transcript), elapsed
+    return _transcript_text(result.value), elapsed, result.model_used, result.fell_back
 
 
 def _run_pipeline_on_sample(
@@ -163,6 +185,8 @@ def run_scenario(
     language: str | None = None,
     provider: str = "local",
     dry_run: bool = False,
+    model_name: str = "kb-whisper-large",
+    oom_fallback: bool = True,
 ) -> AudioRunReport:
     catalog = load_catalog(audio_root)
     samples = resolve_samples(
@@ -282,6 +306,7 @@ def run_scenario(
 
     asr_ok = 0
     pipeline_ok_count = 0
+    oom_fallbacks = 0
     sentiment_pairs: list[tuple[str | None, str | None]] = []
 
     for sample in samples:
@@ -297,13 +322,19 @@ def run_scenario(
         )
         try:
             if scenario in {"smoke", "asr", "sentiment_chain", "language_sanity"}:
-                transcript, elapsed = _run_asr_on_sample(
+                transcript, elapsed, model_used, fell_back = _run_asr_on_sample(
                     sample.path,
                     backend=backend,
                     device=device,
                     language=lang,
                     provider=provider,
+                    model_name=model_name,
+                    oom_fallback=oom_fallback,
                 )
+                result.metadata["model_used"] = model_used
+                if fell_back:
+                    result.metadata["oom_fell_back"] = True
+                    oom_fallbacks += 1
                 result.latency_s = round(elapsed, 3)
                 result.transcript_preview = _preview_text(transcript)
                 result.ok = bool(transcript.strip())
@@ -346,6 +377,8 @@ def run_scenario(
     }
     if scenario in {"smoke", "asr", "sentiment_chain", "language_sanity"}:
         summary["asr_success_rate"] = round(asr_ok / len(samples), 4) if samples else 0.0
+        if oom_fallbacks:
+            summary["oom_fallbacks"] = oom_fallbacks
     if scenario == "pipeline":
         summary["pipeline_success_rate"] = (
             round(pipeline_ok_count / len(samples), 4) if samples else 0.0
