@@ -16,6 +16,8 @@ llm:
   max_tokens: 4096
 
   # Privacy / GDPR
+  # NOTE: callcenter profile overrides this to true (src/profiles.py). Pilot/prod policy:
+  # always anonymize before external LLM. See docs/PILOT_RUNBOOK.md.
   anonymize_before_llm: false   # When true, PII redaction (Fas 3.4) runs before sending transcript
   log_external_calls: true      # Always recommended
 
@@ -33,7 +35,8 @@ openrouter:
 
 # Groq Cloud specific (env var GROQ_API_KEY required)
 # ⚠️ GDPR WARNING: Groq data centers are US + Saudi Arabia — NO confirmed EU hosting.
-# Recommended only for non-PII dev workloads or with anonymize_before_llm enabled.
+# Pilot/prod policy (2026-07): DEV-ONLY — do not set GROQ_API_KEY when API_PRODUCTION=true.
+# See docs/PILOT_RUNBOOK.md and docs/DECISION_REPORT_2026-07-17.md.
 groq:
   base_url: "https://api.groq.com/openai/v1"
   default_model: "llama-3.3-70b-versatile"

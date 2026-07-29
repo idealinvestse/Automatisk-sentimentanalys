@@ -19,14 +19,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    confusion_matrix,
-    f1_score,
-)
-from sklearn.model_selection import train_test_split
-
 from src.intent import CALL_CENTER_INTENTS, IntentClassifier
 
 logger = logging.getLogger(__name__)
@@ -52,6 +44,8 @@ def load_intent_jsonl(path: Path) -> tuple[list[str], list[str]]:
 
 
 def per_class_metrics(y_true: list[str], y_pred: list[str]) -> dict:
+    from sklearn.metrics import classification_report, confusion_matrix
+
     report = classification_report(
         y_true, y_pred, labels=LABEL_ORDER, output_dict=True, zero_division=0
     )
@@ -83,6 +77,8 @@ def benchmark_backend(
     model_path: str | None = None,
     device: str = "cpu",
 ) -> dict:
+    from sklearn.metrics import accuracy_score, f1_score
+
     clf = IntentClassifier(backend=backend, model_path=model_path, device=device)
     t0 = time.perf_counter()
     preds = [clf.classify(t)[0] for t in texts]
@@ -140,6 +136,8 @@ def main() -> None:
     else:
         if not args.data.is_file():
             raise SystemExit(f"Dataset not found: {args.data}")
+        from sklearn.model_selection import train_test_split
+
         texts, labels = load_intent_jsonl(args.data)
         _, x_test, _, y_test = train_test_split(
             texts,

@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 from typing import Any
 
@@ -88,13 +89,16 @@ class WhisperXTranscriber:
         return resolved
 
     def _get_device_str(self) -> str:
-        """Return device string in the form whisperx expects (cuda:0, cpu, mps)."""
-        dev_kind, cuda_idx = normalize_device_for_asr(self.device)
-        if dev_kind == "cuda":
-            return f"cuda:{cuda_idx or 0}"
-        if dev_kind == "mps":
-            return "mps"
-        return "cpu"
+        """Device string for pyannote / torch (``cuda:0``, ``cpu``, ``mps``)."""
+        from ..core.device import whisperx_torch_device
+
+        return whisperx_torch_device(self.device)
+
+    def _get_ctranslate_device(self) -> tuple[str, int]:
+        """Device args for ``whisperx.load_model`` / ctranslate2."""
+        from ..core.device import whisperx_ctranslate_device
+
+        return whisperx_ctranslate_device(self.device)
 
     def _get_compute_type(self) -> str:
         dev_kind, _ = normalize_device_for_asr(self.device)
@@ -109,29 +113,42 @@ class WhisperXTranscriber:
         if self._model is not None:
             return self._model
 
-        device_str = self._get_device_str()
+        from ..install.asr_assets import (
+            ensure_speechbrain_windows_compat,
+            ensure_torch_load_weights_compat,
+            ensure_torchaudio_audiometadata,
+        )
+
+        ensure_torchaudio_audiometadata()
+        ensure_torch_load_weights_compat()
+        ensure_speechbrain_windows_compat()
+        device, device_index = self._get_ctranslate_device()
         compute_type = self._get_compute_type()
 
         logger.debug(
-            "Loading whisperx ASR model '%s' | device=%s | compute_type=%s | revision=%s",
+            "Loading whisperx ASR model '%s' | device=%s index=%s | compute_type=%s | revision=%s",
             self.model_name,
-            device_str,
+            device,
+            device_index,
             compute_type,
             revision or "default",
         )
 
         try:
-            # WhisperX load_model signature: (whisper_arch, device, compute_type, ...)
+            # WhisperX load_model signature: (whisper_arch, device, device_index=0, ...)
             # revision is rarely used for the main whisper model; we log and ignore for now
             if revision:
                 logger.debug(
                     "WhisperX backend received revision=%s (passed to load if supported)", revision
                 )
 
+            vad_method = "silero" if sys.platform == "win32" else "pyannote"
             self._model = whisperx.load_model(
                 self.model_name,
-                device_str,
+                device,
+                device_index=device_index,
                 compute_type=compute_type,
+                vad_method=vad_method,
                 # We deliberately do not force language here; it is supplied at transcribe time
             )
             logger.debug("WhisperX ASR model loaded successfully: %s", self.model_name)
@@ -146,6 +163,9 @@ class WhisperXTranscriber:
         if self._align_model is not None and self._align_metadata is not None:
             return self._align_model, self._align_metadata
 
+        from ..install.asr_assets import ensure_torchaudio_audiometadata
+
+        ensure_torchaudio_audiometadata()
         device_str = self._get_device_str()
         logger.debug("Loading whisperx alignment model for language=%s on %s", language, device_str)
 
@@ -184,6 +204,9 @@ class WhisperXTranscriber:
             )
             return None
 
+        from ..install.asr_assets import ensure_torchaudio_audiometadata
+
+        ensure_torchaudio_audiometadata()
         logger.debug("Initializing WhisperX diarization pipeline on %s", device_str)
         try:
             self._diarize_model = whisperx.DiarizationPipeline(

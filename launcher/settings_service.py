@@ -202,9 +202,11 @@ def restart_hints(before: UserConfig, after: UserConfig) -> list[str]:
         # Webui inherits NEXT_PUBLIC_API_BASE_URL at process start — restart both.
         services.append("api")
         services.append("dashboard")
-    if before.services.dashboard_port != after.services.dashboard_port:
-        if "dashboard" not in services:
-            services.append("dashboard")
+    if (
+        before.services.dashboard_port != after.services.dashboard_port
+        and "dashboard" not in services
+    ):
+        services.append("dashboard")
     runtime_before = before.runtime.model_dump()
     runtime_after = after.runtime.model_dump()
     if runtime_before != runtime_after:
@@ -218,9 +220,11 @@ def restart_hints(before: UserConfig, after: UserConfig) -> list[str]:
         if "dashboard" not in services:
             services.append("dashboard")
     path_keys = ("data_root", "hf_cache", "llm_cache", "outputs", "logs")
-    if any(getattr(before.paths, k) != getattr(after.paths, k) for k in path_keys):
-        if "api" not in services:
-            services.append("api")
+    if (
+        any(getattr(before.paths, k) != getattr(after.paths, k) for k in path_keys)
+        and "api" not in services
+    ):
+        services.append("api")
     return services
 
 

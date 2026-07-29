@@ -10,6 +10,12 @@ from pathlib import Path
 _API_MODULES = ("uvicorn", "fastapi")
 
 
+def _subprocess_no_window_kwargs() -> dict[str, int]:
+    if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}  # type: ignore[attr-defined]
+    return {}
+
+
 def missing_api_modules() -> list[str]:
     """Return names of required API modules that are not importable."""
     return [mod for mod in _API_MODULES if importlib.util.find_spec(mod) is None]
@@ -29,6 +35,7 @@ def check_api_import(
         text=True,
         env=env,
         cwd=str(cwd) if cwd else None,
+        **_subprocess_no_window_kwargs(),
     )
     if result.returncode == 0:
         return None
@@ -53,6 +60,7 @@ def check_api_dependencies(
             text=True,
             env=env,
             cwd=str(cwd) if cwd else None,
+            **_subprocess_no_window_kwargs(),
         )
         if probe.returncode != 0:
             mods = ", ".join(missing)

@@ -23,8 +23,8 @@ from .lexicon import blend_results_with_lexicon, load_lexicon
 from .pipeline import CallAnalysisPipeline
 from .profiles import resolve_profile
 from .sentiment import analyze_smart
+from .transcription.factory import get_transcriber, resolve_preprocess_mode
 from .transcription.router import AsrRouter
-from .transcription.factory import resolve_preprocess_mode
 
 app = typer.Typer(help="Svenskt sentiment- och samtalsanalyssystem")
 console = Console()

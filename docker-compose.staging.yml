@@ -52,11 +52,13 @@ services:
       start_period: 45s
 
   webui:
-    build: ./webui
+    build:
+      context: ./webui
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        NEXT_PUBLIC_API_KEY: ${SENTIMENT_API_KEY:-staging-local-dev-key}
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
       api:
         condition: service_healthy

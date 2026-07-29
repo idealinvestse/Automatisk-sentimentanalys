@@ -207,11 +207,7 @@ def _compute_rule_based(
         first_agent = ""
         for seg in segments:
             spk = seg.get("speaker") if isinstance(seg, dict) else getattr(seg, "speaker", "")
-            r = (
-                role_map.get(str(spk) if spk is not None else "", "")
-                if role_map
-                else ""
-            )
+            r = role_map.get(str(spk) if spk is not None else "", "") if role_map else ""
             if "agent" in str(r).lower():
                 first_agent = (
                     seg.get("text", "") if isinstance(seg, dict) else getattr(seg, "text", "")
@@ -273,6 +269,7 @@ def _score_with_llm_if_needed(
         )
         rule_sc, rule_pas, rule_ev, rule_sp = _compute_rule_based(criterion, segments, role_map)
         return rule_sc, rule_pas, rule_ev, rule_sp, False
+
     # Build tiny transcript slice (first + last + any frustration area) to save tokens.
     # ``redact_segments`` always returns list[dict], but be defensive in case a
     # future caller passes list[Segment] and redaction is a no-op.

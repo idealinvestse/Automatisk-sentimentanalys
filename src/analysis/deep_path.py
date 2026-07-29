@@ -21,7 +21,9 @@ LLM_SUPERSEDED_ANALYZERS: frozenset[str] = frozenset(
 DEEP_PATH_REQUIRED_FIELDS: frozenset[str] = frozenset(LLM_SUPERSEDED_ANALYZERS)
 
 
-def unavailable_payload(analyzer_name: str, *, reason: str = "requires_deep_path") -> dict[str, Any]:
+def unavailable_payload(
+    analyzer_name: str, *, reason: str = "requires_deep_path"
+) -> dict[str, Any]:
     """Explicit null/unavailable marker — prefer honesty over quality-2 heuristics."""
     return {
         "status": "unavailable",

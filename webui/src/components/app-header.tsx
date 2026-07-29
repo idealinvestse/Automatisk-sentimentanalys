@@ -5,16 +5,28 @@ import { Moon, Sun, PhoneCall, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useHealth } from "@/hooks/use-health";
+import { isApiConnected, useHealth } from "@/hooks/use-health";
 import { useIsMounted } from "@/hooks/use-is-mounted";
+
+function healthBadge(status: ReturnType<typeof useHealth>["data"]) {
+  if (!status || status.status === "offline") {
+    return { variant: "warning" as const, label: "API ej tillgänglig" };
+  }
+  if (status.status === "unauthorized") {
+    return { variant: "destructive" as const, label: "API 401 – fel nyckel" };
+  }
+  if (status.status === "auth_required") {
+    return { variant: "destructive" as const, label: "API kräver nyckel" };
+  }
+  return { variant: "success" as const, label: "API ansluten" };
+}
 
 export function AppHeader() {
   const { resolvedTheme, setTheme } = useTheme();
-  const { data: connected, isFetching, refetch } = useHealth();
-  // next-themes only knows the real theme after mount (it reads from
-  // localStorage/system on the client) - render a stable icon until then
-  // to avoid a server/client hydration mismatch.
+  const { data: status, isFetching, refetch } = useHealth();
   const mounted = useIsMounted();
+  const badge = healthBadge(status);
+  const connected = isApiConnected(status);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/60 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/40">
@@ -28,10 +40,16 @@ export function AppHeader() {
         </Badge>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Badge variant={connected ? "success" : "warning"}>
-          {connected ? "API ansluten" : "API ej tillgänglig"}
-        </Badge>
+      <div className="flex min-w-0 items-center gap-2">
+        {!connected && status?.detail ? (
+          <span
+            className="hidden max-w-[14rem] truncate text-xs text-muted-foreground lg:inline"
+            title={status.detail}
+          >
+            {status.detail}
+          </span>
+        ) : null}
+        <Badge variant={badge.variant}>{badge.label}</Badge>
         <Button
           variant="ghost"
           size="icon"

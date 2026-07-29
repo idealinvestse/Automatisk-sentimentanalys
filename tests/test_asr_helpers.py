@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from src.api.helpers import asr_kwargs_from, transcribe_helper
 from src.api.schemas import TranscribeRequest

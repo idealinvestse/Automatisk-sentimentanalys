@@ -1,8 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+import { stubDashboardApi } from "./helpers/mock-api";
+
 /**
  * Smoke tests: each route loads without console errors and renders its H1.
- * Mocks the backend health check so pages render in isolation.
+ * Stubs dashboard API routes so CI does not require a live FastAPI process.
  */
 
 const ROUTES = [
@@ -19,10 +21,7 @@ const ROUTES = [
 
 for (const route of ROUTES) {
   test(`${route.path} renders H1 "${route.h1}"`, async ({ page }) => {
-    // Stub /health so the connection badge doesn't hang.
-    await page.route("**/health", (r) =>
-      r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
-    );
+    await stubDashboardApi(page);
     const errors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
@@ -34,18 +33,14 @@ for (const route of ROUTES) {
 }
 
 test("sidebar navigation works", async ({ page }) => {
-  await page.route("**/health", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
-  );
+  await stubDashboardApi(page);
   await page.goto("/");
   await page.getByRole("link", { name: /Analys & Trender/i }).click();
   await expect(page).toHaveURL(/\/analytics/);
 });
 
 test("theme toggle switches dark mode", async ({ page }) => {
-  await page.route("**/health", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
-  );
+  await stubDashboardApi(page);
   await page.goto("/");
   const html = page.locator("html");
   const before = await html.getAttribute("class");

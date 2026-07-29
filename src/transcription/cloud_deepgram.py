@@ -35,7 +35,7 @@ def map_deepgram_response(data: dict[str, Any]) -> list[Segment]:
     if not channels:
         return []
 
-    alternatives = (channels[0].get("alternatives") or [])
+    alternatives = channels[0].get("alternatives") or []
     if not alternatives:
         return []
 

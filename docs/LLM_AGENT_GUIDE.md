@@ -57,7 +57,7 @@ CallAnalysisReport (returned to CLI / API / Dashboard)
 | `src/lexicon.py`            | Lexicon blending                                                        | - |
 | `configs/`                  | YAML configs, hotwords, llm_config.yaml                                 | `callcenter_hotwords.txt` |
 | `docs/`                     | All documentation                                                       | `ROADMAP.md`, `API.md`, this file |
-| `tests/`                    | 57 test files (581 test functions)                                    | `test_pipeline.py`, `test_llm_*.py` |
+| `tests/`                    | Unit, integration, golden, API and quality-gate tests                  | `test_pipeline.py`, `test_llm_*.py` |
 
 ## 4. Getting Started (for Agents)
 
@@ -164,6 +164,7 @@ Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPO
 
 - If `pyannote.audio` is missing → use heuristic VAD in `diarization.py`.
 - If LLM key is missing → skip Mistral step.
+- Intent `auto` selects the local trained model only when its artifact is available and loadable; otherwise it falls back to the heuristic classifier.
 - If a single analyzer fails → log warning and continue.
 
 **Never** let missing optional dependencies crash the whole pipeline.

@@ -184,12 +184,21 @@ def test_edge_analyze_text_happy_mocked(monkeypatch: pytest.MonkeyPatch) -> None
     def fake_analyze_text(text: str, *, profile: str = "callcenter") -> EdgeAnalysisResult:
         return EdgeAnalysisResult(
             profile=profile,
-            segments=[EdgeSegmentResult(text=text, sentiment_label="positiv", sentiment_score=0.9, intent="information_request")],
+            segments=[
+                EdgeSegmentResult(
+                    text=text,
+                    sentiment_label="positiv",
+                    sentiment_score=0.9,
+                    intent="information_request",
+                )
+            ],
             summary="Offline analysis (callcenter)",
         )
 
     monkeypatch.setattr("src.api.routers.edge.analyze_text_offline", fake_analyze_text)
-    r = client.post("/edge/analyze-text", json={"text": "Tack för hjälpen!", "profile": "callcenter"})
+    r = client.post(
+        "/edge/analyze-text", json={"text": "Tack för hjälpen!", "profile": "callcenter"}
+    )
     assert r.status_code == 200
     data = r.json()
     assert data["profile"] == "callcenter"
@@ -219,7 +228,13 @@ def test_edge_analyze_segments_happy_mocked(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr("src.api.routers.edge.analyze_segments_offline", fake_analyze_segments)
     r = client.post(
         "/edge/analyze-segments",
-        json={"segments": [{"text": "Hej", "speaker": "Agent"}, {"text": "Hej då", "speaker": "Kund"}], "profile": "callcenter"},
+        json={
+            "segments": [
+                {"text": "Hej", "speaker": "Agent"},
+                {"text": "Hej då", "speaker": "Kund"},
+            ],
+            "profile": "callcenter",
+        },
     )
     assert r.status_code == 200
     data = r.json()

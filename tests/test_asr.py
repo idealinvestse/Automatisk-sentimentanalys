@@ -355,6 +355,39 @@ class TestWhisperXBackendMocked:
 
         # Now the load should have been invoked with the mapped name
         mock_wx.load_model.assert_called()
+        args, kwargs = mock_wx.load_model.call_args
+        assert args[1] == "cpu"
+        assert kwargs.get("device_index") == 0
+
+    def test_whisperx_load_model_uses_cuda_not_cuda_colon(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        mock_wmodel = MagicMock()
+        mock_wmodel.transcribe.return_value = {"segments": [], "language": "sv"}
+        mock_wx = MagicMock()
+        mock_wx.load_model.return_value = mock_wmodel
+        mock_wx.load_audio.return_value = object()
+
+        monkeypatch.setattr("src.core.device.torch.cuda.is_available", lambda: True)
+        monkeypatch.setattr("src.core.device.torch.cuda.device_count", lambda: 1)
+
+        with (
+            patch("src.transcription.whisperx._HAS_WHISPERX", True),
+            patch("src.transcription.whisperx.whisperx", mock_wx),
+            patch("src.transcription.whisperx.ensure_torchaudio_audiometadata", create=True),
+            patch(
+                "src.install.asr_assets.ensure_torchaudio_audiometadata",
+                lambda: None,
+            ),
+        ):
+            transcriber = get_transcriber(
+                backend="whisperx", model_name="large-v3", device="cuda:0"
+            )
+            _ = transcriber.transcribe("dummy.wav", language="sv", diarize=False)
+
+        args, kwargs = mock_wx.load_model.call_args
+        assert args[1] == "cuda"
+        assert kwargs.get("device_index") == 0
 
 
 # ------------------------------------------------------------------

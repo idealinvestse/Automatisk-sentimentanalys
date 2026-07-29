@@ -45,7 +45,7 @@ def _format_service_error(name: str, message: str) -> str:
         hints.append("Kontrollera att mappen webui/ finns i app-roten")
         hints.append("Kör: cd webui && npm install")
     elif "uvicorn" in lower or "fastapi" in lower:
-        hints.append("Kör «Installera / Reparera allt» eller: pip install -e \".[api]\"")
+        hints.append('Kör «Installera / Reparera allt» eller: pip install -e ".[api]"')
     if not hints:
         return message
     return message + "\n\nNästa steg:\n• " + "\n• ".join(hints)
@@ -62,6 +62,7 @@ class LauncherApp(tk.Tk):
         self.event_log = EventLog(log_path=log_path)
         self._busy = False
         self._busy_buttons: list[ttk.Button] = []
+        self._refresh_lock = threading.Lock()
 
         self._scroll = ScrollableFrame(self)
         self._scroll.pack(fill=tk.BOTH, expand=True)
@@ -149,13 +150,36 @@ class LauncherApp(tk.Tk):
 
     def _schedule_auto_refresh(self) -> None:
         if not self._busy:
-            self._refresh_status()
+            self._refresh_status_async()
         self.after(_AUTO_REFRESH_MS, self._schedule_auto_refresh)
 
     def _refresh_status(self) -> None:
         self.cfg = load_user_config(_app_root())
         snap = collect_snapshot(self.cfg, launcher_root=_app_root())
         self.status_panel.apply_snapshot(snap)
+
+    def _refresh_status_async(self) -> None:
+        """Collect status off the UI thread so probes cannot freeze the launcher."""
+        if not self._refresh_lock.acquire(blocking=False):
+            return
+        root = _app_root()
+
+        def work() -> None:
+            try:
+                cfg = load_user_config(root)
+                snap = collect_snapshot(cfg, launcher_root=root)
+
+                def apply() -> None:
+                    self.cfg = cfg
+                    self.status_panel.apply_snapshot(snap)
+
+                self.after(0, apply)
+            except Exception as exc:
+                self.event_log.warn(f"Statusuppdatering misslyckades: {exc}", phase="launcher")
+            finally:
+                self._refresh_lock.release()
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _run_service_action(self, name: str, action: str) -> None:
         if self._busy:
@@ -359,6 +383,26 @@ class LauncherApp(tk.Tk):
 
 def main() -> None:
     root = bootstrap_launcher_env()
+    from .single_instance import try_acquire_launcher_lock
+
+    lock = try_acquire_launcher_lock()
+    if lock is None:
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+
+            transient = tk.Tk()
+            transient.withdraw()
+            messagebox.showinfo(
+                "Sentimentanalys",
+                "Kontrollpanelen körs redan.\n\n"
+                "Stäng det befintliga fönstret innan du startar en ny launcher "
+                "(flera instanser kan låsa torch-DLL:er under Installera/reparera).",
+            )
+            transient.destroy()
+        except Exception:
+            print("Sentimentanalys-kontrollpanelen körs redan.", file=sys.stderr)
+        return
     try:
         app = LauncherApp()
         app.mainloop()
@@ -367,6 +411,8 @@ def main() -> None:
 
         (root / "launcher_crash.log").write_text(traceback.format_exc(), encoding="utf-8")
         raise
+    finally:
+        lock.release()
 
 
 if __name__ == "__main__":

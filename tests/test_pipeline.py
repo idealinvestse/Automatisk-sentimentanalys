@@ -352,6 +352,7 @@ class TestCallAnalysisPipeline:
                 lambda *a, **k: ("callcenter", {"llm": {"anonymize_before_llm": True}}),
                 raising=False,
             )
+
             # Make redact_segments fail
             def _boom(*a, **k):
                 raise RuntimeError("redaction engine crashed")

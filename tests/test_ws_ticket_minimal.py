@@ -6,7 +6,6 @@ covered by webui e2e / API WS tests against the real router.
 
 from __future__ import annotations
 
-import pytest
 from fastapi import APIRouter, FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocket, WebSocketDisconnect

@@ -10,6 +10,7 @@ shared channel so all uvicorn workers deliver live logs to subscribers.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from dataclasses import dataclass
@@ -85,10 +86,8 @@ class TranscriptionEventHub:
     async def stop_redis_listener(self) -> None:
         if self._listener_task is not None:
             self._listener_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._listener_task
-            except asyncio.CancelledError:
-                pass
             self._listener_task = None
 
     async def connect(self, websocket: WebSocket) -> None:

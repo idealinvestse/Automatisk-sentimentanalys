@@ -33,6 +33,7 @@ def main() -> None:
         cfg = yaml.safe_load(fh) or {}
     intent_cfg = cfg.get("intent", {})
     min_gain = float(intent_cfg.get("model_switch_min_f1_gain", 0.05))
+    min_model_f1 = float(intent_cfg.get("model_min_macro_f1", 0.8146))
 
     texts, labels = load_intent_jsonl(args.val_file)
     heur = benchmark_backend(texts, labels, backend="heuristic")
@@ -43,11 +44,14 @@ def main() -> None:
         report["model"] = model
         gain = model["f1_macro"] - heur["f1_macro"]
         report["f1_macro_gain"] = round(gain, 4)
-        if gain >= min_gain:
+        if gain >= min_gain and model["f1_macro"] >= min_model_f1:
             report["recommendation"] = "model"
-            print(f"Model beats heuristic by {gain:.4f} F1 — consider switching default")
+            print(f"Model passes promotion gate (F1 {model['f1_macro']:.4f}, " f"gain {gain:.4f})")
         else:
-            print(f"Keep heuristic default (gain {gain:.4f} < {min_gain})")
+            print(
+                f"Keep heuristic default (model F1 {model['f1_macro']:.4f}, "
+                f"gain {gain:.4f}; required F1 {min_model_f1:.4f}, gain {min_gain:.4f})"
+            )
     else:
         print(f"Model path missing ({args.model_path}); heuristic-only comparison")
 

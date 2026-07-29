@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
+import { TranscriptionJobsPanel } from "@/components/transcription-jobs-panel";
 import { useTranscriptionSocket } from "@/hooks/use-transcription-socket";
 import { useCallsStore } from "@/lib/store/calls";
 import { apiClient, ApiError, type TranscribeRequest, type PipelineReport } from "@/lib/api/client";
@@ -36,7 +37,7 @@ const LEVEL_CLASS: Record<string, string> = {
 };
 
 export default function TranscriptionPage() {
-  const { status, logs, progress, done, connect, disconnect, clearLogs } =
+  const { status, logs, progress, done, partialAnalysis, connect, disconnect, clearLogs } =
     useTranscriptionSocket();
   const [jobIdInput, setJobIdInput] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -170,6 +171,8 @@ export default function TranscriptionPage() {
         </CardContent>
       </Card>
 
+      <TranscriptionJobsPanel />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -243,6 +246,23 @@ export default function TranscriptionPage() {
         </Card>
       ) : null}
 
+      {partialAnalysis ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3 pt-5 text-sm">
+            <Badge variant="secondary">Delanalys</Badge>
+            <span>
+              {partialAnalysis.segment_count} segment · {partialAnalysis.sentiment_count} sentiment
+              {partialAnalysis.job_id ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · jobb {partialAnalysis.job_id.slice(0, 8)}…
+                </span>
+              ) : null}
+            </span>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Live-loggar</CardTitle>
@@ -278,8 +298,8 @@ export default function TranscriptionPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Obs: webbläsarens WebSocket-API kan inte skicka <code>X-API-Key</code>-headern, så denna
-        vy fungerar just nu bara mot en backend utan API-nyckel/auth.
+        Auth: REST använder <code>NEXT_PUBLIC_API_KEY</code>; WebSocket hämtar ticket via{" "}
+        <code>GET /ws/transcription/ticket</code> och ansluter med <code>?token=</code>.
       </p>
     </div>
   );

@@ -2,18 +2,71 @@
 
 from __future__ import annotations
 
+import sys
+import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from src.install.asr_assets import (
     AsrAssetReport,
+    _format_download_error,
     collect_asr_status,
     configure_hf_cache,
     download_asr_models,
     ensure_asr_assets,
+    ensure_torchaudio_audiometadata,
     hf_repo_cached,
     install_asr_packages,
 )
+
+
+def test_ensure_torchaudio_audiometadata_noop_when_present() -> None:
+    import torchaudio
+
+    if not hasattr(torchaudio, "AudioMetaData"):
+        pytest.skip("torchaudio lacks AudioMetaData in this env")
+    ensure_torchaudio_audiometadata()
+    assert hasattr(torchaudio, "AudioMetaData")
+
+
+def test_ensure_torchaudio_audiometadata_restores_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = types.ModuleType("torchaudio")
+    monkeypatch.setitem(sys.modules, "torchaudio", fake)
+    ensure_torchaudio_audiometadata()
+    assert hasattr(fake, "AudioMetaData")
+
+
+def test_format_download_error_hints_audiometadata() -> None:
+    msg = _format_download_error(
+        AttributeError("module 'torchaudio' has no attribute 'AudioMetaData'")
+    )
+    assert "torchaudio<2.9" in msg
+    assert "cu128" in msg
+
+
+def test_ensure_torch_load_weights_compat_sets_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    import torch
+
+    from src.install.asr_assets import ensure_torch_load_weights_compat
+
+    calls: list[dict] = []
+
+    def fake_load(*args: object, **kwargs: object) -> str:
+        calls.append(dict(kwargs))
+        return "ok"
+
+    monkeypatch.setattr(torch, "load", fake_load)
+    ensure_torch_load_weights_compat()
+    assert torch.load("x.pt") == "ok"
+    assert calls[0].get("weights_only") is False
+    # second call is idempotent; explicit True is overridden
+    ensure_torch_load_weights_compat()
+    torch.load("y.pt", weights_only=True)
+    assert calls[1].get("weights_only") is False
 
 
 def test_configure_hf_cache_sets_env(tmp_path):
@@ -49,6 +102,43 @@ def test_is_module_installed_checks_other_python(tmp_path: Path) -> None:
         mock_run.return_value = type("R", (), {"returncode": 0})()
         assert is_module_installed("faster_whisper", other) is True
     assert mock_run.call_args.args[0][0] == str(other)
+
+
+def test_is_module_installed_treats_pythonw_as_same_venv(tmp_path: Path, monkeypatch) -> None:
+    """Launcher starts via pythonw.exe; resolve_python returns python.exe — must not spawn."""
+    import sys
+
+    from src.install.asr_assets import is_module_installed
+
+    scripts = tmp_path / "Scripts"
+    scripts.mkdir()
+    py = scripts / "python.exe"
+    pyw = scripts / "pythonw.exe"
+    py.write_text("", encoding="utf-8")
+    pyw.write_text("", encoding="utf-8")
+    monkeypatch.setattr(sys, "executable", str(pyw))
+    with patch("src.install.asr_assets.subprocess.run") as mock_run:
+        with patch("src.install.asr_assets.importlib.util.find_spec", return_value=object()):
+            assert is_module_installed("faster_whisper", py) is True
+    mock_run.assert_not_called()
+
+
+def test_is_module_installed_hides_console_on_windows(tmp_path: Path) -> None:
+    import subprocess
+
+    from src.install.asr_assets import is_module_installed
+
+    other = tmp_path / "other" / "python.exe"
+    other.parent.mkdir()
+    other.write_text("", encoding="utf-8")
+    with patch("src.install.asr_assets.subprocess.run") as mock_run:
+        mock_run.return_value = type("R", (), {"returncode": 0})()
+        assert is_module_installed("faster_whisper", other) is True
+    kwargs = mock_run.call_args.kwargs
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert kwargs.get("creationflags") == subprocess.CREATE_NO_WINDOW
+    else:
+        assert kwargs.get("creationflags", 0) == 0
 
 
 @patch("src.install.asr_assets._ensure_interpreter_site_packages")

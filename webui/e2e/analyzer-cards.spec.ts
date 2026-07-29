@@ -168,9 +168,16 @@ MOCK_PIPELINE_RESPONSE.analyzer_results = {
 // ---------------------------------------------------------------------------
 
 async function mockBackend(page: Page) {
-  // Stub health check
+  // Stub health check + auth ticket probe (connectionStatus)
   await page.route("**/health", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
+  );
+  await page.route("**/ws/transcription/ticket", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ticket: "e2e-no-auth", expires_in: 300 }),
+    }),
   );
   // Stub /analyze_pipeline — return the same rich response for any request body
   await page.route("**/analyze_pipeline", (r) =>

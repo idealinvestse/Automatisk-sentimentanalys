@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
-import pytest
 import yaml
 
 from src.analysis.aspect_platform import (
@@ -20,7 +19,7 @@ from src.analysis.deep_path import (
     is_unavailable,
     unavailable_payload,
 )
-from src.analysis.provenance import apply_llm_overrides_with_provenance, build_override_provenance
+from src.analysis.provenance import apply_llm_overrides_with_provenance
 from src.analysis.registry import resolve_analyzers_for_profile
 from src.core.models import Segment
 from src.pipeline import CallAnalysisPipeline
@@ -248,7 +247,9 @@ def test_partial_analysis_merges_and_marks_incremental():
 
 def test_reconcile_hook_calls_fas4():
     pipe = CallAnalysisPipeline(profile="callcenter", device="cpu")
-    with patch.object(pipe, "_run_fas4_enrichment", return_value={"meta": {"llm_used": False}}) as m:
+    with patch.object(
+        pipe, "_run_fas4_enrichment", return_value={"meta": {"llm_used": False}}
+    ) as m:
         out = pipe.reconcile_partial_with_holistic([], {"sentiment": []})
         assert m.called
         assert out["meta"]["llm_used"] is False

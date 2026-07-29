@@ -133,13 +133,9 @@ def record_status_event(level: str, component: str, error_code: str = "") -> Non
         ).inc()
 
 
-def record_asr_transcription(
-    provider: str, backend: str, outcome: str, duration_s: float
-) -> None:
+def record_asr_transcription(provider: str, backend: str, outcome: str, duration_s: float) -> None:
     if ASR_TRANSCRIPTIONS_TOTAL is not None:
-        ASR_TRANSCRIPTIONS_TOTAL.labels(
-            provider=provider, backend=backend, outcome=outcome
-        ).inc()
+        ASR_TRANSCRIPTIONS_TOTAL.labels(provider=provider, backend=backend, outcome=outcome).inc()
     if ASR_TRANSCRIPTION_DURATION_SECONDS is not None:
         ASR_TRANSCRIPTION_DURATION_SECONDS.labels(
             provider=provider, backend=backend, outcome=outcome

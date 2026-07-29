@@ -8,7 +8,7 @@ This document provides a high-level overview of the project's maturity and futur
 
 The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
 
-> **Note:** Current test count is **921 test functions** (`pytest --collect-only`). See live count for CI gates.
+> **Note:** The test suite is continuously extended. Use `pytest --collect-only -q` for the authoritative current count; CI is the merge gate.
 
 ### Known Gaps / Deferred Items (v0.4.1)
 
@@ -58,12 +58,22 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 - **Privacy by design**: Explicit logging of external LLM calls, PII redaction, no hardcoded secrets.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 
+## Strategy & decision pack (2026-07)
+
+Canonical product strategy: **[STRATEGY.md](../STRATEGY.md)**.  
+Executive go/no-go + 90-day plan: **[docs/DECISION_REPORT_2026-07-17.md](DECISION_REPORT_2026-07-17.md)**.  
+Operational pilot locks: **[docs/PILOT_RUNBOOK.md](PILOT_RUNBOOK.md)** · corpus spec: **[docs/DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md)**.  
+Frontend ↔ backend harmony: **[docs/FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY_2026-07-17.md)**.
+
+**Verdict:** *conditional go* for a controlled pilot (local ASR, anonymize LLM, Groq off, DATA-01 + L7–L9).
+
 ## Next Priorities (post v0.5)
 
 | Priority | Area | Description |
 |----------|------|-------------|
-| High | **Real corpus** | Import anonymized production calls via DATA-01 workflow (`data/import/`) |
-| High | **Intent fine-tune** | Train model that beats heuristic + 0.05 macro F1 on `intent_val.jsonl` |
+| High | **Real corpus** | Import anonymized production calls via DATA-01 (`--pilot-gate`: ≥500 sentiment / ≥200 intent) — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md) |
+| High | **Pilot release gates** | Close L7–L9 + `verify_pilot_policy.py` before customer pilot — [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) |
+| High | **Intent fine-tune** | Train model that beats heuristic + 0.05 macro F1 on `intent_val.jsonl` (training/config/auto-backend plumbing ready; local artifact and measured promotion gate remain) |
 | Medium | **OTLP tracing** | Replace console OTEL exporter with production OTLP endpoint |
 | Medium | **Dashboard polish** | Correlation heatmap, executive drill-downs |
 | Low | **Fine-tuning UX** | Easier domain adaptation workflow for call center data |

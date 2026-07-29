@@ -5,13 +5,12 @@ from __future__ import annotations
 import io
 import re
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 from fastapi import UploadFile
+from fastapi.testclient import TestClient
 
-from src.api import app
 from src.api.app import create_app
 
 
@@ -19,6 +18,7 @@ from src.api.app import create_app
 def _clear_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
 
@@ -34,21 +34,21 @@ def test_upload_rejects_large_file(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("API_MEDIA_ROOT", "/tmp/test_uploads")
     monkeypatch.setenv("API_MAX_UPLOAD_SIZE_MB", "1")
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
-    
+
     # Create a 2 MB file (exceeds 1 MB limit)
     large_content = b"x" * (2 * 1024 * 1024)
-    
-    with patch("src.api.routers.transcription.resolve_and_validate_audio_paths") as mock_validate:
-        mock_validate.return_value = ["/tmp/test_uploads/uploads/test.wav"]
-        
+
+    with patch("src.api.routers.transcription.validate_audio_path") as mock_validate:
+        mock_validate.return_value = "/tmp/test_uploads/uploads/test.wav"
+
         response = client.post(
-            "/upload",
-            files={"file": ("test.wav", io.BytesIO(large_content), "audio/wav")}
+            "/upload", files={"file": ("test.wav", io.BytesIO(large_content), "audio/wav")}
         )
-    
+
     assert response.status_code == 413
     assert "too large" in response.json()["detail"].lower()
 
@@ -58,21 +58,21 @@ def test_upload_accepts_file_within_limit(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("API_MEDIA_ROOT", "/tmp/test_uploads")
     monkeypatch.setenv("API_MAX_UPLOAD_SIZE_MB", "10")
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
-    
+
     # Create a 1 MB file (within 10 MB limit)
     content = b"x" * (1 * 1024 * 1024)
-    
-    with patch("src.api.routers.transcription.resolve_and_validate_audio_paths") as mock_validate:
-        mock_validate.return_value = ["/tmp/test_uploads/uploads/test.wav"]
-        
+
+    with patch("src.api.routers.transcription.validate_audio_path") as mock_validate:
+        mock_validate.return_value = "/tmp/test_uploads/uploads/test.wav"
+
         response = client.post(
-            "/upload",
-            files={"file": ("test.wav", io.BytesIO(content), "audio/wav")}
+            "/upload", files={"file": ("test.wav", io.BytesIO(content), "audio/wav")}
         )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "audio_path" in data
@@ -83,15 +83,15 @@ def test_upload_rejects_unsupported_format(monkeypatch: pytest.MonkeyPatch) -> N
     """POST /upload returns 400 for unsupported file formats."""
     monkeypatch.setenv("API_MEDIA_ROOT", "/tmp/test_uploads")
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
-    
+
     response = client.post(
-        "/upload",
-        files={"file": ("test.exe", io.BytesIO(b"fake"), "application/octet-stream")}
+        "/upload", files={"file": ("test.exe", io.BytesIO(b"fake"), "application/octet-stream")}
     )
-    
+
     assert response.status_code == 400
     assert "unsupported file format" in response.json()["detail"].lower()
 
@@ -100,15 +100,15 @@ def test_upload_requires_media_root(monkeypatch: pytest.MonkeyPatch) -> None:
     """POST /upload returns 500 when API_MEDIA_ROOT is not configured."""
     monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
-    
+
     response = client.post(
-        "/upload",
-        files={"file": ("test.wav", io.BytesIO(b"fake"), "audio/wav")}
+        "/upload", files={"file": ("test.wav", io.BytesIO(b"fake"), "audio/wav")}
     )
-    
+
     assert response.status_code == 500
     assert "media_root not set" in response.json()["detail"].lower()
 
@@ -119,6 +119,7 @@ def test_upload_uses_uuid4_in_filename(monkeypatch: pytest.MonkeyPatch, tmp_path
     media_root.mkdir()
     monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
@@ -126,8 +127,8 @@ def test_upload_uses_uuid4_in_filename(monkeypatch: pytest.MonkeyPatch, tmp_path
 
     # Echo the saved path so the uuid prefix is not discarded by a hardcoded mock.
     with patch(
-        "src.api.routers.transcription.resolve_and_validate_audio_paths",
-        side_effect=lambda paths: paths,
+        "src.api.routers.transcription.validate_audio_path",
+        side_effect=lambda path: path,
     ):
         response = client.post(
             "/upload",
@@ -147,6 +148,7 @@ def test_upload_requires_api_key_when_configured(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
     monkeypatch.setenv("SENTIMENT_API_KEY", "secret")
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
@@ -157,8 +159,8 @@ def test_upload_requires_api_key_when_configured(monkeypatch: pytest.MonkeyPatch
     assert denied.status_code == 401
 
     with patch(
-        "src.api.routers.transcription.resolve_and_validate_audio_paths",
-        side_effect=lambda paths: paths,
+        "src.api.routers.transcription.validate_audio_path",
+        side_effect=lambda path: path,
     ):
         ok = client.post(
             "/upload",
@@ -168,17 +170,20 @@ def test_upload_requires_api_key_when_configured(monkeypatch: pytest.MonkeyPatch
     assert ok.status_code == 200
 
 
-def test_upload_sanitizes_path_traversal_filename(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_upload_sanitizes_path_traversal_filename(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
     media_root = tmp_path / "media"
     media_root.mkdir()
     monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
     with patch(
-        "src.api.routers.transcription.resolve_and_validate_audio_paths",
-        side_effect=lambda paths: paths,
+        "src.api.routers.transcription.validate_audio_path",
+        side_effect=lambda path: path,
     ):
         response = client.post(
             "/upload",
@@ -203,6 +208,7 @@ def test_upload_save_failure_uses_public_error_detail(
     monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
     from src.api.error_responses import PUBLIC_ERROR_DETAIL
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())
@@ -218,11 +224,49 @@ def test_upload_save_failure_uses_public_error_detail(
     assert "/secret" not in response.json()["detail"]
 
 
+def test_upload_end_to_end_validates_under_media_root(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """POST /upload succeeds with real path validation (no mocks)."""
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
+    from src.api.settings import get_api_settings
+
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+    response = client.post(
+        "/upload",
+        files={"file": ("call.wav", io.BytesIO(b"RIFF....data"), "audio/wav")},
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert Path(data["audio_path"]).is_file()
+    assert Path(data["audio_path"]).parent == media_root / "uploads"
+    assert data["filename"] == "call.wav"
+
+
+def test_upload_missing_file_returns_422(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """POST /upload without multipart file field is a validation error (422)."""
+    media_root = tmp_path / "media"
+    media_root.mkdir()
+    monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
+    from src.api.settings import get_api_settings
+
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+    response = client.post("/upload")
+    assert response.status_code == 422
+    body = response.json()
+    assert "detail" in body
+
+
 def test_upload_rejects_empty_filename_extension(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     media_root = tmp_path / "media"
     media_root.mkdir()
     monkeypatch.setenv("API_MEDIA_ROOT", str(media_root))
     from src.api.settings import get_api_settings
+
     get_api_settings.cache_clear()
 
     client = TestClient(create_app())

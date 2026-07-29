@@ -32,6 +32,7 @@ def validate_corpus(
     min_per_intent: int = 3,
     max_class_ratio: float = 0.25,
     max_duplicate_ratio: float = 0.01,
+    disjoint_from: str | Path | None = None,
 ) -> dict:
     """Validate intent JSONL; raises ValueError on failure."""
     path = Path(path)
@@ -66,6 +67,19 @@ def validate_corpus(
     if dup_ratio > max_duplicate_ratio:
         raise ValueError(f"Duplicate ratio {dup_ratio:.2%} exceeds max {max_duplicate_ratio:.0%}")
 
+    if disjoint_from is not None:
+        other_path = Path(disjoint_from)
+        if not other_path.is_file():
+            raise ValueError(f"Comparison corpus not found: {other_path}")
+        other_keys = {
+            (row["text"].lower().strip(), row["intent"]) for row in load_jsonl(other_path)
+        }
+        overlap = set(keys) & other_keys
+        if overlap:
+            raise ValueError(
+                f"Corpus overlaps {other_path}: {len(overlap)} duplicate text/intent pair(s)"
+            )
+
     return {
         "rows": len(rows),
         "intent_distribution": dict(sorted(dist.items())),
@@ -78,12 +92,19 @@ def main() -> None:
     parser.add_argument("path", nargs="?", default="data/intent_train.jsonl")
     parser.add_argument("--min-rows", type=int, default=50)
     parser.add_argument("--min-per-intent", type=int, default=3)
+    parser.add_argument(
+        "--disjoint-from",
+        type=Path,
+        default=None,
+        help="Reject normalized text/intent pairs also present in another corpus",
+    )
     args = parser.parse_args()
     try:
         stats = validate_corpus(
             args.path,
             min_rows=args.min_rows,
             min_per_intent=args.min_per_intent,
+            disjoint_from=args.disjoint_from,
         )
     except ValueError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)

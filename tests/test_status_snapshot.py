@@ -100,6 +100,22 @@ def test_collect_snapshot_api_running(cfg: UserConfig) -> None:
     assert snap.api.health_ok is True
 
 
+def test_collect_snapshot_dashboard_degraded_when_foreign_port_holder(
+    cfg: UserConfig,
+) -> None:
+    """Port open without our tracked process must not look like RUNNING (e.g. LM Studio)."""
+    with (
+        patch("launcher.status_snapshot.is_port_open", return_value=True),
+        patch("launcher.status_snapshot.is_process_running", return_value=False),
+        patch("launcher.status_snapshot.get_pid_info", return_value=None),
+        patch("launcher.status_snapshot.secret_status", return_value={}),
+    ):
+        snap = collect_snapshot(cfg, launcher_root=cfg.resolved_app_root())
+    assert snap.dashboard.state == ServiceState.DEGRADED
+    assert snap.dashboard.port_open is True
+    assert snap.dashboard.process_alive is False
+
+
 def test_service_status_text(cfg: UserConfig) -> None:
     with patch("launcher.status_snapshot.collect_snapshot") as mock_collect:
         from launcher.status_snapshot import (

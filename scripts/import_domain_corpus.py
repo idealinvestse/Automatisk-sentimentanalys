@@ -135,17 +135,24 @@ def main() -> None:
     parser.add_argument("--min-sentiment-rows", type=int, default=50)
     parser.add_argument("--min-intent-rows", type=int, default=20)
     parser.add_argument(
+        "--pilot-gate",
+        action="store_true",
+        help="Enforce pilot corpus minima (500 sentiment / 200 intent rows)",
+    )
+    parser.add_argument(
         "--skip-pii-scan",
         action="store_true",
         help="Skip automated PII scan (only after manual review)",
     )
     args = parser.parse_args()
+    min_sent = 500 if args.pilot_gate else args.min_sentiment_rows
+    min_intent = 200 if args.pilot_gate else args.min_intent_rows
     try:
         imported = import_corpus(
             args.source_dir,
             dest_dir=args.dest_dir,
-            min_sentiment_rows=args.min_sentiment_rows,
-            min_intent_rows=args.min_intent_rows,
+            min_sentiment_rows=min_sent,
+            min_intent_rows=min_intent,
             skip_pii_scan=args.skip_pii_scan,
         )
     except ValueError as exc:
@@ -153,7 +160,9 @@ def main() -> None:
         sys.exit(1)
     for kind, path in imported.items():
         print(f"OK: imported {kind} -> {path}")
-    print("Next: python scripts/evaluate_real_corpus.py --sentiment-csv data/import/callcenter_val_real.csv")
+    print(
+        "Next: python scripts/evaluate_real_corpus.py --sentiment-csv data/import/callcenter_val_real.csv"
+    )
 
 
 if __name__ == "__main__":

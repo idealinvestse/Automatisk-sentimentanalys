@@ -12,6 +12,7 @@ from ...alerting import AlertEngine
 from ...caching import AggregateCache
 from ...core.serialization import utc_now_iso
 from ...pipeline import CallAnalysisPipeline
+from ...profiles import resolve_profile
 from ..dependencies import (
     create_pipeline,
     get_alert_engine,
@@ -39,7 +40,6 @@ from ..schemas import (
     SemanticSearchResponse,
     build_analyzer_results,
 )
-from ...profiles import resolve_profile
 from ..services.pipeline_cache import resolve_reports
 
 logger = logging.getLogger(__name__)
@@ -171,9 +171,7 @@ async def analyze_pipeline_partial(
 def _report_to_pipeline_response(report: Any) -> PipelineResponse:
     return PipelineResponse(
         sentiment_results=report.sentiment_results,
-        intent_results=[
-            {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
-        ],
+        intent_results=[{"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results],
         summary=report.summary,
         topics=report.topics,
         insights=report.insights,
@@ -263,9 +261,7 @@ async def analyze_pipeline_compare(
             total_time += report.processing_time_s
             if total_cost > budget:
                 budget_exceeded = True
-            qa = (report.results or {}).get("qa") or (report.results or {}).get(
-                "compliance_qa", {}
-            )
+            qa = (report.results or {}).get("qa") or (report.results or {}).get("compliance_qa", {})
             qa_score = qa.get("overall_qa_score") if isinstance(qa, dict) else None
             sentiment_label = None
             if report.sentiment_results:

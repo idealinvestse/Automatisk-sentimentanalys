@@ -242,9 +242,9 @@ class SettingsDialog(tk.Toplevel):
         ).grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
 
         self._resolved_paths_var = tk.StringVar(value="")
-        ttk.Label(inner, textvariable=self._resolved_paths_var, foreground="#6b7280", wraplength=520).grid(
-            row=3, column=0, columnspan=2, sticky=tk.W, pady=(0, 8)
-        )
+        ttk.Label(
+            inner, textvariable=self._resolved_paths_var, foreground="#6b7280", wraplength=520
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
 
         fields = (
             ("hf_cache", "HF-cache / modeller (HF_HOME)"),
@@ -272,7 +272,9 @@ class SettingsDialog(tk.Toplevel):
             "paths.logs",
         ):
             if key in self._vars:
-                self._vars[key].trace_add("write", lambda *_a: self._refresh_resolved_paths_preview())
+                self._vars[key].trace_add(
+                    "write", lambda *_a: self._refresh_resolved_paths_preview()
+                )
         self._refresh_resolved_paths_preview()
 
     def _apply_data_root_defaults(self) -> None:
@@ -306,9 +308,13 @@ class SettingsDialog(tk.Toplevel):
             draft.paths = draft.paths.model_copy(
                 update={
                     "data_root": self._vars.get("paths.data_root", tk.StringVar()).get().strip(),
-                    "hf_cache": self._vars.get("paths.hf_cache", tk.StringVar(value="cache/hf")).get()
+                    "hf_cache": self._vars.get(
+                        "paths.hf_cache", tk.StringVar(value="cache/hf")
+                    ).get()
                     or "cache/hf",
-                    "llm_cache": self._vars.get("paths.llm_cache", tk.StringVar(value="cache/llm")).get()
+                    "llm_cache": self._vars.get(
+                        "paths.llm_cache", tk.StringVar(value="cache/llm")
+                    ).get()
                     or "cache/llm",
                     "outputs": self._vars.get("paths.outputs", tk.StringVar(value="outputs")).get()
                     or "outputs",
@@ -343,12 +349,8 @@ class SettingsDialog(tk.Toplevel):
             foreground="#b45309",
             wraplength=520,
         ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 8))
-        self._labeled_combo(
-            inner, "ASR-provider", "asr.provider", ("local", "cloud"), row=1
-        )
-        self._labeled_check(
-            inner, "Moln-fallback till lokal", "asr.cloud_fallback_local", row=2
-        )
+        self._labeled_combo(inner, "ASR-provider", "asr.provider", ("local", "cloud"), row=1)
+        self._labeled_check(inner, "Moln-fallback till lokal", "asr.cloud_fallback_local", row=2)
         ttk.Label(
             inner,
             text=(
@@ -781,12 +783,8 @@ class SettingsDialog(tk.Toplevel):
 
         restart_now = False
         if result.restart_services:
-            msg += (
-                f"\n\nStarta om tjänster nu?\n({', '.join(result.restart_services)})"
-            )
-            restart_now = bool(
-                messagebox.askyesno("Inställningar", msg, parent=self)
-            )
+            msg += f"\n\nStarta om tjänster nu?\n({', '.join(result.restart_services)})"
+            restart_now = bool(messagebox.askyesno("Inställningar", msg, parent=self))
         else:
             messagebox.showinfo("Inställningar", msg, parent=self)
 

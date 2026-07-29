@@ -200,6 +200,37 @@ Skip them with `SENTIMENT_SKIP_AUDIO=1` or `pytest -m "not slow"`.
 CPU smoke on 3 files typically takes several minutes on first run (model download + ASR).
 GPU significantly speeds up ASR and pipeline scenarios.
 
+### Intent fine-tune and DATA-01 runbook
+
+The fixed intent holdout is `data/intent_val.jsonl` (seed 42). Keep it unchanged when
+iterating on synthetic training data. Validate that training and validation remain disjoint,
+then train locally with the optional `training` dependencies:
+
+```bash
+make install-training
+make intent-validate
+python scripts/train_intent.py --config configs/intent_finetune.yaml
+python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --backend both \
+  --output reports/intent_baseline.json
+python scripts/compare_intent_backends.py
+```
+
+The model is a local, gitignored artifact under `models/intent_classifier`. The pipeline default
+remains heuristic; pass `intent_backend="auto"` to use the model when it is present and loadable,
+with automatic heuristic fallback otherwise. A real anonymized DATA-01 corpus must be supplied
+from outside the repository:
+
+```bash
+python scripts/import_domain_corpus.py --source-dir <secure-anonymized-directory> --pilot-gate
+python scripts/evaluate_real_corpus.py \
+  --sentiment-csv data/import/callcenter_val_real.csv \
+  --intent-jsonl data/import/intent_val_real.jsonl
+```
+
+Never bypass the PII scan without documented manual review. The quality slots under
+`data/quality/` remain CI-safe when empty; use `python scripts/evaluate_preference_gate.py
+--require-corpus` only when annotated production data is available.
+
 ### Known gaps (backlog, not PR blockers)
 
 Ordered by risk × cost:
@@ -272,8 +303,9 @@ pip install -e ".[training,min]"
 python scripts/prepare_callcenter_data.py --target-size 10000
 python scripts/prepare_intent_data.py --per-intent 35
 python scripts/validate_domain_corpus.py data/callcenter_val.csv
-python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200
-python -m src.finetune --config configs/finetune.yaml
+make intent-validate
+python -m src.finetune --config configs/finetune.yaml  # sentiment fine-tuning
+python scripts/train_intent.py --config configs/intent_finetune.yaml  # intent fine-tuning
 ```
 
 **Analyzer accuracy benchmarks:**
@@ -306,7 +338,12 @@ Never commit real customer audio or transcripts. See [SECURITY.md](../SECURITY.m
 python scripts/import_domain_corpus.py --source-dir /secure/path/to/anonymized
 # → data/import/callcenter_val_real.csv
 # → data/import/intent_val_real.jsonl
+
+# Pilot / conditional-go gate (requires ≥500 sentiment + ≥200 intent rows):
+python scripts/import_domain_corpus.py --source-dir /secure/path/to/anonymized --pilot-gate
 ```
+
+Full minima and DoD: [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md).
 
 5. **Validering och baseline**
 
@@ -342,5 +379,22 @@ Synthetic data from `scripts/prepare_callcenter_data.py` is for development only
 - `docs/LLM_AGENT_GUIDE.md` – Detailed guide for agents
 - `docs/LLM_AGENT_QUICKREF.md` – Minimal context quick reference
 - `docs/ROADMAP.md` – Current project status
+- `STRATEGY.md` – Product strategy anchor
+- `docs/DECISION_REPORT_2026-07-17.md` – Pilot go/no-go decision pack
+- `docs/PILOT_RUNBOOK.md` – Conditional pilot ops + policy verify
+- `docs/FE_BE_HARMONY_2026-07-17.md` – Frontend ↔ backend contract gaps
+- `docs/DATA_01_CORPUS_SPEC.md` – Real corpus minima for pilot gates
+- `docs/PILOT_ONE_PAGER.md` – Customer-facing pilot summary
 - `docs/PRODUCTION_CHECKLIST.md` – Production + release verification (L7–L9)
 - `SECURITY.md` – Security and privacy guidelines
+
+### Webui OpenAPI types
+
+After changing FastAPI routes/schemas:
+
+```bash
+python scripts/export_openapi.py -o webui/openapi.json
+cd webui && npm run generate:types
+```
+
+Or from `webui/`: `npm run sync:openapi`. Commit `openapi.json` + `src/lib/api/schema.ts`. Compile-time path checks live in `src/lib/api/paths.ts`.

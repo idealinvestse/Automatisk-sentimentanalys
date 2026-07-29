@@ -122,12 +122,197 @@ def ensure_venv(root: Path, *, python: Path | None = None) -> Path:
     return venv_py
 
 
-def _run_pip(python: Path, root: Path, args: list[str]) -> None:
-    subprocess.run(
-        [str(python), "-m", "pip", *args],
-        check=True,
-        cwd=str(root),
+_TORCH_CU128_INDEX = "https://download.pytorch.org/whl/cu128"
+# whisperx/pyannote 3.x need torchaudio.AudioMetaData (removed in torchaudio 2.9+).
+_TORCH_WHISPERX_PINS = ("torch==2.8.0", "torchaudio==2.8.0")
+_PIP_ERROR_TAIL_CHARS = 1500
+_TORCH_REQ_PREFIXES = ("torch", "torchaudio")
+_ACCESS_DENIED_HINT = (
+    "WinError 5 (Access is denied) på torch-DLL: stäng ALLA Sentimentanalys-fönster "
+    "och andra Python-processer som använder .venv, starta sedan launchern igen och "
+    "kör Installera/reparera — eller från PowerShell: .\\launcher.ps1 provision"
+)
+
+
+def _subprocess_no_window_kwargs() -> dict[str, int]:
+    if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}  # type: ignore[attr-defined]
+    return {}
+
+
+def cleanup_pip_leftovers(site_packages: Path) -> list[str]:
+    """Remove Windows pip leftover dirs (``~orch…``) from interrupted uninstalls."""
+    if not site_packages.is_dir():
+        return []
+    removed: list[str] = []
+    for entry in site_packages.iterdir():
+        if not entry.name.startswith("~"):
+            continue
+        if entry.is_dir():
+            shutil.rmtree(entry, ignore_errors=True)
+        else:
+            try:
+                entry.unlink()
+            except OSError:
+                continue
+        if not entry.exists():
+            removed.append(entry.name)
+    return removed
+
+
+def site_packages_for_python(python: Path) -> Path:
+    """Best-effort site-packages path for a venv interpreter."""
+    if sys.platform == "win32":
+        return python.resolve().parent.parent / "Lib" / "site-packages"
+    return (
+        python.resolve().parent.parent
+        / "lib"
+        / f"python{sys.version_info.major}.{sys.version_info.minor}"
+        / "site-packages"
     )
+
+
+def _format_pip_failure(args: list[str], returncode: int, detail: str) -> str:
+    msg = f"pip {' '.join(args)} failed (exit {returncode}):\n{detail}"
+    lower = detail.lower()
+    if "access is denied" in lower or "winerror 5" in lower:
+        msg = f"{msg}\n\n{_ACCESS_DENIED_HINT}"
+    return msg
+
+
+def _run_pip(python: Path, root: Path, args: list[str]) -> None:
+    result = subprocess.run(
+        [str(python), "-m", "pip", *args],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        **_subprocess_no_window_kwargs(),
+    )
+    if result.returncode == 0:
+        return
+    detail = (result.stderr or result.stdout or "").strip()
+    if len(detail) > _PIP_ERROR_TAIL_CHARS:
+        detail = detail[-_PIP_ERROR_TAIL_CHARS:]
+    raise RuntimeError(_format_pip_failure(args, result.returncode, detail))
+
+
+def _nvidia_smi_available() -> bool:
+    try:
+        result = subprocess.run(
+            ["nvidia-smi"],
+            capture_output=True,
+            check=False,
+            **_subprocess_no_window_kwargs(),
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def probe_cuda_torch(python: Path) -> dict[str, str | bool] | None:
+    """Return torch/torchaudio versions when CUDA torch is whisperx-compatible."""
+    script = (
+        "import json,torch,torchaudio;"
+        "print(json.dumps({"
+        "'torch': torch.__version__,"
+        "'torchaudio': torchaudio.__version__,"
+        "'cuda': bool(torch.cuda.is_available()),"
+        "'audiometadata': hasattr(torchaudio,'AudioMetaData')"
+        "}))"
+    )
+    result = subprocess.run(
+        [str(python), "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+        **_subprocess_no_window_kwargs(),
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        import json
+
+        data = json.loads(result.stdout.strip().splitlines()[-1])
+    except (json.JSONDecodeError, IndexError, TypeError):
+        return None
+    if not isinstance(data, dict) or not data.get("cuda"):
+        return None
+    # torchaudio>=2.9 breaks whisperx/pyannote 3.x (no AudioMetaData).
+    if not data.get("audiometadata"):
+        return None
+    torch_ver = str(data.get("torch", ""))
+    return {
+        "torch": torch_ver,
+        "torchaudio": str(data.get("torchaudio", "")),
+        "cuda": True,
+    }
+
+
+def _is_torch_requirement(req: str) -> bool:
+    name = req.strip().lower()
+    for prefix in _TORCH_REQ_PREFIXES:
+        if (
+            name == prefix
+            or name.startswith(f"{prefix}=")
+            or name.startswith(f"{prefix}[")
+            or name.startswith(f"{prefix}~")
+            or name.startswith(f"{prefix}>")
+            or name.startswith(f"{prefix}<")
+            or name.startswith(f"{prefix}!")
+        ):
+            return True
+    return False
+
+
+def extra_requirements_from_pyproject(root: Path, extras: list[str]) -> list[str]:
+    """Flatten optional-dependency requirements for *extras* from pyproject.toml."""
+    import tomllib
+
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    optional = data.get("project", {}).get("optional-dependencies", {})
+    seen: set[str] = set()
+    out: list[str] = []
+    for extra in extras:
+        for req in optional.get(extra, []):
+            key = req.strip()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(key)
+    return out
+
+
+def ensure_cuda_torch(
+    root: Path,
+    python: Path,
+    *,
+    progress: ProgressCallback = None,
+) -> str | None:
+    """Reinstall torch/torchaudio from the CUDA wheel index when an NVIDIA GPU is present.
+
+    Plain ``pip install -e '.[asr]'`` often pulls CPU wheels (or downgrades a
+    previous ``+cu*`` build via whisperx pins). Restore a CUDA build afterwards.
+    Skips when CUDA torch already imports cleanly (avoids WinError 5 on locked DLLs).
+    """
+    index = os.environ.get("SENTIMENT_TORCH_INDEX", "").strip() or _TORCH_CU128_INDEX
+    if not _nvidia_smi_available() and not os.environ.get("SENTIMENT_TORCH_INDEX", "").strip():
+        return None
+    existing = probe_cuda_torch(python)
+    if existing:
+        if progress:
+            progress(f"CUDA torch already OK ({existing['torch']}); skipping reinstall")
+        return f"already:{existing['torch']}"
+    if progress:
+        progress(
+            f"Installing CUDA torch/torchaudio ({', '.join(_TORCH_WHISPERX_PINS)}) from {index}"
+        )
+    cleanup_pip_leftovers(site_packages_for_python(python))
+    _run_pip(
+        python,
+        root,
+        ["install", "--upgrade", *_TORCH_WHISPERX_PINS, "--index-url", index],
+    )
+    return index
 
 
 def install_requirements(root: Path, python: Path, profile: InstallProfile) -> list[str]:
@@ -136,9 +321,37 @@ def install_requirements(root: Path, python: Path, profile: InstallProfile) -> l
     if not pyproject.is_file():
         raise FileNotFoundError(f"Missing pyproject.toml at {pyproject}")
 
+    leftovers = cleanup_pip_leftovers(site_packages_for_python(python))
     extras = extras_for_profile(profile)
     _run_pip(python, root, ["install", "-U", "pip", "wheel"])
-    _run_pip(python, root, ["install", "-e", f".[{','.join(extras)}]"])
+
+    index = ""
+    if _nvidia_smi_available() or os.environ.get("SENTIMENT_TORCH_INDEX", "").strip():
+        index = os.environ.get("SENTIMENT_TORCH_INDEX", "").strip() or _TORCH_CU128_INDEX
+
+    # When CUDA torch already works, avoid pip replacing the locked Windows .pyd
+    # (whisperx pins torch~=2.8 and would otherwise force a reinstall → WinError 5).
+    cuda_torch = probe_cuda_torch(python)
+    if cuda_torch:
+        _run_pip(python, root, ["install", "-e", ".", "--no-deps"])
+        reqs = [
+            r
+            for r in extra_requirements_from_pyproject(root, extras)
+            if not _is_torch_requirement(r)
+        ]
+        if reqs:
+            args = ["install", *reqs]
+            if index:
+                args.extend(["--extra-index-url", index])
+            _run_pip(python, root, args)
+    else:
+        extras_args = ["install", "-e", f".[{','.join(extras)}]"]
+        if index:
+            extras_args.extend(["--extra-index-url", index])
+        _run_pip(python, root, extras_args)
+
+    if leftovers:
+        cleanup_pip_leftovers(site_packages_for_python(python))
     return extras
 
 
@@ -286,11 +499,22 @@ def run_provision(
             report.add("pip", True, "Python packages installed", detail)
             cfg.install_profile = profile
             save_user_config(cfg)
-        except subprocess.CalledProcessError as exc:
-            report.add("pip", False, "pip install failed", str(exc))
-            return report
         except Exception as exc:
             report.add("pip", False, "pip install failed", str(exc))
+            return report
+
+        try:
+            cuda_index = ensure_cuda_torch(root, python, progress=log)
+            if cuda_index:
+                report.add("torch_cuda", True, "CUDA torch/torchaudio installed", cuda_index)
+            else:
+                report.add(
+                    "torch_cuda",
+                    True,
+                    "CUDA torch hoppades över (ingen NVIDIA GPU / SENTIMENT_TORCH_INDEX)",
+                )
+        except Exception as exc:
+            report.add("torch_cuda", False, "CUDA torch install failed", str(exc))
             return report
 
     if download_ffmpeg:

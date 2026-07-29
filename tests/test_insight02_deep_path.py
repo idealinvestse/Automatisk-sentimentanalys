@@ -13,14 +13,17 @@ from src.pipeline_steps import PipelineLLMContext, should_use_any_llm
 
 def test_llm_superseded_set_matches_analyzer_strategy():
     """Must stay aligned with docs/ANALYZER_STRATEGY.md tier table."""
-    assert LLM_SUPERSEDED_ANALYZERS == frozenset(
-        {
-            "empathy",
-            "trajectory",
-            "insights",
-            "root_cause",
-            "actionable_coaching",
-        }
+    assert (
+        frozenset(
+            {
+                "empathy",
+                "trajectory",
+                "insights",
+                "root_cause",
+                "actionable_coaching",
+            }
+        )
+        == LLM_SUPERSEDED_ANALYZERS
     )
 
 

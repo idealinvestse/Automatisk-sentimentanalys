@@ -28,6 +28,10 @@ This project is designed for processing sensitive customer service conversations
 - **External LLM Calls**: All calls to OpenRouter/Mistral are explicitly logged with the prefix `EXTERNAL LLM CALL`. Transcripts are only sent when explicitly enabled via `--use-mistral-llm` or profile settings.
 - **Data at Rest**: Use `.cache/`, `state/`, and `outputs/` (all ignored in `.gitignore`).
 
+## Pilot / production policy (2026-07)
+
+For controlled customer pilots, keep **local ASR**, **Groq unset** for PII workloads, and **PII redaction before LLM** (`callcenter` profile default). Operational checklist: [docs/PILOT_RUNBOOK.md](docs/PILOT_RUNBOOK.md). Verify with `python scripts/verify_pilot_policy.py` (add `--strict` when `API_PRODUCTION=true`).
+
 ## Cloud STT (opt-in)
 
 Cloud speech-to-text sends **raw audio bytes** to a third-party provider (Deepgram). This is **disabled by default**; local Whisper/KB-Whisper runs on your machine unless you explicitly opt in.

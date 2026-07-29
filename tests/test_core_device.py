@@ -7,7 +7,13 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from src.core.device import device_arg_from_key, normalize_device_for_asr, normalize_device_spec
+from src.core.device import (
+    device_arg_from_key,
+    normalize_device_for_asr,
+    normalize_device_spec,
+    whisperx_ctranslate_device,
+    whisperx_torch_device,
+)
 
 
 class TestNormalizeDeviceSpec:
@@ -74,3 +80,19 @@ class TestNormalizeDeviceForAsr:
         device, idx = normalize_device_for_asr("tpu")
         assert device == "cpu"
         assert idx is None
+
+
+class TestWhisperxDeviceHelpers:
+    def test_ctranslate_uses_cuda_not_cuda_colon_index(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("src.core.device.torch.cuda.is_available", lambda: True)
+        monkeypatch.setattr("src.core.device.torch.cuda.device_count", lambda: 1)
+        device, index = whisperx_ctranslate_device("cuda:0")
+        assert device == "cuda"
+        assert index == 0
+
+    def test_torch_device_keeps_cuda_index(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("src.core.device.torch.cuda.is_available", lambda: True)
+        monkeypatch.setattr("src.core.device.torch.cuda.device_count", lambda: 2)
+        assert whisperx_torch_device("cuda:1") == "cuda:1"

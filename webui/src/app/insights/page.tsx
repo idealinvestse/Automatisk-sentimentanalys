@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { AlertsPanel } from "@/components/alerts-panel";
+import { QaScorePanel } from "@/components/qa-score-panel";
+import { SemanticSearchPanel } from "@/components/semantic-search-panel";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { useHotTopics } from "@/hooks/use-hot-topics";
 import type { HotTopicItem } from "@/lib/api/client";
@@ -43,7 +45,7 @@ export default function InsightsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Fas 4 Insikter</h1>
         <p className="text-sm text-muted-foreground">
-          Hot topics aggregerade av <code>POST /insights/hot_topics</code> över demo-samtalen.
+          Hot topics, semantisk sökning, QA-score och larm mot Fas 4-API:erna över aktuella samtal.
         </p>
       </div>
 
@@ -106,6 +108,11 @@ export default function InsightsPage() {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SemanticSearchPanel reports={reports} />
+        <QaScorePanel reports={reports} />
+      </div>
 
       <AlertsPanel />
     </div>

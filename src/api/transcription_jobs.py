@@ -169,8 +169,8 @@ class TranscriptionJobRegistry:
 def get_job_registry(app: Any) -> TranscriptionJobRegistry:
     registry = getattr(app.state, "transcription_jobs", None)
     if registry is None:
-        from .transcription_job_store import create_job_store
         from .settings import get_api_settings
+        from .transcription_job_store import create_job_store
 
         settings = get_api_settings()
         cache = getattr(app.state, "cache", None)

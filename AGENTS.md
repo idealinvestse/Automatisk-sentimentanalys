@@ -14,7 +14,9 @@ This guide is the single source of truth and contains:
 - Swedish localization and call-center domain specifics
 
 **Also read:**
+- `STRATEGY.md` – Product strategy anchor
 - `docs/ROADMAP.md` – Current maturity and completed features
+- `docs/DECISION_REPORT_2026-07-17.md` / `docs/PILOT_RUNBOOK.md` – Pilot go/no-go and ops policy
 - `README.md` – Quickstart and overview
 - `SECURITY.md` – Important privacy and security considerations for call center data
 

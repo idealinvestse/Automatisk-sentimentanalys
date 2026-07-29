@@ -223,9 +223,7 @@ class CallAnalysisPipeline:
         from .analysis.ccp import select_analyzers_runtime
         from .analysis.registry import resolve_analyzers_for_profile
 
-        prior = resolve_analyzers_for_profile(
-            self.profile, explicit_selected=selected_analyzers
-        )
+        prior = resolve_analyzers_for_profile(self.profile, explicit_selected=selected_analyzers)
         n_segs = len(redacted_segments or [])
         # Living routing: YAML is prior. Explicit caller selection wins as the prior base;
         # segment-count trim/expand still applies so short calls stay lean.
@@ -536,7 +534,9 @@ class CallAnalysisPipeline:
             "reconciled": False,
         }
 
-        llm_result: dict[str, Any] = merged.get("llm") if isinstance(merged.get("llm"), dict) else {}
+        llm_result: dict[str, Any] = (
+            merged.get("llm") if isinstance(merged.get("llm"), dict) else {}
+        )
         if reconcile:
             llm_result = self.reconcile_partial_with_holistic(typed_segments, merged)
             merged["partial"]["reconciled"] = True

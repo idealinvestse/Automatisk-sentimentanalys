@@ -30,11 +30,15 @@ services:
       start_period: 30s
 
   webui:
-    build: ./webui
+    build:
+      context: ./webui
+      args:
+        # Browser must reach the published API port on the host.
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        # Bake the same key as SENTIMENT_API_KEY for authenticated pilots (trusted LAN only).
+        NEXT_PUBLIC_API_KEY: ${SENTIMENT_API_KEY:-}
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
     depends_on:
       api:
         condition: service_healthy

@@ -11,6 +11,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -31,6 +32,16 @@ def _load_pairs(path: Path) -> list[PreferencePair]:
     return pairs
 
 
+def _load_gate_config(path: Path) -> dict[str, Any]:
+    import yaml
+
+    if not path.is_file():
+        return {}
+    with path.open(encoding="utf-8") as fh:
+        data = yaml.safe_load(fh) or {}
+    return data.get("preference_gate", {}) if isinstance(data, dict) else {}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Preference gate for deep-path releases")
     parser.add_argument(
@@ -38,7 +49,9 @@ def main() -> int:
         default="data/quality/preference_pairs.jsonl",
         help="JSONL of PreferencePair records",
     )
-    parser.add_argument("--min-win-rate", type=float, default=0.55)
+    parser.add_argument("--config", default="configs/quality_mqm.yaml")
+    parser.add_argument("--min-win-rate", type=float, default=None)
+    parser.add_argument("--min-pairs", type=int, default=None)
     parser.add_argument(
         "--require-corpus",
         action="store_true",
@@ -46,8 +59,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    config = _load_gate_config(Path(args.config))
+    min_win_rate = (
+        args.min_win_rate
+        if args.min_win_rate is not None
+        else float(config.get("min_win_rate", 0.55))
+    )
+    min_pairs = args.min_pairs if args.min_pairs is not None else int(config.get("min_pairs", 1))
     pairs = _load_pairs(Path(args.pairs))
-    result = evaluate_preference_gate(pairs, min_win_rate=args.min_win_rate, min_pairs=1)
+    result = evaluate_preference_gate(pairs, min_win_rate=min_win_rate, min_pairs=min_pairs)
 
     print(json.dumps(result.model_dump(), ensure_ascii=False, indent=2))
 

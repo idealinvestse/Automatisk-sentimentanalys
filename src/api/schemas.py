@@ -317,7 +317,10 @@ class PartialPipelineRequest(BaseModel):
 class EmotionSegmentResult(BaseModel):
     """Per-segment emotion output from the `emotion` analyzer."""
 
-    primary: str = Field(..., description="Primary emotion label (frustration, ilska, besvikelse, förvirring, tillfredsställelse, neutral, oro, glädje)")
+    primary: str = Field(
+        ...,
+        description="Primary emotion label (frustration, ilska, besvikelse, förvirring, tillfredsställelse, neutral, oro, glädje)",
+    )
     scores: dict[str, float] = Field(default_factory=dict, description="Score per emotion label")
     speaker: str | None = None
 
@@ -698,25 +701,19 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
     emotion_raw = results.get("emotion")
     emotion: list[EmotionSegmentResult] | None = None
     if isinstance(emotion_raw, list):
-        emotion = [
-            _safe_parse(EmotionSegmentResult, e) for e in emotion_raw if isinstance(e, dict)
-        ]
+        emotion = [_safe_parse(EmotionSegmentResult, e) for e in emotion_raw if isinstance(e, dict)]
         emotion = [e for e in emotion if e is not None] or None
 
     aspect_raw = results.get("aspect")
     aspect: list[AspectItem] | None = None
     if isinstance(aspect_raw, list):
-        aspect = [
-            _safe_parse(AspectItem, a) for a in aspect_raw if isinstance(a, dict)
-        ]
+        aspect = [_safe_parse(AspectItem, a) for a in aspect_raw if isinstance(a, dict)]
         aspect = [a for a in aspect if a is not None] or None
 
     claims_raw = results.get("aspect_claims")
     aspect_claims: list[AspectItem] | None = None
     if isinstance(claims_raw, list):
-        aspect_claims = [
-            _safe_parse(AspectItem, a) for a in claims_raw if isinstance(a, dict)
-        ]
+        aspect_claims = [_safe_parse(AspectItem, a) for a in claims_raw if isinstance(a, dict)]
         aspect_claims = [a for a in aspect_claims if a is not None] or None
 
     def _parse_or_unavailable(model_cls: type[BaseModel], raw: Any) -> Any | None:
@@ -742,9 +739,7 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
         resolution_probability=_safe_parse(
             ResolutionProbabilityResult, results.get("resolution_probability")
         ),
-        multi_turn_journey=_safe_parse(
-            MultiTurnJourneyResult, results.get("multi_turn_journey")
-        ),
+        multi_turn_journey=_safe_parse(MultiTurnJourneyResult, results.get("multi_turn_journey")),
         upsell_opportunity=_safe_parse(UpsellResult, results.get("upsell_opportunity")),
         dialect_sensitivity=_safe_parse(
             DialectSensitivityResult, results.get("dialect_sensitivity")

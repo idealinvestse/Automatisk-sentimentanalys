@@ -1,6 +1,6 @@
 /**
  * Event shapes for /ws/transcription, mirroring src/api/transcription_events.py
- * (TranscriptionEventHub.log/progress/status/done).
+ * and partial_analysis emits from routers/transcription.py.
  */
 
 export interface BaseEvent {
@@ -50,6 +50,14 @@ export interface PongEvent extends BaseEvent {
   type: "pong";
 }
 
+/** Emitted when run_partial_analysis=true after ASR (local incremental path). */
+export interface PartialAnalysisEvent extends BaseEvent {
+  type: "partial_analysis";
+  job_id: string | null;
+  segment_count: number;
+  sentiment_count: number;
+}
+
 export type TranscriptionEvent =
   | ConnectedEvent
   | SubscribedEvent
@@ -57,6 +65,7 @@ export type TranscriptionEvent =
   | ProgressEvent
   | StatusEvent
   | DoneEvent
-  | PongEvent;
+  | PongEvent
+  | PartialAnalysisEvent;
 
 export type WsConnectionStatus = "connected" | "reconnecting" | "disconnected";

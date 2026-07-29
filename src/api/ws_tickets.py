@@ -6,6 +6,7 @@ so tickets issued by one uvicorn worker are accepted by another.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import secrets
 import time
@@ -64,10 +65,8 @@ class TicketStore:
     def force_expire(self, ticket: str) -> None:
         """Test helper: mark a ticket expired in the active backend."""
         if self._redis is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._redis.delete(f"{_TICKET_KEY_PREFIX}{ticket}")
-            except Exception:
-                pass
         self._memory[ticket] = 0.0
 
     def cleanup_expired(self) -> None:
