@@ -66,6 +66,7 @@ def extras_for_profile(profile: InstallProfile) -> list[str]:
             "api",
             "llm",
             "training",
+            "semantic",
             "install",
         ],
         InstallProfile.dev: [
@@ -75,6 +76,7 @@ def extras_for_profile(profile: InstallProfile) -> list[str]:
             "api",
             "llm",
             "training",
+            "semantic",
             "install",
             "dev",
             "diarize",

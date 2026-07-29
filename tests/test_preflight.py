@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.install.config_schema import UserConfig
+from src.install.config_schema import InstallProfile, UserConfig
 from src.install.preflight import run_preflight
 
 
@@ -36,3 +36,22 @@ def test_preflight_skips_api_checks_when_disabled() -> None:
     names = [c.name for c in report.checks]
     assert "import_fastapi" not in names
     assert "import_uvicorn" not in names
+
+
+def test_preflight_semantic_checks_for_non_minimal_profile() -> None:
+    cfg = UserConfig(install_profile=InstallProfile.full)
+    report = run_preflight(cfg, require_torch=False)
+    names = [c.name for c in report.checks]
+    assert "semantic_sentence_transformers" in names
+    assert "semantic_faiss" in names
+    assert "semantic_hdbscan" in names
+    for check in report.checks:
+        if check.name.startswith("semantic_"):
+            assert check.ok
+
+
+def test_preflight_skips_semantic_checks_for_minimal_profile() -> None:
+    cfg = UserConfig(install_profile=InstallProfile.minimal)
+    report = run_preflight(cfg, require_torch=False)
+    names = [c.name for c in report.checks]
+    assert not any(name.startswith("semantic_") for name in names)
