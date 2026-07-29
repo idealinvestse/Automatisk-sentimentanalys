@@ -1,7 +1,7 @@
 # Makefile for Automatisk-sentimentanalys
 # Provides convenient commands for development, testing, and common tasks.
 
-.PHONY: help install install-dev install-api install-diarize install-training test lint format check clean run-api run-dashboard intent-validate intent-benchmark
+.PHONY: help install install-dev install-api install-diarize install-training install-semantic test lint format check clean run-api run-dashboard intent-validate intent-benchmark
 
 help:  ## Show this help
 	@echo "Available targets:"
@@ -26,8 +26,11 @@ install-diarize:  ## Install diarization support only
 install-training:  ## Install intent fine-tuning and evaluation dependencies
 	pip install -e ".[training,min,dev]"
 
-install-all:  ## Install everything (dev + api + diarize)
-	pip install -e ".[dev,api,diarize]"
+install-semantic:  ## Install semantic search dependencies
+	pip install -e ".[semantic]"
+
+install-all:  ## Install everything (dev + api + diarize + semantic)
+	pip install -e ".[dev,api,diarize,semantic]"
 
 # =============================================================================
 # Quality & Testing
