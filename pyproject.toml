@@ -137,6 +137,12 @@ known-first-party = ["src"]
 "tests/test_asr.py" = ["E402"]
 "tests/test_llm_analyzer.py" = ["E402"]
 "src/transcription/faster_whisper.py" = ["N818", "N806", "B904"]
+"tests/test_asr_assets.py" = ["SIM117"]
+"tests/test_asr_cloud_deepgram.py" = ["SIM117"]
+"tests/test_asr_helpers.py" = ["N806"]
+"tests/test_asr_metrics.py" = ["SIM117"]
+"tests/test_asr_oom_fallback.py" = ["N818"]
+"tests/test_provision.py" = ["SIM117"]
 
 [tool.ruff.format]
 quote-style = "double"

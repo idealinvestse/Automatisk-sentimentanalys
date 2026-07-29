@@ -95,9 +95,9 @@ def listening_pids(host: str, port: int) -> set[int]:
                 ["netstat", "-ano", "-p", "tcp"],
                 text=True,
                 errors="replace",
-                creationflags=subprocess.CREATE_NO_WINDOW
-                if hasattr(subprocess, "CREATE_NO_WINDOW")
-                else 0,
+                creationflags=(
+                    subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+                ),
             )
         except (OSError, subprocess.CalledProcessError):
             return pids
@@ -217,10 +217,7 @@ def port_owned_by_pid_tree(host: str, port: int, root_pid: int) -> bool:
         return False
     if root_pid in listeners:
         return True
-    for listener in listeners:
-        if root_pid in process_ancestor_pids(listener):
-            return True
-    return False
+    return any(root_pid in process_ancestor_pids(listener) for listener in listeners)
 
 
 def process_display_name(pid: int) -> str:
@@ -233,11 +230,14 @@ def process_display_name(pid: int) -> str:
                 ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
                 text=True,
                 errors="replace",
-                creationflags=subprocess.CREATE_NO_WINDOW
-                if hasattr(subprocess, "CREATE_NO_WINDOW")
-                else 0,
+                creationflags=(
+                    subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+                ),
             ).strip()
-            if out and out.lower() not in {"info: no tasks are running which match the specified criteria.", ""}:
+            if out and out.lower() not in {
+                "info: no tasks are running which match the specified criteria.",
+                "",
+            }:
                 # "name.exe","pid","session","session#","mem"
                 name = out.split(",")[0].strip().strip('"')
                 if name:

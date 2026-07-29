@@ -56,11 +56,10 @@ class EvidenceSpan(BaseModel):
         default=None, description="0-based turn number in the conversation."
     )
     segment_id: int | None = Field(
-        default=None, description="0-based segment index in the transcript (alias of turn when 1:1)."
+        default=None,
+        description="0-based segment index in the transcript (alias of turn when 1:1).",
     )
-    start: float | None = Field(
-        default=None, description="Audio start time in seconds (if known)."
-    )
+    start: float | None = Field(default=None, description="Audio start time in seconds (if known).")
     end: float | None = Field(default=None, description="Audio end time in seconds (if known).")
 
 

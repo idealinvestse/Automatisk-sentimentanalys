@@ -32,7 +32,9 @@ def main() -> int:
     app = create_app()
     schema = app.openapi()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     paths = len(schema.get("paths") or {})
     print(f"OK: wrote {args.output} ({paths} paths)")
     return 0

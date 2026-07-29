@@ -141,13 +141,11 @@ def _is_same_interpreter(python: Path | None) -> bool:
     current = Path(sys.executable).resolve()
     if target == current:
         return True
-    if (
+    return (
         target.parent == current.parent
         and target.name.lower() in _PYTHON_EXES
         and current.name.lower() in _PYTHON_EXES
-    ):
-        return True
-    return False
+    )
 
 
 def is_module_installed(module: str, python: Path | None = None) -> bool:
@@ -315,7 +313,9 @@ def _download_whisperx(
 
     ct2_device, ct2_index = whisperx_ctranslate_device(device)
     torch_device = whisperx_torch_device(device)
-    compute_type = "float16" if ct2_device == "cuda" else ("int8" if ct2_device == "cpu" else "float32")
+    compute_type = (
+        "float16" if ct2_device == "cuda" else ("int8" if ct2_device == "cpu" else "float32")
+    )
 
     _log(progress, f"Laddar ner WhisperX ASR-modell: {load_name}")
     # Prefer silero VAD for prefetch (avoids pyannote/speechbrain on Windows).
@@ -329,9 +329,7 @@ def _download_whisperx(
     del model
 
     _log(progress, f"Laddar ner WhisperX align-modell för språk: {language}")
-    align_model, metadata = whisperx.load_align_model(
-        language_code=language, device=torch_device
-    )
+    align_model, metadata = whisperx.load_align_model(language_code=language, device=torch_device)
     del align_model, metadata
 
 
@@ -404,23 +402,20 @@ def ensure_speechbrain_windows_compat() -> None:
                 "Failed to inspect frame for SpeechBrain lazy import guard.",
                 stacklevel=2,
             )
-        if (
-            importer_frame is not None
-            and os.path.basename(importer_frame.filename) == "inspect.py"
-        ):
+        if importer_frame is not None and os.path.basename(importer_frame.filename) == "inspect.py":
             raise AttributeError()
         lazy_module = getattr(self, "lazy_module", None)
         if lazy_module is None:
             try:
                 package = getattr(self, "package", None)
-                target = getattr(self, "target")
+                target = self.target
                 if package is None:
                     lazy_module = importlib.import_module(target)
                 else:
                     lazy_module = importlib.import_module(f".{target}", package)
             except Exception as exc:
                 raise ImportError(f"Lazy import of {self!r} failed") from exc
-            setattr(self, "lazy_module", lazy_module)
+            self.lazy_module = lazy_module
         return lazy_module
 
     ensure_module_fixed._sentiment_win_compat = True  # type: ignore[attr-defined]

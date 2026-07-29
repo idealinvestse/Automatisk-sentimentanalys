@@ -160,7 +160,9 @@ def main() -> None:
         sys.exit(1)
     for kind, path in imported.items():
         print(f"OK: imported {kind} -> {path}")
-    print("Next: python scripts/evaluate_real_corpus.py --sentiment-csv data/import/callcenter_val_real.csv")
+    print(
+        "Next: python scripts/evaluate_real_corpus.py --sentiment-csv data/import/callcenter_val_real.csv"
+    )
 
 
 if __name__ == "__main__":

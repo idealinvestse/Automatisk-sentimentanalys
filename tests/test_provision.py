@@ -189,7 +189,9 @@ def test_cleanup_pip_leftovers_removes_tilde_dirs(tmp_path: Path) -> None:
     assert not (site / "~orch-2.11.0+cu128.dist-info").exists()
 
 
-def test_ensure_cuda_torch_skips_without_gpu(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ensure_cuda_torch_skips_without_gpu(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from src.install.provision import ensure_cuda_torch
 
     monkeypatch.delenv("SENTIMENT_TORCH_INDEX", raising=False)

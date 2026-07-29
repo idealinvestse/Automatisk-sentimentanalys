@@ -45,7 +45,7 @@ def _format_service_error(name: str, message: str) -> str:
         hints.append("Kontrollera att mappen webui/ finns i app-roten")
         hints.append("Kör: cd webui && npm install")
     elif "uvicorn" in lower or "fastapi" in lower:
-        hints.append("Kör «Installera / Reparera allt» eller: pip install -e \".[api]\"")
+        hints.append('Kör «Installera / Reparera allt» eller: pip install -e ".[api]"')
     if not hints:
         return message
     return message + "\n\nNästa steg:\n• " + "\n• ".join(hints)

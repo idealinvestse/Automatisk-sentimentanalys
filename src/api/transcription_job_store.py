@@ -75,7 +75,7 @@ class SqliteJobStore:
         cancelled = 1 if job.cancel_event.is_set() or job.status == "cancelled" else 0
         with self._lock, self._connect() as conn:
             conn.execute(
-                    """
+                """
                     INSERT INTO transcription_jobs
                         (job_id, kind, status, created_at, meta_json, cancelled)
                     VALUES (?, ?, ?, ?, ?, ?)
@@ -86,35 +86,35 @@ class SqliteJobStore:
                         meta_json = excluded.meta_json,
                         cancelled = excluded.cancelled
                     """,
-                    (
-                        job.job_id,
-                        job.kind,
-                        job.status,
-                        job.created_at,
-                        json.dumps(dict(job.meta)),
-                        cancelled,
-                    ),
-                )
+                (
+                    job.job_id,
+                    job.kind,
+                    job.status,
+                    job.created_at,
+                    json.dumps(dict(job.meta)),
+                    cancelled,
+                ),
+            )
             conn.commit()
 
     def get(self, job_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as conn:
             row = conn.execute(
-                    "SELECT * FROM transcription_jobs WHERE job_id = ?",
-                    (job_id,),
-                ).fetchone()
+                "SELECT * FROM transcription_jobs WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
         return self._row_to_dict(row) if row else None
 
     def list(self, *, limit: int = 20) -> list[dict[str, Any]]:
         with self._lock, self._connect() as conn:
             rows = conn.execute(
-                    """
+                """
                     SELECT * FROM transcription_jobs
                     ORDER BY created_at DESC
                     LIMIT ?
                     """,
-                    (limit,),
-                ).fetchall()
+                (limit,),
+            ).fetchall()
         return [self._row_to_dict(row) for row in rows]
 
     def complete(self, job_id: str, *, status: str = "completed") -> None:
@@ -128,12 +128,12 @@ class SqliteJobStore:
     def cancel(self, job_id: str) -> None:
         with self._lock, self._connect() as conn:
             conn.execute(
-                    """
+                """
                     UPDATE transcription_jobs
                     SET status = 'cancelled', cancelled = 1
                     WHERE job_id = ?
                     """,
-                    (job_id,),
+                (job_id,),
             )
             conn.commit()
 

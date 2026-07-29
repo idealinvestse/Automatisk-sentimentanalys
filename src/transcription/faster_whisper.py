@@ -342,9 +342,7 @@ class FasterWhisperTranscriber:
                             attempts += 1
                             if attempts >= 3:
                                 warnings.append(f"chunk_failed:{chunk_index}")
-                                logger.warning(
-                                    "Chunk %d failed after retries: %s", chunk_index, ce
-                                )
+                                logger.warning("Chunk %d failed after retries: %s", chunk_index, ce)
                                 segments_iter = []
                                 break
 

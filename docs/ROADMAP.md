@@ -8,7 +8,7 @@ This document provides a high-level overview of the project's maturity and futur
 
 The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
 
-> **Note:** Current test count is **921 test functions** (`pytest --collect-only`). See live count for CI gates.
+> **Note:** The test suite is continuously extended. Use `pytest --collect-only -q` for the authoritative current count; CI is the merge gate.
 
 ### Known Gaps / Deferred Items (v0.4.1)
 

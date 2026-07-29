@@ -8,7 +8,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .audio_catalog import load_catalog
-from .audio_models import AudioCompareReport, AudioRunReport, CompareFileResult, FileResult, ScenarioId
+from .audio_models import (
+    AudioCompareReport,
+    AudioRunReport,
+    CompareFileResult,
+    FileResult,
+    ScenarioId,
+)
 from .audio_scenarios import resolve_samples, scenario_requires_ml
 
 logger = logging.getLogger(__name__)
@@ -39,9 +45,7 @@ def _aggregate_sentiment(scores: list[dict[str, Any]]) -> str | None:
 def _transcript_text(transcript: object) -> str:
     segments = getattr(transcript, "segments", None) or []
     if segments:
-        return " ".join(
-            (getattr(seg, "text", "") or "").strip() for seg in segments
-        ).strip()
+        return " ".join((getattr(seg, "text", "") or "").strip() for seg in segments).strip()
     return getattr(transcript, "text", "") or ""
 
 
@@ -98,9 +102,7 @@ def _require_cuda_if_requested(device: str) -> None:
         import torch
 
         if not torch.cuda.is_available():
-            raise RuntimeError(
-                "device=cuda requested but torch.cuda.is_available() is False"
-            )
+            raise RuntimeError("device=cuda requested but torch.cuda.is_available() is False")
 
 
 def _pipeline_transcript_text(report: object) -> str:
@@ -178,9 +180,7 @@ def _run_pipeline_on_sample(
     _require_cuda_if_requested(device)
 
     def _analyze(model: str):
-        pipeline = CallAnalysisPipeline(
-            device=device, asr_backend=backend, asr_model=model
-        )
+        pipeline = CallAnalysisPipeline(device=device, asr_backend=backend, asr_model=model)
         report = pipeline.analyze_audio(
             audio_path=sample_path, language=language, run_diarization=False
         )
@@ -581,11 +581,7 @@ def run_compare(
         successes = [row for row in provider_rows if row.ok]
         wers = [row.wer for row in successes if row.wer is not None]
         latencies = [row.latency_s for row in successes if row.latency_s is not None]
-        costs = [
-            row.estimated_cost_usd
-            for row in successes
-            if row.estimated_cost_usd is not None
-        ]
+        costs = [row.estimated_cost_usd for row in successes if row.estimated_cost_usd is not None]
         by_provider[provider] = {
             "n_success": len(successes),
             "n_failed": len(provider_rows) - len(successes),

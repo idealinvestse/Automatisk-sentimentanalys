@@ -115,8 +115,8 @@ class WhisperXTranscriber:
 
         from ..install.asr_assets import (
             ensure_speechbrain_windows_compat,
-            ensure_torchaudio_audiometadata,
             ensure_torch_load_weights_compat,
+            ensure_torchaudio_audiometadata,
         )
 
         ensure_torchaudio_audiometadata()

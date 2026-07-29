@@ -35,7 +35,7 @@ class NegationAnalyzer(Analyzer):
             text = seg.text or ""
             positions = detect_negation_with_position(text)
             evidence_spans: list[dict[str, Any]] = []
-            for pos_idx, ntype in positions[:3]:
+            for pos_idx, _ntype in positions[:3]:
                 snippet = text[max(0, pos_idx - 8) : pos_idx + 24].strip()
                 if snippet:
                     evidence_spans.append(
@@ -54,7 +54,9 @@ class NegationAnalyzer(Analyzer):
                 {
                     "has_negation": bool(positions) or detect_negation(text),
                     "negation_count": len(positions),
-                    "positions": [{"index": pos_idx, "type": ntype} for pos_idx, ntype in positions],
+                    "positions": [
+                        {"index": pos_idx, "type": ntype} for pos_idx, ntype in positions
+                    ],
                     "speaker": getattr(seg, "speaker", None),
                     "evidence_spans": evidence_spans,
                 }

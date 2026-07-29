@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-
 _SENTIMENT_SCORE = {
     "positive": 1.0,
     "positiv": 1.0,

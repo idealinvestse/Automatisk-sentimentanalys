@@ -99,7 +99,9 @@ def get_api_settings() -> APISettings:
         use_redis_cache=_env_bool("API_USE_REDIS_CACHE", bool(defaults.get("use_redis_cache"))),
         redis_url=os.getenv("REDIS_URL") or defaults.get("redis_url"),
         cache_dir=os.getenv("API_CACHE_DIR", ".cache/aggregates"),
-        state_dir=os.getenv("API_STATE_DIR") or os.getenv("API_CACHE_DIR", ".cache/aggregates") or ".cache/aggregates",
+        state_dir=os.getenv("API_STATE_DIR")
+        or os.getenv("API_CACHE_DIR", ".cache/aggregates")
+        or ".cache/aggregates",
         rate_limit_rpm=rate_limit,
         trusted_proxy=_env_bool("API_TRUSTED_PROXY"),
         production=_env_bool("API_PRODUCTION"),

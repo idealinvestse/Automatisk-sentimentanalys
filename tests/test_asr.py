@@ -359,7 +359,6 @@ class TestWhisperXBackendMocked:
         assert args[1] == "cpu"
         assert kwargs.get("device_index") == 0
 
-
     def test_whisperx_load_model_uses_cuda_not_cuda_colon(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -381,7 +380,9 @@ class TestWhisperXBackendMocked:
                 lambda: None,
             ),
         ):
-            transcriber = get_transcriber(backend="whisperx", model_name="large-v3", device="cuda:0")
+            transcriber = get_transcriber(
+                backend="whisperx", model_name="large-v3", device="cuda:0"
+            )
             _ = transcriber.transcribe("dummy.wav", language="sv", diarize=False)
 
         args, kwargs = mock_wx.load_model.call_args

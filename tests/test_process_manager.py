@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from launcher.process_manager import (
+    _wait_for_service,
     restart_named_services,
     start_api,
     start_dashboard,
     stop_service,
-    _wait_for_service,
 )
 from src.install.config_schema import UserConfig
 
@@ -43,7 +43,9 @@ def _port_free_then_open() -> object:
     return is_open
 
 
-def test_start_api_spawns_uvicorn_and_tracks_pid(cfg: UserConfig, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_start_api_spawns_uvicorn_and_tracks_pid(
+    cfg: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
     captured: dict[str, object] = {}
 
     class FakeProc:
@@ -182,7 +184,9 @@ def test_stop_service_kills_tracked_pid_on_windows(
     assert get_pid_info(cfg, "api") is None
 
 
-def test_wait_for_service_raises_when_process_exits(cfg: UserConfig, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_wait_for_service_raises_when_process_exits(
+    cfg: UserConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
     proc = MagicMock()
     proc.pid = 77
     monkeypatch.setattr("launcher.process_manager.is_port_open", lambda *a, **k: False)

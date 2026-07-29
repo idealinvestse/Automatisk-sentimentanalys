@@ -11,6 +11,7 @@ import pytest
 
 from src.install.asr_assets import (
     AsrAssetReport,
+    _format_download_error,
     collect_asr_status,
     configure_hf_cache,
     download_asr_models,
@@ -18,7 +19,6 @@ from src.install.asr_assets import (
     ensure_torchaudio_audiometadata,
     hf_repo_cached,
     install_asr_packages,
-    _format_download_error,
 )
 
 

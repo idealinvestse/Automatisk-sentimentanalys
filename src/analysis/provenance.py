@@ -23,7 +23,10 @@ def check_emotion_channel_diversity(
     local_has = bool(local_emotion)
     llm_has = bool(llm_emotion_trajectory)
     if local_has and llm_has:
-        return True, "Local emotion sensor and LLM emotion_trajectory both present (diverse channels)."
+        return (
+            True,
+            "Local emotion sensor and LLM emotion_trajectory both present (diverse channels).",
+        )
     if not local_has and llm_has:
         return True, "LLM-only emotion channel (no local keyword emotion)."
     if local_has and not llm_has:
@@ -88,7 +91,9 @@ def build_override_provenance(
             local_source=local_source,
             reason="deep_path_holistic",
             evidence_spans=_spans_from_llm(llm_val),
-            channel_diversity_ok=diversity_ok if field in {"agent_assessment", "trajectory"} else True,
+            channel_diversity_ok=(
+                diversity_ok if field in {"agent_assessment", "trajectory"} else True
+            ),
             notes=diversity_notes if field in {"agent_assessment", "trajectory"} else None,
         )
         provenance.append(entry)

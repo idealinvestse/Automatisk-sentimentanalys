@@ -151,7 +151,9 @@ class SemanticSearchEngine:
         if key in self._embed_cache:
             return [self._embed_cache[key]] * len(texts)  # simplistic; real would per-text
         try:
-            embs_raw = model.encode(texts, show_progress_bar=False, normalize_embeddings=True).tolist()
+            embs_raw = model.encode(
+                texts, show_progress_bar=False, normalize_embeddings=True
+            ).tolist()
             embs: list[list[float]] = [list(map(float, row)) for row in embs_raw]
             for t, e in zip(texts, embs, strict=False):
                 self._embed_cache[_hash_texts([t])] = e

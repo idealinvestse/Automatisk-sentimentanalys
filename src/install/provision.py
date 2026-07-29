@@ -251,9 +251,15 @@ def probe_cuda_torch(python: Path) -> dict[str, str | bool] | None:
 def _is_torch_requirement(req: str) -> bool:
     name = req.strip().lower()
     for prefix in _TORCH_REQ_PREFIXES:
-        if name == prefix or name.startswith(f"{prefix}=") or name.startswith(f"{prefix}[") or name.startswith(
-            f"{prefix}~"
-        ) or name.startswith(f"{prefix}>") or name.startswith(f"{prefix}<") or name.startswith(f"{prefix}!"):
+        if (
+            name == prefix
+            or name.startswith(f"{prefix}=")
+            or name.startswith(f"{prefix}[")
+            or name.startswith(f"{prefix}~")
+            or name.startswith(f"{prefix}>")
+            or name.startswith(f"{prefix}<")
+            or name.startswith(f"{prefix}!")
+        ):
             return True
     return False
 
@@ -294,12 +300,12 @@ def ensure_cuda_torch(
     existing = probe_cuda_torch(python)
     if existing:
         if progress:
-            progress(
-                f"CUDA torch already OK ({existing['torch']}); skipping reinstall"
-            )
+            progress(f"CUDA torch already OK ({existing['torch']}); skipping reinstall")
         return f"already:{existing['torch']}"
     if progress:
-        progress(f"Installing CUDA torch/torchaudio ({', '.join(_TORCH_WHISPERX_PINS)}) from {index}")
+        progress(
+            f"Installing CUDA torch/torchaudio ({', '.join(_TORCH_WHISPERX_PINS)}) from {index}"
+        )
     cleanup_pip_leftovers(site_packages_for_python(python))
     _run_pip(
         python,

@@ -1,7 +1,7 @@
 # Makefile for Automatisk-sentimentanalys
 # Provides convenient commands for development, testing, and common tasks.
 
-.PHONY: help install install-dev install-api install-diarize test lint format check clean run-api run-dashboard
+.PHONY: help install install-dev install-api install-diarize install-training test lint format check clean run-api run-dashboard intent-validate intent-benchmark
 
 help:  ## Show this help
 	@echo "Available targets:"
@@ -22,6 +22,9 @@ install-api:  ## Install with API profile (includes core ML + REST deps)
 
 install-diarize:  ## Install diarization support only
 	pip install -e ".[diarize]"
+
+install-training:  ## Install intent fine-tuning and evaluation dependencies
+	pip install -e ".[training,min,dev]"
 
 install-all:  ## Install everything (dev + api + diarize)
 	pip install -e ".[dev,api,diarize]"
@@ -68,6 +71,13 @@ check:  ## Run lint + format check + mypy
 
 pre-commit:  ## Run pre-commit on all files
 	pre-commit run --all-files
+
+intent-validate:  ## Validate train/validation intent corpora for leakage and balance
+	python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200 --min-per-intent 20 --disjoint-from data/intent_val.jsonl
+	python scripts/validate_intent_corpus.py data/intent_val.jsonl --min-rows 50 --min-per-intent 5
+
+intent-benchmark:  ## Benchmark heuristic intent backend on the fixed validation set
+	python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --backend heuristic --output reports/intent_baseline.json --min-macro-f1 0.75
 
 # =============================================================================
 # Running the application

@@ -30,10 +30,7 @@ def check_webui_package(
         return f"webui/package.json saknas under {root}"
     node_modules = root / "webui" / "node_modules"
     if not node_modules.is_dir():
-        return (
-            f"webui/node_modules saknas under {root}. "
-            "Kör: cd webui && npm install"
-        )
+        return f"webui/node_modules saknas under {root}. " "Kör: cd webui && npm install"
     return None
 
 

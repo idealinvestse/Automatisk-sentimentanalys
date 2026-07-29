@@ -26,9 +26,7 @@ def resolve_asr_provider(provider: str | None) -> ProviderName:
         return "local"
     normalized = str(provider).strip().lower()
     if normalized not in _VALID_PROVIDERS:
-        raise ValueError(
-            f"Unknown ASR provider '{provider}'. Supported: 'local', 'cloud'"
-        )
+        raise ValueError(f"Unknown ASR provider '{provider}'. Supported: 'local', 'cloud'")
     return normalized  # type: ignore[return-value]
 
 
@@ -91,16 +89,12 @@ class AsrRouter:
         started = time.perf_counter()
         outcome = "error"
         try:
-            transcriber = get_transcriber(
-                backend=backend, model_name=model_name, device=device
-            )
+            transcriber = get_transcriber(backend=backend, model_name=model_name, device=device)
             transcript = transcriber.transcribe(audio_path, **kwargs)  # type: ignore[arg-type]
             outcome = "success"
             return filter_hallucinations(transcript)
         finally:
-            record_asr_transcription(
-                "local", backend, outcome, time.perf_counter() - started
-            )
+            record_asr_transcription("local", backend, outcome, time.perf_counter() - started)
 
     def _transcribe_cloud(
         self,

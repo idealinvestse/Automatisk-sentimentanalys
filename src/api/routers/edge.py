@@ -71,8 +71,6 @@ async def analyze_segments_edge(req: EdgeSegmentsRequest) -> EdgeAnalysisResult:
     logger.info("Edge segments analysis: profile=%s segments=%d", req.profile, len(req.segments))
 
     async def _do() -> EdgeAnalysisResult:
-        return await asyncio.to_thread(
-            analyze_segments_offline, req.segments, profile=req.profile
-        )
+        return await asyncio.to_thread(analyze_segments_offline, req.segments, profile=req.profile)
 
     return await run_route("edge/analyze-segments", _do)

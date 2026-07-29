@@ -207,9 +207,8 @@ iterating on synthetic training data. Validate that training and validation rema
 then train locally with the optional `training` dependencies:
 
 ```bash
-pip install -e ".[training,dev]"
-python scripts/validate_intent_corpus.py data/intent_train.jsonl \
-  --min-rows 200 --min-per-intent 20 --disjoint-from data/intent_val.jsonl
+make install-training
+make intent-validate
 python scripts/train_intent.py --config configs/intent_finetune.yaml
 python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --backend both \
   --output reports/intent_baseline.json
@@ -304,8 +303,9 @@ pip install -e ".[training,min]"
 python scripts/prepare_callcenter_data.py --target-size 10000
 python scripts/prepare_intent_data.py --per-intent 35
 python scripts/validate_domain_corpus.py data/callcenter_val.csv
-python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200
-python -m src.finetune --config configs/finetune.yaml
+make intent-validate
+python -m src.finetune --config configs/finetune.yaml  # sentiment fine-tuning
+python scripts/train_intent.py --config configs/intent_finetune.yaml  # intent fine-tuning
 ```
 
 **Analyzer accuracy benchmarks:**

@@ -291,7 +291,9 @@ def analyze_smart(
     return results, meta
 
 
-def analyze_one(text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True) -> dict[str, Any]:
+def analyze_one(
+    text: str, model_name: str = DEFAULT_MODEL, normalize: bool = True
+) -> dict[str, Any]:
     """Analyze a single text and return one result dict."""
     results = analyze([text], model_name=model_name, batch_size=1, normalize=normalize)
     if not results:

@@ -98,12 +98,17 @@ def evaluate_deep_path_ccps(
             sanity_detail = "Sentiment missing or empty — core local path required before LLM"
         elif isinstance(sent, list) and sent:
             labels = [s.get("label") if isinstance(s, dict) else None for s in sent]
-            if all(l is None for l in labels):
+            if all(label is None for label in labels):
                 sanity_ok = False
                 sanity_detail = "Sentiment labels all missing"
-    if sanity_ok and isinstance(sent, list) and sent and isinstance(neg, list):
-        if len(neg) != len(sent):
-            sanity_detail = f"Negation length mismatch ({len(neg)} vs {len(sent)}) — warning only"
+    if (
+        sanity_ok
+        and isinstance(sent, list)
+        and sent
+        and isinstance(neg, list)
+        and len(neg) != len(sent)
+    ):
+        sanity_detail = f"Negation length mismatch ({len(neg)} vs {len(sent)}) — warning only"
     checks.append(
         CCPCheck(
             name="sentiment_negation_sanity",
@@ -159,9 +164,11 @@ def select_analyzers_runtime(
         for item in intent_results:
             if isinstance(item, dict):
                 intents.append(str(item.get("intent", "")).lower())
-            elif isinstance(item, (list, tuple)) and item:
+            elif isinstance(item, list | tuple) and item:
                 intents.append(str(item[0]).lower())
-    complaint_like = sum(1 for i in intents if any(k in i for k in ("klagomål", "complaint", "reklamation", "fel")))
+    complaint_like = sum(
+        1 for i in intents if any(k in i for k in ("klagomål", "complaint", "reklamation", "fel"))
+    )
     if complaint_like >= max(1, len(intents) // 3):
         for extra in ("compliance_risk", "resolution_probability", "predictive"):
             if extra not in selected:

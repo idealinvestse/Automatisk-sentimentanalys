@@ -46,10 +46,7 @@ def main() -> None:
         report["f1_macro_gain"] = round(gain, 4)
         if gain >= min_gain and model["f1_macro"] >= min_model_f1:
             report["recommendation"] = "model"
-            print(
-                f"Model passes promotion gate (F1 {model['f1_macro']:.4f}, "
-                f"gain {gain:.4f})"
-            )
+            print(f"Model passes promotion gate (F1 {model['f1_macro']:.4f}, " f"gain {gain:.4f})")
         else:
             print(
                 f"Keep heuristic default (model F1 {model['f1_macro']:.4f}, "

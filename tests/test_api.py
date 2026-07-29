@@ -243,7 +243,9 @@ def test_alerts_endpoint(monkeypatch):
 
 def _fake_pipeline_report(**overrides):
     fake = MagicMock()
-    fake.sentiment_results = overrides.get("sentiment_results", [{"label": "positiv", "score": 0.9}])
+    fake.sentiment_results = overrides.get(
+        "sentiment_results", [{"label": "positiv", "score": 0.9}]
+    )
     fake.intent_results = overrides.get("intent_results", [])
     fake.summary = overrides.get("summary", {})
     fake.topics = overrides.get("topics", {})

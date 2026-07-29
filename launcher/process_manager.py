@@ -137,11 +137,7 @@ def _wait_for_service(
         elapsed = timeout - (deadline - time.monotonic())
         port_open = is_port_open(host, port, timeout=0.2)
         alive = is_process_running(proc.pid)
-        owned = (
-            port_owned_by_pid_tree(host, port, proc.pid)
-            if port_open and alive
-            else False
-        )
+        owned = port_owned_by_pid_tree(host, port, proc.pid) if port_open and alive else False
         if on_tick:
             on_tick(elapsed, port_open, alive)
         if log and int(elapsed) > int(last_logged_sec):
@@ -188,9 +184,7 @@ def _wait_for_service(
 
     stop_service(cfg, name, log=log)
     _, err_path = service_log_paths(cfg, name)
-    if is_port_open(host, port, timeout=0.2) and not port_owned_by_pid_tree(
-        host, port, proc.pid
-    ):
+    if is_port_open(host, port, timeout=0.2) and not port_owned_by_pid_tree(host, port, proc.pid):
         occupant = describe_port_occupant(host, port) or "unknown process"
         msg = (
             f"Port {host}:{port} is open but not owned by {name} (pid {proc.pid}) "
@@ -317,9 +311,7 @@ def start_dashboard(cfg: UserConfig, *, log: EventLog | None = None) -> ProcessI
     if log:
         log.info(f"Spawned pid {proc.pid}", phase="dashboard.start")
     wait_timeout = (
-        _START_TIMEOUT_SEC
-        if cfg.runtime.dashboard.dev_mode
-        else _DASHBOARD_PROD_START_TIMEOUT_SEC
+        _START_TIMEOUT_SEC if cfg.runtime.dashboard.dev_mode else _DASHBOARD_PROD_START_TIMEOUT_SEC
     )
     _wait_for_service(cfg, "dashboard", proc, log=log, timeout_sec=wait_timeout)
     if log:

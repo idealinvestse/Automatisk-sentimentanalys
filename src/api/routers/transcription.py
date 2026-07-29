@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
@@ -146,7 +146,9 @@ async def upload_audio_file(
 
     # Unique + sanitized filename (uuid prefix; strip traversal / unsafe chars)
     unique_id = uuid.uuid4().hex[:12]
-    safe_stem = re.sub(r"[^\w.\-]+", "_", Path(original_name).stem, flags=re.UNICODE)[:80] or "audio"
+    safe_stem = (
+        re.sub(r"[^\w.\-]+", "_", Path(original_name).stem, flags=re.UNICODE)[:80] or "audio"
+    )
     safe_filename = f"{unique_id}_{safe_stem}{file_ext}"
     file_path = upload_dir / safe_filename
 
