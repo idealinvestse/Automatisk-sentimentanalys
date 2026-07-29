@@ -199,7 +199,10 @@ class IntentClassifier:
         model_path: str | None = None,
         device: str = "cpu",
     ) -> None:
+        if backend not in {"heuristic", "model", "auto"}:
+            raise ValueError(f"Unsupported intent backend: {backend}")
         self.backend = backend
+        self.resolved_backend = "heuristic" if backend == "auto" else backend
         self.model_path = model_path
         self.device = device
         self._model: Any = None
@@ -211,7 +214,7 @@ class IntentClassifier:
             for kw in intent_data.get("keywords", []):
                 self._keyword_index[kw.lower()] = intent_name
 
-        if backend == "model" and model_path:
+        if backend in {"model", "auto"} and model_path:
             self._load_model()
 
     # ------------------------------------------------------------------
@@ -223,7 +226,7 @@ class IntentClassifier:
         Returns:
             (intent_label, confidence_score) tuple.
         """
-        if self.backend == "model" and self._model is not None:
+        if self.resolved_backend == "model" and self._model is not None:
             return self._classify_model(text)
 
         return self._classify_heuristic(text)
@@ -416,10 +419,12 @@ class IntentClassifier:
 
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_path)
             self._model = AutoModelForSequenceClassification.from_pretrained(self.model_path)
+            self.resolved_backend = "model"
             logger.info("Intent model loaded from %s", self.model_path)
         except Exception as e:
             logger.warning("Failed to load intent model: %s. Falling back to heuristic.", e)
             self.backend = "heuristic"
+            self.resolved_backend = "heuristic"
 
     def _classify_model(self, text: str) -> tuple[str, float]:
         """Model-based intent classification."""

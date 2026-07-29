@@ -1,0 +1,13 @@
+base_model: KBLab/bert-base-swedish-cased
+train: data/intent_train.jsonl
+val_file: data/intent_val.jsonl
+output: models/intent_classifier-ci
+epochs: 1
+batch_size: 4
+lr: 5.0e-5
+max_length: 64
+seed: 42
+eval_split: 0.1
+early_stopping: 1
+max_train_samples: 40
+device: cpu

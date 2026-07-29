@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Intent/DATA-01 sprint hardening** — fixed-val intent training configuration and provenance metadata, train/validation leakage validation, opt-in `auto` intent backend with heuristic fallback, and config-driven preference-gate thresholds.
+- **Webui↔API harmony H1–H9 (2026-07-17)** — API key + auth badge; OpenAPI types; smoke e2e stubs; alerts via `/alerts`; WS `partial_analysis`; Insights panels for `/search/semantic` + `/qa/score`; transcription jobs list/cancel; Docker bake API key at webui build.
+- **Pilot decision pack (2026-07-17)** — `STRATEGY.md`, `docs/DECISION_REPORT_2026-07-17.md`, `docs/PILOT_RUNBOOK.md`, `docs/DATA_01_CORPUS_SPEC.md`, `docs/PILOT_ONE_PAGER.md`; `scripts/verify_pilot_policy.py`; `import_domain_corpus.py --pilot-gate` (500/200 row minima); Parallel research under `reports/parallel-research/`.
+- **FE/BE harmony analysis** — `docs/FE_BE_HARMONY_2026-07-17.md`.
 - **ASR dual-engine hardening** — `AsrRouter` with local-default provider policy; stable transcript error codes and provider metadata; Whisper hallucination post-filter; decode hardening (disabled prev-text conditioning) and per-chunk retry; opt-in Deepgram `CloudSttEngine` (no silent cloud fallback); `evaluate audio compare` for local vs cloud A/B; SQLite/Redis persistent transcription jobs across API restarts; Prometheus transcription latency and cloud egress metrics; pyannote diarization when `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` is set (heuristic fallback otherwise); SECURITY/API/architecture docs and launcher/webui cloud-STT opt-in copy.
 
 ### Removed

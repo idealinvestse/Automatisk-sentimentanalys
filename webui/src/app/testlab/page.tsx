@@ -17,7 +17,7 @@ import { apiClient, ApiError, type PipelineCompareResponse, type PipelineReport 
 import { extractTrustSurface } from "@/lib/real-data";
 import { TrustSurfaceCard } from "@/components/analyzer-cards";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
-import { useHealth } from "@/hooks/use-health";
+import { isApiConnected, useHealth } from "@/hooks/use-health";
 import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
 
 const EXAMPLE_SEGMENTS = JSON.stringify(
@@ -27,7 +27,8 @@ const EXAMPLE_SEGMENTS = JSON.stringify(
 );
 
 export default function TestLabPage() {
-  const { data: connected } = useHealth();
+  const { data: health } = useHealth();
+  const connected = isApiConnected(health);
   const [segmentsInput, setSegmentsInput] = React.useState("");
   const [useLlm, setUseLlm] = React.useState(false);
   const [provider, setProvider] = React.useState<"openrouter" | "groq">("openrouter");

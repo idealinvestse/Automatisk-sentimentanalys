@@ -18,6 +18,7 @@ intent:
   min_accuracy: 0.74
   backend: heuristic
   model_switch_min_f1_gain: 0.05
+  model_min_macro_f1: 0.8146
 
 labeled_fixtures:
   emotion: tests/fixtures/analyzer_labeled/emotion_labeled.jsonl

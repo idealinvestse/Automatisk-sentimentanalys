@@ -186,10 +186,20 @@ Följande data backas upp:
 ### Kvarstående gaps (post v0.5, ej blockerande):
 
 1. **Windows keyring** — launcher secrets via keyring extra (valfritt för desktop)
-2. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data (A1)
+2. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data (A1) — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md)
 3. **Svensk ASR-pack** — `samples/audio/sv/*` saknar ljudfiler; L7 kräver lokal audio (A3)
 4. **Intent fine-tune** — ingen `models/intent_classifier` ännu; kör `scripts/train_intent.py` + `compare_intent_backends.py` (A2)
 5. **WS event hub** — fortfarande in-process; tickets är Redis-delade men live-events delas inte mellan workers
+
+### Conditional pilot gates (2026-07)
+
+Innan kundpilot med kvalitetsclaim — se [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) och [DECISION_REPORT_2026-07-17.md](DECISION_REPORT_2026-07-17.md).
+
+- [ ] **Pilot policy** — `python scripts/verify_pilot_policy.py` (använd `--strict` med `API_PRODUCTION=true`)
+- [ ] **Groq / Deepgram** — nycklar unset för PII-pilot (dev-only undantag dokumenterat)
+- [ ] **DATA-01 pilot-gate** — `import_domain_corpus.py --pilot-gate` (≥500 sentiment / ≥200 intent)
+- [ ] **L7–L9 + /testlab + spotcheck** — enligt § Release verification ovan
+- [ ] **DPIA / DPA** — externt juridiskt (ej i repo)
 
 ### WebSocket ticket auth (Fas 5 harmonization)
 

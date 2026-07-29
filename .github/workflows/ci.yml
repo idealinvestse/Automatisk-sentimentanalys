@@ -166,6 +166,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Verify OpenAPI client paths
+        run: npx tsc --noEmit -p tsconfig.json
+
       - name: Build
         run: npm run build
 
@@ -193,7 +196,7 @@ jobs:
           pip install -e ".[training,min,dev]"
 
       - name: Fine-tune config and corpus tests
-        run: pytest tests/test_finetune.py -q
+        run: pytest tests/test_finetune.py tests/test_train_intent.py tests/test_validate_intent_corpus.py -q
 
       - name: Validate domain corpus
         run: python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500
@@ -220,13 +223,16 @@ jobs:
 
       - name: Validate intent corpora
         run: |
-          python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200 --min-per-intent 20
+          python scripts/validate_intent_corpus.py data/intent_train.jsonl --min-rows 200 --min-per-intent 20 --disjoint-from data/intent_val.jsonl
           python scripts/validate_intent_corpus.py data/intent_val.jsonl --min-rows 50 --min-per-intent 5
 
       - name: Benchmark intent (fixed val, macro F1 gate)
         run: |
           python scripts/benchmark_intent.py --val-file data/intent_val.jsonl --backend heuristic \
             --output reports/intent_baseline.json --min-macro-f1 0.75
+
+      - name: Intent and DATA-01 workflow tests
+        run: pytest tests/test_intent_model_backend.py tests/test_import_domain_corpus.py tests/test_quality_gate.py -q
 
       - name: Benchmark analyzers (fast heuristic sentiment)
         run: |

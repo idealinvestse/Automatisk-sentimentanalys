@@ -123,9 +123,37 @@ def _log(progress: ProgressCallback, message: str) -> None:
         progress(message)
 
 
+_PYTHON_EXES = frozenset({"python.exe", "pythonw.exe"})
+
+
+def _subprocess_no_window_kwargs() -> dict[str, int]:
+    """Avoid flashing console windows when probing from a pythonw/GUI parent."""
+    if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}  # type: ignore[attr-defined]
+    return {}
+
+
+def _is_same_interpreter(python: Path | None) -> bool:
+    """True when *python* is this process, including python.exe ↔ pythonw.exe twins."""
+    if python is None:
+        return True
+    target = Path(python).resolve()
+    current = Path(sys.executable).resolve()
+    if target == current:
+        return True
+    if (
+        target.parent == current.parent
+        and target.name.lower() in _PYTHON_EXES
+        and current.name.lower() in _PYTHON_EXES
+    ):
+        return True
+    return False
+
+
 def is_module_installed(module: str, python: Path | None = None) -> bool:
     """Return True if *module* can be imported by *python* (default: current interpreter)."""
-    if python is not None and Path(python).resolve() != Path(sys.executable).resolve():
+    if not _is_same_interpreter(python):
+        assert python is not None  # for type checkers
         result = subprocess.run(
             [
                 str(python),
@@ -135,6 +163,7 @@ def is_module_installed(module: str, python: Path | None = None) -> bool:
             ],
             capture_output=True,
             check=False,
+            **_subprocess_no_window_kwargs(),
         )
         return result.returncode == 0
     return importlib.util.find_spec(module) is not None
@@ -142,7 +171,7 @@ def is_module_installed(module: str, python: Path | None = None) -> bool:
 
 def _ensure_interpreter_site_packages(python: Path) -> None:
     """Make *python*'s site-packages importable in this process (launcher → venv)."""
-    if Path(python).resolve() == Path(sys.executable).resolve():
+    if _is_same_interpreter(python):
         return
     result = subprocess.run(
         [
@@ -157,6 +186,7 @@ def _ensure_interpreter_site_packages(python: Path) -> None:
         capture_output=True,
         text=True,
         check=False,
+        **_subprocess_no_window_kwargs(),
     )
     if result.returncode != 0:
         return
@@ -211,6 +241,7 @@ def install_asr_packages(
             [str(interpreter), "-m", "pip", "install", *to_install],
             check=True,
             cwd=str(root),
+            **_subprocess_no_window_kwargs(),
         )
         report.add("asr_packages", True, "ASR-paket installerade", ", ".join(to_install))
     except subprocess.CalledProcessError as exc:
@@ -270,31 +301,130 @@ def _download_whisperx(
     language: str,
     progress: ProgressCallback,
 ) -> None:
+    ensure_torchaudio_audiometadata()
+    ensure_torch_load_weights_compat()
+    ensure_speechbrain_windows_compat()
     import whisperx
 
-    from ..core.device import normalize_device_for_asr
+    from ..core.device import whisperx_ctranslate_device, whisperx_torch_device
 
     load_name = resolve_model_name_for_backend(model_name, "whisperx")
     lower = load_name.lower()
     if "kb-whisper" in lower or "kblab" in lower:
         load_name = "large-v3"
 
-    dev_kind, cuda_idx = normalize_device_for_asr(device)
-    if dev_kind == "cuda":
-        device_str = f"cuda:{cuda_idx or 0}"
-    elif dev_kind == "mps":
-        device_str = "mps"
-    else:
-        device_str = "cpu"
-    compute_type = "float16" if dev_kind == "cuda" else ("int8" if dev_kind == "cpu" else "float32")
+    ct2_device, ct2_index = whisperx_ctranslate_device(device)
+    torch_device = whisperx_torch_device(device)
+    compute_type = "float16" if ct2_device == "cuda" else ("int8" if ct2_device == "cpu" else "float32")
 
     _log(progress, f"Laddar ner WhisperX ASR-modell: {load_name}")
-    model = whisperx.load_model(load_name, device_str, compute_type=compute_type)
+    # Prefer silero VAD for prefetch (avoids pyannote/speechbrain on Windows).
+    model = whisperx.load_model(
+        load_name,
+        ct2_device,
+        device_index=ct2_index,
+        compute_type=compute_type,
+        vad_method="silero",
+    )
     del model
 
     _log(progress, f"Laddar ner WhisperX align-modell för språk: {language}")
-    align_model, metadata = whisperx.load_align_model(language_code=language, device=device_str)
+    align_model, metadata = whisperx.load_align_model(
+        language_code=language, device=torch_device
+    )
     del align_model, metadata
+
+
+def ensure_torchaudio_audiometadata() -> None:
+    """Restore ``torchaudio.AudioMetaData`` for pyannote 3.x on torchaudio>=2.9."""
+    import torchaudio
+
+    if hasattr(torchaudio, "AudioMetaData"):
+        return
+    try:
+        from torchaudio._backend.common import AudioMetaData as _AudioMetaData
+    except Exception:
+        from dataclasses import dataclass
+
+        @dataclass
+        class _AudioMetaData:  # type: ignore[no-redef]
+            sample_rate: int = 0
+            num_frames: int = 0
+            num_channels: int = 0
+            bits_per_sample: int = 0
+            encoding: str = ""
+
+    torchaudio.AudioMetaData = _AudioMetaData  # type: ignore[attr-defined]
+
+
+def ensure_torch_load_weights_compat() -> None:
+    """Allow pyannote checkpoints under torch>=2.6 (default weights_only=True)."""
+    import torch
+
+    current = torch.load
+    if getattr(current, "_sentiment_weights_compat", False):
+        return
+    original = current
+
+    def _load(*args: object, **kwargs: object) -> object:
+        # lightning_fabric may pass weights_only=True explicitly; force False for
+        # trusted pyannote/whisperx checkpoints that embed omegaconf objects.
+        kwargs["weights_only"] = False
+        return original(*args, **kwargs)
+
+    _load._sentiment_weights_compat = True  # type: ignore[attr-defined]
+    torch.load = _load  # type: ignore[assignment]
+
+
+def ensure_speechbrain_windows_compat() -> None:
+    """Fix SpeechBrain LazyModule inspect guard on Windows (k2_fsa ImportError).
+
+    Upstream used ``endswith('/inspect.py')`` which never matches Windows paths,
+    so optional lazy imports (k2) crash during normal model load.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        from speechbrain.utils.importutils import LazyModule
+    except Exception:
+        return
+    if getattr(LazyModule.ensure_module, "_sentiment_win_compat", False):
+        return
+
+    import importlib
+    import inspect as py_inspect
+    import warnings
+
+    def ensure_module_fixed(self: object, stacklevel: int = 1) -> object:  # type: ignore[no-untyped-def]
+        importer_frame = None
+        try:
+            importer_frame = py_inspect.getframeinfo(sys._getframe(stacklevel + 1))
+        except AttributeError:
+            warnings.warn(
+                "Failed to inspect frame for SpeechBrain lazy import guard.",
+                stacklevel=2,
+            )
+        if (
+            importer_frame is not None
+            and os.path.basename(importer_frame.filename) == "inspect.py"
+        ):
+            raise AttributeError()
+        lazy_module = getattr(self, "lazy_module", None)
+        if lazy_module is None:
+            try:
+                package = getattr(self, "package", None)
+                target = getattr(self, "target")
+                if package is None:
+                    lazy_module = importlib.import_module(target)
+                else:
+                    lazy_module = importlib.import_module(f".{target}", package)
+            except Exception as exc:
+                raise ImportError(f"Lazy import of {self!r} failed") from exc
+            setattr(self, "lazy_module", lazy_module)
+        return lazy_module
+
+    ensure_module_fixed._sentiment_win_compat = True  # type: ignore[attr-defined]
+    LazyModule.ensure_module = ensure_module_fixed  # type: ignore[method-assign]
 
 
 def _format_download_error(exc: BaseException) -> str:
@@ -307,6 +437,24 @@ def _format_download_error(exc: BaseException) -> str:
         )
     if "not enough space" in lower or "os error 112" in lower:
         return f"{text}\n\nTips: frigör diskutrymme (särskilt C:) eller flytta HF-cachen till D:."
+    if "audiometadata" in lower:
+        return (
+            f"{text}\n\nTips: whisperx/pyannote kräver torchaudio<2.9. "
+            "Kör om Installera/reparera eller: "
+            r".\.venv\Scripts\python.exe -m pip install --upgrade "
+            '"torch==2.8.0" "torchaudio==2.8.0" '
+            "--index-url https://download.pytorch.org/whl/cu128"
+        )
+    if "unsupported device cuda:" in lower:
+        return (
+            f"{text}\n\nTips: whisperx/faster-whisper vill ha device='cuda' "
+            "(inte 'cuda:0'). Uppdatera launchern och kör om ASR-nedladdning."
+        )
+    if "weights_only" in lower or "weightsunpickler" in lower:
+        return (
+            f"{text}\n\nTips: torch>=2.6 blockerar äldre pyannote-checkpoints. "
+            "Uppdatera launchern (weights_only-compat) och kör om ASR-nedladdning."
+        )
     return text
 
 

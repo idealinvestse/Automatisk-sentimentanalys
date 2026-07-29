@@ -222,10 +222,14 @@ def stop_service(cfg: UserConfig, name: str, *, log: EventLog | None = None) -> 
         return True
     try:
         if sys.platform == "win32":
+            flags = 0
+            if hasattr(subprocess, "CREATE_NO_WINDOW"):
+                flags = subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
             subprocess.run(
                 ["taskkill", "/PID", str(info.pid), "/T", "/F"],
                 check=False,
                 capture_output=True,
+                creationflags=flags,
             )
         else:
             import os

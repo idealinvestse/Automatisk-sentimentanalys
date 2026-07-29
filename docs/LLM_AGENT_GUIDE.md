@@ -164,6 +164,7 @@ Do **not** duplicate holistic tasks inside new registry analyzers; extend `SUPPO
 
 - If `pyannote.audio` is missing → use heuristic VAD in `diarization.py`.
 - If LLM key is missing → skip Mistral step.
+- Intent `auto` selects the local trained model only when its artifact is available and loadable; otherwise it falls back to the heuristic classifier.
 - If a single analyzer fails → log warning and continue.
 
 **Never** let missing optional dependencies crash the whole pipeline.

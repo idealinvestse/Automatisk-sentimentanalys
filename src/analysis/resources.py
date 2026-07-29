@@ -64,8 +64,10 @@ class ModelResourcePool:
         )
 
     def get_intent_classifier(self, backend: str = "heuristic") -> IntentClassifier:
-        model_path = DEFAULT_INTENT_MODEL_PATH if backend == "model" else None
-        if backend == "model" and not os.path.isdir(model_path or ""):
+        if backend not in {"heuristic", "model", "auto"}:
+            raise ValueError(f"Unsupported intent backend: {backend}")
+        model_path = DEFAULT_INTENT_MODEL_PATH if backend in {"model", "auto"} else None
+        if backend in {"model", "auto"} and not os.path.isdir(model_path or ""):
             logger.debug("Intent model path missing (%s); using heuristic", model_path)
             backend = "heuristic"
             model_path = None

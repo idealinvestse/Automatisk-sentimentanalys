@@ -92,6 +92,12 @@ def build_child_env(cfg: UserConfig) -> dict[str, str]:
     if ffmpeg := resolve_ffmpeg(cfg):
         env.setdefault("FFMPEG_PATH", ffmpeg)
 
+    # Uploads need a writable media sandbox; default under app root when unset.
+    if not env.get("API_MEDIA_ROOT", "").strip():
+        media = cfg.resolved_app_root() / "media"
+        media.mkdir(parents=True, exist_ok=True)
+        env["API_MEDIA_ROOT"] = str(media)
+
     return env
 
 

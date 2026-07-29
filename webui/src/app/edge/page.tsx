@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SentimentBadge } from "@/components/status-badges";
 import { apiClient, ApiError, type EdgeAnalysisResult } from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
-import { useHealth } from "@/hooks/use-health";
+import { isApiConnected, useHealth } from "@/hooks/use-health";
 
 type Mode = "text" | "segments";
 
@@ -29,7 +29,8 @@ const EXAMPLE_SEGMENTS = JSON.stringify(
 );
 
 export default function EdgePage() {
-  const { data: connected } = useHealth();
+  const { data: health } = useHealth();
+  const connected = isApiConnected(health);
   const [mode, setMode] = React.useState<Mode>("text");
   const [textInput, setTextInput] = React.useState("");
   const [segmentsInput, setSegmentsInput] = React.useState("");

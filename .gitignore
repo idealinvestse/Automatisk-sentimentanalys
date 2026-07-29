@@ -1,121 +1,122 @@
 # =============================================================================
-# Python – Bytecode & Runtime
+# Automatisk-sentimentanalys — .gitignore
+# Python 3.11+ · FastAPI · Next.js webui · ASR/ML · Windows launcher
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# Secrets & environment (never commit real credentials)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+.env.local
+.env.*.local
+
+.secrets/
+secrets/
+*.secret
+*.secrets
+*.pem
+*.p12
+*.pfx
+*.token
+*.auth
+
+# Explicit key files (allow *.key.example templates)
+*.key
+!*.key.example
+!**/*.key.example
+configs/openrouter.key
+openrouter.key
+OPENROUTER_API_KEY.txt
+
+# Cloud credential dirs / service accounts
+.aws/
+.gcp/
+.azure/
+credentials.json
+credentials*.json
+serviceAccount*.json
+service-account*.json
+*-credentials.json
+
+# -----------------------------------------------------------------------------
+# Python — bytecode, venv, packaging
+# -----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyd
 .Python
-
-# =============================================================================
-# Virtual Environments
-# =============================================================================
 .venv/
 venv/
 env/
 ENV/
-env.bak/
+.env.bak/
 venv.bak/
+python/
+.python-version.bak
 
-# =============================================================================
-# Environment & Secrets
-# =============================================================================
-.env
-.env.*
-!.env.example
-.env.local
-.env.*.local
-.secrets
-*.secret
-*.secrets
-secrets/
-*.key
-**/*.key
-*.pem
-**/*key*.txt
-**/*secret*.txt
-*api_key*
-*secret_key*
-*.token
-*.auth
-# Cloud / credential files (never commit real keys)
-.aws/
-.gcp/
-.azure/
-credentials*.json
-serviceAccount*.json
-service-account*.json
-
-# =============================================================================
-# Python Packaging
-# =============================================================================
 *.egg-info/
+.eggs/
 dist/
 build/
-.eggs/
 *.egg
 *.whl
 pip-wheel-metadata/
+MANIFEST
 *.manifest
-*.spec
 
-# =============================================================================
-# IDE / Editor
-# =============================================================================
+# PyInstaller (keep Inno .iss tracked; ignore generated specs if local)
+*.pyinstaller.spec
+
+# -----------------------------------------------------------------------------
+# IDE / editors / local agent tooling
+# -----------------------------------------------------------------------------
 .idea/
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
 .vs/
-mcps/
-terminals/
 *.swp
 *.swo
 *~
 *.sublime-project
 *.sublime-workspace
+.history/
+.cursor/
+!.cursor/rules/
 
-# =============================================================================
-# OS – Junk Files
-# =============================================================================
+# Local agent / compound-engineering scratch (not project docs)
+agent-tools/
+.superpowers/
+.playwright-mcp/
+.compound-engineering/cache/
+
+# -----------------------------------------------------------------------------
+# OS junk
+# -----------------------------------------------------------------------------
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
-desktop.ini
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 *.tmp
 *.temp
+*.bak
+*.orig
+*.rej
 
-# =============================================================================
-# Project – Generated Outputs
-# =============================================================================
-outputs/
-results/
-runs/
-state/
-*.log
-
-# =============================================================================
-# Project – Trained Models & Checkpoints
-# =============================================================================
-models/
-checkpoints/
-*.pt
-*.pth
-*.ckpt
-*.safetensors
-
-# =============================================================================
-# Project – Cache Directories
-# =============================================================================
-cache/
-.cache/
-.cache_dir/
-.cache/*
-hf_cache/
-transformers_cache/
-
-# =============================================================================
-# Testing & Quality Tools
-# =============================================================================
+# -----------------------------------------------------------------------------
+# Testing, lint, typecheck, coverage
+# -----------------------------------------------------------------------------
 .pytest_cache/
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 .tox/
@@ -123,65 +124,143 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 .dmypy.json
+dmypy.json
 .benchmarks/
 .hypothesis/
+.pytype/
+.pyre/
+.ty/
 
-# =============================================================================
-# Jupyter / Notebooks
-# =============================================================================
+# -----------------------------------------------------------------------------
+# Jupyter
+# -----------------------------------------------------------------------------
 .ipynb_checkpoints/
-*.ipynb_checkpoints
 
-# =============================================================================
-# Streamlit
-# =============================================================================
-.streamlit/secrets.toml
+# -----------------------------------------------------------------------------
+# Project runtime — caches, state, logs, outputs
+# -----------------------------------------------------------------------------
+outputs/
+results/
+runs/
+state/
+backups/
+*.log
+*.log.*
+logs/
 
-# =============================================================================
-# Misc
-# =============================================================================
-*.bak
-*.orig
-*.rej
+cache/
+.cache/
+.cache_dir/
+hf_cache/
+transformers_cache/
+torch_cache/
+.huggingface/
+.whisper/
+.whisperx/
+.xtts/
+wandb/
+mlruns/
+lightning_logs/
+.neptune/
+.comet/
 
-# Agent / tool output (local only)
-agent-tools/
-.superpowers/
+# Job / local DB stores
+*.sqlite
+*.sqlite3
+*.db
+!data/**/*.db.example
 
-# Real domain data (never commit — use scripts/import_domain_corpus.py)
+# -----------------------------------------------------------------------------
+# ML artifacts (download or train locally; never commit weights)
+# -----------------------------------------------------------------------------
+models/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.onnx
+*.safetensors
+*.h5
+*.keras
+*.joblib
+*.pkl
+*.pickle
+
+# -----------------------------------------------------------------------------
+# DATA-01 — real / imported domain corpora (gitignored slot)
+# -----------------------------------------------------------------------------
 data/import/*
 !data/import/.gitkeep
 data/*_real.csv
 data/*_real.jsonl
+data/**/*_real.csv
+data/**/*_real.jsonl
 
-# Generated eval reports
-reports/llm_quality_smoke.json
-reports/llm_human_study_template.md
-reports/audio_*.json
-reports/offline/
-
-# Large local audio datasets (manifest + docs committed; download RAVDESS locally)
+# Large or local-only media (keep manifests, README, .gitkeep)
 samples/audio/Actor_*/
 samples/audio/**/*.wav
 samples/audio/**/*.mp3
 samples/audio/**/*.flac
+samples/audio/**/*.ogg
+samples/audio/**/*.m4a
+samples/audio/**/*.webm
 
+# Local user overrides (templates stay tracked under installer/templates/)
+user_config.yaml
+**/user_config.local.yaml
 
-# =============================================================================
-# OpenRouter / LLM API keys (dev convenience only - NEVER commit real keys)
-# =============================================================================
-configs/openrouter.key
-openrouter.key
-*.openrouter_key
-OPENROUTER_API_KEY.txt
-.openrouter*
-**/*openrouter*.key
-**/*openrouter*.txt
-**/openrouter_api_key*
-# Also protect common patterns for other LLM providers
-**/*openai*.key
-**/*openai*.txt
-**/*anthropic*.key
-**/*together*.key
-**/*groq*.key
-.playwright-mcp/
+# -----------------------------------------------------------------------------
+# Generated / ephemeral eval reports (committed baselines stay tracked)
+# -----------------------------------------------------------------------------
+reports/llm_quality_smoke.json
+reports/llm_human_study_template.md
+reports/audio_*.json
+reports/offline/
+reports/**/*_local.json
+reports/**/*_smoke.json
+
+# -----------------------------------------------------------------------------
+# Node / Next.js (webui also has its own .gitignore; root patterns help monorepo)
+# -----------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.next/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# -----------------------------------------------------------------------------
+# Windows installer / portable build outputs
+# -----------------------------------------------------------------------------
+installer/Output/
+installer/dist/
+installer/*.exe
+installer/*.zip
+*.islc
+
+# -----------------------------------------------------------------------------
+# Streamlit / misc local UI secrets
+# -----------------------------------------------------------------------------
+.streamlit/secrets.toml
+
+# -----------------------------------------------------------------------------
+# Direnv / mise / asdf local
+# -----------------------------------------------------------------------------
+.direnv/
+.envrc.local

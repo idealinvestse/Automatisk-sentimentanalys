@@ -111,3 +111,23 @@ def normalize_device_for_asr(device: str | None = "auto") -> tuple[str, int | No
     if d == "mps":
         return "mps", None
     return "cpu", None
+
+
+def whisperx_ctranslate_device(device: str | None = "auto") -> tuple[str, int]:
+    """Device args for ``whisperx.load_model`` / faster-whisper (not ``cuda:0``).
+
+    ctranslate2 accepts ``cuda``/``cpu``/``auto`` plus a separate index — passing
+    ``cuda:0`` raises ``ValueError: unsupported device cuda:0``.
+    """
+    kind, idx = normalize_device_for_asr(device)
+    if kind == "cuda":
+        return "cuda", int(idx or 0)
+    return kind, 0
+
+
+def whisperx_torch_device(device: str | None = "auto") -> str:
+    """Device string for pyannote / torch ``.to(device)`` (``cuda:0``, ``cpu``, ``mps``)."""
+    kind, idx = normalize_device_for_asr(device)
+    if kind == "cuda":
+        return f"cuda:{idx or 0}"
+    return kind

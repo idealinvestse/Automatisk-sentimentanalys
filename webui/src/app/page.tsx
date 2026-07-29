@@ -9,14 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
 import { CallsTable } from "@/components/calls-table";
-import { useHealth } from "@/hooks/use-health";
+import { isApiConnected, useHealth } from "@/hooks/use-health";
 import { useDemoReports } from "@/hooks/use-demo-reports";
 import { summarizeKpis } from "@/lib/mock-data";
 import { extractCustomerEffort, extractCoaching, extractUpsell, extractResolutionProbability } from "@/lib/real-data";
 
 export default function OverviewPage() {
   const router = useRouter();
-  const { data: connected } = useHealth();
+  const { data: health } = useHealth();
+  const connected = isApiConnected(health);
   const { calls, reports, isLoading, isError, errorCount } = useDemoReports();
   const kpis = summarizeKpis(calls);
 

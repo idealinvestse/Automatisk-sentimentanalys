@@ -1,0 +1,5733 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Swedish Sentiment API",
+    "description": "REST API for Swedish sentiment analysis, ASR transcription, call-center conversation analysis, and batch processing.",
+    "version": "0.4.1"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health",
+        "description": "Simple health check endpoint.\n\nReturns:\n    ``{\"status\": \"ok\"}`` when the service is running.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Metrics",
+        "description": "Prometheus metrics endpoint (requires ``X-API-Key`` when auth is enabled).",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/status/processes": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "List Process Events",
+        "description": "Return recent process status events (filterable for ops dashboard).",
+        "operationId": "list_process_events_status_processes_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "component",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Component"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO timestamp lower bound",
+              "title": "Since"
+            },
+            "description": "ISO timestamp lower bound"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Process Events Status Processes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Job Status",
+        "description": "Live status summary for a single job_id.",
+        "operationId": "job_status_status_jobs__job_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Job Status Status Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/health/detail": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Health Detail",
+        "description": "Extended health with component availability.",
+        "operationId": "health_detail_status_health_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Detail Status Health Detail Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/analyze": {
+      "post": {
+        "tags": [
+          "Sentiment"
+        ],
+        "summary": "Analyze",
+        "description": "Analyze sentiment of Swedish texts.",
+        "operationId": "analyze_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/transcription/jobs": {
+      "get": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "List Transcription Jobs",
+        "description": "List recent transcription jobs (newest first).",
+        "operationId": "list_transcription_jobs_transcription_jobs_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeJobListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transcription/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Get Transcription Job",
+        "description": "Return status snapshot for a transcription job.",
+        "operationId": "get_transcription_job_transcription_jobs__job_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeJobStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transcription/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Cancel Transcription Job",
+        "description": "Request cancellation of a running transcription job.",
+        "operationId": "cancel_transcription_job_transcription_jobs__job_id__cancel_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeJobCancelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Upload Audio File",
+        "description": "Upload an audio file to the server for transcription.\n\nThe file is saved under API_MEDIA_ROOT/uploads/ with a unique filename.\nReturns the validated server-side path that can be used with POST /transcribe.\n\nSupports common audio formats: wav, mp3, m4a, flac, ogg, webm.\nMaximum file size: API_MAX_UPLOAD_SIZE_MB (default 200 MB).\nOld files are cleaned up after API_UPLOAD_RETENTION_DAYS (default 7 days).",
+        "operationId": "upload_audio_file_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_audio_file_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/transcribe": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Transcribe",
+        "description": "Transcribe an audio file using ASR.",
+        "operationId": "transcribe_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscribeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/batch_transcribe": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Batch Transcribe",
+        "description": "Transcribe multiple audio files, optionally in parallel.",
+        "operationId": "batch_transcribe_batch_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchTranscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchTranscribeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/analyze_conversation": {
+      "post": {
+        "tags": [
+          "Conversation"
+        ],
+        "summary": "Analyze Conversation",
+        "description": "Transcribe a call and run sentiment analysis per segment.",
+        "operationId": "analyze_conversation_analyze_conversation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeConversationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/batch_analyze_conversation": {
+      "post": {
+        "tags": [
+          "Conversation"
+        ],
+        "summary": "Batch Analyze Conversation",
+        "description": "Analyze sentiment for multiple conversation audio files.",
+        "operationId": "batch_analyze_conversation_batch_analyze_conversation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAnalyzeConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchAnalyzeConversationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/analyze_pipeline": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Analyze Pipeline",
+        "description": "Run the full call analysis pipeline on pre-transcribed segments.",
+        "operationId": "analyze_pipeline_analyze_pipeline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/analyze_pipeline/partial": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Analyze Pipeline Partial",
+        "description": "Incremental local analysis with optional holistic LLM reconciliation.",
+        "operationId": "analyze_pipeline_partial_analyze_pipeline_partial_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartialPipelineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/analyze_pipeline/compare": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Analyze Pipeline Compare",
+        "description": "Run the same segments through up to 3 LLM models for side-by-side comparison.",
+        "operationId": "analyze_pipeline_compare_analyze_pipeline_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineCompareResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/agent_performance/{agent_id}": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Agent Performance",
+        "description": "Get pre-computed/cached agent performance aggregates (Fas 4.5.1 + 4.5.2).",
+        "operationId": "get_agent_performance_agent_performance__agent_id__post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPerformanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPerformanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/semantic": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Semantic Search",
+        "description": "Hybrid semantic + keyword search over provided calls (Fas 4.3.2 + 4.5.2).",
+        "operationId": "semantic_search_search_semantic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/insights/hot_topics": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Hot Topics",
+        "description": "Get cached hot topics and trends (Fas 4.3.1 + 4.5.2).",
+        "operationId": "get_hot_topics_insights_hot_topics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HotTopicsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotTopicsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/qa/score": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Qa Score",
+        "description": "Run QA scoring on segments (Fas 4.2 + 4.5.2).",
+        "operationId": "get_qa_score_qa_score_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QAScoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAScoreResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/alerts": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Alerts",
+        "description": "Get alerts from per-call results or aggregate trends (Fas 4.4.2 + 4.5.2).",
+        "operationId": "get_alerts_alerts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/scan_process": {
+      "post": {
+        "tags": [
+          "Scan"
+        ],
+        "summary": "Scan Process",
+        "description": "Scan a directory and process new/changed audio files incrementally.\n\nTracks processed files via an optional state JSON file so that re-runs\nonly process files that are new or have been modified since the last run.\n\n**Race-condition fix:** State is written to disk after *each batch*\n(not only at the end) so that progress is preserved if the process is\ninterrupted mid-run.\n\nArgs:\n    req: Scan parameters including directory, pattern, batch size,\n         workers, and ASR/sentiment settings.\n\nReturns:\n    Per-file results, counts, and a UTC timestamp.",
+        "operationId": "scan_process_scan_process_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanProcessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanProcessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/ws/transcription/ticket": {
+      "get": {
+        "tags": [
+          "Transcription WebSocket"
+        ],
+        "summary": "Get Ws Ticket",
+        "description": "Issue a short-lived WebSocket authentication ticket.\n\nBrowsers cannot send custom headers (X-API-Key) on WebSocket handshake.\nThis endpoint (protected by normal auth) returns a token that can be\npassed as a query parameter (?token=) to the WebSocket endpoint.\n\nTickets expire after 5 minutes. With ``API_USE_REDIS_CACHE=true`` the\nstore is shared across uvicorn workers.",
+        "operationId": "get_ws_ticket_ws_transcription_ticket_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Ws Ticket Ws Transcription Ticket Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/alerting/status": {
+      "get": {
+        "tags": [
+          "alerting"
+        ],
+        "summary": "Get current webhook and circuit breaker status",
+        "description": "Return current alerting/webhook health.",
+        "operationId": "get_alerting_status_alerting_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Alerting Status Alerting Status Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/alerting/reset-circuit-breaker": {
+      "post": {
+        "tags": [
+          "alerting"
+        ],
+        "summary": "Reset the webhook circuit breaker",
+        "description": "Manually reset the circuit breaker (ops / testing).",
+        "operationId": "reset_circuit_breaker_alerting_reset_circuit_breaker_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reset Circuit Breaker Alerting Reset Circuit Breaker Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/edge/analyze-text": {
+      "post": {
+        "tags": [
+          "Edge"
+        ],
+        "summary": "Analyze Text Edge",
+        "description": "Run offline sentiment + heuristic intent on a single text string.\n\nEquivalent to `sentimentanalys edge-analyze --text ...`.\nNo LLM, no diarization, no Fas 4 — lightweight and offline-first.",
+        "operationId": "analyze_text_edge_edge_analyze_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdgeTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EdgeAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/edge/analyze-segments": {
+      "post": {
+        "tags": [
+          "Edge"
+        ],
+        "summary": "Analyze Segments Edge",
+        "description": "Run offline analysis on pre-transcribed segments.\n\nEquivalent to `sentimentanalys edge-analyze` on segment input.\nApplies early PII redaction (callcenter profile) + sentiment + heuristic intent.",
+        "operationId": "analyze_segments_edge_edge_analyze_segments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdgeSegmentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EdgeAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActiveListeningResult": {
+        "properties": {
+          "listening_score": {
+            "type": "number",
+            "title": "Listening Score",
+            "default": 50.0
+          },
+          "backchannel_count": {
+            "type": "integer",
+            "title": "Backchannel Count",
+            "default": 0
+          },
+          "speaker_balance": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Speaker Balance"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "tips": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tips"
+          }
+        },
+        "type": "object",
+        "title": "ActiveListeningResult",
+        "description": "Output from the `active_listening` analyzer."
+      },
+      "AgentPerformanceRequest": {
+        "properties": {
+          "reanalyze": {
+            "type": "boolean",
+            "title": "Reanalyze",
+            "description": "Force re-analysis of all calls; default uses per-call report cache",
+            "default": false
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          },
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List",
+            "description": "List of segment lists (one per call)"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id",
+            "description": "Agent identifier to aggregate for"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window",
+            "description": "Time window e.g. 7d, 30d",
+            "default": "7d"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list",
+          "agent_id"
+        ],
+        "title": "AgentPerformanceRequest",
+        "description": "Request for /agent_performance endpoint. Provide segments for one or more calls."
+      },
+      "AgentPerformanceResponse": {
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agent_id",
+          "metrics",
+          "timestamp"
+        ],
+        "title": "AgentPerformanceResponse"
+      },
+      "AlertsRequest": {
+        "properties": {
+          "reanalyze": {
+            "type": "boolean",
+            "title": "Reanalyze",
+            "description": "Force re-analysis of all calls; default uses per-call report cache",
+            "default": false
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          },
+          "segments_list": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segments List"
+          },
+          "aggregate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "title": "AlertsRequest"
+      },
+      "AlertsResponse": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Alerts"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerts",
+          "timestamp"
+        ],
+        "title": "AlertsResponse"
+      },
+      "AnalyzeConversationRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Provider",
+            "description": "ASR provider: local (default) | cloud (Deepgram, opt-in)",
+            "default": "local"
+          },
+          "cloud_fallback_local": {
+            "type": "boolean",
+            "title": "Cloud Fallback Local",
+            "description": "Fall back to local ASR if cloud fails (default off)",
+            "default": false
+          },
+          "audio_path": {
+            "type": "string",
+            "title": "Audio Path",
+            "description": "Path to audio file accessible by the server"
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "return_all_scores": {
+            "type": "boolean",
+            "title": "Return All Scores",
+            "default": true
+          },
+          "use_full_pipeline": {
+            "type": "boolean",
+            "title": "Use Full Pipeline",
+            "description": "Use CallAnalysisPipeline (PII, QA, agent metrics) instead of light transcribe+sentiment path",
+            "default": false
+          },
+          "sentiment_profile": {
+            "type": "string",
+            "title": "Sentiment Profile",
+            "description": "Sentiment profile for light path (call, callcenter, default, ...)",
+            "default": "callcenter"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model",
+            "description": "Optional override for sentiment model"
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_path"
+        ],
+        "title": "AnalyzeConversationRequest"
+      },
+      "AnalyzeConversationResponse": {
+        "properties": {
+          "transcript": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transcript"
+          },
+          "segment_sentiments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentSentiment"
+            },
+            "type": "array",
+            "title": "Segment Sentiments"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "pipeline_results": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Results",
+            "description": "Full analyzer output when use_full_pipeline=True (agent_performance, qa, pii_redaction, ...)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transcript",
+          "segment_sentiments",
+          "meta",
+          "timestamp"
+        ],
+        "title": "AnalyzeConversationResponse"
+      },
+      "AnalyzeRequest": {
+        "properties": {
+          "texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Texts",
+            "description": "List of texts to analyze"
+          },
+          "datatype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Datatype",
+            "description": "Data type: post, comment, article, review, ..."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Source: forum, magazine, news, social, ..."
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile",
+            "description": "Explicit profile name to use"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Optional model override"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device",
+            "description": "Device: auto, cpu, cuda, cuda:0, mps",
+            "default": "auto"
+          },
+          "batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "default": 16
+          },
+          "return_all_scores": {
+            "type": "boolean",
+            "title": "Return All Scores",
+            "default": false
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4096.0,
+                "minimum": 8.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          },
+          "clean": {
+            "type": "boolean",
+            "title": "Clean",
+            "default": true
+          },
+          "normalize": {
+            "type": "boolean",
+            "title": "Normalize",
+            "default": true
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File",
+            "description": "Path to Swedish lexicon (CSV/TSV) with columns term|word and polarity|score|sentiment"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "description": "Blend weight [0..1]",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "texts"
+        ],
+        "title": "AnalyzeRequest"
+      },
+      "AnalyzeResponse": {
+        "properties": {
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "results": {
+            "items": {},
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meta",
+          "timestamp",
+          "results"
+        ],
+        "title": "AnalyzeResponse"
+      },
+      "AnalyzerResults": {
+        "properties": {
+          "emotion": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EmotionSegmentResult"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emotion"
+          },
+          "aspect": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AspectItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aspect"
+          },
+          "aspect_claims": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AspectItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aspect Claims",
+            "description": "Primary product unit: aspect claim charts with evidence"
+          },
+          "derived_call_sentiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DerivedCallSentiment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trajectory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrajectoryResult"
+              },
+              {
+                "$ref": "#/components/schemas/UnavailableResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trajectory"
+          },
+          "root_cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RootCauseResult"
+              },
+              {
+                "$ref": "#/components/schemas/UnavailableResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause"
+          },
+          "actionable_coaching": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoachingResult"
+              },
+              {
+                "$ref": "#/components/schemas/UnavailableResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actionable Coaching"
+          },
+          "customer_effort": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomerEffortResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_listening": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveListeningResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "empathy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmpathyResult"
+              },
+              {
+                "$ref": "#/components/schemas/UnavailableResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empathy"
+          },
+          "resolution_probability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolutionProbabilityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "multi_turn_journey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MultiTurnJourneyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upsell_opportunity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpsellResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dialect_sensitivity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DialectSensitivityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compliance_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComplianceRiskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleClassifierResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "predictive": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictiveResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_performance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Performance"
+          },
+          "qa": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa"
+          },
+          "agent_assessment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Assessment"
+          },
+          "agent_assessment_local": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Assessment Local"
+          },
+          "customer_metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Metrics"
+          },
+          "pii_redaction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pii Redaction"
+          },
+          "alerts": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alerts"
+          },
+          "llm_judge": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Judge"
+          },
+          "override_provenance": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Provenance"
+          },
+          "deep_path_ccp": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Path Ccp"
+          },
+          "degradation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradation"
+          },
+          "partial": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial"
+          },
+          "analyzer_routing": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyzer Routing"
+          }
+        },
+        "type": "object",
+        "title": "AnalyzerResults",
+        "description": "Typed view of `PipelineResponse.results`.\n\nAll fields are optional because analyzers may be skipped (profile config,\nLLM deep path, or graceful degradation). Consumers should null-check each\nfield before rendering."
+      },
+      "AspectItem": {
+        "properties": {
+          "aspect": {
+            "type": "string",
+            "title": "Aspect"
+          },
+          "sentiment": {
+            "type": "string",
+            "title": "Sentiment",
+            "description": "positive | negative | neutral"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "evidence_spans": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Spans",
+            "description": "Shared EvidenceSpan dicts (quote + optional timing)"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "local_absa | llm_refined"
+          },
+          "related_to": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aspect",
+          "sentiment"
+        ],
+        "title": "AspectItem",
+        "description": "One aspect-based sentiment item from the `aspect` analyzer or claim chart."
+      },
+      "BatchAnalyzeConversationItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "segment_sentiments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SegmentSentiment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Sentiments"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "BatchAnalyzeConversationItem"
+      },
+      "BatchAnalyzeConversationRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Provider",
+            "description": "ASR provider: local (default) | cloud (Deepgram, opt-in)",
+            "default": "local"
+          },
+          "cloud_fallback_local": {
+            "type": "boolean",
+            "title": "Cloud Fallback Local",
+            "description": "Fall back to local ASR if cloud fails (default off)",
+            "default": false
+          },
+          "audio_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Paths"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory"
+          },
+          "glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glob"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "sentiment_profile": {
+            "type": "string",
+            "title": "Sentiment Profile",
+            "description": "Sentiment profile for light path",
+            "default": "callcenter"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "sentiment_batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Sentiment Batch Size",
+            "description": "Batch size for sentiment inference",
+            "default": 16
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "BatchAnalyzeConversationRequest"
+      },
+      "BatchAnalyzeConversationResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BatchAnalyzeConversationItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "timestamp"
+        ],
+        "title": "BatchAnalyzeConversationResponse"
+      },
+      "BatchTranscribeItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "BatchTranscribeItem"
+      },
+      "BatchTranscribeRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Provider",
+            "description": "ASR provider: local (default) | cloud (Deepgram, opt-in)",
+            "default": "local"
+          },
+          "cloud_fallback_local": {
+            "type": "boolean",
+            "title": "Cloud Fallback Local",
+            "description": "Fall back to local ASR if cloud fails (default off)",
+            "default": false
+          },
+          "audio_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Paths"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory"
+          },
+          "glob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glob",
+            "description": "Glob pattern within directory, e.g. **/*.wav"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "BatchTranscribeRequest"
+      },
+      "BatchTranscribeResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BatchTranscribeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "timestamp"
+        ],
+        "title": "BatchTranscribeResponse"
+      },
+      "Body_upload_audio_file_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_audio_file_upload_post"
+      },
+      "CoachingInsightItem": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "description": "high | medium | low"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          },
+          "evidence": {
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "priority",
+          "recommendation"
+        ],
+        "title": "CoachingInsightItem"
+      },
+      "CoachingResult": {
+        "properties": {
+          "coaching_insights": {
+            "items": {
+              "$ref": "#/components/schemas/CoachingInsightItem"
+            },
+            "type": "array",
+            "title": "Coaching Insights"
+          },
+          "top_recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Recommendation"
+          },
+          "insight_count": {
+            "type": "integer",
+            "title": "Insight Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "CoachingResult",
+        "description": "Output from the `actionable_coaching` analyzer."
+      },
+      "ComplianceRiskResult": {
+        "properties": {
+          "overall_risk_level": {
+            "type": "string",
+            "title": "Overall Risk Level",
+            "description": "low | medium | high",
+            "default": "low"
+          },
+          "flagged_segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Flagged Segments"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "title": "ComplianceRiskResult",
+        "description": "Output from the `compliance_risk` analyzer."
+      },
+      "CustomerEffortResult": {
+        "properties": {
+          "overall_ces": {
+            "type": "number",
+            "title": "Overall Ces",
+            "default": 0.0
+          },
+          "scale": {
+            "type": "string",
+            "title": "Scale",
+            "default": "0-100 (högre = mer effort/frustration)"
+          },
+          "per_segment": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerEffortSegment"
+            },
+            "type": "array",
+            "title": "Per Segment"
+          },
+          "coaching_tips": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Coaching Tips"
+          }
+        },
+        "type": "object",
+        "title": "CustomerEffortResult",
+        "description": "Output from the `customer_effort` analyzer."
+      },
+      "CustomerEffortSegment": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "start": {
+            "type": "number",
+            "title": "Start",
+            "default": 0.0
+          },
+          "end": {
+            "type": "number",
+            "title": "End",
+            "default": 0.0
+          },
+          "effort_score": {
+            "type": "number",
+            "title": "Effort Score",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "CustomerEffortSegment"
+      },
+      "DerivedCallSentiment": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": "neutral"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "default": 0.0
+          },
+          "aspect_count": {
+            "type": "integer",
+            "title": "Aspect Count",
+            "default": 0
+          },
+          "by_aspect": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "By Aspect"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "derived_from_aspects"
+          }
+        },
+        "type": "object",
+        "title": "DerivedCallSentiment",
+        "description": "Call-level sentiment derived from aspect claims (secondary to aspects)."
+      },
+      "DialectSensitivityResult": {
+        "properties": {
+          "dialect_risk_level": {
+            "type": "string",
+            "title": "Dialect Risk Level",
+            "description": "low | medium | high",
+            "default": "low"
+          },
+          "flagged_segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Flagged Segments"
+          },
+          "total_dialect_hits": {
+            "type": "integer",
+            "title": "Total Dialect Hits",
+            "default": 0
+          },
+          "slang_count": {
+            "type": "integer",
+            "title": "Slang Count",
+            "default": 0
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "title": "DialectSensitivityResult",
+        "description": "Output from the `dialect_sensitivity` analyzer."
+      },
+      "EdgeAnalysisResult": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "title": "Profile"
+          },
+          "offline": {
+            "type": "boolean",
+            "title": "Offline",
+            "default": true
+          },
+          "llm_used": {
+            "type": "boolean",
+            "title": "Llm Used",
+            "default": false
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeSegmentResult"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "EdgeAnalysisResult"
+      },
+      "EdgeSegmentResult": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "sentiment_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Label"
+          },
+          "sentiment_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Score"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "has_negation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Negation"
+          },
+          "aspects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Aspects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "EdgeSegmentResult"
+      },
+      "EdgeSegmentsRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Segments",
+            "description": "Pre-transcribed segments with 'text' and optionally 'speaker'"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Sentiment profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "EdgeSegmentsRequest",
+        "description": "Multi-segment offline analysis request (pre-transcribed)."
+      },
+      "EdgeTextRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Text to analyze offline"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Sentiment profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "EdgeTextRequest",
+        "description": "Single-text offline analysis request."
+      },
+      "EmotionSegmentResult": {
+        "properties": {
+          "primary": {
+            "type": "string",
+            "title": "Primary",
+            "description": "Primary emotion label (frustration, ilska, besvikelse, förvirring, tillfredsställelse, neutral, oro, glädje)"
+          },
+          "scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Scores",
+            "description": "Score per emotion label"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          }
+        },
+        "type": "object",
+        "required": [
+          "primary"
+        ],
+        "title": "EmotionSegmentResult",
+        "description": "Per-segment emotion output from the `emotion` analyzer."
+      },
+      "EmpathyResult": {
+        "properties": {
+          "overall_empathy": {
+            "type": "number",
+            "title": "Overall Empathy",
+            "default": 50.0
+          },
+          "scale": {
+            "type": "string",
+            "title": "Scale",
+            "default": "0-100 (högre = bättre empati)"
+          },
+          "per_segment": {
+            "items": {
+              "$ref": "#/components/schemas/EmpathySegment"
+            },
+            "type": "array",
+            "title": "Per Segment"
+          },
+          "coaching_tips": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Coaching Tips"
+          }
+        },
+        "type": "object",
+        "title": "EmpathyResult",
+        "description": "Output from the `empathy` analyzer."
+      },
+      "EmpathySegment": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "empathy_score": {
+            "type": "number",
+            "title": "Empathy Score",
+            "default": 0.0
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "title": "EmpathySegment"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HotTopicsRequest": {
+        "properties": {
+          "reanalyze": {
+            "type": "boolean",
+            "title": "Reanalyze",
+            "description": "Force re-analysis of all calls; default uses per-call report cache",
+            "default": false
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          },
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List"
+          },
+          "window": {
+            "type": "string",
+            "title": "Window",
+            "default": "7d"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list"
+        ],
+        "title": "HotTopicsRequest"
+      },
+      "HotTopicsResponse": {
+        "properties": {
+          "hot_topics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hot Topics"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hot_topics",
+          "meta",
+          "timestamp"
+        ],
+        "title": "HotTopicsResponse"
+      },
+      "JourneyStage": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "start": {
+            "type": "number",
+            "title": "Start",
+            "default": 0.0
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "text_snippet": {
+            "type": "string",
+            "title": "Text Snippet",
+            "default": ""
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "title": "JourneyStage"
+      },
+      "ModelCompareResult": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "processing_time_s": {
+            "type": "number",
+            "title": "Processing Time S"
+          },
+          "llm_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Cost Usd"
+          },
+          "qa_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Score"
+          },
+          "sentiment_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Label"
+          },
+          "llm_trajectory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Trajectory"
+          },
+          "response": {
+            "$ref": "#/components/schemas/PipelineResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "processing_time_s",
+          "response"
+        ],
+        "title": "ModelCompareResult",
+        "description": "Single model run in a compare batch."
+      },
+      "MultiTurnJourneyResult": {
+        "properties": {
+          "journey_stages": {
+            "items": {
+              "$ref": "#/components/schemas/JourneyStage"
+            },
+            "type": "array",
+            "title": "Journey Stages"
+          },
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved",
+            "default": false
+          },
+          "unresolved_count": {
+            "type": "integer",
+            "title": "Unresolved Count",
+            "default": 0
+          },
+          "key_turning_points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Key Turning Points"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "title": "MultiTurnJourneyResult",
+        "description": "Output from the `multi_turn_journey` analyzer."
+      },
+      "PartialPipelineRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "New or windowed ASR segments since last partial update"
+          },
+          "previous_results": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Results",
+            "description": "Prior partial results to merge (aspect/sentiment lists append)"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "selected_analyzers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Analyzers"
+          },
+          "reconcile": {
+            "type": "boolean",
+            "title": "Reconcile",
+            "description": "If true, run holistic LLM reconciliation (hangup / periodic)",
+            "default": false
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "PartialPipelineRequest",
+        "description": "Incremental / partial analysis (streaming-friendly local path)."
+      },
+      "PipelineCompareRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "ASR segments with 'text' and optionally 'speaker' keys"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Models",
+            "description": "OpenRouter model slugs (max 3)"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Analysis profile",
+            "default": "callcenter"
+          },
+          "selected_analyzers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Analyzers"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path for comparison",
+            "default": true
+          },
+          "cost_budget_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Budget Usd",
+            "description": "Total USD budget across all model runs (default: profile cost_budget_per_call)"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key"
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments",
+          "models"
+        ],
+        "title": "PipelineCompareRequest",
+        "description": "Run the same segments through multiple LLM models for A/B comparison."
+      },
+      "PipelineCompareResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "results": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelCompareResult"
+            },
+            "type": "object",
+            "title": "Results"
+          },
+          "total_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost Usd"
+          },
+          "total_processing_time_s": {
+            "type": "number",
+            "title": "Total Processing Time S"
+          },
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "budget_exceeded": {
+            "type": "boolean",
+            "title": "Budget Exceeded",
+            "default": false
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "results",
+          "total_processing_time_s",
+          "timestamp"
+        ],
+        "title": "PipelineCompareResponse",
+        "description": "Side-by-side pipeline results for multiple LLM models."
+      },
+      "PipelineRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "ASR segments with 'text' and optionally 'speaker' keys"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Analysis profile (callcenter, sales, complaint, support, teknisk_support, ...)",
+            "default": "default"
+          },
+          "selected_analyzers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Analyzers",
+            "description": "Explicit analyzer subset (overrides profile default_selected; deps auto-resolved)"
+          },
+          "async_analyzers": {
+            "type": "boolean",
+            "title": "Async Analyzers",
+            "description": "Run independent analyzers in parallel within dependency levels",
+            "default": false
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model",
+            "description": "Optional sentiment model override"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "PipelineRequest",
+        "description": "Request for the full call analysis pipeline."
+      },
+      "PipelineResponse": {
+        "properties": {
+          "sentiment_results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sentiment Results"
+          },
+          "intent_results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Intent Results"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          },
+          "topics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Topics"
+          },
+          "insights": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Insights"
+          },
+          "risks": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Risks"
+          },
+          "processing_time_s": {
+            "type": "number",
+            "title": "Processing Time S"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "llm": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Llm",
+            "description": "Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)"
+          },
+          "results": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Results",
+            "description": "Complete analyzer results (Fas4: agent_performance, qa, agent_assessment, customer_metrics, ...). Use this for new call center features."
+          },
+          "analyzer_results": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyzerResults"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Typed view of `results` (Fas 5). Null when no analyzers ran or for backward-compatible clients."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentiment_results",
+          "intent_results",
+          "summary",
+          "topics",
+          "insights",
+          "risks",
+          "processing_time_s",
+          "timestamp"
+        ],
+        "title": "PipelineResponse",
+        "description": "Response from the full call analysis pipeline.\n\nFas 4 additions: `results` contains the full analyzer output dict (including\n\"agent_performance\", \"qa\"/\"compliance_qa\", \"agent_assessment\", \"customer_metrics\",\n\"agent_assessment_local\" etc.). This makes the new call-center features\navailable over the API as required by the plan.\n\nFas 5: `analyzer_results` provides a typed view of the same data for\ndocumentation and type-safe consumers. `results` stays `dict[str, Any]`\nfor backward compatibility."
+      },
+      "PredictiveResult": {
+        "properties": {
+          "churn_risk": {
+            "type": "number",
+            "title": "Churn Risk",
+            "default": 0.0
+          },
+          "escalation_risk": {
+            "type": "number",
+            "title": "Escalation Risk",
+            "default": 0.0
+          },
+          "satisfaction_score": {
+            "type": "number",
+            "title": "Satisfaction Score",
+            "default": 0.5
+          },
+          "risk_factors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risk Factors"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level",
+            "description": "low | medium | high | critical",
+            "default": "low"
+          },
+          "recommended_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Action"
+          }
+        },
+        "type": "object",
+        "title": "PredictiveResult",
+        "description": "Output from the `predictive` analyzer (RiskAnalyzer)."
+      },
+      "QAScoreRequest": {
+        "properties": {
+          "reanalyze": {
+            "type": "boolean",
+            "title": "Reanalyze",
+            "description": "Force re-analysis of all calls; default uses per-call report cache",
+            "default": false
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          },
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "QAScoreRequest"
+      },
+      "QAScoreResponse": {
+        "properties": {
+          "qa": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Qa"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "qa",
+          "timestamp"
+        ],
+        "title": "QAScoreResponse"
+      },
+      "ResolutionProbabilityResult": {
+        "properties": {
+          "resolution_probability": {
+            "type": "number",
+            "title": "Resolution Probability",
+            "default": 50.0
+          },
+          "confidence": {
+            "type": "integer",
+            "title": "Confidence",
+            "default": 30
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action",
+            "default": ""
+          },
+          "factors": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Factors"
+          }
+        },
+        "type": "object",
+        "title": "ResolutionProbabilityResult",
+        "description": "Output from the `resolution_probability` analyzer."
+      },
+      "RoleClassifierResult": {
+        "properties": {
+          "roles": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Roles",
+            "description": "speaker -> agent|customer"
+          },
+          "talk_ratios": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Talk Ratios"
+          },
+          "question_density": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Question Density"
+          },
+          "lexical_formality": {
+            "type": "number",
+            "title": "Lexical Formality",
+            "default": 0.0
+          },
+          "intervention_count": {
+            "type": "integer",
+            "title": "Intervention Count",
+            "default": 0
+          },
+          "sentiment_variance": {
+            "type": "number",
+            "title": "Sentiment Variance",
+            "default": 0.0
+          },
+          "num_agent_turns": {
+            "type": "integer",
+            "title": "Num Agent Turns",
+            "default": 0
+          },
+          "num_customer_turns": {
+            "type": "integer",
+            "title": "Num Customer Turns",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RoleClassifierResult",
+        "description": "Output from the `role` analyzer."
+      },
+      "RootCauseItem": {
+        "properties": {
+          "cause": {
+            "type": "string",
+            "title": "Cause"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 1
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cause"
+        ],
+        "title": "RootCauseItem"
+      },
+      "RootCauseResult": {
+        "properties": {
+          "root_causes": {
+            "items": {
+              "$ref": "#/components/schemas/RootCauseItem"
+            },
+            "type": "array",
+            "title": "Root Causes"
+          },
+          "top_root_cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Root Cause"
+          },
+          "evidence_examples": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evidence Examples"
+          },
+          "overall_risk": {
+            "type": "string",
+            "title": "Overall Risk",
+            "description": "low | medium | high",
+            "default": "low"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "title": "RootCauseResult",
+        "description": "Output from the `root_cause` analyzer."
+      },
+      "ScanItem": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "batch_index": {
+            "type": "integer",
+            "title": "Batch Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "ok",
+          "batch_index"
+        ],
+        "title": "ScanItem"
+      },
+      "ScanProcessRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Provider",
+            "description": "ASR provider: local (default) | cloud (Deepgram, opt-in)",
+            "default": "local"
+          },
+          "cloud_fallback_local": {
+            "type": "boolean",
+            "title": "Cloud Fallback Local",
+            "description": "Fall back to local ASR if cloud fails (default off)",
+            "default": false
+          },
+          "directory": {
+            "type": "string",
+            "title": "Directory",
+            "description": "Directory to scan"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern",
+            "description": "Glob pattern relative to directory (e.g., **/*.wav)"
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "default": true
+          },
+          "batch_size": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "description": "Number of files per processing batch",
+            "default": 4
+          },
+          "max_files": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Files"
+          },
+          "state_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State File",
+            "description": "Optional JSON file to track processed files"
+          },
+          "workers": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Workers",
+            "description": "Parallel workers per batch",
+            "default": 1
+          },
+          "worker_timeout": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worker Timeout",
+            "description": "Per-file worker timeout in seconds",
+            "default": 300.0
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "transcribe | analyze_conversation",
+            "default": "transcribe"
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": false
+          },
+          "use_full_pipeline": {
+            "type": "boolean",
+            "title": "Use Full Pipeline",
+            "description": "When operation=analyze_conversation, use full CallAnalysisPipeline per file",
+            "default": false
+          },
+          "sentiment_profile": {
+            "type": "string",
+            "title": "Sentiment Profile",
+            "description": "Sentiment profile for light analyze path",
+            "default": "callcenter"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "sentiment_batch_size": {
+            "type": "integer",
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Sentiment Batch Size",
+            "description": "Batch size for sentiment inference",
+            "default": 16
+          },
+          "lexicon_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexicon File"
+          },
+          "lexicon_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lexicon Weight",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "directory"
+        ],
+        "title": "ScanProcessRequest"
+      },
+      "ScanProcessResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScanItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "ok",
+          "failed",
+          "total",
+          "skipped",
+          "timestamp"
+        ],
+        "title": "ScanProcessResponse"
+      },
+      "SegmentSentiment": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "negativ": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negativ"
+          },
+          "neutral": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neutral"
+          },
+          "positiv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positiv"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "intent_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "start",
+          "end",
+          "text",
+          "label",
+          "score"
+        ],
+        "title": "SegmentSentiment"
+      },
+      "SemanticSearchRequest": {
+        "properties": {
+          "reanalyze": {
+            "type": "boolean",
+            "title": "Reanalyze",
+            "description": "Force re-analysis of all calls; default uses per-call report cache",
+            "default": false
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "description": "Enable LLM holistic analysis",
+            "default": false
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model",
+            "description": "Override LLM model slug"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "description": "Force deep LLM path",
+            "default": false
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key",
+            "description": "Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY."
+          },
+          "provider": {
+            "type": "string",
+            "pattern": "^(openrouter|groq)$",
+            "title": "Provider",
+            "description": "LLM provider: openrouter (default) | groq",
+            "default": "openrouter"
+          },
+          "groq_eu_residency": {
+            "type": "boolean",
+            "title": "Groq Eu Residency",
+            "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
+            "default": false
+          },
+          "segments_list": {
+            "items": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Segments List",
+            "description": "List of calls to index/search over"
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments_list",
+          "query"
+        ],
+        "title": "SemanticSearchRequest"
+      },
+      "SemanticSearchResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "hits": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Hits"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "hits",
+          "meta",
+          "timestamp"
+        ],
+        "title": "SemanticSearchResponse"
+      },
+      "TrajectoryResult": {
+        "properties": {
+          "customer_sentiment_slope": {
+            "type": "number",
+            "title": "Customer Sentiment Slope",
+            "default": 0.0
+          },
+          "escalation_events": {
+            "type": "integer",
+            "title": "Escalation Events",
+            "default": 0
+          },
+          "escalation_event_details": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Escalation Event Details"
+          },
+          "peak_frustration_turn": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Frustration Turn"
+          },
+          "sentiment_trend": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Sentiment Trend"
+          }
+        },
+        "type": "object",
+        "title": "TrajectoryResult",
+        "description": "Output from the `trajectory` analyzer."
+      },
+      "TranscribeJobCancelResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "cancelled": {
+            "type": "boolean",
+            "title": "Cancelled"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "cancelled",
+          "timestamp"
+        ],
+        "title": "TranscribeJobCancelResponse"
+      },
+      "TranscribeJobListResponse": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Jobs"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "timestamp"
+        ],
+        "title": "TranscribeJobListResponse"
+      },
+      "TranscribeJobStatus": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "cancelled": {
+            "type": "boolean",
+            "title": "Cancelled",
+            "default": false
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "title": "TranscribeJobStatus"
+      },
+      "TranscribeRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "kb-whisper-large"
+          },
+          "backend": {
+            "type": "string",
+            "title": "Backend",
+            "description": "faster | transformers | whisperx (alignment + diarization)",
+            "default": "faster"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "auto"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "sv"
+          },
+          "beam_size": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Beam Size",
+            "default": 5
+          },
+          "vad": {
+            "type": "boolean",
+            "title": "Vad",
+            "default": true
+          },
+          "chunk_length_s": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 5.0,
+            "title": "Chunk Length S",
+            "default": 30
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision",
+            "description": "KB-Whisper revision: standard|strict|subtitle"
+          },
+          "diarize": {
+            "type": "boolean",
+            "title": "Diarize",
+            "description": "Run speaker diarization",
+            "default": false
+          },
+          "num_speakers": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Speakers",
+            "description": "Expected number of speakers (None=auto)"
+          },
+          "hotwords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotwords",
+            "description": "Domain-specific words to boost (callcenter terms etc.)"
+          },
+          "initial_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Prompt",
+            "description": "Conditioning prompt for ASR decoder"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Provider",
+            "description": "ASR provider: local (default) | cloud (Deepgram, opt-in)",
+            "default": "local"
+          },
+          "cloud_fallback_local": {
+            "type": "boolean",
+            "title": "Cloud Fallback Local",
+            "description": "Fall back to local ASR if cloud fails (default off)",
+            "default": false
+          },
+          "audio_path": {
+            "type": "string",
+            "title": "Audio Path",
+            "description": "Path to audio file accessible by the server"
+          },
+          "word_timestamps": {
+            "type": "boolean",
+            "title": "Word Timestamps",
+            "default": true
+          },
+          "preprocess": {
+            "type": "boolean",
+            "title": "Preprocess",
+            "description": "Enable audio preprocessing before ASR",
+            "default": false
+          },
+          "preprocess_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preprocess Mode",
+            "description": "Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD). Overrides legacy boolean when set."
+          },
+          "run_partial_analysis": {
+            "type": "boolean",
+            "title": "Run Partial Analysis",
+            "description": "After ASR, run incremental partial pipeline on transcript segments (local path)",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_path"
+        ],
+        "title": "TranscribeRequest"
+      },
+      "TranscribeResponse": {
+        "properties": {
+          "transcript": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transcript"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "partial_analysis": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Analysis",
+            "description": "Incremental partial pipeline snapshot when run_partial_analysis=true"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transcript",
+          "timestamp"
+        ],
+        "title": "TranscribeResponse"
+      },
+      "UnavailableResult": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unavailable",
+            "title": "Status",
+            "default": "unavailable"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": "requires_deep_path"
+          },
+          "analyzer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyzer"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "title": "UnavailableResult",
+        "description": "Honest degradation marker when deep path is required."
+      },
+      "UploadResponse": {
+        "properties": {
+          "audio_path": {
+            "type": "string",
+            "title": "Audio Path",
+            "description": "Validated server-side path to uploaded file"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original filename from upload"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "description": "File size in bytes"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_path",
+          "filename",
+          "size_bytes",
+          "timestamp"
+        ],
+        "title": "UploadResponse",
+        "description": "Response from POST /upload."
+      },
+      "UpsellOpportunity": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "start": {
+            "type": "number",
+            "title": "Start",
+            "default": 0.0
+          },
+          "end": {
+            "type": "number",
+            "title": "End",
+            "default": 0.0
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 0.0
+          },
+          "signals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "suggested_action": {
+            "type": "string",
+            "title": "Suggested Action",
+            "default": ""
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "UpsellOpportunity"
+      },
+      "UpsellResult": {
+        "properties": {
+          "opportunities": {
+            "items": {
+              "$ref": "#/components/schemas/UpsellOpportunity"
+            },
+            "type": "array",
+            "title": "Opportunities"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 0
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "title": "UpsellResult",
+        "description": "Output from the `upsell_opportunity` analyzer."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

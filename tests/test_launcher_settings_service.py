@@ -254,3 +254,17 @@ def test_config_to_env_dashboard_storage_secret(config_env: Path) -> None:
     env = config_to_env(cfg)
     assert env["DASHBOARD_STORAGE_SECRET"] == "dash-secret"
     assert "NICEGUI_STORAGE_SECRET" not in env
+
+
+def test_build_child_env_defaults_api_media_root(
+    config_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Launcher ensures uploads work even when media_root is empty in config."""
+    from launcher.env_builder import build_child_env
+
+    monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
+    cfg = UserConfig(paths={"app_root": str(config_env)}, runtime={"api": {"media_root": ""}})
+    env = build_child_env(cfg)
+    media = Path(env["API_MEDIA_ROOT"])
+    assert media == config_env / "media"
+    assert media.is_dir()

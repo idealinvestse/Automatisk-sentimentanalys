@@ -68,14 +68,173 @@ def test_install_requirements_fails_without_pyproject(tmp_path: Path) -> None:
 
 
 def test_install_requirements_uses_editable_extras(tmp_path: Path) -> None:
-    (tmp_path / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname='test'\n"
+        "[project.optional-dependencies]\n"
+        "min=['transformers>=4']\n"
+        "install=['pyyaml>=6']\n",
+        encoding="utf-8",
+    )
     python = venv_python_path(tmp_path)
 
-    with patch("src.install.provision._run_pip") as mock_pip:
+    with (
+        patch("src.install.provision._run_pip") as mock_pip,
+        patch("src.install.provision._nvidia_smi_available", return_value=False),
+        patch("src.install.provision.cleanup_pip_leftovers", return_value=[]),
+        patch("src.install.provision.probe_cuda_torch", return_value=None),
+    ):
         installed = install_requirements(tmp_path, python, InstallProfile.minimal)
 
     assert installed == ["min", "install"]
     assert mock_pip.call_args_list[-1][0][2] == ["install", "-e", ".[min,install]"]
+
+
+def test_install_requirements_adds_cuda_index_when_gpu_present(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname='test'\n"
+        "[project.optional-dependencies]\n"
+        "min=['transformers>=4']\n"
+        "install=['pyyaml>=6']\n",
+        encoding="utf-8",
+    )
+    python = venv_python_path(tmp_path)
+
+    with (
+        patch("src.install.provision._run_pip") as mock_pip,
+        patch("src.install.provision._nvidia_smi_available", return_value=True),
+        patch("src.install.provision.cleanup_pip_leftovers", return_value=[]),
+        patch("src.install.provision.probe_cuda_torch", return_value=None),
+    ):
+        install_requirements(tmp_path, python, InstallProfile.minimal)
+
+    args = mock_pip.call_args_list[-1][0][2]
+    assert args[:3] == ["install", "-e", ".[min,install]"]
+    assert "--extra-index-url" in args
+    assert "https://download.pytorch.org/whl/cu128" in args
+
+
+def test_install_requirements_skips_torch_replace_when_cuda_ok(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname='test'\n"
+        "[project.optional-dependencies]\n"
+        "min=['torch>=2.2','transformers>=4']\n"
+        "install=['pyyaml>=6','torchaudio>=2.2']\n",
+        encoding="utf-8",
+    )
+    python = venv_python_path(tmp_path)
+    cuda = {"torch": "2.11.0+cu128", "torchaudio": "2.11.0+cu128", "cuda": True}
+
+    with (
+        patch("src.install.provision._run_pip") as mock_pip,
+        patch("src.install.provision._nvidia_smi_available", return_value=True),
+        patch("src.install.provision.cleanup_pip_leftovers", return_value=[]),
+        patch("src.install.provision.probe_cuda_torch", return_value=cuda),
+    ):
+        install_requirements(tmp_path, python, InstallProfile.minimal)
+
+    pip_cmds = [call[0][2] for call in mock_pip.call_args_list]
+    assert ["install", "-e", ".", "--no-deps"] in pip_cmds
+    dep_cmd = next(c for c in pip_cmds if c[:1] == ["install"] and "-e" not in c and "-U" not in c)
+    assert "transformers>=4" in dep_cmd
+    assert "pyyaml>=6" in dep_cmd
+    assert not any(isinstance(x, str) and x.startswith("torch") for x in dep_cmd)
+
+
+def test_run_pip_appends_access_denied_hint() -> None:
+    from src.install.provision import _format_pip_failure
+
+    msg = _format_pip_failure(
+        ["install", "torch"],
+        1,
+        "OSError: [WinError 5] Access is denied: 'torch\\\\_C.pyd'",
+    )
+    assert "Access is denied" in msg
+    assert "launcher.ps1 provision" in msg
+    assert "WinError 5" in msg
+
+
+def test_run_pip_includes_stderr_on_failure(tmp_path: Path) -> None:
+    from src.install.provision import _run_pip
+
+    fake = tmp_path / "python.exe"
+    fake.write_text("", encoding="utf-8")
+    completed = type(
+        "Completed",
+        (),
+        {
+            "returncode": 1,
+            "stdout": "Building wheels...\n",
+            "stderr": "ERROR: Could not install packages due to an OSError: [WinError 5] Access is denied\n",
+        },
+    )()
+    with patch("src.install.provision.subprocess.run", return_value=completed) as mock_run:
+        with pytest.raises(RuntimeError, match="Access is denied") as exc_info:
+            _run_pip(fake, tmp_path, ["install", "-e", ".[api]"])
+    assert "exit 1" in str(exc_info.value)
+    assert mock_run.call_args.kwargs.get("capture_output") is True
+
+
+def test_cleanup_pip_leftovers_removes_tilde_dirs(tmp_path: Path) -> None:
+    from src.install.provision import cleanup_pip_leftovers
+
+    site = tmp_path / "site-packages"
+    site.mkdir()
+    (site / "~orch-2.11.0+cu128.dist-info").mkdir()
+    (site / "~unctorch").mkdir()
+    (site / "torch").mkdir()
+    removed = cleanup_pip_leftovers(site)
+    assert "~orch-2.11.0+cu128.dist-info" in removed
+    assert "~unctorch" in removed
+    assert (site / "torch").is_dir()
+    assert not (site / "~orch-2.11.0+cu128.dist-info").exists()
+
+
+def test_ensure_cuda_torch_skips_without_gpu(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.install.provision import ensure_cuda_torch
+
+    monkeypatch.delenv("SENTIMENT_TORCH_INDEX", raising=False)
+    with (
+        patch("src.install.provision._nvidia_smi_available", return_value=False),
+        patch("src.install.provision._run_pip") as mock_pip,
+    ):
+        assert ensure_cuda_torch(tmp_path, tmp_path / "python.exe") is None
+    mock_pip.assert_not_called()
+
+
+def test_ensure_cuda_torch_skips_when_already_ok(tmp_path: Path) -> None:
+    from src.install.provision import ensure_cuda_torch
+
+    with (
+        patch("src.install.provision._nvidia_smi_available", return_value=True),
+        patch(
+            "src.install.provision.probe_cuda_torch",
+            return_value={"torch": "2.11.0+cu128", "torchaudio": "2.11.0+cu128", "cuda": True},
+        ),
+        patch("src.install.provision._run_pip") as mock_pip,
+    ):
+        result = ensure_cuda_torch(tmp_path, tmp_path / "python.exe")
+    assert result == "already:2.11.0+cu128"
+    mock_pip.assert_not_called()
+
+
+def test_ensure_cuda_torch_installs_when_gpu_present(tmp_path: Path) -> None:
+    from src.install.provision import ensure_cuda_torch
+
+    with (
+        patch("src.install.provision._nvidia_smi_available", return_value=True),
+        patch("src.install.provision.probe_cuda_torch", return_value=None),
+        patch("src.install.provision.cleanup_pip_leftovers", return_value=[]),
+        patch("src.install.provision.site_packages_for_python", return_value=tmp_path),
+        patch("src.install.provision._run_pip") as mock_pip,
+    ):
+        index = ensure_cuda_torch(tmp_path, tmp_path / "python.exe")
+    assert index == "https://download.pytorch.org/whl/cu128"
+    assert mock_pip.call_args[0][2][:4] == [
+        "install",
+        "--upgrade",
+        "torch==2.8.0",
+        "torchaudio==2.8.0",
+    ]
 
 
 def test_run_provision_reports_pip_failure(tmp_path: Path) -> None:

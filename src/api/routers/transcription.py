@@ -10,13 +10,13 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..error_responses import PUBLIC_ERROR_DETAIL
 from ..helpers import asr_kwargs_from, transcribe_helper
-from ..path_validation import resolve_and_validate_audio_paths
+from ..path_validation import resolve_and_validate_audio_paths, validate_audio_path
 from ..router_errors import run_route
 from ..schemas import (
     BatchTranscribeItem,
@@ -103,7 +103,10 @@ async def cancel_transcription_job(job_id: str, request: Request) -> TranscribeJ
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_audio_file(file: UploadFile, request: Request) -> UploadResponse:
+async def upload_audio_file(
+    request: Request,
+    file: UploadFile = File(..., description="Audio file to upload"),
+) -> UploadResponse:
     """Upload an audio file to the server for transcription.
 
     The file is saved under API_MEDIA_ROOT/uploads/ with a unique filename.
@@ -174,12 +177,12 @@ async def upload_audio_file(file: UploadFile, request: Request) -> UploadRespons
 
     # Validate the saved file exists and is under media root
     try:
-        validated_path = resolve_and_validate_audio_paths([str(file_path)])[0]
+        validated_path = validate_audio_path(str(file_path))
     except ValueError as e:
         # Clean up if validation fails
         if file_path.exists():
             file_path.unlink()
-        raise HTTPException(status_code=400, detail=f"File validation failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"File validation failed: {str(e)}") from e
 
     return UploadResponse(
         audio_path=validated_path,

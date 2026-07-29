@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api/client";
 import type {
   DoneEvent,
   LogEvent,
+  PartialAnalysisEvent,
   ProgressEvent,
   StatusEvent,
   TranscriptionEvent,
@@ -17,17 +18,17 @@ const MAX_DELAY_MS = 30_000;
 const MAX_LOGS = 300;
 
 /**
- * Client for GET /ws/transcription with reconnect/backoff.
+ * Client for WS /ws/transcription with reconnect/backoff.
  *
- * Note: browsers cannot set custom headers (e.g. X-API-Key) on a WebSocket
- * handshake, so this only works out of the box when SENTIMENT_API_KEY / auth
- * is disabled on the backend.
+ * Auth: browsers cannot set X-API-Key on the WS handshake — `apiClient.wsUrl()`
+ * fetches GET /ws/transcription/ticket (with API key) and appends `?token=`.
  */
 export function useTranscriptionSocket() {
   const [status, setStatus] = React.useState<WsConnectionStatus>("disconnected");
   const [logs, setLogs] = React.useState<LogEvent[]>([]);
   const [progress, setProgress] = React.useState<ProgressEvent | null>(null);
   const [done, setDone] = React.useState<DoneEvent | null>(null);
+  const [partialAnalysis, setPartialAnalysis] = React.useState<PartialAnalysisEvent | null>(null);
   const [jobId, setJobId] = React.useState<string | null>(null);
 
   const wsRef = React.useRef<WebSocket | null>(null);
@@ -49,9 +50,19 @@ export function useTranscriptionSocket() {
       setProgress(event);
     } else if (event.type === "done") {
       setDone(event);
+    } else if (event.type === "partial_analysis") {
+      setPartialAnalysis(event);
+      setLogs((prev) => [
+        ...prev.slice(-(MAX_LOGS - 1)),
+        {
+          type: "log",
+          job_id: event.job_id,
+          level: "info",
+          msg: `Delanalys: ${event.segment_count} segment, ${event.sentiment_count} sentiment`,
+          ts: event.ts,
+        },
+      ]);
     } else if (event.type === "status") {
-      // Surface long-running-state changes as a synthetic log line so they
-      // are visible in the same feed without a separate status widget.
       const statusEvent = event as StatusEvent;
       setLogs((prev) => [
         ...prev.slice(-(MAX_LOGS - 1)),
@@ -76,8 +87,6 @@ export function useTranscriptionSocket() {
     timeoutRef.current = setTimeout(() => connectRef.current(targetJobId), delay);
   }, []);
 
-  // Keep the connect closure in a ref so callers (connect/scheduleRetry) always
-  // invoke the latest version without re-creating their own callbacks.
   React.useEffect(() => {
     connectRef.current = async (targetJobId: string | null) => {
       if (stoppedRef.current) return;
@@ -125,6 +134,7 @@ export function useTranscriptionSocket() {
     attemptRef.current = 0;
     setJobId(targetJobId ?? null);
     setDone(null);
+    setPartialAnalysis(null);
     connectRef.current(targetJobId ?? null);
   }, []);
 
@@ -146,5 +156,15 @@ export function useTranscriptionSocket() {
     };
   }, [clearRetryTimer]);
 
-  return { status, logs, progress, done, jobId, connect, disconnect, clearLogs };
+  return {
+    status,
+    logs,
+    progress,
+    done,
+    partialAnalysis,
+    jobId,
+    connect,
+    disconnect,
+    clearLogs,
+  };
 }

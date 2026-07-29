@@ -2,9 +2,35 @@
  * Typed fetch client for the FastAPI backend.
  *
  * Talks to the same REST endpoints as the Python API without backend changes.
+ * Path inventory is checked against generated OpenAPI types in `./paths.ts`
+ * (`npm run generate:types`). Hand-written response shapes below remain the
+ * runtime contract until callers migrate onto `schema.ts` components.
  */
 
+import "./paths";
+
 const DEFAULT_BASE_URL = "http://localhost:8000";
+
+function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
+}
+
+/** Browser-visible API key (pilot: same value as SENTIMENT_API_KEY on trusted LAN). */
+function getApiKeyFromEnv(): string | undefined {
+  const key =
+    process.env.NEXT_PUBLIC_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SENTIMENT_API_KEY?.trim();
+  return key || undefined;
+}
+
+/** Connection + auth probe result for the header badge. */
+export type ApiConnectionStatus = {
+  reachable: boolean;
+  /** null = auth not required or not probed */
+  authenticated: boolean | null;
+  status: "ok" | "offline" | "unauthorized" | "auth_required";
+  detail?: string;
+};
 
 /** Loose shape of a CallAnalysisReport dict returned by /analyze_pipeline. */
 export interface PipelineReport {
@@ -356,6 +382,47 @@ export interface AlertsResponse {
   timestamp: string;
 }
 
+/** Response shape of POST /search/semantic. */
+export interface SemanticSearchResponse {
+  query: string;
+  hits: Array<{
+    text?: string;
+    score?: number;
+    call_index?: number;
+    segment_index?: number;
+    speaker?: string;
+    [key: string]: unknown;
+  }>;
+  meta: Record<string, unknown>;
+  timestamp: string;
+}
+
+/** Response shape of POST /qa/score. */
+export interface QAScoreResponse {
+  qa: {
+    overall_qa_score?: number | null;
+    passed?: boolean;
+    criteria_results?: unknown[];
+    compliance_flags?: unknown[];
+    [key: string]: unknown;
+  };
+  timestamp: string;
+}
+
+/** Response shape of GET /transcription/jobs. */
+export interface TranscriptionJobStatus {
+  job_id: string;
+  kind: string;
+  status: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface TranscriptionJobListResponse {
+  jobs: TranscriptionJobStatus[];
+  [key: string]: unknown;
+}
+
 /** Edge AI: single segment result from offline analysis. */
 export interface EdgeSegmentResult {
   text: string;
@@ -453,10 +520,6 @@ export interface ApiClientOptions {
   timeoutMs?: number;
 }
 
-function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
-}
-
 export class ApiClient {
   readonly baseUrl: string;
   private readonly apiKey?: string;
@@ -466,12 +529,20 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? getBaseUrl()).replace(/\/$/, "");
-    this.apiKey = options.apiKey;
+    this.apiKey = options.apiKey ?? getApiKeyFromEnv();
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
-  private headers(): HeadersInit {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
+  /** True when a browser API key is configured (env or constructor). */
+  get hasApiKey(): boolean {
+    return Boolean(this.apiKey);
+  }
+
+  private headers(opts: { json?: boolean } = {}): HeadersInit {
+    const headers: Record<string, string> = {};
+    if (opts.json !== false) {
+      headers["Content-Type"] = "application/json";
+    }
     if (this.apiKey) headers["X-API-Key"] = this.apiKey;
     return headers;
   }
@@ -547,11 +618,57 @@ export class ApiClient {
   }
 
   async health(): Promise<boolean> {
+    const status = await this.connectionStatus();
+    return status.status === "ok";
+  }
+
+  /**
+   * Probe /health (public) then a protected ticket endpoint to surface 401s.
+   * When auth is disabled, ticket returns 200 and status is "ok".
+   */
+  async connectionStatus(): Promise<ApiConnectionStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, { signal: AbortSignal.timeout(10_000) });
-      return response.ok;
+      const healthRes = await fetch(`${this.baseUrl}/health`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!healthRes.ok) {
+        return { reachable: false, authenticated: null, status: "offline" };
+      }
     } catch {
-      return false;
+      return { reachable: false, authenticated: null, status: "offline" };
+    }
+
+    try {
+      await this.get<{ ticket: string }>("/ws/transcription/ticket");
+      return {
+        reachable: true,
+        authenticated: this.hasApiKey ? true : null,
+        status: "ok",
+      };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        if (!this.hasApiKey) {
+          return {
+            reachable: true,
+            authenticated: false,
+            status: "auth_required",
+            detail: "Backend kräver X-API-Key — sätt NEXT_PUBLIC_API_KEY",
+          };
+        }
+        return {
+          reachable: true,
+          authenticated: false,
+          status: "unauthorized",
+          detail: "API-nyckel avvisad (401)",
+        };
+      }
+      // Ticket endpoint failed for other reasons — still reachable via /health
+      return {
+        reachable: true,
+        authenticated: null,
+        status: "ok",
+        detail: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 
@@ -642,6 +759,38 @@ export class ApiClient {
     );
   }
 
+  semanticSearch<T = SemanticSearchResponse>(
+    query: string,
+    segmentsList: unknown[][],
+    options: { top_k?: number; filters?: Record<string, unknown> } & Record<string, unknown> = {},
+  ) {
+    const { top_k = 5, filters, ...rest } = options;
+    return this.post<T>(
+      "/search/semantic",
+      {
+        query,
+        segments_list: segmentsList,
+        top_k,
+        filters: filters ?? null,
+        profile: "callcenter",
+        ...rest,
+      },
+      180_000,
+    );
+  }
+
+  getQaScore<T = QAScoreResponse>(segments: unknown[], options: Record<string, unknown> = {}) {
+    return this.post<T>(
+      "/qa/score",
+      {
+        segments,
+        profile: "callcenter",
+        ...options,
+      },
+      180_000,
+    );
+  }
+
   getAlertingStatus<T = AlertingStatusResponse>() {
     return this.get<T>("/alerting/status");
   }
@@ -677,15 +826,15 @@ export class ApiClient {
     return this.get<T>(`/status/jobs/${jobId}`);
   }
 
-  listTranscriptionJobs<T = unknown>(limit = 20) {
+  listTranscriptionJobs<T = TranscriptionJobListResponse>(limit = 20) {
     return this.get<T>("/transcription/jobs", { limit });
   }
 
-  getTranscriptionJob<T = unknown>(jobId: string) {
+  getTranscriptionJob<T = TranscriptionJobStatus>(jobId: string) {
     return this.get<T>(`/transcription/jobs/${jobId}`);
   }
 
-  cancelTranscriptionJob<T = unknown>(jobId: string) {
+  cancelTranscriptionJob<T = { job_id: string; cancelled: boolean; status?: string }>(jobId: string) {
     return this.post<T>(`/transcription/jobs/${jobId}/cancel`, {});
   }
 
@@ -706,7 +855,8 @@ export class ApiClient {
 
     const response = await fetch(`${this.baseUrl}/upload`, {
       method: "POST",
-      headers: this.headers(), // Don't set Content-Type for FormData (browser does it with boundary)
+      // Omit Content-Type so the browser sets multipart boundary; still send API key.
+      headers: this.headers({ json: false }),
       body: formData,
     });
 
@@ -753,4 +903,6 @@ export class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiClient = new ApiClient({
+  apiKey: getApiKeyFromEnv(),
+});

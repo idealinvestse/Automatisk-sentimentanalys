@@ -144,7 +144,7 @@ function WebhookStatus() {
 
 export function AlertsPanel() {
   const [filter, setFilter] = useState<AlertSeverityFilter>("all");
-  const { alerts, totalCount, countsBySeverity, isLoading, isError } = useAlerts(filter);
+  const { alerts, totalCount, countsBySeverity, isLoading, isError, source } = useAlerts(filter);
 
   return (
     <Card>
@@ -156,14 +156,19 @@ export function AlertsPanel() {
               Aktiva larm
             </CardTitle>
             <CardDescription>
-              Strukturerade alerts från pipeline-resultaten, per samtal.
+              {source === "api"
+                ? "Fas 4 POST /alerts (server), med fallback till pipeline-inbäddade larm."
+                : "Strukturerade alerts från pipeline-resultaten (fallback när /alerts saknas)."}
             </CardDescription>
           </div>
-          {totalCount > 0 && (
-            <Badge variant={countsBySeverity.critical > 0 ? "destructive" : "warning"}>
-              {totalCount} {totalCount === 1 ? "larm" : "larm"}
-            </Badge>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge variant="outline">{source === "api" ? "API" : "Pipeline"}</Badge>
+            {totalCount > 0 && (
+              <Badge variant={countsBySeverity.critical > 0 ? "destructive" : "warning"}>
+                {totalCount} {totalCount === 1 ? "larm" : "larm"}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
