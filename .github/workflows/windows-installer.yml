@@ -41,13 +41,13 @@ jobs:
         run: ./installer/build-portable.ps1 -Version ${{ steps.meta.outputs.version }} -Profile ${{ steps.meta.outputs.profile }}
 
       - name: Upload portable staging
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: portable-staging
           path: build/portable-staging/
 
       - name: Upload portable ZIP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sentimentanalys-portable
           path: dist/*.zip
@@ -89,7 +89,7 @@ jobs:
           & $iscc $iss /DMyAppVersion=${{ steps.meta.outputs.version }} /DInstallProfile=${{ steps.meta.outputs.profile }}
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sentimentanalys-setup
           path: dist/*.exe
