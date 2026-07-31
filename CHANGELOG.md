@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Multi-provider LLM + cost-aware analysis perspectives** — OpenAI-compatible clients for Mistral/NVIDIA/Cerebras/OpenRouter/Groq; `free_sequential` and `sv_optimal` router profiles with rate-limit cooldowns; multi-provider model catalog scanner (`data/model_catalogs/`); paid-model advisor with 12 analysis perspectives (cost/quality scoring); API `GET /llm/analysis-profiles` (+ detail); pipeline field `analysis_perspective`; Testlabb perspective picker UI; docs `docs/MULTI_PROVIDER_LLM.md`. OpenRouter default slug fixed to `mistralai/mistral-medium-3-5` (legacy `3.5` aliased).
+
+### Added
 - **Intent/DATA-01 sprint hardening** — fixed-val intent training configuration and provenance metadata, train/validation leakage validation, opt-in `auto` intent backend with heuristic fallback, and config-driven preference-gate thresholds.
 - **Webui↔API harmony H1–H9 (2026-07-17)** — API key + auth badge; OpenAPI types; smoke e2e stubs; alerts via `/alerts`; WS `partial_analysis`; Insights panels for `/search/semantic` + `/qa/score`; transcription jobs list/cancel; Docker bake API key at webui build.
 - **Pilot decision pack (2026-07-17)** — `STRATEGY.md`, `docs/DECISION_REPORT_2026-07-17.md`, `docs/PILOT_RUNBOOK.md`, `docs/DATA_01_CORPUS_SPEC.md`, `docs/PILOT_ONE_PAGER.md`; `scripts/verify_pilot_policy.py`; `import_domain_corpus.py --pilot-gate` (500/200 row minima); Parallel research under `reports/parallel-research/`.

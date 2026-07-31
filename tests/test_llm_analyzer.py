@@ -76,14 +76,14 @@ def test_schema_validation_roundtrip():
             ],
             "overall_assessment": "Agenten behöver träna empati-fraser vid fakturaärenden.",
         },
-        "meta": {"model": "mistralai/mistral-medium-3.5"},
+        "meta": {"model": "mistralai/mistral-medium-3-5"},
     }
 
     model = CallLLMOutput.model_validate(good)
     assert model.actionable_summary is not None
     assert model.actionable_summary.risk_level == "high"
     dumped = model.model_dump()
-    assert dumped["meta"]["model"] == "mistralai/mistral-medium-3.5"
+    assert dumped["meta"]["model"] == "mistralai/mistral-medium-3-5"
     # Fas 4.1.2: detailed coaching recs + evidence
     assess = model.agent_assessment
     assert assess is not None
@@ -145,13 +145,13 @@ def test_analyzer_success_path_validates_and_merges_meta():
         "meta": {"from_llm": True},
     }
     fake_meta = {
-        "model": "mistralai/mistral-medium-3.5",
+        "model": "mistralai/mistral-medium-3-5",
         "cost_usd": 0.012,
         "cached": False,
     }
     fake_client.structured_chat.return_value = (fake_result, fake_meta)
 
-    analyzer = ConversationMistralAnalyzer(client=fake_client, model="mistralai/mistral-medium-3.5")
+    analyzer = ConversationMistralAnalyzer(client=fake_client, model="mistralai/mistral-medium-3-5")
 
     segments = [
         {"speaker": "SPEAKER_0", "text": "Tack för hjälpen."},
@@ -166,7 +166,7 @@ def test_analyzer_success_path_validates_and_merges_meta():
     assert out["actionable_summary"]["problem"] == "Inget större problem."
     assert out["meta"]["cost_usd"] == 0.012
     assert out["meta"]["cached"] is False
-    assert out["meta"]["model"] == "mistralai/mistral-medium-3.5"
+    assert out["meta"]["model"] == "mistralai/mistral-medium-3-5"
     assert "tasks" in out["meta"]
 
     # The client must have been called with a json_schema

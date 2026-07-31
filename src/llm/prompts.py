@@ -10,7 +10,7 @@ and significantly strengthening them according to the plan:
 - Structured output discipline so that strict JSON schema works reliably
 - Examples (light few-shot) of good vs bad reasoning
 
-The prompts are designed for `mistralai/mistral-medium-3.5` and `mistral-large-3` (and their OpenRouter slugs).
+The prompts are designed for `mistralai/mistral-medium-3-5` and `mistral-large-3` (and their OpenRouter slugs).
 They work with the Pydantic schemas in schemas.py.
 
 Later iterations (after real Swedish callcenter samples + human preference eval in 3.3.3)

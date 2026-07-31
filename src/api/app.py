@@ -54,6 +54,7 @@ from .routers import (
     conversation,
     edge,
     health,
+    llm_profiles,
     pipeline,
     scan,
     status,
@@ -295,6 +296,7 @@ def create_app() -> FastAPI:
     app.include_router(transcription.router, dependencies=_auth)
     app.include_router(conversation.router, dependencies=_auth)
     app.include_router(pipeline.router, dependencies=_auth)
+    app.include_router(llm_profiles.router, dependencies=_auth)
     app.include_router(scan.router, dependencies=_auth)
     app.include_router(ws_transcription.router)
     app.include_router(alerting.router, dependencies=_auth)

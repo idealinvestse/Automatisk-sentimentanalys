@@ -243,14 +243,21 @@ class PipelineRequest(BaseModel):
     use_mistral_llm: bool = Field(False, description="Enable LLM holistic analysis")
     llm_model: str | None = Field(None, description="Override LLM model slug")
     deep_analysis: bool = Field(False, description="Force deep LLM path")
+    analysis_perspective: str | None = Field(
+        None,
+        description=(
+            "Optional analysis perspective id from GET /llm/analysis-profiles "
+            "(e.g. cost_saver, coaching_qa, holistic_deep). Auto-picks paid model by cost/quality."
+        ),
+    )
     llm_api_key: str | None = Field(
         None,
         description="Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY.",
     )
     provider: str = Field(
         "openrouter",
-        description="LLM provider: openrouter (default) | groq",
-        pattern=r"^(openrouter|groq)$",
+        description="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
     )
     groq_eu_residency: bool = Field(
         False,
@@ -293,7 +300,7 @@ class PartialPipelineRequest(BaseModel):
         None,
         description="Deprecated: prefer X-OpenRouter-Key header.",
     )
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq)$")
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$")
     groq_eu_residency: bool = False
 
     @field_validator("segments")
@@ -637,7 +644,7 @@ class PipelineCompareRequest(BaseModel):
         description="Total USD budget across all model runs (default: profile cost_budget_per_call)",
     )
     llm_api_key: str | None = None
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq)$")
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$")
     groq_eu_residency: bool = False
 
     @field_validator("segments")
@@ -1009,8 +1016,8 @@ class Fas4LlmFlags(BaseModel):
     )
     provider: str = Field(
         "openrouter",
-        description="LLM provider: openrouter (default) | groq",
-        pattern=r"^(openrouter|groq)$",
+        description="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
     )
     groq_eu_residency: bool = Field(
         False,

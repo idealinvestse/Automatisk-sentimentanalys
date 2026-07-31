@@ -37,7 +37,7 @@ export const ROUTING_TIERS: Record<RoutingTier, TierInfo> = {
     id: "balanced",
     label: "BALANCED",
     description: "Standard — mistral-medium. Bra balans mellan kostnad och kvalitet.",
-    model: "mistralai/mistral-medium-3.5",
+    model: "mistralai/mistral-medium-3-5",
     costPerMTokens: 0.40,
     quality: 4,
     latency: "medium",

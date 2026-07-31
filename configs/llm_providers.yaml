@@ -1,0 +1,122 @@
+# Multi-provider LLM configuration (OpenAI-compatible endpoints).
+# API keys: env vars or gitignored configs/*.key (see src/llm/provider_secrets.py).
+#
+# Profiles:
+#   free_sequential  — only free / free-tier models; one provider at a time (rate-limit safe)
+#   sv_optimal       — best Swedish-capable models per provider (seq or parallel fan-out)
+
+providers:
+  openrouter:
+    enabled: true
+    base_url: "https://openrouter.ai/api/v1"
+    env_keys: ["OPENROUTER_API_KEY"]
+    key_files: ["configs/openrouter.key"]
+    models_path: "/models"
+    # OpenRouter marks free models with :free suffix or $0 pricing
+    free_model_suffix: ":free"
+    default_rpm: 20
+    default_rpd: 200
+    headers_extra:
+      HTTP-Referer: "https://github.com/idealinvestse/Automatisk-sentimentanalys"
+      X-Title: "Automatisk-sentimentanalys"
+
+  mistral:
+    enabled: true
+    base_url: "https://api.mistral.ai/v1"
+    env_keys: ["MISTRAL_API_KEY"]
+    key_files: ["configs/mistral.key"]
+    models_path: "/models"
+    default_rpm: 30
+    default_rpd: 500
+    # Native Mistral slugs (not openrouter-prefixed)
+    curated_free: []
+    curated_sv:
+      fast: "mistral-small-latest"
+      balanced: "mistral-medium-latest"
+      deep: "mistral-large-latest"
+
+  nvidia:
+    enabled: true
+    base_url: "https://integrate.api.nvidia.com/v1"
+    env_keys: ["NVIDIA_API_KEY", "NGC_API_KEY", "NVIDIA_NIM_API_KEY"]
+    key_files: ["configs/nvidia.key"]
+    models_path: "/models"
+    default_rpm: 40
+    default_rpd: 1000
+    # Build.nvidia free-tier friendly defaults (overridden by live catalog when present)
+    curated_free:
+      - "meta/llama-3.1-8b-instruct"
+      - "google/gemma-2-9b-it"
+      - "mistralai/mistral-7b-instruct-v0.3"
+    curated_sv:
+      fast: "meta/llama-3.1-8b-instruct"
+      balanced: "mistralai/mistral-nemotron"
+      deep: "meta/llama-3.1-70b-instruct"
+
+  cerebras:
+    enabled: true
+    base_url: "https://api.cerebras.ai/v1"
+    env_keys: ["CEREBRAS_API_KEY"]
+    key_files: ["configs/cerebras.key"]
+    models_path: "/models"
+    default_rpm: 30
+    default_rpd: 14400
+    curated_free:
+      - "llama3.1-8b"
+      - "qwen-3-32b"
+    curated_sv:
+      fast: "llama3.1-8b"
+      balanced: "llama-3.3-70b"
+      deep: "qwen-3-32b"
+
+  groq:
+    enabled: true
+    base_url: "https://api.groq.com/openai/v1"
+    env_keys: ["GROQ_API_KEY"]
+    key_files: ["configs/groq.key"]
+    models_path: "/models"
+    default_rpm: 30
+    default_rpd: 14400
+    # DEV-only for pilot (US hosting). See PILOT_RUNBOOK.
+    curated_free:
+      - "llama-3.1-8b-instant"
+    curated_sv:
+      fast: "llama-3.1-8b-instant"
+      balanced: "llama-3.3-70b-versatile"
+      deep: "llama-3.3-70b-versatile"
+
+# Routing profiles
+profiles:
+  free_sequential:
+    description: "Free-tier only; rotate providers one-at-a-time to stay under rate limits."
+    mode: sequential
+    free_only: true
+    # Try order — exhausted/rate-limited provider is skipped until cooldown
+    provider_order: ["nvidia", "cerebras", "mistral", "openrouter"]
+    max_provider_attempts: 4
+    cooldown_seconds_on_429: 60
+
+  sv_optimal:
+    description: "Best Swedish-capable models; sequential by default, optional parallel fan-out."
+    mode: sequential  # or parallel
+    free_only: false
+    provider_order: ["mistral", "openrouter", "nvidia", "cerebras"]
+    # Preferred OpenRouter Mistral slug when using openrouter
+    openrouter_sv:
+      fast: "mistralai/mistral-small-3.1-24b-instruct"
+      balanced: "mistralai/mistral-medium-3-5"
+      deep: "mistralai/mistral-large-2512"
+    parallel_tasks: ["trajectory", "actionable_summary"]  # safe to fan out
+    sequential_tasks: ["root_cause", "agent_assessment", "full_holistic_call_analysis"]
+
+# Paid analysis perspectives (cost-aware) live in code:
+#   src/llm/paid_model_advisor.ANALYSIS_PERSPECTIVES
+# API: GET /llm/analysis-profiles  → selectable menu with recommended paid models
+# Snapshot: data/model_catalogs/analysis_profiles.json
+
+# Local artifact locations (gitignored large JSON is fine under data/)
+catalog:
+  dir: "data/model_catalogs"
+  index_file: "data/model_catalogs/index.json"
+  rate_state_file: "data/model_catalogs/rate_limit_state.json"
+  profiles_file: "data/model_catalogs/analysis_profiles.json"

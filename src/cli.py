@@ -689,7 +689,7 @@ def analyze_call_cmd(
     llm_model: str | None = typer.Option(
         None,
         "--llm-model",
-        help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3.5). Example: mistralai/mistral-large-3",
+        help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3-5). Example: mistralai/mistral-large-3",
     ),
     deep_analysis: bool = typer.Option(
         False,
@@ -699,7 +699,7 @@ def analyze_call_cmd(
     provider: str = typer.Option(
         "openrouter",
         "--provider",
-        help="LLM provider: openrouter (default) | groq. Groq is faster/cheaper but US-hosted (GDPR: enable --groq-eu-residency or PII redaction).",
+        help="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal. Groq is US-hosted (GDPR). free_sequential rotates free-tier providers one-at-a-time.",
     ),
     groq_eu_residency: bool = typer.Option(
         False,

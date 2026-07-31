@@ -34,7 +34,7 @@ PROFILE_SPECS: dict[str, dict] = {
         # LLM disabled for generic profiles (hybrid only on explicit flag or callcenter)
         "llm": {
             "enabled": False,
-            "default_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
             "cost_budget_per_call": 0.05,
         },
     },
@@ -159,8 +159,8 @@ PROFILE_SPECS: dict[str, dict] = {
         # Task 3.2.3: Mistral/OpenRouter LLM config for holistisk analysis (European-first)
         "llm": {
             "enabled": True,  # callcenter gets the deep path by default (selective via length/confidence)
-            "default_model": "mistralai/mistral-medium-3.5",
-            "fallback_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
+            "fallback_model": "mistralai/mistral-medium-3-5",
             "routing_tier": "balanced",
             "cost_budget_per_call": 0.08,
             "anonymize_before_llm": True,  # Fas 4.4.1 — PII-safe default for production
@@ -185,7 +185,7 @@ PROFILE_SPECS: dict[str, dict] = {
         "lexicon_weight": 0.25,
         "llm": {
             "enabled": False,
-            "default_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
             "cost_budget_per_call": 0.05,
         },
     },
@@ -207,7 +207,7 @@ PROFILE_SPECS: dict[str, dict] = {
         "lexicon_weight": 0.25,
         "llm": {
             "enabled": True,
-            "default_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
             "cost_budget_per_call": 0.08,
         },
     },
@@ -229,7 +229,7 @@ PROFILE_SPECS: dict[str, dict] = {
         "lexicon_weight": 0.25,
         "llm": {
             "enabled": True,
-            "default_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
             "cost_budget_per_call": 0.06,
         },
     },
@@ -251,7 +251,7 @@ PROFILE_SPECS: dict[str, dict] = {
         "lexicon_weight": 0.2,
         "llm": {
             "enabled": False,
-            "default_model": "mistralai/mistral-medium-3.5",
+            "default_model": "mistralai/mistral-medium-3-5",
             "cost_budget_per_call": 0.05,
         },
     },

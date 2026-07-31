@@ -260,7 +260,7 @@ def _fake_pipeline_report(**overrides):
 def test_analyze_pipeline_compare_happy(monkeypatch):
     models = [
         "mistralai/mistral-small-3.1-24b-instruct",
-        "mistralai/mistral-medium-3.5",
+        "mistralai/mistral-medium-3-5",
     ]
     with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
@@ -312,7 +312,7 @@ def test_analyze_pipeline_compare_budget_flag(monkeypatch):
             "/analyze_pipeline/compare",
             json={
                 "segments": [{"text": "Hej"}],
-                "models": ["mistralai/mistral-medium-3.5"],
+                "models": ["mistralai/mistral-medium-3-5"],
                 "cost_budget_usd": 0.05,
             },
         )
@@ -323,7 +323,7 @@ def test_analyze_pipeline_compare_budget_flag(monkeypatch):
 def test_analyze_pipeline_compare_requires_segments():
     r = client.post(
         "/analyze_pipeline/compare",
-        json={"segments": [], "models": ["mistralai/mistral-medium-3.5"]},
+        json={"segments": [], "models": ["mistralai/mistral-medium-3-5"]},
     )
     assert r.status_code == 422
 

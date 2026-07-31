@@ -56,7 +56,7 @@ def test_structured_chat_success_and_meta(fake_api_key, tmp_path, monkeypatch):
 
     # Build a fake completion object that the SDK would return
     fake_completion = MagicMock()
-    fake_completion.model = "mistralai/mistral-medium-3.5"
+    fake_completion.model = "mistralai/mistral-medium-3-5"
     fake_completion.id = "gen-xyz123"
     fake_usage = MagicMock()
     fake_usage.prompt_tokens = 1240
@@ -106,7 +106,7 @@ def test_structured_chat_success_and_meta(fake_api_key, tmp_path, monkeypatch):
         )
 
     assert result["actionable_summary"]["problem"] == "Faktureringsfel"
-    assert meta["model"] == "mistralai/mistral-medium-3.5"
+    assert meta["model"] == "mistralai/mistral-medium-3-5"
     assert meta["cached"] is False
     assert meta["cost_usd"] is not None and meta["cost_usd"] > 0
     assert meta["task"] == "actionable_summary"
@@ -190,7 +190,7 @@ def test_privacy_log_emitted(fake_api_key, tmp_path, caplog):
     client = OpenRouterClient(api_key=fake_api_key, cache_dir=tmp_path / "c4", enable_cache=False)
 
     fake_c = MagicMock()
-    fake_c.model = "mistralai/mistral-medium-3.5"
+    fake_c.model = "mistralai/mistral-medium-3-5"
     fake_c.id = "g1"
     u = MagicMock()
     u.prompt_tokens = 10

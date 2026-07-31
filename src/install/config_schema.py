@@ -55,7 +55,7 @@ class AsrDefaults(BaseModel):
 class LlmConfig(BaseModel):
     enabled: bool = False
     provider: str = "openrouter"
-    default_model: str = "mistralai/mistral-medium-3.5"
+    default_model: str = "mistralai/mistral-medium-3-5"
     cost_budget_per_call: float = 0.08
     anonymize_before_llm: bool = False
     log_external_calls: bool = True

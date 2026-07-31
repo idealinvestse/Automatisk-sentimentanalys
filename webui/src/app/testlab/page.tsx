@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
 import { ModelRoutingCard } from "@/components/model-routing-card";
+import { AnalysisPerspectivePicker } from "@/components/analysis-perspective-picker";
 import { ModelComparePanel } from "@/components/model-compare-panel";
 import { apiClient, ApiError, type PipelineCompareResponse, type PipelineReport } from "@/lib/api/client";
 import { extractTrustSurface } from "@/lib/real-data";
@@ -19,6 +20,10 @@ import { TrustSurfaceCard } from "@/components/analyzer-cards";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { isApiConnected, useHealth } from "@/hooks/use-health";
 import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
+import {
+  FALLBACK_ANALYSIS_MENU,
+  type AnalysisProfileMenuItem,
+} from "@/lib/analysis-profiles";
 
 const EXAMPLE_SEGMENTS = JSON.stringify(
   [{ text: "Hej, hur kan jag hjälpa dig?", speaker: "Agent" }],
@@ -28,14 +33,45 @@ const EXAMPLE_SEGMENTS = JSON.stringify(
 
 export default function TestLabPage() {
   const { data: health } = useHealth();
-  const connected = isApiConnected(health);
-  const [segmentsInput, setSegmentsInput] = React.useState("");
-  const [useLlm, setUseLlm] = React.useState(false);
-  const [provider, setProvider] = React.useState<"openrouter" | "groq">("openrouter");
-  const [routingTier, setRoutingTier] = React.useState<RoutingTier>("balanced");
-  const [partialMode, setPartialMode] = React.useState(false);
-  const [reconcile, setReconcile] = React.useState(false);
-  const [partialPrevious, setPartialPrevious] = React.useState<Record<string, unknown> | null>(null);
+    const connected = isApiConnected(health);
+    const [segmentsInput, setSegmentsInput] = React.useState("");
+    const [useLlm, setUseLlm] = React.useState(false);
+    const [provider, setProvider] = React.useState<string>("openrouter");
+    const [routingTier, setRoutingTier] = React.useState<RoutingTier>("balanced");
+    const [perspectiveId, setPerspectiveId] = React.useState<string | null>("balanced_ops");
+    const [perspectiveMenu, setPerspectiveMenu] =
+      React.useState<AnalysisProfileMenuItem[]>(FALLBACK_ANALYSIS_MENU);
+    const [perspectiveLoading, setPerspectiveLoading] = React.useState(false);
+    const [partialMode, setPartialMode] = React.useState(false);
+    const [reconcile, setReconcile] = React.useState(false);
+    const [partialPrevious, setPartialPrevious] = React.useState<Record<string, unknown> | null>(null);
+
+    React.useEffect(() => {
+      if (!connected || !useLlm) return;
+      let cancelled = false;
+      setPerspectiveLoading(true);
+      apiClient
+        .getAnalysisProfiles({ top_k: 3, refresh: true })
+        .then((res) => {
+          if (cancelled) return;
+          const menu = res.menu?.length ? res.menu : FALLBACK_ANALYSIS_MENU;
+          setPerspectiveMenu(menu);
+        })
+        .catch(() => {
+          if (!cancelled) setPerspectiveMenu(FALLBACK_ANALYSIS_MENU);
+        })
+        .finally(() => {
+          if (!cancelled) setPerspectiveLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [connected, useLlm]);
+
+    const selectedPerspective = React.useMemo(
+      () => perspectiveMenu.find((p) => p.id === perspectiveId) ?? null,
+      [perspectiveMenu, perspectiveId],
+    );
 
   const mutation = useMutation<PipelineReport, ApiError, void>({
     mutationFn: async () => {
@@ -51,35 +87,44 @@ export default function TestLabPage() {
         throw new ApiError("segments måste vara en icke-tom lista");
       }
       const segArr = segments as unknown[];
-      const effectiveTier = resolveEffectiveTier(routingTier, segArr.length, useLlm);
-      if (partialMode) {
-        return apiClient.analyzePipelinePartial(segments, {
-          previous_results: partialPrevious,
-          reconcile,
-          use_mistral_llm: useLlm,
-          deep_analysis: useLlm,
-          provider,
-          llm_model: useLlm ? tierToModel(effectiveTier) : undefined,
-        });
-      }
-      return apiClient.analyzePipeline(segments, {
-        use_mistral_llm: useLlm,
-        deep_analysis: useLlm,
-        provider,
-        llm_model: useLlm ? tierToModel(effectiveTier) : undefined,
-      });
-    },
-    onSuccess: (data) => {
-      notifySuccess(partialMode ? "Partial pipeline klar" : "Pipeline-analys klar");
-      if (partialMode && !reconcile) {
-        setPartialPrevious((data.results as Record<string, unknown>) ?? null);
-      }
-      if (reconcile) {
-        setPartialPrevious(null);
-      }
-    },
-    onError: (err) => notifyApiError(err, "Pipeline-fel: "),
-  });
+            const effectiveTier = resolveEffectiveTier(routingTier, segArr.length, useLlm);
+            const sel = selectedPerspective?.selectable;
+            const llmModel =
+              useLlm
+                ? sel?.llm_model || tierToModel(effectiveTier)
+                : undefined;
+            const llmProvider = useLlm ? sel?.provider || provider : provider;
+            const perspective = useLlm ? selectedPerspective?.id : undefined;
+            if (partialMode) {
+              return apiClient.analyzePipelinePartial(segments, {
+                previous_results: partialPrevious,
+                reconcile,
+                use_mistral_llm: useLlm,
+                deep_analysis: useLlm || !!sel?.deep_analysis,
+                provider: llmProvider,
+                llm_model: llmModel,
+                analysis_perspective: perspective,
+              });
+            }
+            return apiClient.analyzePipeline(segments, {
+                          use_mistral_llm: useLlm,
+                          deep_analysis: useLlm || !!sel?.deep_analysis,
+                          provider: llmProvider,
+                          llm_model: llmModel,
+                          analysis_perspective: perspective,
+                        });
+                },
+                onSuccess: (data) => {
+                  notifySuccess(partialMode ? "Partial pipeline klar" : "Pipeline-analys klar");
+                  if (partialMode && !reconcile) {
+                    setPartialPrevious((data.results as Record<string, unknown>) ?? null);
+                  }
+                  if (reconcile) {
+                    setPartialPrevious(null);
+                  }
+                },
+                onError: (err) => notifyApiError(err, "Pipeline-fel: "),
+              });
 
   const compareMutation = useMutation<PipelineCompareResponse, ApiError, void>({
     mutationFn: async () => {
@@ -161,49 +206,69 @@ export default function TestLabPage() {
               </label>
             ) : null}
             {useLlm ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">LLM-provider</span>
-                <Select value={provider} onValueChange={(v) => setProvider(v as typeof provider)}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="openrouter">openrouter</SelectItem>
-                    <SelectItem value="groq">groq</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">LLM-provider (fallback)</span>
+                            <Select value={provider} onValueChange={(v) => setProvider(v)}>
+                              <SelectTrigger className="w-44">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="openrouter">openrouter</SelectItem>
+                                <SelectItem value="mistral">mistral</SelectItem>
+                                <SelectItem value="nvidia">nvidia</SelectItem>
+                                <SelectItem value="cerebras">cerebras</SelectItem>
+                                <SelectItem value="free_sequential">free_sequential</SelectItem>
+                                <SelectItem value="sv_optimal">sv_optimal</SelectItem>
+                                <SelectItem value="groq">groq</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : null}
+                      </div>
 
-          {useLlm && provider === "groq" ? (
-            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning-text">
-              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                Groq: US/Saudi-datacenter (ingen EU-hosting). Aktivera PII-redigering innan
-                användning i produktion.
-              </span>
-            </div>
-          ) : null}
+                      {useLlm && provider === "groq" ? (
+                        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning-text">
+                          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                          <span>
+                            Groq: US/Saudi-datacenter (ingen EU-hosting). Aktivera PII-redigering innan
+                            användning i produktion.
+                          </span>
+                        </div>
+                      ) : null}
 
-          {useLlm && provider === "openrouter" ? (
-            <ModelRoutingCard
-              tier={routingTier}
-              onTierChange={setRoutingTier}
-              effectiveTier={resolveEffectiveTier(
-                routingTier,
-                (() => {
-                  try {
-                    const parsed = JSON.parse(segmentsInput);
-                    return Array.isArray(parsed) ? parsed.length : 0;
-                  } catch {
-                    return 0;
-                  }
-                })(),
-                useLlm,
-              )}
-            />
-          ) : null}
+                      {useLlm ? (
+                        <AnalysisPerspectivePicker
+                          items={perspectiveMenu}
+                          value={perspectiveId}
+                          loading={perspectiveLoading}
+                          disabled={mutation.isPending}
+                          onChange={(item) => {
+                            setPerspectiveId(item.id);
+                            if (item.selectable?.provider) {
+                              setProvider(item.selectable.provider);
+                            }
+                          }}
+                        />
+                      ) : null}
+
+                      {useLlm && provider === "openrouter" && !selectedPerspective ? (
+                        <ModelRoutingCard
+                          tier={routingTier}
+                          onTierChange={setRoutingTier}
+                          effectiveTier={resolveEffectiveTier(
+                            routingTier,
+                            (() => {
+                              try {
+                                const parsed = JSON.parse(segmentsInput);
+                                return Array.isArray(parsed) ? parsed.length : 0;
+                              } catch {
+                                return 0;
+                              }
+                            })(),
+                            useLlm,
+                          )}
+                        />
+                      ) : null}
 
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="gap-1.5">

@@ -264,3 +264,7 @@ installer/*.zip
 # -----------------------------------------------------------------------------
 .direnv/
 .envrc.local
+
+# Multi-provider model catalogs (regenerable)
+data/model_catalogs/
+data/openrouter_models_catalog.json

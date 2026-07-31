@@ -105,7 +105,7 @@ class TestCallAnalysisPipeline:
         fake_llm_out = {
             "trajectory": {"summary": "Test trajectory from Mistral"},
             "actionable_summary": {"problem": "Test problem"},
-            "meta": {"model": "mistralai/mistral-medium-3.5", "llm_used": True, "cost_usd": 0.001},
+            "meta": {"model": "mistralai/mistral-medium-3-5", "llm_used": True, "cost_usd": 0.001},
         }
 
         with patch("src.llm.mistral_analyzer.ConversationMistralAnalyzer") as mock_analyzer_cls:
@@ -128,7 +128,7 @@ class TestCallAnalysisPipeline:
             )
             # Re-create with flags by using a fresh pipeline configured for LLM
             pipe_llm = CallAnalysisPipeline(
-                use_mistral_llm=True, llm_model="mistralai/mistral-medium-3.5"
+                use_mistral_llm=True, llm_model="mistralai/mistral-medium-3-5"
             )
             # Re-apply the sentiment mock on the new instance's path
             monkeypatch.setattr(

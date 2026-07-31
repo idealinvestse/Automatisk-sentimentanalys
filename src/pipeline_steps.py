@@ -203,23 +203,52 @@ def run_mistral_holistic(
     results: dict[str, Any],
     ctx: PipelineLLMContext,
 ) -> dict[str, Any]:
-    """Call the Mistral analyzer (if available) and return enriched result or fallback dict."""
+    """Call the Mistral/OpenAI-compat analyzer and return enriched result or fallback dict."""
     try:
         from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
         model = ctx.llm_model
-        if not model and ctx.provider != "groq":
-            from .llm.routing import RoutingTier, select_model
+        client = None
+        provider = (ctx.provider or "openrouter").lower()
 
-            tier = RoutingTier.BALANCED
-            model = select_model(
-                tier,
-                segment_count=len(seg_dicts),
-                deep_analysis=ctx.deep_analysis or ctx.use_mistral_llm,
+        # Multi-provider router profiles
+        if provider in {"auto", "free_sequential", "sv_optimal", "router"}:
+            from .llm.router_client import RouterBackedClient
+
+            profile = "sv_optimal" if provider == "sv_optimal" else "free_sequential"
+            client = RouterBackedClient(profile=profile, tier="balanced", default_model=model)
+            model = model or client.default_model
+        elif provider in {"mistral", "nvidia", "cerebras"}:
+            from .llm.openai_compat_client import OpenAICompatClient
+            from .llm.provider_secrets import get_provider_api_key, load_provider_config
+
+            cfg = load_provider_config()
+            spec = (cfg.get("providers") or {}).get(provider) or {}
+            curated = (spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}
+            model = model or curated.get("balanced") or curated.get("fast") or "mistral-small-latest"
+            client = OpenAICompatClient(
+                provider=provider,
+                api_key=ctx.llm_api_key or get_provider_api_key(provider, config=cfg),
+                base_url=str(spec.get("base_url") or ""),
+                default_model=model,
+                extra_headers=dict(spec.get("headers_extra") or {}),
             )
+        else:
+            # openrouter default
+            if not model:
+                from .llm.routing import RoutingTier, select_model
+
+                tier = RoutingTier.BALANCED
+                model = select_model(
+                    tier,
+                    segment_count=len(seg_dicts),
+                    deep_analysis=ctx.deep_analysis or ctx.use_mistral_llm,
+                )
+
         mistral = ConversationMistralAnalyzer(
+            client=client,
             model=model,
             api_key=ctx.llm_api_key,
         )
@@ -238,10 +267,67 @@ def run_mistral_holistic(
         else:
             llm_out.setdefault("meta", {})
             llm_out["meta"]["llm_used"] = True
+        llm_out.setdefault("meta", {})
+        llm_out["meta"].setdefault("provider", provider)
         return llm_out
     except Exception as exc:
         logger.warning("Mistral holistic step failed (will use local only): %s", exc)
         return {"llm_used": False, "llm_fallback_reason": str(exc), "error": str(exc)}
+
+
+def run_llm_holistic(
+    segments: list[Segment] | list[dict[str, Any]],
+    results: dict[str, Any],
+    ctx: PipelineLLMContext,
+) -> dict[str, Any]:
+    """Route to the correct LLM analyzer based on provider."""
+    if not _llm_credentials_available(ctx):
+        return {
+            "llm_used": False,
+            "meta": {
+                "llm_used": False,
+                "llm_fallback_reason": "missing_api_key",
+                "provider": ctx.provider,
+            },
+            "fallback": True,
+        }
+    if ctx.provider == "groq":
+        return run_groq_holistic(segments, results, ctx)
+    return run_mistral_holistic(segments, results, ctx)
+
+
+def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
+    """True when a provider API key is available (ctx override or env/file)."""
+    if ctx.llm_api_key:
+        return True
+    provider = (ctx.provider or "openrouter").lower()
+    if provider == "groq":
+        try:
+            from .llm.groq_client import get_groq_api_key
+
+            return bool(get_groq_api_key())
+        except Exception:
+            return False
+    if provider in {"auto", "free_sequential", "sv_optimal", "router"}:
+        try:
+            from .llm.provider_secrets import list_configured_providers
+
+            return any(list_configured_providers().values())
+        except Exception:
+            return False
+    if provider in {"mistral", "nvidia", "cerebras", "openrouter"}:
+        try:
+            from .llm.provider_secrets import get_provider_api_key
+
+            return bool(get_provider_api_key(provider if provider != "openrouter" else "openrouter"))
+        except Exception:
+            return False
+    try:
+        from .llm.openrouter_client import get_openrouter_api_key
+
+        return bool(get_openrouter_api_key())
+    except Exception:
+        return False
 
 
 def run_groq_holistic(
@@ -310,46 +396,6 @@ def run_groq_holistic(
             "error": str(exc),
             "meta": {"provider": "groq"},
         }
-
-
-def run_llm_holistic(
-    segments: list[Segment] | list[dict[str, Any]],
-    results: dict[str, Any],
-    ctx: PipelineLLMContext,
-) -> dict[str, Any]:
-    """Route to the correct LLM analyzer based on provider."""
-    if not _llm_credentials_available(ctx):
-        return {
-            "llm_used": False,
-            "meta": {
-                "llm_used": False,
-                "llm_fallback_reason": "missing_api_key",
-                "provider": ctx.provider,
-            },
-            "fallback": True,
-        }
-    if ctx.provider == "groq":
-        return run_groq_holistic(segments, results, ctx)
-    return run_mistral_holistic(segments, results, ctx)
-
-
-def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
-    """True when a provider API key is available (ctx override or env/file)."""
-    if ctx.llm_api_key:
-        return True
-    if ctx.provider == "groq":
-        try:
-            from .llm.groq_client import get_groq_api_key
-
-            return bool(get_groq_api_key())
-        except Exception:
-            return False
-    try:
-        from .llm.openrouter_client import get_openrouter_api_key
-
-        return bool(get_openrouter_api_key())
-    except Exception:
-        return False
 
 
 def run_fas4_enrichment(

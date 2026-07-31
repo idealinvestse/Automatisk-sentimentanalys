@@ -26,14 +26,30 @@ from __future__ import annotations
 from .groq_analyzer import GroqAnalyzer
 from .groq_client import GroqClient, get_groq_api_key
 from .mistral_analyzer import ConversationMistralAnalyzer
+from .model_catalog import (
+    fetch_all_provider_catalogs,
+    fetch_openrouter_models_catalog,
+    fetch_provider_models_catalog,
+    load_catalog,
+    load_provider_catalog,
+)
+from .multi_provider_router import MultiProviderRouter, RouterProfile, make_router
+from .openai_compat_client import OpenAICompatClient
 from .openrouter_client import (
     OpenRouterClient,
     get_openrouter_api_key,
     load_openrouter_key_from_file,
 )
+from .paid_model_advisor import (
+    ANALYSIS_PERSPECTIVES,
+    list_analysis_profiles,
+    recommend_for_perspective,
+)
 from .pii_redactor import redact_pii, redact_segments
 from .prompts import SYSTEM_PROMPT as LLM_SYSTEM_PROMPT
 from .prompts import build_user_prompt, get_system_prompt
+from .provider_secrets import get_provider_api_key, list_configured_providers, save_provider_key
+from .router_client import RouterBackedClient
 from .schemas import (
     GROQ_DEFAULT_MODEL,
     GROQ_FALLBACK_CHAIN,
@@ -53,8 +69,24 @@ from .schemas import (
 
 __all__ = [
     "OpenRouterClient",
+    "OpenAICompatClient",
+    "RouterBackedClient",
+    "MultiProviderRouter",
+    "RouterProfile",
+    "make_router",
     "get_openrouter_api_key",
+    "get_provider_api_key",
+    "list_configured_providers",
+    "save_provider_key",
     "load_openrouter_key_from_file",
+    "fetch_openrouter_models_catalog",
+    "fetch_provider_models_catalog",
+    "fetch_all_provider_catalogs",
+    "load_catalog",
+    "load_provider_catalog",
+    "ANALYSIS_PERSPECTIVES",
+    "list_analysis_profiles",
+    "recommend_for_perspective",
     "GroqClient",
     "get_groq_api_key",
     "GroqAnalyzer",

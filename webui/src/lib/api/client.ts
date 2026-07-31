@@ -672,6 +672,23 @@ export class ApiClient {
     }
   }
 
+  /** Cost-aware analysis perspectives with recommended paid models. */
+  getAnalysisProfiles(options: { top_k?: number; refresh?: boolean } = {}) {
+    const q = new URLSearchParams();
+    if (options.top_k != null) q.set("top_k", String(options.top_k));
+    if (options.refresh != null) q.set("refresh", String(options.refresh));
+    const qs = q.toString();
+    return this.get<import("@/lib/analysis-profiles").AnalysisProfilesResponse>(
+      `/llm/analysis-profiles${qs ? `?${qs}` : ""}`,
+    );
+  }
+
+  getAnalysisProfileDetail(perspectiveId: string, top_k = 5) {
+    return this.get<Record<string, unknown>>(
+      `/llm/analysis-profiles/${encodeURIComponent(perspectiveId)}?top_k=${top_k}`,
+    );
+  }
+
   analyzePipeline<T = PipelineReport>(
     segments: unknown[],
     options: Record<string, unknown> = {},

@@ -23,11 +23,11 @@ def test_select_model_budget_forces_fast():
 def test_select_model_from_catalog_when_default_present(tmp_path):
     catalog_path = tmp_path / "catalog.json"
     catalog_path.write_text(
-        '{"models": [{"id": "mistralai/mistral-medium-3.5"}]}',
+        '{"models": [{"id": "mistralai/mistral-medium-3-5"}]}',
         encoding="utf-8",
     )
     model = select_model(RoutingTier.BALANCED, catalog_path=catalog_path)
-    assert model == "mistralai/mistral-medium-3.5"
+    assert model == "mistralai/mistral-medium-3-5"
 
 
 def test_select_model_falls_back_to_available_mistral(tmp_path):

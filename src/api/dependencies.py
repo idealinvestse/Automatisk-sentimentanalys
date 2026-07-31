@@ -74,7 +74,36 @@ def create_pipeline(
     provider: str = "openrouter",
     groq_eu_residency: bool = False,
     async_analyzers: bool = False,
+    analysis_perspective: str | None = None,
 ) -> CallAnalysisPipeline:
+    # Cost/quality-aware paid model pick from analysis perspective menu
+    if analysis_perspective and not llm_model:
+        try:
+            from ..llm.paid_model_advisor import recommend_for_perspective
+
+            rec = recommend_for_perspective(analysis_perspective, top_k=1)
+            sel = rec.selectable or {}
+            if sel.get("llm_model"):
+                llm_model = str(sel["llm_model"])
+            if sel.get("provider") and provider in {
+                "openrouter",
+                "auto",
+                "router",
+                "sv_optimal",
+                "free_sequential",
+            }:
+                # Only override generic providers; honor explicit mistral/nvidia/…
+                provider = str(sel["provider"])
+            if sel.get("deep_analysis"):
+                deep_analysis = True
+            use_mistral_llm = True
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "analysis_perspective=%s resolve failed: %s", analysis_perspective, exc
+            )
+
     return CallAnalysisPipeline(
         sentiment_model=sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
         device=device,

@@ -89,6 +89,7 @@ async def analyze_pipeline(
         provider=req.provider,
         groq_eu_residency=req.groq_eu_residency,
         async_analyzers=req.async_analyzers,
+        analysis_perspective=getattr(req, "analysis_perspective", None),
     )
 
     async def _do() -> PipelineResponse:

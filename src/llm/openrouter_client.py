@@ -7,7 +7,7 @@ Design rationale (why this solution):
   first-class support for the `response_format={"type": "json_schema", "json_schema": {...}, "strict": true}`
   contract that Mistral models on OpenRouter honor reliably. Alternative (raw httpx + manual parsing)
   would be fragile for strict schema validation.
-- **European-first + privacy**: Defaults to `mistralai/mistral-medium-3.5` (and Large 3 as stronger option).
+- **European-first + privacy**: Defaults to `mistralai/mistral-medium-3-5` (and Large 3 as stronger option).
   OpenRouter routes to Mistral's infra; we explicitly log every egress of conversation data
   (required for GDPR accountability when processing Swedish callcenter PII).
 - Hybrid architecture support: The client itself never decides "when" to call – that is profile/pipeline
@@ -192,19 +192,31 @@ class OpenRouterClient:
     # Pricing as of plan date / OpenRouter listings (double-checked via search; update as models evolve).
     # Values are USD per token. Used for approx cost reporting only.
     PRICING: dict[str, dict[str, float]] = {
+        "mistralai/mistral-medium-3-5": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},
+        # Legacy dotted slug (never a valid OpenRouter id) — kept so cost math still works if seen in logs/cache
         "mistralai/mistral-medium-3.5": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},
-        "mistralai/mistral-medium-3-5": {
-            "input": 1.50 / 1_000_000,
-            "output": 7.50 / 1_000_000,
-        },  # OpenRouter slug variant
-        "mistralai/mistral-large-3": {"input": 2.00 / 1_000_000, "output": 6.00 / 1_000_000},
         "mistralai/mistral-large-2512": {"input": 2.00 / 1_000_000, "output": 6.00 / 1_000_000},
+        "mistralai/mistral-large-3": {"input": 2.00 / 1_000_000, "output": 6.00 / 1_000_000},
         "default": {"input": 1.50 / 1_000_000, "output": 7.50 / 1_000_000},
     }
 
-    DEFAULT_MODEL = "mistralai/mistral-medium-3.5"
+    # OpenRouter publishes hyphenated Mistral slugs; older docs/configs used dots or marketing names.
+    MODEL_ALIASES: dict[str, str] = {
+        "mistralai/mistral-medium-3.5": "mistralai/mistral-medium-3-5",
+        "mistralai/mistral-large-3": "mistralai/mistral-large-2512",
+    }
+
+    DEFAULT_MODEL = "mistralai/mistral-medium-3-5"
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
     DEFAULT_CACHE_DIR = Path(".cache") / "llm"
+
+    @classmethod
+    def normalize_model_id(cls, model: str | None) -> str:
+        """Map legacy/marketing slugs to current OpenRouter model ids."""
+        if not model:
+            return cls.DEFAULT_MODEL
+        mid = model.strip()
+        return cls.MODEL_ALIASES.get(mid, mid)
 
     def __init__(
         self,
@@ -229,7 +241,7 @@ class OpenRouterClient:
         self.api_key = get_openrouter_api_key(api_key)
 
         self.base_url = base_url
-        self.default_model = default_model
+        self.default_model = self.normalize_model_id(default_model)
         self.timeout = timeout
         self.max_retries = max(1, max_retries)
         self.enable_cache = enable_cache
@@ -401,7 +413,7 @@ class OpenRouterClient:
                 details={"task": task_name, "reason": "missing_api_key"},
             )
 
-        model = model or self.default_model
+        model = self.normalize_model_id(model or self.default_model)
         client = self._ensure_openai()
 
         # Privacy / GDPR audit log – this is non-negotiable per plan rule 5
@@ -583,7 +595,7 @@ class OpenRouterClient:
         **kwargs: Any,
     ) -> tuple[str, dict[str, Any]]:
         """Plain text chat completion (no schema enforcement). Returns (content, meta)."""
-        model = model or self.default_model
+        model = self.normalize_model_id(model or self.default_model)
         client = self._ensure_openai()
 
         logger.info("EXTERNAL LLM (plain) call to %s", model)

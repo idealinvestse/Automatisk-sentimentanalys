@@ -5,11 +5,12 @@
 
 llm:
   enabled: true
-  provider: "openrouter"  # openrouter | groq
-  default_model: "mistralai/mistral-medium-3.5"
+  provider: "openrouter"  # openrouter | groq | mistral | nvidia | cerebras | free_sequential | sv_optimal | auto
+  # See configs/llm_providers.yaml for multi-provider router + free-tier rotation
+  default_model: "mistralai/mistral-medium-3-5"
   # Stronger (more expensive) alternative for very complex or high-value calls
-  strong_model: "mistralai/mistral-large-3"
-  fallback_model: "mistralai/mistral-medium-3.5"
+  strong_model: "mistralai/mistral-large-2512"
+  fallback_model: "mistralai/mistral-medium-3-5"
   # Per-call soft budget in USD (client + pipeline can warn or skip)
   cost_budget_per_call: 0.08
   temperature: 0.15

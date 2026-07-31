@@ -63,6 +63,7 @@ class TestFetchOpenRouterModelsCatalog:
         with (
             patch("urllib.request.urlopen", return_value=mock_resp) as mock_open,
             patch("src.llm.model_catalog.get_openrouter_api_key", return_value=None),
+            patch("src.llm.model_catalog.get_provider_api_key", return_value=None),
         ):
             catalog = fetch_openrouter_models_catalog(out)
 

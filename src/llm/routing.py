@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODELS = {
     "fast": "mistralai/mistral-small-3.1-24b-instruct",
-    "balanced": "mistralai/mistral-medium-3.5",
+    "balanced": "mistralai/mistral-medium-3-5",
     "deep": "mistralai/mistral-large-2512",
 }
 
