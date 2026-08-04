@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CallSync } from "@/components/call-sync";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="flex h-full min-h-screen flex-col bg-background text-foreground">
         <ThemeProvider>
           <QueryProvider>
+            <CallSync />
             <AppHeader />
             <div className="flex flex-1 overflow-hidden">
               <AppSidebar />

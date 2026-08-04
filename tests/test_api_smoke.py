@@ -175,6 +175,27 @@ def test_production_guard_requires_media_root(monkeypatch: pytest.MonkeyPatch) -
         validate_production_settings(settings)
 
 
+def test_api_production_implies_auth_and_media_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_PRODUCTION", "true")
+    monkeypatch.delenv("API_REQUIRE_AUTH", raising=False)
+    monkeypatch.delenv("API_REQUIRE_MEDIA_ROOT", raising=False)
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
+    get_api_settings.cache_clear()
+    from src.api.settings import validate_production_settings
+    from src.core.errors import ConfigurationError
+
+    settings = get_api_settings()
+    with pytest.raises(ConfigurationError, match="SENTIMENT_API_KEY"):
+        validate_production_settings(settings)
+
+    monkeypatch.setenv("SENTIMENT_API_KEY", "test-key")
+    get_api_settings.cache_clear()
+    settings = get_api_settings()
+    with pytest.raises(ConfigurationError, match="API_MEDIA_ROOT"):
+        validate_production_settings(settings)
+
+
 # --- Edge AI router tests ---------------------------------------------------
 
 

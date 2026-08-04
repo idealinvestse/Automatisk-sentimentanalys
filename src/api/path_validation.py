@@ -10,7 +10,13 @@ from .settings import get_api_settings
 def _resolve_under_media_root(path: str) -> str:
     resolved = os.path.realpath(path)
     settings = get_api_settings()
+    # Production / explicit media-root mode must never accept unconstrained paths.
     if not settings.media_root:
+        if settings.production or settings.require_media_root:
+            raise ValueError(
+                "API_MEDIA_ROOT must be configured when API_PRODUCTION "
+                "or API_REQUIRE_MEDIA_ROOT is set"
+            )
         return resolved
     root = os.path.realpath(settings.media_root)
     try:

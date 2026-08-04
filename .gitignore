@@ -205,6 +205,8 @@ samples/audio/**/*.flac
 samples/audio/**/*.ogg
 samples/audio/**/*.m4a
 samples/audio/**/*.webm
+# Committed L7 synthetic smoke fixture (no PII)
+!samples/audio/sv/callcenter/smoke_sv_billing.wav
 
 # Local user overrides (templates stay tracked under installer/templates/)
 user_config.yaml

@@ -34,16 +34,26 @@ class APISettings:
 
 
 def validate_production_settings(settings: APISettings) -> None:
-    """Fail fast when production guards are enabled but misconfigured."""
+    """Fail fast when production guards are enabled but misconfigured.
+
+    ``API_PRODUCTION=true`` implies auth + media-root sandbox even if the
+    individual require_* flags are left at defaults.
+    """
     from ..core.errors import ConfigurationError
 
-    if (settings.production or settings.require_auth) and not settings.api_key:
+    need_auth = settings.production or settings.require_auth
+    need_media = settings.production or settings.require_media_root
+    if need_auth and not settings.api_key:
         raise ConfigurationError(
             "SENTIMENT_API_KEY is required when API_PRODUCTION or API_REQUIRE_AUTH is set"
         )
-    if (settings.production or settings.require_media_root) and not settings.media_root:
+    if need_media and not settings.media_root:
         raise ConfigurationError(
             "API_MEDIA_ROOT is required when API_PRODUCTION or API_REQUIRE_MEDIA_ROOT is set"
+        )
+    if settings.production and settings.use_redis_cache and not settings.redis_url:
+        raise ConfigurationError(
+            "REDIS_URL is required when API_PRODUCTION and API_USE_REDIS_CACHE are both set"
         )
 
 

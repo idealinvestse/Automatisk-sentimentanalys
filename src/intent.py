@@ -413,7 +413,28 @@ class IntentClassifier:
     # Model backend
     # ------------------------------------------------------------------
     def _load_model(self) -> None:
-        """Load a fine-tuned intent classification model."""
+        """Load a fine-tuned intent model (sklearn smoke artifact or transformers)."""
+        from pathlib import Path
+
+        root = Path(self.model_path) if self.model_path else None
+        if root is not None:
+            joblib_path = root / "model.joblib"
+            backend_marker = root / "backend.txt"
+            prefer_sklearn = False
+            if backend_marker.is_file():
+                prefer_sklearn = "sklearn" in backend_marker.read_text(encoding="utf-8").lower()
+            if prefer_sklearn or joblib_path.is_file():
+                try:
+                    import joblib
+
+                    self._model = joblib.load(joblib_path)
+                    self._tokenizer = "sklearn"
+                    self.resolved_backend = "model"
+                    logger.info("Intent sklearn model loaded from %s", joblib_path)
+                    return
+                except Exception as e:
+                    logger.warning("Failed to load sklearn intent model: %s", e)
+
         try:
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -428,6 +449,19 @@ class IntentClassifier:
 
     def _classify_model(self, text: str) -> tuple[str, float]:
         """Model-based intent classification."""
+        if self._tokenizer == "sklearn":
+            pred = self._model.predict([text])[0]
+            proba = None
+            if hasattr(self._model, "predict_proba"):
+                try:
+                    probs = self._model.predict_proba([text])[0]
+                    classes = list(self._model.classes_)
+                    idx = classes.index(pred)
+                    proba = float(probs[idx])
+                except Exception:
+                    proba = None
+            return str(pred), round(proba if proba is not None else 0.7, 3)
+
         import torch
 
         inputs = self._tokenizer(text, return_tensors="pt", truncation=True, max_length=256)

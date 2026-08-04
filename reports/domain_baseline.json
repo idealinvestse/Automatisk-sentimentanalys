@@ -3,11 +3,18 @@
   "accuracy": 0.664,
   "f1_macro": 0.6639,
   "intent_heuristic_val": {
-    "accuracy": 0.7429,
-    "f1_macro": 0.7646,
-    "testset": "data/intent_val.jsonl"
+    "accuracy": 0.8267,
+    "f1_macro": 0.8403,
+    "testset": "data/intent_val.jsonl",
+    "n_samples": 300
+  },
+  "intent_sklearn_smoke": {
+    "accuracy": 1.0,
+    "f1_macro": 1.0,
+    "model_path": "models/intent_classifier_smoke",
+    "note": "Synthetic train/val — promotion still requires real telephony slice"
   },
   "testset": "data/callcenter_val.csv",
-  "evaluated_at": "20260709T143826Z",
-  "note": "Sentiment baseline on synthetic val (500 rows, model backend); intent metrics on deduplicated intent_val.jsonl. Refreshed for v0.5 DATA-01 smoke."
+  "evaluated_at": "20260804T211500Z",
+  "note": "Sentiment baseline on synthetic val (500 rows, model backend). Intent metrics refreshed after pilot-gate corpus expansion (300 val rows). Replace with evaluate_real_corpus.py on anonymized telephony before quality claims."
 }

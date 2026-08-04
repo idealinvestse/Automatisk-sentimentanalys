@@ -98,21 +98,7 @@ async def analyze_pipeline(
             req.segments,
             req.selected_analyzers,
         )
-        return PipelineResponse(
-            sentiment_results=report.sentiment_results,
-            intent_results=[
-                {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
-            ],
-            summary=report.summary,
-            topics=report.topics,
-            insights=report.insights,
-            risks=report.risks,
-            processing_time_s=report.processing_time_s,
-            timestamp=utc_now_iso(),
-            llm=report.llm,
-            results=report.results,
-            analyzer_results=build_analyzer_results(report.results),
-        )
+        return _report_to_pipeline_response(report)
 
     return await run_route("analyze_pipeline", _do)
 
@@ -150,26 +136,15 @@ async def analyze_pipeline_partial(
             selected_analyzers=req.selected_analyzers,
             reconcile=req.reconcile,
         )
-        return PipelineResponse(
-            sentiment_results=report.sentiment_results,
-            intent_results=[
-                {"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results
-            ],
-            summary=report.summary,
-            topics=report.topics,
-            insights=report.insights,
-            risks=report.risks,
-            processing_time_s=report.processing_time_s,
-            timestamp=utc_now_iso(),
-            llm=report.llm,
-            results=report.results,
-            analyzer_results=build_analyzer_results(report.results),
-        )
+        return _report_to_pipeline_response(report)
 
     return await run_route("analyze_pipeline_partial", _do)
 
 
 def _report_to_pipeline_response(report: Any) -> PipelineResponse:
+    from ..degradation import collect_degraded_reasons
+
+    degraded = collect_degraded_reasons(report)
     return PipelineResponse(
         sentiment_results=report.sentiment_results,
         intent_results=[{"intent": i, "confidence": round(c, 3)} for i, c in report.intent_results],
@@ -182,6 +157,8 @@ def _report_to_pipeline_response(report: Any) -> PipelineResponse:
         llm=report.llm,
         results=report.results,
         analyzer_results=build_analyzer_results(report.results),
+        degraded=degraded,
+        mode="degraded" if degraded else "full",
     )
 
 

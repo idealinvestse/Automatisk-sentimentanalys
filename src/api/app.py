@@ -49,8 +49,10 @@ from .error_responses import (
 )
 from .metrics import init_app_info, record_http_request
 from .middleware_rate_limit import RateLimitMiddleware
+from .call_store import CallStore
 from .routers import (
     alerting,
+    calls,
     conversation,
     edge,
     health,
@@ -99,6 +101,8 @@ def _init_app_state(application: FastAPI) -> None:
         application.state.ws_tickets = TicketStore(
             redis_client=application.state.cache.redis_client,
         )
+    if not hasattr(application.state, "call_store"):
+        application.state.call_store = CallStore(settings.state_dir)
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -147,7 +151,33 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
         )
     )
     app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
+    app.state.call_store = CallStore(settings.state_dir)
     init_app_info(version="0.4.1")
+
+    # Startup upload retention cleanup (also runs on each upload)
+    if settings.media_root:
+        try:
+            from pathlib import Path
+
+            from .routers.transcription import _cleanup_old_uploads
+
+            upload_dir = Path(settings.media_root) / "uploads"
+            _cleanup_old_uploads(upload_dir, settings.upload_retention_days)
+        except Exception as exc:
+            logger.warning("Startup upload cleanup skipped: %s", exc)
+
+    if settings.use_redis_cache and hub.backend != "redis":
+        logger.warning(
+            "API_USE_REDIS_CACHE=true but transcription event hub backend=%s — "
+            "live WS will not fan out across uvicorn workers",
+            hub.backend,
+        )
+    if settings.production and not settings.use_redis_cache:
+        logger.warning(
+            "API_PRODUCTION without API_USE_REDIS_CACHE — use a single uvicorn worker "
+            "or enable Redis for jobs/tickets/WS events"
+        )
+
     reporter = get_status_reporter()
     reporter.phase("api", "startup", "Swedish Sentiment API started", auth=settings.auth_enabled)
     logger.info(
@@ -296,6 +326,7 @@ def create_app() -> FastAPI:
     app.include_router(transcription.router, dependencies=_auth)
     app.include_router(conversation.router, dependencies=_auth)
     app.include_router(pipeline.router, dependencies=_auth)
+    app.include_router(calls.router, dependencies=_auth)
     app.include_router(llm_profiles.router, dependencies=_auth)
     app.include_router(scan.router, dependencies=_auth)
     app.include_router(ws_transcription.router)

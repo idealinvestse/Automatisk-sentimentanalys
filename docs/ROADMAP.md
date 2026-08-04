@@ -71,12 +71,21 @@ Frontend ↔ backend harmony: **[docs/FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY
 
 | Priority | Area | Description |
 |----------|------|-------------|
-| High | **Real corpus** | Import anonymized production calls via DATA-01 (`--pilot-gate`: ≥500 sentiment / ≥200 intent) — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md) |
-| High | **Pilot release gates** | Close L7–L9 + `verify_pilot_policy.py` before customer pilot — [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) |
-| High | **Intent fine-tune** | Train model that beats heuristic + 0.05 macro F1 on `intent_val.jsonl` (training/config/auto-backend plumbing ready; local artifact and measured promotion gate remain) |
+| High | **Real corpus** | Replace synthetic DATA-01 bundle (`generate_pilot_corpus.py`) with anonymized telephony via `--pilot-gate` — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md) |
+| High | **Pilot release gates** | Run `scripts/run_pilot_gates.py` (L7 fixture + policy); close L8/L9 + live `/testlab` before customer pilot — [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) |
+| High | **Intent fine-tune** | Promote model that beats heuristic + 0.05 macro F1 (`train_intent_smoke.py` / `train_intent.py` + `run_quality_gates.py`) |
 | Medium | **OTLP tracing** | Replace console OTEL exporter with production OTLP endpoint |
 | Medium | **Dashboard polish** | Correlation heatmap, executive drill-downs |
 | Low | **Fine-tuning UX** | Easier domain adaptation workflow for call center data |
+
+### Ops hardening landed (post-genomlysning)
+
+- Server-side `/calls` persistence + webui sync (localStorage = cache)
+- Next.js BFF proxy (`NEXT_PUBLIC_USE_API_PROXY`) to hide API keys
+- `/ready` readiness + `/status/health/detail` degraded checks
+- Pipeline `degraded` / `mode` fields + UI banner
+- Redis-backed WS hub visibility + staging auth/media-root locked
+- Pilot corpus generator + quality-gate orchestrator
 
 ### Completed in v0.5
 

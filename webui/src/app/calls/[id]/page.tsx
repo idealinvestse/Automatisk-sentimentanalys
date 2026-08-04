@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
+import { DegradedBanner } from "@/components/degraded-banner";
 import { EmotionTimelineChart } from "@/components/emotion-timeline-chart";
 import { RiskBadge, SentimentBadge } from "@/components/status-badges";
 import { CallAlertsSection } from "@/components/call-alerts-section";
@@ -72,6 +73,13 @@ export default function CallDetailPage() {
           </p>
         </div>
       </div>
+
+      {realCall ? (
+        <DegradedBanner
+          mode={realCall.report.mode}
+          degraded={realCall.report.degraded}
+        />
+      ) : null}
 
       {isLoading ? (
         <Card>

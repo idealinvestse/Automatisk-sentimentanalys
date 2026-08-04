@@ -11,12 +11,33 @@ import "./paths";
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
+/** When true, browser REST goes through Next.js BFF (`/api/backend`) so the API key stays server-side. */
+function useApiProxy(): boolean {
+  const flag = process.env.NEXT_PUBLIC_USE_API_PROXY?.trim().toLowerCase();
+  return flag === "1" || flag === "true" || flag === "yes";
+}
+
 function getBaseUrl(): string {
+  if (useApiProxy()) {
+    return "/api/backend";
+  }
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
 }
 
-/** Browser-visible API key (pilot: same value as SENTIMENT_API_KEY on trusted LAN). */
+/** Direct FastAPI origin for WebSocket (BFF does not proxy WS). */
+function getDirectApiBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_WS_API_BASE_URL?.trim() ||
+    DEFAULT_BASE_URL
+  ).replace(/\/$/, "");
+}
+
+/** Browser-visible API key (legacy trusted-LAN). Unused when BFF proxy is enabled. */
 function getApiKeyFromEnv(): string | undefined {
+  if (useApiProxy()) {
+    return undefined;
+  }
   const key =
     process.env.NEXT_PUBLIC_API_KEY?.trim() ||
     process.env.NEXT_PUBLIC_SENTIMENT_API_KEY?.trim();
@@ -51,6 +72,10 @@ export interface PipelineReport {
   insights?: Record<string, unknown>;
   /** Typed view of `results` (Fas 5). Null when no analyzers ran. */
   analyzer_results?: AnalyzerResults | null;
+  /** Graceful-degradation reasons from the API. */
+  degraded?: string[];
+  /** 'full' | 'degraded' */
+  mode?: string;
   [key: string]: unknown;
 }
 
@@ -533,9 +558,13 @@ export class ApiClient {
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
-  /** True when a browser API key is configured (env or constructor). */
+  /** True when a browser API key is configured, or when BFF proxy handles auth. */
   get hasApiKey(): boolean {
-    return Boolean(this.apiKey);
+    return Boolean(this.apiKey) || useApiProxy();
+  }
+
+  get usesProxy(): boolean {
+    return useApiProxy();
   }
 
   private headers(opts: { json?: boolean } = {}): HeadersInit {
@@ -652,7 +681,9 @@ export class ApiClient {
             reachable: true,
             authenticated: false,
             status: "auth_required",
-            detail: "Backend kräver X-API-Key — sätt NEXT_PUBLIC_API_KEY",
+            detail: useApiProxy()
+              ? "Backend kräver auth — sätt SENTIMENT_API_KEY på Next.js-servern (BFF)"
+              : "Backend kräver X-API-Key — sätt NEXT_PUBLIC_API_KEY eller aktivera BFF-proxy",
           };
         }
         return {
@@ -892,7 +923,9 @@ export class ApiClient {
 
   /** ws:// or wss:// URL for the live transcription event stream. */
   async wsUrl(path = "/ws/transcription"): Promise<string> {
-    const url = new URL(this.baseUrl);
+    // WebSocket cannot go through the REST BFF — always use the direct API origin.
+    const origin = useApiProxy() ? getDirectApiBaseUrl() : this.baseUrl;
+    const url = new URL(origin.startsWith("http") ? origin : DEFAULT_BASE_URL);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     url.pathname = path;
 
@@ -904,6 +937,28 @@ export class ApiClient {
       url.search = "";
     }
     return url.toString();
+  }
+
+  /** List server-persisted analyzed calls. */
+  listCalls<T = { calls: unknown[]; count: number }>(limit = 50) {
+    return this.get<T>("/calls", { limit });
+  }
+
+  /** Persist an analyzed call on the server (localStorage remains a cache). */
+  saveCall<T = Record<string, unknown>>(
+    id: string,
+    body: {
+      transcript?: Record<string, unknown>;
+      report?: Record<string, unknown>;
+      meta?: Record<string, unknown>;
+      created_at?: string;
+    },
+  ) {
+    return this.post<T>("/calls", { id, ...body });
+  }
+
+  deleteCall<T = { id: string; deleted: boolean }>(id: string) {
+    return this.request<T>(`/calls/${encodeURIComponent(id)}`, { method: "DELETE" });
   }
 
   /** Edge AI: analyze a single text offline (POST /edge/analyze-text). */

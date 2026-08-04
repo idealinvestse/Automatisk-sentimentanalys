@@ -137,12 +137,13 @@ docker run --gpus all -p 8000:8000 -v hf_cache:/cache/hf sentimentanalys-gpu
 
 Körs **utöver** grön CI före deploy-kandidat. CI mockar ML/LLM medvetet — dessa steg ger helstack-förtroende.
 
-- [ ] **L7 ASR/audio smoke** — `python -m src.evaluate audio smoke --device cpu` (eller `cuda` på GPU-host). Vid behov: `pytest -m audio` med `samples/audio` tillgängligt.
+- [ ] **L7 ASR/audio smoke** — `python -m src.evaluate audio smoke --device cpu --pack sv_callcenter --limit 1` (fixture: `samples/audio/sv/callcenter/smoke_sv_billing.wav`). Eller: `python scripts/run_pilot_gates.py --skip-l8 --skip-l9`.
 - [ ] **L8 LLM quality** (om deep-path/LLM är på i prod) — `python -m src.evaluate llm-quality` med giltig provider-nyckel.
-- [ ] **L9 Staging observability** — `docker compose -f docker-compose.staging.yml up` + `python scripts/staging_observability_smoke.py --api-base http://localhost:8000` (health/metrics).
+- [ ] **L9 Staging observability** — `docker compose -f docker-compose.staging.yml up` + `python scripts/staging_observability_smoke.py --api-base http://localhost:8000 --api-key $SENTIMENT_API_KEY` (health/ready/metrics).
 - [ ] **Webui mot live API** — manuell pass via `/testlab` (pipeline + ev. A/B). Playwright i CI stubbar backend och ersätter inte detta.
 - [ ] **Spotcheck** — en svensk call via CLI `analyze-call` och samma flöde i dashboarden.
 - [ ] **Windows launcher** (om installer shippas) — manuell smoke av start/API/dashboard på Windows.
+- [ ] **Pilot policy** — `python scripts/verify_pilot_policy.py --strict` med `.env` från `.env.pilot.example`.
 
 ### Backup-guide
 
@@ -187,9 +188,9 @@ Följande data backas upp:
 
 1. **Windows keyring** — launcher secrets via keyring extra (valfritt för desktop)
 2. **Riktig korpus** — DATA-01 import-slot redo; väntar på extern anonymiserad data (A1) — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md)
-3. **Svensk ASR-pack** — `samples/audio/sv/*` saknar ljudfiler; L7 kräver lokal audio (A3)
-4. **Intent fine-tune** — ingen `models/intent_classifier` ännu; kör `scripts/train_intent.py` + `compare_intent_backends.py` (A2)
-5. **WS event hub** — fortfarande in-process; tickets är Redis-delade men live-events delas inte mellan workers
+3. **Svensk ASR-pack** — L7 smoke-fixture finns (`smoke_sv_billing.wav`); ersätt med riktig telefoni för WER-claim
+4. **Intent fine-tune** — kör `scripts/train_intent_smoke.py` (sklearn) eller `scripts/train_intent.py` (BERT) + `benchmark_intent.py`
+5. **WS event hub** — Redis pub/sub implementerad när `API_USE_REDIS_CACHE=true`; kräv Redis vid multi-worker
 
 ### Conditional pilot gates (2026-07)
 

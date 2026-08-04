@@ -617,6 +617,14 @@ class PipelineResponse(BaseModel):
         None,
         description="Typed view of `results` (Fas 5). Null when no analyzers ran or for backward-compatible clients.",
     )
+    degraded: list[str] = Field(
+        default_factory=list,
+        description="Graceful-degradation reasons (LLM skipped, analyzers unavailable, etc.). Empty = full path.",
+    )
+    mode: str = Field(
+        "full",
+        description="'full' when no degradation; 'degraded' when one or more optional components were skipped.",
+    )
 
 
 class PipelineCompareRequest(BaseModel):

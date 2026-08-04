@@ -1,0 +1,4 @@
+expected_sentiment: negativ
+scenario: billing_complaint
+speakers: 2
+notes: "Synthetic L7 smoke fixture (1s tone) — not real customer audio; no PII"

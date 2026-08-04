@@ -1,0 +1,53 @@
+"""Tests for server-side call persistence."""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from src.api.app import create_app
+from src.api.call_store import CallStore
+from src.api.settings import get_api_settings
+
+
+def test_call_store_roundtrip(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    doc = store.save(
+        "call-1",
+        {"transcript": {"id": "call-1", "title": "Test"}, "report": {"mode": "full"}},
+    )
+    assert doc["id"] == "call-1"
+    assert store.get("call-1")["transcript"]["title"] == "Test"
+    listed = store.list(limit=10)
+    assert len(listed) == 1
+    assert store.delete("call-1") is True
+    assert store.get("call-1") is None
+
+
+def test_calls_api_crud(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    monkeypatch.setenv("API_STATE_DIR", str(tmp_path))
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+
+    created = client.post(
+        "/calls",
+        json={
+            "id": "abc-123",
+            "transcript": {"id": "abc-123", "title": "Faktura"},
+            "report": {"degraded": [], "mode": "full"},
+        },
+    )
+    assert created.status_code == 200
+    assert created.json()["id"] == "abc-123"
+
+    listed = client.get("/calls?limit=10")
+    assert listed.status_code == 200
+    assert listed.json()["count"] >= 1
+
+    got = client.get("/calls/abc-123")
+    assert got.status_code == 200
+    assert got.json()["transcript"]["title"] == "Faktura"
+
+    deleted = client.delete("/calls/abc-123")
+    assert deleted.status_code == 200
+    assert client.get("/calls/abc-123").status_code == 404

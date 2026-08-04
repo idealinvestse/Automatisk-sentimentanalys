@@ -25,11 +25,16 @@ Detaljerad motivering: decision pack §4–5.
 Från repo-roten (`Automatisk-sentimentanalys/`):
 
 ```bash
+# Ready-made template: copy .env.pilot.example → .env and fill secrets
+
 # Kräver .env med API_PRODUCTION=true för full prod-gate-check
 python scripts/verify_pilot_policy.py
 
 # Striktare: faila om Groq-nyckel finns samtidigt som production
 python scripts/verify_pilot_policy.py --strict
+
+# Orchestrate policy + L7 (+ optional L8/L9):
+python scripts/run_pilot_gates.py --strict --skip-l8 --skip-l9 --device cpu
 ```
 
 Skriptet kontrollerar bl.a.:
@@ -63,15 +68,35 @@ Profil: `callcenter` (PII-redaction på). Starta API med staging-compose eller G
 
 ### Webui auth (H1)
 
-När `SENTIMENT_API_KEY` är satt måste webui skicka samma värde:
+**Prefererad:** Next.js BFF-proxy så API-nyckeln stannar server-side:
 
 ```bash
-# webui/.env.local (dev) — syns i browser; endast betrodda nät
+# webui/.env.local
+NEXT_PUBLIC_USE_API_PROXY=1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000   # behövs för WebSocket
+SENTIMENT_API_BASE_URL=http://localhost:8000
+SENTIMENT_API_KEY=<samma-som-backend>
+```
+
+**Legacy trusted-LAN:** nyckel synlig i browser-bundle:
+
+```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_API_KEY=<samma-som-SENTIMENT_API_KEY>
 ```
 
-Docker Compose (`docker-compose.webui.yml`) bakar in `SENTIMENT_API_KEY` som `NEXT_PUBLIC_API_KEY` vid **build**. Bygg om webui efter nyckelbyte. Se [FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY_2026-07-17.md).
+Se `webui/.env.production.example` och [FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY_2026-07-17.md).
+
+### Multi-worker / live WS
+
+När `uvicorn --workers > 1` **måste** Redis vara på:
+
+```bash
+API_USE_REDIS_CACHE=true
+REDIS_URL=redis://localhost:6379/0
+```
+
+Annars är jobs/tickets/WS event hub process-lokala. `/status/health/detail` och `/ready` exponerar Redis/hub-backend.
 
 ---
 
@@ -94,6 +119,10 @@ Kör och bocka i PRODUCTION_CHECKLIST:
 Se [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md).
 
 ```bash
+# CI / lokal path-övning (syntetisk — ersätter inte riktig telefoni):
+python scripts/generate_pilot_corpus.py --import --pilot-gate
+
+# Riktig anonymiserad korpus (externt):
 python scripts/import_domain_corpus.py --source-dir /secure/anonymized --pilot-gate
 python scripts/evaluate_real_corpus.py \
   --sentiment-csv data/import/callcenter_val_real.csv \
@@ -101,6 +130,7 @@ python scripts/evaluate_real_corpus.py \
 ```
 
 `--pilot-gate` kräver minst **500** sentiment-rader och **200** intent-rader (decision pack).
+Kvalitetslöften till kund kräver **riktig** telefoni-slice, inte bara den syntetiska bundlen.
 
 ---
 

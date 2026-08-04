@@ -1,70 +1,300 @@
-{"text": "Typ Jag har bytt email, kan ni ändra det?", "intent": "account_update"}
-{"text": "Kan ni hjälpa mig uppdatera mina uppgifter?", "intent": "account_update"}
-{"text": "Ursäkta, jag vill ändra min adress", "intent": "account_update"}
-{"text": "Eh, Jag har bytt email, kan ni ändra det?", "intent": "account_update"}
-{"text": "Alltså, Ursäkta, uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
-{"text": "Kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
-{"text": "Ursäkta, kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
+{"text": "Typ God dag, hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Eh, alltså, Ursäkta, jag vill ändra min adress", "intent": "account_update"}
+{"text": "Eh, alltså, God dag, hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Hej, jag har flyttat och behöver ny adress", "intent": "account_update"}
+{"text": "Ursäkta, hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Ursäkta, mina kontaktuppgifter behöver uppdateras", "intent": "account_update"}
+{"text": "Hej, jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Alltså, Hej, hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Alltså, Jag har flyttat och behöver ny adress", "intent": "account_update"}
+{"text": "Eh, Kan ni registrera min nya postadress?", "intent": "account_update"}
+{"text": "Ursäkta, jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Eh, Kan ni hjälpa mig uppdatera mina uppgifter?", "intent": "account_update"}
+{"text": "Alltså, Uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
+{"text": "Hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Eh, alltså, Jag vill ändra min adress", "intent": "account_update"}
+{"text": "Eh, alltså, Kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
+{"text": "Typ Hej, jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Hej, jag vill ändra min adress", "intent": "account_update"}
+{"text": "Eh, Uppdatera mitt kundkonto är ni snälla", "intent": "account_update"}
+{"text": "Kan ni registrera min nya postadress?", "intent": "account_update"}
+{"text": "Alltså, Kan ni uppdatera mitt telefonnummer?", "intent": "account_update"}
+{"text": "God dag, jag behöver ändra min adress i systemet", "intent": "account_update"}
+{"text": "Alltså, Jag vill byta lösenord på mitt konto", "intent": "account_update"}
+{"text": "Eh, Jag vill ändra min adress", "intent": "account_update"}
+{"text": "God dag, jag vill ändra min adress", "intent": "account_update"}
+{"text": "Eh, Ändra min e-postadress tack", "intent": "account_update"}
+{"text": "Jag behöver ändra min adress i systemet", "intent": "account_update"}
+{"text": "Typ Hur ändrar jag min profil?", "intent": "account_update"}
+{"text": "Alltså, Kan ni registrera min nya postadress?", "intent": "account_update"}
+{"text": "God dag, jag har bytt email, kan ni ändra det?", "intent": "account_update"}
+{"text": "Eh, Jag vill boka en tid", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Jag vill boka en tid", "intent": "appointment_booking"}
+{"text": "Ursäkta, boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Eh, alltså, God dag, jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Hej, kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "Alltså, God dag, när har ni nästa lediga tid?", "intent": "appointment_booking"}
 {"text": "Hej, när har ni nästa lediga tid?", "intent": "appointment_booking"}
-{"text": "Boka in mig på förmiddagen tack", "intent": "appointment_booking"}
-{"text": "God dag, finns det någon ledig tid imorgon?", "intent": "appointment_booking"}
-{"text": "Ursäkta, när har ni nästa lediga tid?", "intent": "appointment_booking"}
-{"text": "Alltså, Kan jag boka ett videosamtal?", "intent": "appointment_booking"}
-{"text": "Eh, Boka om min tid till nästa vecka", "intent": "appointment_booking"}
-{"text": "God dag, boka om min tid till nästa vecka", "intent": "appointment_booking"}
-{"text": "Jag har inte fått någon faktura än", "intent": "billing_inquiry"}
-{"text": "Typ Kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
-{"text": "Hej, jag har en fråga om min faktura", "intent": "billing_inquiry"}
-{"text": "Hej, kan ni skicka om fakturan?", "intent": "billing_inquiry"}
-{"text": "Eh, alltså, Ursäkta, kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
-{"text": "Eh, Hur mycket kostar det per månad?", "intent": "billing_inquiry"}
-{"text": "Kan ni skicka om fakturan?", "intent": "billing_inquiry"}
-{"text": "Hej, avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
-{"text": "Ursäkta, säg upp allt, jag vill inte vara kund längre", "intent": "cancellation"}
-{"text": "Ursäkta, avboka min beställning", "intent": "cancellation"}
-{"text": "Ursäkta, hur lång uppsägningstid har ni?", "intent": "cancellation"}
-{"text": "Eh, alltså, Jag ångrar mig och vill avbryta", "intent": "cancellation"}
-{"text": "Ursäkta, jag vill avboka min prenumeration", "intent": "cancellation"}
-{"text": "Typ Kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "Eh, alltså, Hej, jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Ursäkta, finns det någon ledig tid imorgon?", "intent": "appointment_booking"}
+{"text": "Ursäkta, kan jag få en tid på torsdag?", "intent": "appointment_booking"}
+{"text": "Alltså, Jag måste avboka min tid på fredag", "intent": "appointment_booking"}
+{"text": "Alltså, Ursäkta, har ni drop-in imorgon?", "intent": "appointment_booking"}
+{"text": "Eh, Kan jag få en tid på torsdag?", "intent": "appointment_booking"}
+{"text": "Typ Ursäkta, jag vill ha ett möte med en handläggare", "intent": "appointment_booking"}
+{"text": "Typ God dag, jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Typ Hej, kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "Alltså, Jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Eh, Ursäkta, kan jag få en tid på torsdag?", "intent": "appointment_booking"}
+{"text": "Finns det någon ledig tid imorgon?", "intent": "appointment_booking"}
+{"text": "Eh, Jag vill ha ett möte med en handläggare", "intent": "appointment_booking"}
+{"text": "Eh, God dag, när har ni nästa lediga tid?", "intent": "appointment_booking"}
+{"text": "God dag, jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Ursäkta, jag behöver boka servicebesök", "intent": "appointment_booking"}
+{"text": "Typ När har ni nästa lediga tid?", "intent": "appointment_booking"}
+{"text": "Typ Ursäkta, jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Typ Hej, kan jag få en tid på torsdag?", "intent": "appointment_booking"}
+{"text": "Eh, alltså, God dag, boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Eh, God dag, kan jag boka ett videosamtal?", "intent": "appointment_booking"}
+{"text": "Eh, alltså, Jag behöver omboka mitt möte", "intent": "appointment_booking"}
+{"text": "Hej, boka in mig på förmiddagen tack", "intent": "appointment_booking"}
+{"text": "Eh, Jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Typ Det står fel belopp på min faktura", "intent": "billing_inquiry"}
+{"text": "God dag, det står fel belopp på min faktura", "intent": "billing_inquiry"}
+{"text": "Alltså, God dag, jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Eh, alltså, Ursäkta, hur mycket kostar det per månad?", "intent": "billing_inquiry"}
+{"text": "Eh, alltså, Hej, när ska jag betala?", "intent": "billing_inquiry"}
+{"text": "Eh, alltså, Hej, jag har en fråga om min faktura", "intent": "billing_inquiry"}
+{"text": "Eh, Varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Alltså, God dag, varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Hej, det står fel belopp på min faktura", "intent": "billing_inquiry"}
+{"text": "God dag, när ska jag betala?", "intent": "billing_inquiry"}
+{"text": "Vad är den här extra debiteringen på fakturan?", "intent": "billing_inquiry"}
+{"text": "Eh, alltså, Kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
+{"text": "Eh, Jag har en fråga om min faktura", "intent": "billing_inquiry"}
+{"text": "Alltså, Vad är den här extra debiteringen på fakturan?", "intent": "billing_inquiry"}
+{"text": "Typ Hej, jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Min faktura matchar inte mitt avtal", "intent": "billing_inquiry"}
+{"text": "Jag undrar varför fakturan är så hög, inte ett klagomål bara", "intent": "billing_inquiry"}
+{"text": "Alltså, Hur mycket kostar det per månad?", "intent": "billing_inquiry"}
+{"text": "Hej, jag undrar varför fakturan är så hög, inte ett klagomål bara", "intent": "billing_inquiry"}
+{"text": "God dag, varför är fakturan så hög denna månad?", "intent": "billing_inquiry"}
+{"text": "Eh, Kan ni förklara avgiften på min senaste faktura?", "intent": "billing_inquiry"}
+{"text": "Eh, alltså, Vad är den här extra debiteringen på fakturan?", "intent": "billing_inquiry"}
+{"text": "Typ Jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
+{"text": "Alltså, Hej, jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
+{"text": "Ursäkta, jag har inte fått någon faktura än", "intent": "billing_inquiry"}
+{"text": "Typ Hej, jag vill ha fakturan via mail istället", "intent": "billing_inquiry"}
+{"text": "God dag, kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
+{"text": "Kan ni förklara den här avgiften?", "intent": "billing_inquiry"}
+{"text": "God dag, min faktura matchar inte mitt avtal", "intent": "billing_inquiry"}
+{"text": "Eh, Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Hej, hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Jag ångrar mig och vill avbryta", "intent": "cancellation"}
+{"text": "Typ Hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Typ Ursäkta, jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Alltså, God dag, kan ni avsluta mitt konto?", "intent": "cancellation"}
+{"text": "Ursäkta, kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "Jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Kan ni stänga mitt konto idag?", "intent": "cancellation"}
+{"text": "Alltså, Ursäkta, hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Eh, Ursäkta, avboka min beställning", "intent": "cancellation"}
+{"text": "Eh, alltså, Hej, jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Alltså, Avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
+{"text": "Alltså, Jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Eh, alltså, Kan ni avsluta mitt konto?", "intent": "cancellation"}
+{"text": "Eh, alltså, Hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Eh, Säg upp allt, jag vill inte vara kund längre", "intent": "cancellation"}
+{"text": "Eh, alltså, Ursäkta, jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Eh, Avsluta mitt medlemskap omedelbart", "intent": "cancellation"}
+{"text": "Eh, alltså, God dag, säg upp allt, jag vill inte vara kund längre", "intent": "cancellation"}
+{"text": "Typ God dag, hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Typ Jag vill avsluta mitt abonnemang", "intent": "cancellation"}
+{"text": "Typ God dag, jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "Eh, alltså, Jag är inte intresserad längre, avsluta tack", "intent": "cancellation"}
+{"text": "God dag, jag vill avboka min prenumeration", "intent": "cancellation"}
+{"text": "Alltså, Jag ångrar mig och vill avbryta", "intent": "cancellation"}
+{"text": "Typ God dag, hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Alltså, Hur lång uppsägningstid har ni?", "intent": "cancellation"}
+{"text": "Eh, Avboka min beställning", "intent": "cancellation"}
+{"text": "Eh, Hur säger jag upp tjänsten?", "intent": "cancellation"}
+{"text": "Eh, Ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Eh, Ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "God dag, jag är mycket missnöjd med servicen", "intent": "complaint"}
+{"text": "Eh, Hej, detta är under all kritik", "intent": "complaint"}
+{"text": "Jag är mycket missnöjd med servicen", "intent": "complaint"}
+{"text": "Min faktura är fel och jag är arg på er", "intent": "complaint"}
+{"text": "Eh, Det fungerar inte och det är oacceptabelt", "intent": "complaint"}
+{"text": "Alltså, Ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "God dag, ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Alltså, Ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Hej, det fungerar inte och det är oacceptabelt", "intent": "complaint"}
+{"text": "Hej, jag känner mig lurad av er", "intent": "complaint"}
+{"text": "Typ God dag, det här är rena katastrofen", "intent": "complaint"}
+{"text": "God dag, er support är helt värdelös", "intent": "complaint"}
+{"text": "Alltså, Sämsta servicen jag varit med om", "intent": "complaint"}
+{"text": "Hej, er support är helt värdelös", "intent": "complaint"}
+{"text": "Ursäkta, det här är helt oacceptabelt!", "intent": "complaint"}
 {"text": "Ursäkta, jag vill eskalera mitt ärende", "intent": "complaint"}
-{"text": "Sämsta servicen jag varit med om", "intent": "complaint"}
-{"text": "Hej, jag är arg och frustrerad över situationen", "intent": "complaint"}
-{"text": "Hej, detta är under all kritik", "intent": "complaint"}
-{"text": "God dag, sämsta servicen jag varit med om", "intent": "complaint"}
-{"text": "Ursäkta, jag är mycket missnöjd med servicen", "intent": "complaint"}
-{"text": "Hej, jag vill lämna ett klagomål", "intent": "complaint"}
-{"text": "Berätta mer om era tjänster", "intent": "information_request"}
-{"text": "Eh, alltså, Har ni någon app man kan använda?", "intent": "information_request"}
-{"text": "Vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Ni har behandlat mig dåligt", "intent": "complaint"}
+{"text": "Hej, det här är rena katastrofen", "intent": "complaint"}
+{"text": "Alltså, Det fungerar inte och det är oacceptabelt", "intent": "complaint"}
+{"text": "Jag är arg och frustrerad över situationen", "intent": "complaint"}
+{"text": "Alltså, Jag är arg och frustrerad över situationen", "intent": "complaint"}
+{"text": "Eh, Ursäkta, jag känner mig lurad av er", "intent": "complaint"}
+{"text": "Typ Jag vill eskalera mitt ärende", "intent": "complaint"}
+{"text": "Det här är rena katastrofen", "intent": "complaint"}
+{"text": "Ursäkta, min faktura är fel och jag är arg på er", "intent": "complaint"}
+{"text": "Eh, Hej, er support är helt värdelös", "intent": "complaint"}
+{"text": "Eh, alltså, Jag vill eskalera mitt ärende", "intent": "complaint"}
+{"text": "Hej, ingen har hjälpt mig trots flera samtal", "intent": "complaint"}
+{"text": "Eh, alltså, Kan ni berätta om era olika abonnemang?", "intent": "information_request"}
+{"text": "Ursäkta, jag undrar om ni har butik i Stockholm", "intent": "information_request"}
+{"text": "God dag, vilka öppettider har ni?", "intent": "information_request"}
+{"text": "Vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Alltså, Jag undrar om ni har butik i Stockholm", "intent": "information_request"}
+{"text": "Eh, alltså, Vad ingår i grundpaketet?", "intent": "information_request"}
 {"text": "Har ni någon app man kan använda?", "intent": "information_request"}
+{"text": "Ursäkta, kan ni berätta om era olika abonnemang?", "intent": "information_request"}
+{"text": "Eh, Ursäkta, vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Eh, Hej, vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Ursäkta, har ni någon app man kan använda?", "intent": "information_request"}
+{"text": "Eh, Vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "God dag, vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Ursäkta, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Eh, God dag, vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Alltså, Ursäkta, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Typ Hej, har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Alltså, Hej, vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Hej, har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Eh, Vilka kanaler kan jag kontakta er på?", "intent": "information_request"}
+{"text": "Eh, alltså, Hej, vilka betalningsalternativ finns?", "intent": "information_request"}
+{"text": "Alltså, Vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Typ Ursäkta, finns det studentrabatt?", "intent": "information_request"}
+{"text": "Typ Har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Vad ingår i grundpaketet?", "intent": "information_request"}
+{"text": "Ursäkta, vad ingår i grundpaketet?", "intent": "information_request"}
 {"text": "Hej, kan ni berätta om era olika abonnemang?", "intent": "information_request"}
-{"text": "Hej, berätta mer om era tjänster", "intent": "information_request"}
-{"text": "Hej, vad kostar det att bli kund?", "intent": "information_request"}
-{"text": "När kommer mitt paket?", "intent": "order_status"}
-{"text": "Eh, Hur lång är leveranstiden?", "intent": "order_status"}
-{"text": "Typ Har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Ursäkta, har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Typ Ursäkta, har ni något erbjudande just nu?", "intent": "information_request"}
+{"text": "Ursäkta, vilka öppettider har ni?", "intent": "information_request"}
+{"text": "Ursäkta, kan ni spåra min leverans?", "intent": "order_status"}
 {"text": "Ursäkta, när kommer mitt paket?", "intent": "order_status"}
-{"text": "God dag, kan ni spåra min leverans?", "intent": "order_status"}
-{"text": "Ursäkta, hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Typ Kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Eh, alltså, Var är min beställning?", "intent": "order_status"}
+{"text": "Eh, Kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Ursäkta, jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "Typ Har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Eh, Ursäkta, har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Hej, jag vill kolla status på min beställning", "intent": "order_status"}
+{"text": "Typ Hej, har paketet lämnat lagret?", "intent": "order_status"}
+{"text": "Alltså, Hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Alltså, Hej, spårningssidan visar inget", "intent": "order_status"}
+{"text": "Alltså, Är min order skickad än?", "intent": "order_status"}
+{"text": "Eh, alltså, Kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "När kommer mitt paket?", "intent": "order_status"}
+{"text": "Eh, Hej, kan ni bekräfta att ni mottagit min order?", "intent": "order_status"}
+{"text": "Eh, När skickades paketet?", "intent": "order_status"}
+{"text": "Eh, Hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Eh, alltså, Hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Typ Var är min beställning?", "intent": "order_status"}
 {"text": "Eh, Var är min beställning?", "intent": "order_status"}
-{"text": "Alltså, Ursäkta, jag kom fel", "intent": "other"}
-{"text": "God dag, ursäkta, jag kom fel", "intent": "other"}
-{"text": "Alltså, Hej, jag har blivit hänvisad hit", "intent": "other"}
-{"text": "Eh, alltså, Jag vet inte riktigt vem jag ska prata med", "intent": "other"}
+{"text": "Eh, Ursäkta, när kommer mitt paket?", "intent": "order_status"}
+{"text": "Spårningssidan visar inget", "intent": "order_status"}
+{"text": "God dag, jag undrar om ni har skickat min vara", "intent": "order_status"}
+{"text": "Typ Är min order skickad än?", "intent": "order_status"}
+{"text": "Jag vill kolla status på min beställning", "intent": "order_status"}
+{"text": "Eh, God dag, hur lång är leveranstiden?", "intent": "order_status"}
+{"text": "Eh, Hej, kan ni spåra min leverans?", "intent": "order_status"}
+{"text": "Alltså, Spårningssidan visar inget", "intent": "order_status"}
+{"text": "Kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Eh, alltså, Ursäkta, kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Typ God dag, jag ringer för att kolla läget", "intent": "other"}
+{"text": "Typ Hej, tack för hjälpen, hej då!", "intent": "other"}
+{"text": "Typ Jag har blivit hänvisad hit", "intent": "other"}
+{"text": "Alltså, Jag söker någon som kan hjälpa mig", "intent": "other"}
+{"text": "Alltså, Ursäkta, är detta kundtjänst?", "intent": "other"}
+{"text": "God dag, kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Typ Jag ringer för att kolla läget", "intent": "other"}
+{"text": "Typ Ursäkta, tack för hjälpen, hej då!", "intent": "other"}
 {"text": "Ursäkta, hej, jag har en allmän fråga", "intent": "other"}
-{"text": "Hej, hej, jag har en allmän fråga", "intent": "other"}
 {"text": "Typ Ursäkta, jag kom fel", "intent": "other"}
-{"text": "Fakturan är fel, jag vill ha pengarna tillbaka", "intent": "refund_request"}
-{"text": "Ursäkta, jag vill ha kompensation för strulet", "intent": "refund_request"}
-{"text": "Ni lovade återbetalning men inget har hänt", "intent": "refund_request"}
-{"text": "Eh, alltså, Återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Ursäkta, kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Jag är osäker på vart jag ska vända mig", "intent": "other"}
+{"text": "Eh, Är detta kundtjänst?", "intent": "other"}
+{"text": "Eh, Tack för hjälpen, hej då!", "intent": "other"}
+{"text": "Typ Tack för hjälpen, hej då!", "intent": "other"}
+{"text": "God dag, jag ringer för att kolla läget", "intent": "other"}
+{"text": "Typ Hej, jag vill bara testa er support", "intent": "other"}
+{"text": "Eh, Ursäkta, kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Ursäkta, ursäkta, jag kom fel", "intent": "other"}
+{"text": "Hej, ursäkta, jag kom fel", "intent": "other"}
+{"text": "Alltså, Är detta kundtjänst?", "intent": "other"}
+{"text": "Typ God dag, jag hoppas ni kan hjälpa", "intent": "other"}
+{"text": "Eh, alltså, God dag, jag hoppas ni kan hjälpa", "intent": "other"}
+{"text": "Eh, alltså, Hej, jag har en allmän fråga", "intent": "other"}
+{"text": "Eh, Kan ni koppla mig till rätt avdelning?", "intent": "other"}
+{"text": "Typ God dag, jag är osäker på vart jag ska vända mig", "intent": "other"}
+{"text": "Alltså, Hej, jag har en allmän fråga", "intent": "other"}
+{"text": "Ursäkta, jag har blivit hänvisad hit", "intent": "other"}
+{"text": "Typ Fakturan är fel, jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "God dag, återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Hej, ni debiterade fel, återbetala tack", "intent": "refund_request"}
+{"text": "Typ Ursäkta, kreditera mitt konto tack", "intent": "refund_request"}
+{"text": "Återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Ursäkta, jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
+{"text": "Eh, Jag har blivit feldebiterad och vill ha återbetalning", "intent": "refund_request"}
+{"text": "Eh, Ursäkta, när får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Alltså, Hej, ni drog för mycket, återbetala mellanskillnaden", "intent": "refund_request"}
+{"text": "God dag, när får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Hej, jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "Hej, ni drog för mycket, återbetala mellanskillnaden", "intent": "refund_request"}
+{"text": "Eh, alltså, Ursäkta, när får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Hej, återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Eh, alltså, Ni lovade återbetalning men inget har hänt", "intent": "refund_request"}
+{"text": "Alltså, När får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Alltså, Hej, jag kräver återbetalning för dubbeldebitering", "intent": "refund_request"}
+{"text": "Typ Kan ni refunda den felaktiga avgiften?", "intent": "refund_request"}
+{"text": "Eh, Jag vill ha pengarna tillbaka", "intent": "refund_request"}
 {"text": "Hej, ni lovade återbetalning men inget har hänt", "intent": "refund_request"}
-{"text": "Eh, alltså, Jag returnerade varan, var är återbetalningen?", "intent": "refund_request"}
-{"text": "Ursäkta, återbetala beloppet omgående", "intent": "refund_request"}
-{"text": "Ursäkta, router blinkar rött hela tiden", "intent": "technical_support"}
-{"text": "Alltså, Något är fel med min anslutning", "intent": "technical_support"}
-{"text": "Min enhet startar inte", "intent": "technical_support"}
-{"text": "Wifi fungerar inte efter omstart", "intent": "technical_support"}
-{"text": "Hej, det står bara och laddar", "intent": "technical_support"}
+{"text": "Eh, alltså, Kan ni återbetala min senaste faktura?", "intent": "refund_request"}
+{"text": "Ursäkta, ni debiterade fel, återbetala tack", "intent": "refund_request"}
+{"text": "Alltså, Jag har blivit feldebiterad och vill ha återbetalning", "intent": "refund_request"}
+{"text": "Eh, alltså, God dag, ni debiterade fel, återbetala tack", "intent": "refund_request"}
+{"text": "Eh, Återbetala beloppet omgående", "intent": "refund_request"}
+{"text": "Ursäkta, kan ni refunda den felaktiga avgiften?", "intent": "refund_request"}
+{"text": "Ni debiterade fel, återbetala tack", "intent": "refund_request"}
+{"text": "Eh, Fakturan är fel, jag vill ha pengarna tillbaka", "intent": "refund_request"}
+{"text": "Eh, alltså, Hej, när får jag mina pengar tillbaka?", "intent": "refund_request"}
+{"text": "Ursäkta, jag kräver återbetalning för dubbeldebitering", "intent": "refund_request"}
+{"text": "Eh, alltså, Hej, min enhet startar inte", "intent": "technical_support"}
+{"text": "God dag, kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Eh, Hej, jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
+{"text": "Alltså, Ursäkta, något är fel med min anslutning", "intent": "technical_support"}
+{"text": "Jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
+{"text": "God dag, produkten fungerar inte som den ska", "intent": "technical_support"}
+{"text": "Typ Hej, kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Hej, jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
+{"text": "Eh, alltså, Hej, kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Eh, Appen kraschar hela tiden", "intent": "technical_support"}
+{"text": "Ursäkta, appen kraschar hela tiden", "intent": "technical_support"}
 {"text": "Eh, Något är fel med min anslutning", "intent": "technical_support"}
-{"text": "Eh, alltså, Ursäkta, router blinkar rött hela tiden", "intent": "technical_support"}
+{"text": "Eh, Jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Wifi fungerar inte efter omstart", "intent": "technical_support"}
+{"text": "Eh, alltså, Ursäkta, det står bara och laddar", "intent": "technical_support"}
+{"text": "God dag, jag får ett felmeddelande när jag loggar in", "intent": "technical_support"}
+{"text": "God dag, jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Alltså, Jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Eh, alltså, Hej, produkten fungerar inte som den ska", "intent": "technical_support"}
+{"text": "Hej, jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Ursäkta, hjälp, ingenting fungerar!", "intent": "technical_support"}
+{"text": "Eh, Ursäkta, jag kan inte ansluta till internet", "intent": "technical_support"}
+{"text": "Typ God dag, kan ni fjärrstyra och kolla vad som är fel?", "intent": "technical_support"}
+{"text": "Alltså, Jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
+{"text": "Eh, alltså, God dag, det står bara och laddar", "intent": "technical_support"}
+{"text": "Typ Det står bara och laddar", "intent": "technical_support"}
+{"text": "Eh, Ursäkta, jag behöver teknisk hjälp med installationen", "intent": "technical_support"}
+{"text": "God dag, något är fel med min anslutning", "intent": "technical_support"}
+{"text": "Eh, Ursäkta, hjälp, ingenting fungerar!", "intent": "technical_support"}
+{"text": "Alltså, Hjälp, ingenting fungerar!", "intent": "technical_support"}

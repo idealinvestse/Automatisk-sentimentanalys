@@ -37,15 +37,15 @@ services:
       - SENTIMENT_JSON_LOGS=1
       - OTEL_ENABLED=true
       - API_PRODUCTION=true
-      - API_REQUIRE_AUTH=false
-      - API_REQUIRE_MEDIA_ROOT=false
-      - SENTIMENT_API_KEY=staging-local-dev-key
+      - API_REQUIRE_AUTH=true
+      - API_REQUIRE_MEDIA_ROOT=true
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-staging-local-dev-key}
       - API_MEDIA_ROOT=/tmp/media
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,11 @@ services:
       context: ./webui
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-        NEXT_PUBLIC_API_KEY: ${SENTIMENT_API_KEY:-staging-local-dev-key}
+        NEXT_PUBLIC_USE_API_PROXY: "1"
+        NEXT_PUBLIC_API_KEY: ""
+    environment:
+      - SENTIMENT_API_BASE_URL=http://api:8000
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-staging-local-dev-key}
     ports:
       - "3000:3000"
     depends_on:

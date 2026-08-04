@@ -7,8 +7,10 @@ WORKDIR /app
 # NEXT_PUBLIC_* must be present at build time (inlined into the client bundle).
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ARG NEXT_PUBLIC_API_KEY=
+ARG NEXT_PUBLIC_USE_API_PROXY=
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_KEY=$NEXT_PUBLIC_API_KEY
+ENV NEXT_PUBLIC_USE_API_PROXY=$NEXT_PUBLIC_USE_API_PROXY
 
 # Install dependencies using the lockfile for reproducible builds.
 COPY package.json package-lock.json* ./
