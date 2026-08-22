@@ -65,7 +65,13 @@ class ParsedMetadata(BaseModel):
     scenario: str | None = None
     speakers: int | None = None
     notes: str | None = None
+    language: str | None = None
+    expected_transcript_contains: list[str] = Field(default_factory=list)
+    skip_ml: bool = False
+    schema_name: str | None = Field(default=None, alias="schema")
     extra: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = {"populate_by_name": True}
 
 
 class AudioSample(BaseModel):

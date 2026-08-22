@@ -173,6 +173,128 @@ def test_smoke_with_mocked_asr(mock_transcribe, _mock_requires_ml, tmp_path):
     assert all(f.ok for f in report.files)
 
 
+def _sidecar_audio_root(tmp_path: Path, phrases: list[str]) -> str:
+    root = tmp_path / "sidecar_audio"
+    pack = root / "sv" / "callcenter"
+    pack.mkdir(parents=True)
+    (pack / "demo.wav").write_bytes(b"RIFF\x00\x00\x00\x00")
+    phrase_yaml = "\n".join(f'  - "{p}"' for p in phrases)
+    (pack / "demo.meta.yaml").write_text(
+        "schema: audio_smoke_v1\n"
+        "language: sv\n"
+        "expected_sentiment: neutral\n"
+        "expected_transcript_contains:\n"
+        f"{phrase_yaml}\n",
+        encoding="utf-8",
+    )
+    (root / "manifest.yaml").write_text(
+        """
+version: 1
+packs:
+  sv_callcenter:
+    label: test
+    language: sv
+    root: sv/callcenter
+    glob: "**/*.wav"
+    parser: sidecar
+    default_asr_language: sv
+    tags: [swedish]
+    enabled: true
+""",
+        encoding="utf-8",
+    )
+    return str(root)
+
+
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.transcription.router.AsrRouter.transcribe")
+def test_smoke_fails_on_empty_transcript(mock_transcribe, _mock_requires_ml, tmp_path):
+    from src.core.models import Transcript
+
+    audio_root = _sidecar_audio_root(tmp_path, ["hej"])
+    mock_transcribe.return_value = Transcript(
+        model="test",
+        backend="faster",
+        language="sv",
+        duration=1.0,
+        processing_time=0.1,
+        segments=[],
+    )
+    report = run_scenario(
+        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
+    )
+    assert report.summary.get("n_failed") == 1
+    assert "empty transcript" in (report.files[0].error or "")
+
+
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.transcription.router.AsrRouter.transcribe")
+def test_smoke_fails_on_missing_expected_phrases(mock_transcribe, _mock_requires_ml, tmp_path):
+    from src.core.models import Segment, Transcript
+
+    audio_root = _sidecar_audio_root(tmp_path, ["faktura"])
+    mock_transcribe.return_value = Transcript(
+        model="test",
+        backend="faster",
+        language="sv",
+        duration=1.0,
+        processing_time=0.1,
+        segments=[Segment(start=0.0, end=1.0, text="Välkommen till växeln")],
+    )
+    report = run_scenario(
+        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
+    )
+    assert report.files[0].ok is False
+    assert "missing expected phrases" in (report.files[0].error or "")
+
+
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.transcription.router.AsrRouter.transcribe")
+def test_smoke_passes_expected_phrases_casefold(mock_transcribe, _mock_requires_ml, tmp_path):
+    from src.core.models import Segment, Transcript
+
+    audio_root = _sidecar_audio_root(tmp_path, ["Välkommen till växeln"])
+    mock_transcribe.return_value = Transcript(
+        model="test",
+        backend="faster",
+        language="sv",
+        duration=1.0,
+        processing_time=0.1,
+        segments=[Segment(start=0.0, end=1.0, text="välkommen   till växeln idag")],
+    )
+    report = run_scenario(
+        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
+    )
+    assert report.files[0].ok is True
+
+
+@patch("src.benchmarks.audio_runner._run_sentiment_on_text", return_value="neutral")
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.pipeline.CallAnalysisPipeline")
+def test_pipeline_uses_callcenter_profile_and_preprocess(
+    mock_pipeline_cls, _mock_requires_ml, _mock_sentiment, tmp_path
+):
+    from unittest.mock import MagicMock
+
+    audio_root = _sidecar_audio_root(tmp_path, ["hej"])
+    instance = MagicMock()
+    report = MagicMock()
+    report.segments = [{"text": "hej där"}]
+    report.diarization = None
+    instance.analyze_audio.return_value = report
+    mock_pipeline_cls.return_value = instance
+
+    result = run_scenario(
+        "pipeline", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
+    )
+    assert result.files[0].ok is True
+    assert mock_pipeline_cls.call_args.kwargs.get("profile") == "callcenter"
+    kwargs = instance.analyze_audio.call_args.kwargs
+    assert kwargs.get("preprocess_mode") == "callcenter"
+    assert kwargs.get("strict_asr") is True
+    assert kwargs.get("run_diarization") is False
+
+
 def test_list_command_via_evaluate(tmp_path):
     audio_root, _ = _audio_root(tmp_path)
     from typer.testing import CliRunner

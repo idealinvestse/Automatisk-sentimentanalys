@@ -197,7 +197,7 @@ data/*_real.jsonl
 data/**/*_real.csv
 data/**/*_real.jsonl
 
-# Large or local-only media (keep manifests, README, .gitkeep)
+# Large or local-only media (keep manifests, README, sidecars, .gitkeep)
 samples/audio/Actor_*/
 samples/audio/**/*.wav
 samples/audio/**/*.mp3
@@ -207,6 +207,12 @@ samples/audio/**/*.m4a
 samples/audio/**/*.webm
 # Committed L7 synthetic smoke fixture (no PII)
 !samples/audio/sv/callcenter/smoke_sv_billing.wav
+# Sidecar metadata is small and must stay tracked
+!samples/audio/**/*.meta.yaml
+
+# Runtime API uploads (API_MEDIA_ROOT); never commit customer audio
+media/uploads/
+!media/uploads/.gitkeep
 
 # Local user overrides (templates stay tracked under installer/templates/)
 user_config.yaml
@@ -221,6 +227,8 @@ reports/audio_*.json
 reports/offline/
 reports/**/*_local.json
 reports/**/*_smoke.json
+reports/**/*_latest.json
+reports/step_c_*.json
 
 # -----------------------------------------------------------------------------
 # Node / Next.js (webui also has its own .gitignore; root patterns help monorepo)

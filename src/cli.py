@@ -814,6 +814,7 @@ def analyze_call_cmd(
                     preprocess=preprocess,
                     preprocess_mode=preprocess_mode,
                     selected_analyzers=selected_list,
+                    strict_asr=True,
                 )
                 report_dict = report.to_dict()
             except Exception as e:

@@ -1,4 +1,7 @@
+schema: audio_smoke_v1
+language: sv
 expected_sentiment: negativ
 scenario: billing_complaint
 speakers: 2
+skip_ml: true
 notes: "Synthetic L7 smoke fixture (1s tone) — not real customer audio; no PII"

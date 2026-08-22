@@ -313,6 +313,7 @@ class CallAnalysisPipeline:
         initial_prompt: str | None = None,
         preprocess: bool = False,
         preprocess_mode: str | None = None,
+        strict_asr: bool = False,
     ) -> CallAnalysisReport:
         """Analyze a call from an audio file.
 
@@ -322,6 +323,7 @@ class CallAnalysisPipeline:
             language: Language code for ASR.
             run_diarization: Whether to run speaker diarization.
             selected_analyzers: Optional list of analyzer names to run. Runs all by default.
+            strict_asr: If True, re-raise ASR failures instead of returning an empty report.
 
         Returns:
             CallAnalysisReport with full analysis.
@@ -374,6 +376,8 @@ class CallAnalysisPipeline:
                     exc_info=True,
                 )
                 status.error("pipeline", "transcribe", f"Transkribering misslyckades: {e}")
+                if strict_asr:
+                    raise
                 from .core.models import Transcript
 
                 transcript = Transcript(

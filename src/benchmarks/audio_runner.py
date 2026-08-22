@@ -127,6 +127,44 @@ def _raise_if_pipeline_swallowed_cuda_oom(report: object) -> None:
         raise RuntimeError(error)
 
 
+def _expected_contains(sample: object) -> list[str]:
+    meta = getattr(sample, "metadata", None)
+    if meta is None:
+        return []
+    phrases = getattr(meta, "expected_transcript_contains", None) or []
+    if not phrases:
+        extra = getattr(meta, "extra", None) or {}
+        phrases = extra.get("expected_transcript_contains") or []
+    if isinstance(phrases, str):
+        return [phrases] if phrases.strip() else []
+    return [str(item) for item in phrases if str(item).strip()]
+
+
+def _normalize_for_contains(text: str) -> str:
+    return " ".join(text.casefold().split())
+
+
+def _missing_expected_phrases(transcript: str, phrases: list[str]) -> list[str]:
+    haystack = _normalize_for_contains(transcript)
+    return [phrase for phrase in phrases if _normalize_for_contains(phrase) not in haystack]
+
+
+def _assert_transcript_contract(
+    transcript: str | None,
+    sample: object,
+    *,
+    diarization: dict[str, Any] | None = None,
+) -> None:
+    text = (transcript or "").strip()
+    if not text:
+        raise RuntimeError("empty transcript")
+    if diarization and diarization.get("backend") == "failed":
+        raise RuntimeError(f"ASR/diarization failed: {diarization.get('error') or 'unknown'}")
+    missing = _missing_expected_phrases(text, _expected_contains(sample))
+    if missing:
+        raise RuntimeError(f"missing expected phrases: {missing}")
+
+
 def _run_asr_on_sample(
     sample_path: str,
     *,
@@ -173,6 +211,9 @@ def _run_pipeline_on_sample(
     language: str,
     model_name: str = "kb-whisper-large",
     oom_fallback: bool = True,
+    run_diarization: bool = False,
+    profile: str = "callcenter",
+    preprocess_mode: str = "callcenter",
 ) -> tuple[bool, str | None, str, bool]:
     from ..pipeline import CallAnalysisPipeline
     from ..transcription.oom_fallback import transcribe_with_oom_fallback
@@ -180,11 +221,20 @@ def _run_pipeline_on_sample(
     _require_cuda_if_requested(device)
 
     def _analyze(model: str):
-        pipeline = CallAnalysisPipeline(device=device, asr_backend=backend, asr_model=model)
+        pipeline = CallAnalysisPipeline(
+            device=device, asr_backend=backend, asr_model=model, profile=profile
+        )
         report = pipeline.analyze_audio(
-            audio_path=sample_path, language=language, run_diarization=False
+            audio_path=sample_path,
+            language=language,
+            run_diarization=run_diarization,
+            preprocess_mode=preprocess_mode,
+            strict_asr=True,
         )
         _raise_if_pipeline_swallowed_cuda_oom(report)
+        diarization = getattr(report, "diarization", None) or {}
+        if diarization.get("backend") == "failed":
+            raise RuntimeError(f"ASR/diarization failed: {diarization.get('error') or 'unknown'}")
         return report
 
     result = transcribe_with_oom_fallback(
@@ -194,7 +244,9 @@ def _run_pipeline_on_sample(
         transcribe_fn=_analyze,
     )
     text = _pipeline_transcript_text(result.value)
-    return True, text or None, result.model_used, result.fell_back
+    if not text:
+        raise RuntimeError("empty transcript")
+    return True, text, result.model_used, result.fell_back
 
 
 def _run_sentiment_on_text(text: str, *, device: str) -> str | None:
@@ -347,7 +399,7 @@ def run_scenario(
 
     for sample in samples:
         pack = catalog.active_packs().get(sample.pack_id)
-        lang = language or (pack.default_asr_language if pack else sample.language)
+        lang = language or sample.language or (pack.default_asr_language if pack else "sv")
         result = FileResult(
             path=sample.path,
             relative_path=sample.relative_path,
@@ -373,9 +425,9 @@ def run_scenario(
                     oom_fallbacks += 1
                 result.latency_s = round(elapsed, 3)
                 result.transcript_preview = _preview_text(transcript)
-                result.ok = bool(transcript.strip())
-                if result.ok:
-                    asr_ok += 1
+                _assert_transcript_contract(transcript, sample)
+                result.ok = True
+                asr_ok += 1
                 if scenario in {"sentiment_chain", "language_sanity"}:
                     pred = _run_sentiment_on_text(transcript, device=device)
                     result.sentiment_pred = pred
@@ -395,13 +447,13 @@ def run_scenario(
                     result.metadata["oom_fell_back"] = True
                     oom_fallbacks += 1
                 result.pipeline_ok = ok
-                result.ok = ok
                 result.transcript_preview = _preview_text(pipeline_transcript or "")
-                if ok:
-                    pipeline_ok_count += 1
-                    pred = _run_sentiment_on_text(pipeline_transcript or "", device=device)
-                    result.sentiment_pred = pred
-                    sentiment_pairs.append((sample.expected_sentiment, pred))
+                _assert_transcript_contract(pipeline_transcript, sample)
+                result.ok = True
+                pipeline_ok_count += 1
+                pred = _run_sentiment_on_text(pipeline_transcript or "", device=device)
+                result.sentiment_pred = pred
+                sentiment_pairs.append((sample.expected_sentiment, pred))
             else:
                 result.ok = True
         except Exception as exc:

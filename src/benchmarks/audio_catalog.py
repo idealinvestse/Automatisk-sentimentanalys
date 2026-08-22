@@ -132,6 +132,28 @@ def _load_sidecar_meta(audio_path: Path) -> dict[str, Any]:
         return {}
 
 
+_SIDECAR_FIRST_CLASS = {
+    "expected_sentiment",
+    "scenario",
+    "speakers",
+    "notes",
+    "language",
+    "expected_transcript_contains",
+    "skip_ml",
+    "schema",
+}
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if str(item).strip()]
+    return [str(value)] if str(value).strip() else []
+
+
 def parse_sample_metadata(audio_path: Path, pack: SamplePack) -> ParsedMetadata:
     if pack.parser == "ravdess_speech":
         parsed = parse_ravdess_filename(audio_path.name, pack)
@@ -145,11 +167,11 @@ def parse_sample_metadata(audio_path: Path, pack: SamplePack) -> ParsedMetadata:
             scenario=meta.get("scenario"),
             speakers=meta.get("speakers"),
             notes=meta.get("notes"),
-            extra={
-                k: v
-                for k, v in meta.items()
-                if k not in {"expected_sentiment", "scenario", "speakers", "notes"}
-            },
+            language=meta.get("language"),
+            expected_transcript_contains=_as_str_list(meta.get("expected_transcript_contains")),
+            skip_ml=bool(meta.get("skip_ml", False)),
+            schema=meta.get("schema"),
+            extra={k: v for k, v in meta.items() if k not in _SIDECAR_FIRST_CLASS},
         )
     return ParsedMetadata(parser=pack.parser)
 
@@ -195,7 +217,7 @@ class AudioCatalog:
                         pack_id=pack_id,
                         path=str(path),
                         relative_path=rel,
-                        language=pack.language,
+                        language=metadata.language or pack.language,
                         metadata=metadata,
                         expected_sentiment=expected,
                     )
@@ -226,6 +248,16 @@ class AudioCatalog:
                         parse_failures += 1
                         if parse_failures <= 3:
                             errors.append(f"{pack_id}: unparseable RAVDESS filename: {path.name}")
+            if pack.parser == "sidecar" and files:
+                for path in files:
+                    metadata = parse_sample_metadata(path, pack)
+                    if metadata.skip_ml:
+                        continue
+                    if not metadata.expected_transcript_contains:
+                        parse_failures += 1
+                        errors.append(
+                            f"{pack_id}: missing expected_transcript_contains for {path.name}"
+                        )
 
             pack_reports[pack_id] = {
                 "active": active,
@@ -298,5 +330,8 @@ def _apply_subset(
                 seen_packs.add(sample.pack_id)
                 chosen.append(sample)
         return chosen
+
+    if subset == "all":
+        return samples
 
     return samples

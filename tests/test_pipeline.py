@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.pipeline import CallAnalysisPipeline, CallAnalysisReport
 
 
@@ -96,6 +98,18 @@ class TestCallAnalysisPipeline:
         # Diarization is attempted even when transcription fails; it returns an empty result
         assert report.diarization is not None
         assert report.diarization.get("segments") == []
+
+    def test_analyze_audio_strict_asr_reraises(self, monkeypatch):
+        """CLI/evaluate path must not swallow ASR failures."""
+        self._mock_sentiment(monkeypatch)
+        with (
+            patch(
+                "src.pipeline.AsrRouter.transcribe",
+                side_effect=RuntimeError("asr down"),
+            ),
+            pytest.raises(RuntimeError, match="asr down"),
+        ):
+            self.pipe.analyze_audio("dummy.wav", strict_asr=True)
 
     def test_analyze_segments_with_mistral_flag_accepts_and_merges(self, monkeypatch):
         """Pipeline accepts Mistral flags and surfaces llm in report (even if it falls back)."""

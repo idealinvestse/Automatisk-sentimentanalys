@@ -1,0 +1,9 @@
+schema: audio_smoke_v1
+language: sv
+expected_sentiment: neutral
+scenario: routing
+speakers: 2
+expected_transcript_contains:
+  - "Bostadsförmedlingen"
+  - "handledare"
+notes: "Housing-queue switchboard routing; phrases from local kb-whisper-large run; no PII"
