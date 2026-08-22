@@ -86,11 +86,20 @@ jobs:
             tests/test_alerting_router.py \
             tests/test_transcription_jobs.py \
             tests/test_ws_ticket_minimal.py \
+            tests/test_ws_transcription_router.py \
+            tests/test_ws_tickets.py \
+            tests/test_transcription_events_redis.py \
             tests/test_path_validation.py \
             tests/test_router_errors.py \
             tests/test_batch.py \
             tests/test_status_api.py \
+            tests/test_call_store.py \
+            tests/test_ready_and_degradation.py \
+            tests/test_llm_profiles_api.py \
+            tests/test_api_auth_matrix.py \
+            tests/test_api_cors.py \
             tests/contracts/test_api_error_contract.py \
+            tests/contracts/test_openapi_snapshot.py \
             -q --cov=src/api --cov-report=term-missing --cov-fail-under=90
 
   docker:

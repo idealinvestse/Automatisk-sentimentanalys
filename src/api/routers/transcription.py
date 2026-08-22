@@ -35,6 +35,26 @@ from ..transcription_jobs import TranscriptionJob, get_job_registry
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Transcription"])
 
+_AUDIO_MAGIC_MARKERS: tuple[bytes, ...] = (
+    b"RIFF",
+    b"ID3",
+    b"fLaC",
+    b"OggS",
+    b"ftyp",
+    bytes((0x1A, 0x45, 0xDF, 0xA3)),
+)
+
+
+def looks_like_audio(header: bytes) -> bool:
+    """Reject obvious non-audio payloads (e.g. PE/MZ) even when the suffix is .wav."""
+    if not header:
+        return False
+    if header[:2] == b"MZ":
+        return False
+    if header[:2] in {b"\xff\xfb", b"\xff\xf3", b"\xff\xf2"}:
+        return True
+    return any(marker in header[:16] for marker in _AUDIO_MAGIC_MARKERS)
+
 
 def _job_id(request: Request) -> str | None:
     return request.headers.get(JOB_HEADER)
@@ -159,7 +179,17 @@ async def upload_audio_file(
 
     try:
         with open(file_path, "wb") as f:
+            first_chunk = True
             while chunk := await file.read(chunk_size):
+                if first_chunk:
+                    first_chunk = False
+                    if not looks_like_audio(chunk[:16]):
+                        f.close()
+                        file_path.unlink(missing_ok=True)
+                        raise HTTPException(
+                            status_code=400,
+                            detail="File content does not look like audio (magic bytes)",
+                        )
                 total_bytes += len(chunk)
                 if total_bytes > max_size_bytes:
                     f.close()

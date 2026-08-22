@@ -59,7 +59,16 @@ def test_openapi_has_core_paths() -> None:
     r = client.get("/openapi.json")
     assert r.status_code == 200
     paths = r.json().get("paths", {})
-    for path in ("/health", "/analyze", "/analyze_pipeline", "/analyze_pipeline/partial"):
+    for path in (
+        "/health",
+        "/ready",
+        "/analyze",
+        "/upload",
+        "/calls",
+        "/llm/analysis-profiles",
+        "/analyze_pipeline",
+        "/analyze_pipeline/partial",
+    ):
         assert path in paths
 
 

@@ -1,7 +1,7 @@
 """Minimal WebSocket smoke without full pipeline import (Fas 6 hardening).
 
 Uses a stub FastAPI app that only exercises connect/ping. Auth rejection is
-covered by webui e2e / API WS tests against the real router.
+covered by `tests/test_ws_transcription_router.py` against the real router.
 """
 
 from __future__ import annotations

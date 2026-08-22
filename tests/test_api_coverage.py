@@ -335,6 +335,19 @@ def test_analyze_pipeline_analysis_error_propagates():
     assert "Analysis failed" in r.json()["detail"] or "internal error" in r.json()["detail"].lower()
 
 
+def test_analyze_pipeline_llm_error_502():
+    with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
+        mock_pipe.return_value.analyze_segments.side_effect = LLMError("provider down")
+        r = client.post(
+            "/analyze_pipeline",
+            json={"segments": [{"text": "x", "start": 0, "end": 1}]},
+        )
+    assert r.status_code == 502
+    body = r.json()
+    assert body["error_code"] == "llm_request_failed"
+    assert "request_id" in body
+
+
 def test_qa_score_compliance_qa_fallback():
     report = MagicMock()
     report.results = {"compliance_qa": {"overall_qa_score": 70}}

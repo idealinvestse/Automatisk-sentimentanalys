@@ -84,6 +84,8 @@ async def transcription_ws(
     ticket_ok = _ticket_valid(websocket.app, token)
 
     if not (header_ok or ticket_ok):
+        # Accept first so the client sees close 1008 (not a pre-handshake 403).
+        await websocket.accept()
         await websocket.close(code=1008, reason="Unauthorized")
         return
 

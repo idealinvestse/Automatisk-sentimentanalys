@@ -24,6 +24,8 @@ ERROR_CODE_INTERNAL = "internal_error"
 ERROR_CODE_VALIDATION = "validation_error"
 ERROR_CODE_UNAUTHORIZED = "unauthorized"
 ERROR_CODE_RATE_LIMITED = "rate_limit_exceeded"
+ERROR_CODE_PAYLOAD_TOO_LARGE = "payload_too_large"
+ERROR_CODE_CONFLICT = "conflict"
 
 PUBLIC_ERROR_DETAIL = "An internal error occurred. Please try again later."
 CONFIGURATION_ERROR_DETAIL = "Invalid configuration."

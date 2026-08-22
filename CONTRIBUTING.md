@@ -65,7 +65,15 @@ See [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) before deployin
 
 ## Test coverage
 
-The default coverage gate in `pyproject.toml` is `fail_under = 65` for `src/`. Several heavy optional paths are **omitted** from coverage (ASR backends, diarization, CLI, preprocess). Do not cite Fas 4 gate numbers (e.g. 86 %) without noting the omit list. Run `pytest --collect-only -q` for live test count.
+Coverage gates (do not mix them up):
+
+| Gate | Scope | Threshold |
+|------|--------|-----------|
+| CI job `test` | `src/` | ≥ **80 %** |
+| `pyproject.toml` `[tool.coverage.report]` | `src/` | ≥ **85 %** |
+| CI job `api-test` / `make test-api` | `src/api` | ≥ **90 %** |
+
+Several heavy optional paths are **omitted** from coverage (ASR backends, diarization, CLI, preprocess). Do not cite Fas 4 gate numbers (e.g. 86 %) without noting the omit list. Run `pytest --collect-only -q` for live test count.
 
 ## Reporting Issues
 

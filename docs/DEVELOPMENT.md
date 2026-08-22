@@ -134,7 +134,7 @@ pytest tests/test_pipeline.py tests/test_callcenter_golden.py -q
 
 **B. Pull request (CI floor)** — already in `.github/workflows/ci.yml`:
 
-1. lint → pytest (3.11/3.12, `src` cov ≥80 %) → api-test (`src/api` cov ≥90 %)
+1. lint → pytest (3.11/3.12, `src` cov ≥80 %) → api-test (`src/api` cov ≥90 %). Lokalt: `pyproject.toml` `fail_under = 85` för hela `src/`.
 2. mypy, docker config/build
 3. analyzer-accuracy + finetune-smoke
 4. webui lint/build/e2e

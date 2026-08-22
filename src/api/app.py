@@ -36,7 +36,9 @@ from .dependencies import require_api_key
 from .error_responses import (
     ANALYSIS_ERROR_DETAIL,
     CONFIGURATION_ERROR_DETAIL,
+    ERROR_CODE_CONFLICT,
     ERROR_CODE_INTERNAL,
+    ERROR_CODE_PAYLOAD_TOO_LARGE,
     ERROR_CODE_RATE_LIMITED,
     ERROR_CODE_UNAUTHORIZED,
     ERROR_CODE_VALIDATION,
@@ -248,6 +250,10 @@ def create_app() -> FastAPI:
             code = ERROR_CODE_RATE_LIMITED
         elif exc.status_code == 422:
             code = ERROR_CODE_VALIDATION
+        elif exc.status_code == 413:
+            code = ERROR_CODE_PAYLOAD_TOO_LARGE
+        elif exc.status_code == 409:
+            code = ERROR_CODE_CONFLICT
         else:
             code = ERROR_CODE_INTERNAL
         return error_response(request, exc.status_code, exc.detail, error_code=code)

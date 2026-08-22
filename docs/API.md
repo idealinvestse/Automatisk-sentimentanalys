@@ -34,11 +34,13 @@ curl -H "X-API-Key: your-secret" http://localhost:8000/analyze \
 
 | Endpoint | Auth |
 |----------|------|
-| `GET /health` | None |
-| `GET /status/*`, `GET /metrics`, `GET /alerting/status`, `WS /ws/transcription` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
-| All `POST` routes | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
+| `GET /health`, `GET /ready` | None |
+| `GET /status/*`, `GET /metrics`, `GET /alerting/status` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
+| `GET /ws/transcription/ticket` | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
+| `WS /ws/transcription` | `X-API-Key` **or** `?token=` from `/ws/transcription/ticket` when auth is enabled |
+| All other `GET`/`PUT`/`POST`/`DELETE` routes (`/analyze`, `/calls`, `/llm/*`, `/edge/*`, …) | Optional `X-API-Key` when `SENTIMENT_API_KEY` is set |
 
-WebSocket clients must send `X-API-Key` as a header (not a query parameter).
+Browsers cannot set custom headers on the WebSocket handshake. Issue a ticket with `GET /ws/transcription/ticket` (header auth) and connect as `WS /ws/transcription?token=<ticket>`. Tickets expire after 5 minutes. Non-browser clients may send `X-API-Key` on the handshake instead.
 
 Without `SENTIMENT_API_KEY`, the API accepts requests locally (tests/dev only).
 
@@ -108,6 +110,7 @@ Transcription endpoints accept `provider`, `cloud_fallback_local`, `diarize`, an
 ### Health
 
 - `GET /health` — liveness (`{"status": "ok"}`)
+- `GET /ready` — readiness. Returns **200** `{status: ready, checks: …}` or **503** `{status: not_ready, checks: …}` when production-critical deps fail (`SENTIMENT_API_KEY` / `API_MEDIA_ROOT` in production mode, Redis ping when `API_USE_REDIS_CACHE=true`).
 
 ### Sentiment
 
@@ -122,7 +125,7 @@ Transcription endpoints accept `provider`, `cloud_fallback_local`, `diarize`, an
 - `GET /transcription/jobs/{job_id}` — job status
 - `POST /transcription/jobs/{job_id}/cancel` — cancel a running job
 - `GET /ws/transcription/ticket` — short-lived ticket for WebSocket auth (when `SENTIMENT_API_KEY` is set)
-- `WS /ws/transcription` — real-time log/progress stream during transcription (`X-API-Key` header when auth enabled). Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`.
+- `WS /ws/transcription` — real-time log/progress stream. Authenticate with `X-API-Key` **or** `?token=` from the ticket endpoint. Missing/invalid/expired credentials close the socket with **1008**. Send header `X-Transcription-Job-Id` on POST requests to correlate events. Event types: `log`, `progress`, `status`, `done`. Client may send `{"type":"ping"}` or `{"type":"subscribe","job_id":"…"}`.
 
 ### Conversation
 
@@ -136,9 +139,29 @@ Transcription endpoints accept `provider`, `cloud_fallback_local`, `diarize`, an
 - `POST /analyze_pipeline` — full `CallAnalysisPipeline` on pre-transcribed segments  
   Response `results` includes Fas 4 fields: `agent_performance`, `qa` / `compliance_qa`, `agent_assessment`, `customer_metrics`, `alerts`, etc.
 
+- `POST /analyze_pipeline/partial` — incremental local analysis on growing segment lists (`previous_results`, `reconcile`). Same `PipelineResponse` shape as `/analyze_pipeline`.
+
 - `POST /analyze_pipeline/compare` — run the same segments through up to 3 LLM models (A/B comparison)  
   Request: `segments`, `models` (max 3 slugs), optional `cost_budget_usd`.  
   Response: per-model `results` with QA score, sentiment, cost, latency, and full `PipelineResponse`.
+
+### Calls (server-side history)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/calls` | List saved analyzed calls (newest first, `limit` 1–500) |
+| GET | `/calls/{id}` | Fetch one saved call (**404** if missing) |
+| POST | `/calls` | Create or update (`id` in body) |
+| PUT | `/calls/{id}` | Create or update; path `id` must match `body.id` (**422** on mismatch) |
+| DELETE | `/calls/{id}` | Delete (**404** if missing) |
+
+### LLM profiles
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/llm/analysis-profiles` | Selectable analysis perspectives + paid-model picks (`cached`, `menu`, `providers_configured`) |
+| GET | `/llm/analysis-profiles/{id}` | Detail + ranked models for one perspective (**404** `unknown_perspective`) |
+| GET | `/llm/providers` | Which LLM providers have a key configured (booleans only — never secret values) |
 
 ### Fas 4 (call center)
 
@@ -420,6 +443,8 @@ print(r.json()["results"])
 | HTTP | `error_code` | Meaning |
 |------|----------------|---------|
 | 401 | `unauthorized` | Missing/invalid `X-API-Key` |
+| 409 | `conflict` | Job already cancelled / already finished |
+| 413 | `payload_too_large` | Upload exceeded `API_MAX_UPLOAD_SIZE_MB` |
 | 422 | `validation_error` | Pydantic validation or `ConfigurationError` |
 | 429 | `rate_limit_exceeded` | `API_RATE_LIMIT_RPM` exceeded |
 | 500 | `internal_error` / domain codes | Sanitized `detail`; domain errors include e.g. `transcription_failed`, `analysis_failed` |
@@ -435,4 +460,4 @@ All error JSON bodies include backward-compatible `detail` plus `request_id` (ma
 make test-api   # full API suite + ≥90% coverage on src/api
 ```
 
-Coverage target for `src/api/`: **≥ 90%**. See `docs/DEVELOPMENT.md` § Testing for the L0–L9 runbook.
+Coverage gates: CI `test` ≥ **80 %** on `src/`; `pyproject.toml` ≥ **85 %** on `src/`; `make test-api` / CI `api-test` ≥ **90 %** on `src/api`. See `docs/DEVELOPMENT.md` § Testing for the L0–L9 runbook.

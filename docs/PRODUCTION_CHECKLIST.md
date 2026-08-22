@@ -131,7 +131,7 @@ docker run --gpus all -p 8000:8000 -v hf_cache:/cache/hf sentimentanalys-gpu
 - [x] **Rate limiting** — `API_RATE_LIMIT_RPM` i `src/api/settings.py:84`. Enforced i `src/api/middleware_rate_limit.py` + registrerad i `app.py:161`.
 - [x] **Redis cache** — `API_USE_REDIS_CACHE` i settings. `src/caching.py` stödjer Redis (rad 44-76) med fallback till file cache.
 - [x] **Backup** — `scripts/backup.py` skapar timestampade tar.gz-arkiv med rotation. Se "Backup-guide" nedan för cron-exempel.
-- [x] **CI gate** — `.github/workflows/ci.yml` jobb `api-test` (rad 65-88) kör `pytest tests/test_api.py` med `--cov-fail-under=90` på `src/api`. Separat `webui`-jobb (rad 99) kör lint+build+e2e. Full test-runbook (L0–L9, när-kör-vad): [DEVELOPMENT.md](DEVELOPMENT.md) § Testing.
+- [x] **CI gate** — `.github/workflows/ci.yml` jobb `api-test` kör API-sviten (`test_api*.py`, contracts, WS/auth/ready/calls) med `--cov-fail-under=90` på `src/api`. CI-jobbet `test` håller `src/` ≥80 %. Lokalt är `pyproject.toml` `fail_under = 85` för hela `src/`. Separat `webui`-jobb kör lint+build+e2e. Full test-runbook (L0–L9, när-kör-vad): [DEVELOPMENT.md](DEVELOPMENT.md) § Testing.
 
 ### Release verification (L7–L9)
 

@@ -211,5 +211,7 @@ exclude_lines = [
 ]
 fail_under = 85
 
-# API hardening gate (run explicitly):
-#   pytest tests/test_api.py tests/test_api_coverage.py --cov=src/api --cov-fail-under=90
+# Coverage gates (keep these three numbers in sync with docs):
+#   CI job `test`:     pytest tests/ --cov=src --cov-fail-under=80
+#   pyproject (local): fail_under = 85 for all of src/
+#   CI job `api-test`: pytest … --cov=src/api --cov-fail-under=90  (see Makefile test-api)
