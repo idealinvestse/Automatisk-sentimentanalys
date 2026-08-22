@@ -116,6 +116,15 @@ def test_skip_ml_excluded_from_ml_scenarios(tmp_path: Path):
     assert all(not sample.metadata.skip_ml for sample in smoke)
 
 
+def test_skip_ml_fallback_when_only_fixtures(tmp_path: Path):
+    root = tmp_path / "audio"
+    _write_pack(root, 1, skip_last=True)
+    catalog = AudioCatalog(root)
+    smoke = resolve_samples(catalog, "smoke", pack_ids=["sv_callcenter"])
+    assert len(smoke) == 1
+    assert smoke[0].metadata.skip_ml is True
+
+
 def test_sidecar_validate_requires_expected_phrases(tmp_path: Path):
     root = tmp_path / "audio"
     pack = root / "sv" / "callcenter"

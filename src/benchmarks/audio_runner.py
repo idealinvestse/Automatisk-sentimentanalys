@@ -154,15 +154,23 @@ def _assert_transcript_contract(
     sample: object,
     *,
     diarization: dict[str, Any] | None = None,
+    allow_empty: bool = False,
 ) -> None:
-    text = (transcript or "").strip()
-    if not text:
-        raise RuntimeError("empty transcript")
     if diarization and diarization.get("backend") == "failed":
         raise RuntimeError(f"ASR/diarization failed: {diarization.get('error') or 'unknown'}")
+    text = (transcript or "").strip()
+    if not text:
+        if allow_empty:
+            return
+        raise RuntimeError("empty transcript")
     missing = _missing_expected_phrases(text, _expected_contains(sample))
     if missing:
         raise RuntimeError(f"missing expected phrases: {missing}")
+
+
+def _sample_allows_empty(sample: object) -> bool:
+    meta = getattr(sample, "metadata", None)
+    return bool(getattr(meta, "skip_ml", False))
 
 
 def _run_asr_on_sample(
@@ -214,7 +222,8 @@ def _run_pipeline_on_sample(
     run_diarization: bool = False,
     profile: str = "callcenter",
     preprocess_mode: str = "callcenter",
-) -> tuple[bool, str | None, str, bool]:
+    allow_empty: bool = False,
+) -> tuple[bool, str | None, str, bool, dict[str, Any]]:
     from ..pipeline import CallAnalysisPipeline
     from ..transcription.oom_fallback import transcribe_with_oom_fallback
 
@@ -244,9 +253,10 @@ def _run_pipeline_on_sample(
         transcribe_fn=_analyze,
     )
     text = _pipeline_transcript_text(result.value)
-    if not text:
+    diarization = getattr(result.value, "diarization", None) or {}
+    if not text and not allow_empty:
         raise RuntimeError("empty transcript")
-    return True, text, result.model_used, result.fell_back
+    return True, text or None, result.model_used, result.fell_back, diarization
 
 
 def _run_sentiment_on_text(text: str, *, device: str) -> str | None:
@@ -425,7 +435,9 @@ def run_scenario(
                     oom_fallbacks += 1
                 result.latency_s = round(elapsed, 3)
                 result.transcript_preview = _preview_text(transcript)
-                _assert_transcript_contract(transcript, sample)
+                _assert_transcript_contract(
+                    transcript, sample, allow_empty=_sample_allows_empty(sample)
+                )
                 result.ok = True
                 asr_ok += 1
                 if scenario in {"sentiment_chain", "language_sanity"}:
@@ -434,13 +446,16 @@ def run_scenario(
                     sentiment_pairs.append((sample.expected_sentiment, pred))
 
             elif scenario == "pipeline":
-                ok, pipeline_transcript, model_used, fell_back = _run_pipeline_on_sample(
-                    sample.path,
-                    backend=backend,
-                    device=device,
-                    language=lang,
-                    model_name=model_name,
-                    oom_fallback=oom_fallback,
+                ok, pipeline_transcript, model_used, fell_back, diarization = (
+                    _run_pipeline_on_sample(
+                        sample.path,
+                        backend=backend,
+                        device=device,
+                        language=lang,
+                        model_name=model_name,
+                        oom_fallback=oom_fallback,
+                        allow_empty=_sample_allows_empty(sample),
+                    )
                 )
                 result.metadata["model_used"] = model_used
                 if fell_back:
@@ -448,7 +463,12 @@ def run_scenario(
                     oom_fallbacks += 1
                 result.pipeline_ok = ok
                 result.transcript_preview = _preview_text(pipeline_transcript or "")
-                _assert_transcript_contract(pipeline_transcript, sample)
+                _assert_transcript_contract(
+                    pipeline_transcript,
+                    sample,
+                    diarization=diarization,
+                    allow_empty=_sample_allows_empty(sample),
+                )
                 result.ok = True
                 pipeline_ok_count += 1
                 pred = _run_sentiment_on_text(pipeline_transcript or "", device=device)

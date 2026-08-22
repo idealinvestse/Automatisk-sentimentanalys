@@ -75,7 +75,9 @@ def resolve_samples(
         )
 
     if scenario_requires_ml(scenario):
-        samples = [sample for sample in samples if not sample.metadata.skip_ml]
+        preferred = [sample for sample in samples if not sample.metadata.skip_ml]
+        # Keep skip_ml fixtures only when they are the sole pack members (L7 checkout).
+        samples = preferred or samples
     return samples
 
 

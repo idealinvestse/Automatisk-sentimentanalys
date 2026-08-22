@@ -295,6 +295,87 @@ def test_pipeline_uses_callcenter_profile_and_preprocess(
     assert kwargs.get("run_diarization") is False
 
 
+def test_assert_transcript_contract_fails_on_failed_diarization():
+    from types import SimpleNamespace
+
+    from src.benchmarks.audio_runner import _assert_transcript_contract
+
+    sample = SimpleNamespace(
+        metadata=SimpleNamespace(expected_transcript_contains=["hej"], skip_ml=False)
+    )
+    with pytest.raises(RuntimeError, match="ASR/diarization failed: boom"):
+        _assert_transcript_contract(
+            "hej",
+            sample,
+            diarization={"backend": "failed", "error": "boom"},
+        )
+
+
+@patch("src.benchmarks.audio_runner._run_sentiment_on_text", return_value="neutral")
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.pipeline.CallAnalysisPipeline")
+def test_pipeline_fails_on_swallowed_asr(
+    mock_pipeline_cls, _mock_requires_ml, _mock_sentiment, tmp_path
+):
+    from unittest.mock import MagicMock
+
+    audio_root = _sidecar_audio_root(tmp_path, ["hej"])
+    instance = MagicMock()
+    report = MagicMock()
+    report.segments = [{"text": "hej"}]
+    report.diarization = {"backend": "failed", "error": "asr init failed"}
+    instance.analyze_audio.return_value = report
+    mock_pipeline_cls.return_value = instance
+
+    result = run_scenario(
+        "pipeline", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
+    )
+    assert result.files[0].ok is False
+    assert "ASR/diarization failed" in (result.files[0].error or "")
+
+
+@patch("src.benchmarks.audio_runner.scenario_requires_ml", return_value=False)
+@patch("src.transcription.router.AsrRouter.transcribe")
+def test_skip_ml_allows_empty_transcript(mock_transcribe, _mock_requires_ml, tmp_path):
+    from src.core.models import Transcript
+
+    root = tmp_path / "sidecar_audio"
+    pack = root / "sv" / "callcenter"
+    pack.mkdir(parents=True)
+    (pack / "tone.wav").write_bytes(b"RIFF\x00\x00\x00\x00")
+    (pack / "tone.meta.yaml").write_text(
+        "schema: audio_smoke_v1\nlanguage: sv\nskip_ml: true\n",
+        encoding="utf-8",
+    )
+    (root / "manifest.yaml").write_text(
+        """
+version: 1
+packs:
+  sv_callcenter:
+    label: test
+    language: sv
+    root: sv/callcenter
+    glob: "**/*.wav"
+    parser: sidecar
+    default_asr_language: sv
+    tags: [swedish]
+    enabled: true
+""",
+        encoding="utf-8",
+    )
+    mock_transcribe.return_value = Transcript(
+        model="test",
+        backend="faster",
+        language="sv",
+        duration=1.0,
+        processing_time=0.1,
+        segments=[],
+    )
+    report = run_scenario("smoke", audio_root=str(root), pack_ids=["sv_callcenter"], device="cpu")
+    assert report.files[0].ok is True
+    assert report.summary.get("n_failed") == 0
+
+
 def test_list_command_via_evaluate(tmp_path):
     audio_root, _ = _audio_root(tmp_path)
     from typer.testing import CliRunner
