@@ -3,18 +3,16 @@ export interface NavItem {
   label: string;
   /** Lucide icon name, kept as string to avoid importing every icon eagerly. */
   icon: string;
-  /** Optional display hint for the route. */
-  legacyTab?: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Översikt", icon: "LayoutDashboard", legacyTab: "Översikt" },
-  { href: "/analytics", label: "Analys & Trender", icon: "LineChart", legacyTab: "Analys & Trender" },
+  { href: "/", label: "Översikt", icon: "LayoutDashboard" },
+  { href: "/analytics", label: "Analys & Trender", icon: "LineChart" },
   { href: "/analysis", label: "Analysdetaljer", icon: "Microscope" },
-  { href: "/agents", label: "Agentprestanda", icon: "Users", legacyTab: "Agentprestanda" },
-  { href: "/insights", label: "Fas 4 Insikter", icon: "Sparkles", legacyTab: "Fas 4 Insikter" },
+  { href: "/agents", label: "Agentprestanda", icon: "Users" },
+  { href: "/insights", label: "Fas 4 Insikter", icon: "Sparkles" },
   { href: "/executive", label: "Executive Insights", icon: "Briefcase" },
-  { href: "/transcription", label: "Transkribering", icon: "AudioLines", legacyTab: "Transkribering" },
-  { href: "/testlab", label: "Testlabb", icon: "FlaskConical", legacyTab: "Testlabb" },
+  { href: "/transcription", label: "Transkribering", icon: "AudioLines" },
+  { href: "/testlab", label: "Testlabb", icon: "FlaskConical" },
   { href: "/edge", label: "Edge AI", icon: "Cpu" },
 ];

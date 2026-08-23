@@ -480,8 +480,7 @@ class CallAnalysisPipeline:
 
         Runs local core analyzers on the current segment window, merges with
         ``previous_results``, and optionally reconciles with holistic LLM when
-        ``reconcile=True`` (hangup / every N seconds). Full WS-first product
-        rewrite is deferred — see docs/plans/2026-07-10-analysfunktioner-implementation-plan.md.
+        ``reconcile=True`` (hangup / every N seconds).
         """
         t0 = time.time()
         # Prefer slim local set for partial updates

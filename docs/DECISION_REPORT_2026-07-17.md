@@ -248,7 +248,6 @@ Varje verdict är Tier 3 (privacy/compliance) eller Tier 2 (arkitektur/kostnad),
 - [reports/domain_baseline.json](../reports/domain_baseline.json)
 - [configs/analyzer_eval.yaml](../configs/analyzer_eval.yaml)
 - [configs/llm_config.yaml](../configs/llm_config.yaml)
-- [docs/plans/2026-07-17-decision-surface-brainstorm.md](plans/2026-07-17-decision-surface-brainstorm.md)
 
 ### Parallel deep research
 

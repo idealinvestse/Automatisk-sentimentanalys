@@ -1,1 +1,1 @@
-"""App package for shared demo helpers and dashboard launch compatibility shims."""
+"""Shared demo-transcript helpers used by tests and as the webui mapper contract."""

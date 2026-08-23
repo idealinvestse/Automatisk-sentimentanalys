@@ -3,7 +3,6 @@
 Usage:
     python -m launcher.dashboard_spawn
     # or: sentimentanalys-dashboard
-    # or: python -m app.dashboard_launcher  (compat shim)
 
 Requires Node.js/npm and dependencies installed in webui/ (`npm install`).
 

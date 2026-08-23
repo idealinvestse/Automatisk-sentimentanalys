@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ASR dual-engine hardening** — `AsrRouter` with local-default provider policy; stable transcript error codes and provider metadata; Whisper hallucination post-filter; decode hardening (disabled prev-text conditioning) and per-chunk retry; opt-in Deepgram `CloudSttEngine` (no silent cloud fallback); `evaluate audio compare` for local vs cloud A/B; SQLite/Redis persistent transcription jobs across API restarts; Prometheus transcription latency and cloud egress metrics; pyannote diarization when `HF_TOKEN` / `HUGGINGFACE_HUB_TOKEN` is set (heuristic fallback otherwise); SECURITY/API/architecture docs and launcher/webui cloud-STT opt-in copy.
 
 ### Removed
+- **Leftover shims and process artifacts** — unused Streamlit demo module (`app/services/demo_data.py`), `app/dashboard_launcher` compat shim, empty `src/fine_tuning` stub, unused webui `ComingSoon`, completed `docs/plans/` + `docs/superpowers/` notes, and research dumps at repo root (`asr-pipeline-robustness-2026.*`, `.git_commit_msg.txt`).
 - **NiceGUI legacy dashboard** — `app/archive/nicegui_dashboard/`, `dashboard-nicegui` extra, NiceGUI-only tests, and `docker-compose.nicegui.yml`. Primary UI is `webui/` only; launcher starts Next.js.
 - **Documentation debt** — historical FAS/audit/plan docs, `docs/archive/`, agent IDE folders (`.grok/`, `.windsurf/`, `.devin/`), notebooks, and non-CI report artifacts. Canonical docs remain under `docs/` + root README/AGENTS/SECURITY/CHANGELOG/CONTRIBUTING.
 

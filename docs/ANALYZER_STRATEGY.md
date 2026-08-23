@@ -80,4 +80,4 @@ Implemented in `src/pipeline_steps.py`:
 
 ## Historical note
 
-Replaces `docs/PROPOSED_ANALYZERS.md` (2026-06-27 research list). Ideation 2026-07-10: `docs/ideation/2026-07-10-analysfunktioner-ideation.html` → plan `docs/plans/2026-07-10-analysfunktioner-implementation-plan.md`.
+Replaces the 2026-06-27 research list (`docs/PROPOSED_ANALYZERS.md`, removed).

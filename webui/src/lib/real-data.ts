@@ -76,8 +76,7 @@ export interface RealCall {
 }
 
 // ---------------------------------------------------------------------------
-// Alert extraction (mirrors src/llm/schemas.py::Alert and
-// app/services/data_services.py::collect_all_alerts)
+// Alert extraction (mirrors src/llm/schemas.py::Alert)
 // ---------------------------------------------------------------------------
 
 export type AlertSeverity = "critical" | "high" | "medium" | "low" | "info";
