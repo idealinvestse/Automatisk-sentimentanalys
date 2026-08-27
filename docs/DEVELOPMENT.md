@@ -237,11 +237,17 @@ Ordered by risk × cost:
 
 1. Real anonymized call corpus (DATA-01) — import slot ready, awaiting external data
 2. Intent fine-tune model under `models/intent_classifier` (must beat heuristic +0.05 F1)
-3. Swedish ASR audio pack under `samples/audio/sv/` (dirs exist, no wav yet)
+3. Swedish ASR audio pack under `samples/audio/sv/` (sidecars committed; most `.wav` stems are local-only)
 4. Webui Vitest/RTL for hooks/API client — keep Playwright thin
-5. Staging live-API smoke as mandatory pre-deploy step
-6. WS event hub Redis pub/sub (tickets already Redis-capable via `TicketStore`)
-7. Load/concurrency — defer until multi-worker pressure
+5. Staging live-API smoke as mandatory pre-deploy step (compose config is gated in CI)
+6. Load/concurrency — defer until multi-worker pressure
+
+`TranscriptionEventHub` Redis pub/sub is implemented when `API_USE_REDIS_CACHE=true`.
+
+Coverage gates (keep in sync with `pyproject.toml` and CI):
+- PR job `test`: `--cov=src --cov-fail-under=80`
+- Local `pyproject` `fail_under`: 85
+- PR job `api-test` / `make test-api`: `--cov=src/api --cov-fail-under=90`
 
 Out of optimal strategy for now: chasing coverage on the omit list (CLI, whisper backends, `secrets_win`); expanding archived NiceGUI tests.
 

@@ -298,8 +298,9 @@ export default function TranscriptionPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Auth: REST använder <code>NEXT_PUBLIC_API_KEY</code>; WebSocket hämtar ticket via{" "}
-        <code>GET /ws/transcription/ticket</code> och ansluter med <code>?token=</code>.
+        Auth: REST går via BFF med server-side <code>SENTIMENT_API_KEY</code>. WebSocket
+        hämtar ticket via <code>GET /ws/transcription/ticket</code> och ansluter med{" "}
+        <code>?token=</code> mot <code>NEXT_PUBLIC_API_BASE_URL</code>.
       </p>
     </div>
   );

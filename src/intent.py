@@ -11,9 +11,7 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -438,6 +436,8 @@ class IntentClassifier:
         try:
             from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+            if not self.model_path:
+                raise ValueError("model_path is required for transformers intent backend")
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_path)
             self._model = AutoModelForSequenceClassification.from_pretrained(self.model_path)
             self.resolved_backend = "model"
@@ -477,159 +477,8 @@ class IntentClassifier:
         return label, round(confidence, 3)
 
 
-# ---------------------------------------------------------------------------
-# Training data generator
-# ---------------------------------------------------------------------------
-def generate_intent_dataset(output_path: str, n_examples: int = 800) -> None:
-    """Generate a Swedish call center intent training dataset.
-
-    Creates a JSONL file with labelled examples for each intent.
-    """
-    templates: dict[str, list[str]] = {
-        "account_update": [
-            "Jag vill ändra min adress",
-            "Kan ni uppdatera mitt telefonnummer?",
-            "Jag har bytt email, kan ni ändra det?",
-            "Mina kontaktuppgifter behöver uppdateras",
-            "Hur ändrar jag min profil?",
-            "Jag vill byta lösenord på mitt konto",
-            "Kan ni hjälpa mig uppdatera mina uppgifter?",
-            "Jag har flyttat och behöver ny adress",
-            "Ändra min e-postadress tack",
-            "Uppdatera mitt kundkonto är ni snälla",
-        ],
-        "billing_inquiry": [
-            "Jag har en fråga om min faktura",
-            "Varför är fakturan så hög denna månad?",
-            "Kan ni förklara den här avgiften?",
-            "Jag har inte fått någon faktura än",
-            "När ska jag betala?",
-            "Kan jag få en specifikation på fakturan?",
-            "Det står fel belopp på min faktura",
-            "Hur mycket kostar det per månad?",
-            "Jag vill ha fakturan via mail istället",
-            "Kan ni skicka om fakturan?",
-        ],
-        "technical_support": [
-            "Produkten fungerar inte som den ska",
-            "Jag får ett felmeddelande när jag loggar in",
-            "Min enhet startar inte",
-            "Det står bara och laddar",
-            "Appen kraschar hela tiden",
-            "Jag kan inte ansluta till internet",
-            "Något är fel med min anslutning",
-            "Hjälp, ingenting fungerar!",
-            "Kan ni fjärrstyra och kolla vad som är fel?",
-            "Jag behöver teknisk hjälp med installationen",
-        ],
-        "order_status": [
-            "Var är min beställning?",
-            "När kommer mitt paket?",
-            "Kan ni spåra min leverans?",
-            "Jag har inte fått någon orderbekräftelse",
-            "Hur lång är leveranstiden?",
-            "Är min order skickad än?",
-            "Jag vill kolla status på min beställning",
-            "När skickades paketet?",
-            "Kan ni bekräfta att ni mottagit min order?",
-            "Jag undrar om ni har skickat min vara",
-        ],
-        "cancellation": [
-            "Jag vill avsluta mitt abonnemang",
-            "Hur säger jag upp tjänsten?",
-            "Jag vill avboka min prenumeration",
-            "Kan ni avsluta mitt konto?",
-            "Jag är inte intresserad längre, avsluta tack",
-            "Säg upp allt, jag vill inte vara kund längre",
-            "Avboka min beställning",
-            "Jag ångrar mig och vill avbryta",
-            "Hur lång uppsägningstid har ni?",
-            "Avsluta mitt medlemskap omedelbart",
-        ],
-        "complaint": [
-            "Jag är mycket missnöjd med servicen",
-            "Det här är helt oacceptabelt!",
-            "Jag vill lämna ett klagomål",
-            "Ni har behandlat mig dåligt",
-            "Detta är under all kritik",
-            "Jag känner mig lurad av er",
-            "Sämsta servicen jag varit med om",
-            "Jag vill eskalera mitt ärende",
-            "Ingen har hjälpt mig trots flera samtal",
-            "Det här är rena katastrofen",
-        ],
-        "information_request": [
-            "Vilka öppettider har ni?",
-            "Berätta mer om era tjänster",
-            "Vad kostar det att bli kund?",
-            "Har ni något erbjudande just nu?",
-            "Hur fungerar er tjänst?",
-            "Vilka betalningsalternativ finns?",
-            "Jag undrar om ni har butik i Stockholm",
-            "Kan ni berätta om era olika abonnemang?",
-            "Vad ingår i grundpaketet?",
-            "Har ni någon app man kan använda?",
-        ],
-        "refund_request": [
-            "Jag vill ha pengarna tillbaka",
-            "Kan ni återbetala min senaste faktura?",
-            "Jag har blivit feldebiterad och vill ha återbetalning",
-            "När får jag mina pengar tillbaka?",
-            "Ni lovade återbetalning men inget har hänt",
-            "Kreditera mitt konto tack",
-            "Jag returnerade varan, var är återbetalningen?",
-            "Ni drog för mycket, återbetala mellanskillnaden",
-            "Jag vill ha kompensation för strulet",
-            "Återbetala beloppet omgående",
-        ],
-        "appointment_booking": [
-            "Jag vill boka en tid",
-            "Kan jag få en tid på torsdag?",
-            "Jag behöver omboka mitt möte",
-            "Finns det någon ledig tid imorgon?",
-            "Boka in mig på förmiddagen tack",
-            "Jag måste avboka min tid på fredag",
-            "När har ni nästa lediga tid?",
-            "Kan jag boka ett videosamtal?",
-            "Jag vill ha ett möte med en handläggare",
-            "Boka om min tid till nästa vecka",
-        ],
-        "other": [
-            "Hej, jag har en allmän fråga",
-            "Jag är osäker på vart jag ska vända mig",
-            "Kan ni koppla mig till rätt avdelning?",
-            "Jag vill bara testa er support",
-            "Tack för hjälpen, hej då!",
-            "Jag ringer för att kolla läget",
-            "Ursäkta, jag kom fel",
-            "Jag har blivit hänvisad hit",
-            "Är detta kundtjänst?",
-            "Jag söker någon som kan hjälpa mig",
-        ],
-    }
-
-    examples: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    for intent, phrases in templates.items():
-        for phrase in phrases:
-            key = (phrase.lower().strip(), intent)
-            if key not in seen:
-                seen.add(key)
-                examples.append({"text": phrase, "intent": intent})
-
-    # Deprecated: use scripts/prepare_intent_data.py for balanced train/val splits.
-
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        for ex in examples[:n_examples]:
-            f.write(json.dumps(ex, ensure_ascii=False) + "\n")
-
-    logger.info("Intent dataset written: %s (%d examples)", output_path, n_examples)
-
-
 __all__ = [
     "CALL_CENTER_INTENTS",
     "INTENT_LABELS",
     "IntentClassifier",
-    "generate_intent_dataset",
 ]

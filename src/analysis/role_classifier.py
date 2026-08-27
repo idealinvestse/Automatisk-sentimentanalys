@@ -18,6 +18,7 @@ Integration note: pipeline.py and mistral_analyzer.py now do:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from ..core.models import AnalysisContext
@@ -30,6 +31,11 @@ logger = logging.getLogger(__name__)
 # Delegate to shared pure heuristics in agent_performance (single source of truth for 4.1.1 features).
 # This eliminates duplication while keeping role_classifier lightweight and early in the analyzer graph.
 # Role still owns the basic speaker->role heuristic.
+compute_talk_ratios: Callable[..., dict[str, float]] | None
+compute_question_density: Callable[..., dict[str, float]] | None
+compute_lexical_formality: Callable[..., float] | None
+compute_sentiment_variance: Callable[..., float] | None
+compute_intervention_count: Callable[..., int] | None
 try:
     from ..agent_performance import (
         compute_intervention_count,
@@ -146,7 +152,7 @@ class RoleAnalyzer(Analyzer):
 
         # --- Extended Fas 4.1 features (delegated to shared logic in agent_performance to avoid dupe) ---
         # Use the full compute_* when available (they handle dict/Segment, role_map etc.)
-        if compute_talk_ratios:
+        if compute_talk_ratios is not None:
             ratios = compute_talk_ratios(segments, roles)
             a_talk = ratios.get("agent_talk_ratio", 0.5)
             c_talk = ratios.get("customer_talk_ratio", 0.5)
@@ -155,7 +161,7 @@ class RoleAnalyzer(Analyzer):
             a_talk = c_talk = 0.5
             talk_listen = 1.0
 
-        if compute_question_density:
+        if compute_question_density is not None:
             qd = compute_question_density(segments, roles)
             qdens_a = qd.get("agent_question_density", 0.0)
             qdens_c = qd.get("customer_question_density", 0.0)
@@ -166,15 +172,21 @@ class RoleAnalyzer(Analyzer):
             a_turns = c_turns = 0
 
         form_score = (
-            compute_lexical_formality(segments, roles) if compute_lexical_formality else 0.5
+            compute_lexical_formality(segments, roles)
+            if compute_lexical_formality is not None
+            else 0.5
         )
 
-        inter = compute_intervention_count(segments, roles) if compute_intervention_count else 0
+        inter = (
+            compute_intervention_count(segments, roles)
+            if compute_intervention_count is not None
+            else 0
+        )
 
         # sentiment_variance (needs prior sentiment results)
         var = 0.0
         sent = ctx.results.get("sentiment") if hasattr(ctx, "results") else None
-        if compute_sentiment_variance and sent and len(sent) == len(segments):
+        if compute_sentiment_variance is not None and sent and len(sent) == len(segments):
             var = compute_sentiment_variance(segments, roles, sent)
 
         out: dict[str, Any] = {

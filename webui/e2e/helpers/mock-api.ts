@@ -32,6 +32,13 @@ export async function stubDashboardApi(page: Page): Promise<void> {
   await page.route("**/health", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
   );
+  await page.route("**/ready", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"status":"ok","ready":true}',
+    }),
+  );
   await page.route("**/ws/transcription/ticket", (r) =>
     r.fulfill({
       status: 200,

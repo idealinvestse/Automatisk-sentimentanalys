@@ -59,9 +59,12 @@ def prefer_aspect_claims(results: dict[str, Any]) -> list[dict[str, Any]]:
     for item in local:
         if not isinstance(item, dict):
             continue
-        spans = item.get("evidence_spans")
-        if not spans and item.get("evidence"):
-            spans = [
+        spans_raw = item.get("evidence_spans")
+        item_spans: list[dict[str, Any]] | None = (
+            spans_raw if isinstance(spans_raw, list) else None
+        )
+        if not item_spans and item.get("evidence"):
+            item_spans = [
                 {
                     "text": item["evidence"],
                     "speaker_role": item.get("speaker"),
@@ -74,7 +77,7 @@ def prefer_aspect_claims(results: dict[str, Any]) -> list[dict[str, Any]]:
                 "aspect": item.get("aspect", "annat"),
                 "sentiment": _norm_sentiment(item.get("sentiment")),
                 "score": float(item.get("score", 0.0)),
-                "evidence_spans": spans or [],
+                "evidence_spans": item_spans or [],
                 "related_to": [],
                 "source": "local_absa",
             }

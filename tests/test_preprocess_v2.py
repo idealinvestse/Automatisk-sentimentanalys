@@ -11,7 +11,7 @@ from src.transcription.preprocess import (
     normalize_preprocess_mode,
     prepare_asr_audio,
 )
-from src.transcription.preprocess_v2 import preprocess_audio_callcenter
+from src.transcription.preprocess_callcenter import preprocess_audio_callcenter
 from src.transcription.vad_callcenter import (
     CALLCENTER_VAD_PARAMETERS,
     get_callcenter_vad_parameters,
@@ -66,7 +66,7 @@ class TestCallcenterVad:
         assert vad_options_for_mode("callcenter", vad_enabled=False) is None
 
 
-@patch("src.transcription.preprocess_v2.subprocess.run")
+@patch("src.transcription.preprocess_callcenter.subprocess.run")
 def test_preprocess_audio_callcenter_ffmpeg_chain(mock_run, tmp_path):
     audio = tmp_path / "input.wav"
     audio.write_bytes(b"fake")
@@ -98,7 +98,7 @@ def test_maybe_preprocess_for_mode_callcenter_delegates(tmp_path):
     audio = tmp_path / "input.wav"
     audio.write_bytes(b"fake")
 
-    with patch("src.transcription.preprocess_v2.preprocess_audio_callcenter") as mock_cc:
+    with patch("src.transcription.preprocess_callcenter.preprocess_audio_callcenter") as mock_cc:
         mock_cc.return_value = MagicMock(path=str(audio), cleanup=MagicMock())
         handle = maybe_preprocess_for_mode(str(audio), "callcenter")
         mock_cc.assert_called_once_with(str(audio))

@@ -64,9 +64,10 @@ async def health_detail(request: Request) -> dict[str, Any]:
     tickets = getattr(request.app.state, "ws_tickets", None)
     redis_client = getattr(cache, "redis_client", None) if cache is not None else None
     redis_ok = redis_client is not None
-    if redis_ok:
+    if redis_client is not None:
         try:
             redis_client.ping()
+            redis_ok = True
         except Exception:
             redis_ok = False
 

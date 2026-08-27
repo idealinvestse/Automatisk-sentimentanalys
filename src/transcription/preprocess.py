@@ -236,7 +236,7 @@ def maybe_preprocess_for_mode(
     if resolved == "off":
         return PreprocessHandle(path=audio_path, _temp_paths=[], _original_path=audio_path)
     if resolved == "callcenter":
-        from .preprocess_v2 import preprocess_audio_callcenter
+        from .preprocess_callcenter import preprocess_audio_callcenter
 
         return preprocess_audio_callcenter(audio_path)
     return preprocess_audio(audio_path, highpass=True, noise_reduction=True)

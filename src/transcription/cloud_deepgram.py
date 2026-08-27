@@ -192,7 +192,8 @@ class DeepgramTranscriber:
                     error_code=AsrErrorCode.CLOUD_AUTH,
                 ) from exc
 
-            return response.json()
+            payload: dict[str, Any] = response.json()
+            return payload
 
         if last_error is not None:
             raise last_error

@@ -4,7 +4,7 @@
 **Uppdaterad:** 2026-07-10 (release verification L7–L9 + länk till test-runbook)  
 **Syfte:** Checklista innan produktionsdrift av Swedish Sentiment API och webui-dashboard.
 
-> **Verifieringsstatus 2026-07-09 (v0.5):** 19 PASS, 0 FAIL, 0 PARTIAL av 23 items.
+> **Verifieringsstatus 2026-08-27 (v0.5.1):** 19 PASS, 4 OPEN (pilot/L7–L9/DPIA/DATA-01) av 23 items.
 > Staging stack validerad via `docker-compose.staging.yml` + `scripts/staging_observability_smoke.py`.
 > GPU CUDA smoke verifierad via `scripts/verify_gpu_docker.ps1` (se §3).
 
@@ -25,7 +25,7 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["api:8000"]
-    # bearer_token: "your-SENTIMENT_API_KEY"  # om auth aktiverat
+    # http_headers.X-API-Key.values: ["your-SENTIMENT_API_KEY"]
 ```
 
 - [x] **Tracing** — `src/core/tracing.py` med `OTEL_ENABLED=true`. OTLP HTTP exporter när `OTEL_EXPORTER_OTLP_ENDPOINT` är satt (annars ConsoleSpanExporter). Kräver `opentelemetry-exporter-otlp-proto-http` (ingår i `[api]`).
@@ -204,7 +204,7 @@ Innan kundpilot med kvalitetsclaim — se [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) o
 
 ### WebSocket ticket auth (Fas 5 harmonization)
 
-WebSocket tickets lagras via `TicketStore` (`src/api/ws_tickets.py`). Med `API_USE_REDIS_CACHE=true` + `REDIS_URL` delas tickets mellan uvicorn-workers. Utan Redis används in-memory (single-worker). **Kvar:** `TranscriptionEventHub` är process-lokal — multi-worker live-loggar kräver pub/sub i ett senare steg.
+WebSocket tickets lagras via `TicketStore` (`src/api/ws_tickets.py`). Med `API_USE_REDIS_CACHE=true` + `REDIS_URL` delas tickets, jobb och `TranscriptionEventHub`-events mellan uvicorn-workers. Utan Redis används in-memory (single-worker).
 ### Åtgärdade i denna session:
 
 - ✅ `.env.example` skapad med alla 25+ env vars

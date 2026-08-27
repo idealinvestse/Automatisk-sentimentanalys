@@ -423,7 +423,7 @@ def redact_segments(
         from transformers import pipeline  # type: ignore
 
         # Small Swedish NER if available in env (non-fatal if missing)
-        ner_pipeline = pipeline(
+        ner_pipeline = pipeline(  # type: ignore[call-overload]
             "ner", model="KB/bert-base-swedish-cased-ner", aggregation_strategy="simple", device=-1
         )
         logger.debug("PII redactor: Swedish NER pipeline loaded for names/addresses")

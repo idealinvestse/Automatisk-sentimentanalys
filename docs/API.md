@@ -1,10 +1,10 @@
-# Swedish Sentiment API (v0.4.1)
+# Swedish Sentiment API (v0.5.1)
 
 REST API for Swedish sentiment analysis, ASR transcription, call-center pipelines, and Fas 4 aggregates.
 
 **Interactive docs:** `http://localhost:8000/docs` (uvicorn)  
 **OpenAPI JSON:** `/openapi.json`  
-**Hardening plan:** [API_REVIEW_HARDENING_PLAN.md](./archive/API_REVIEW_HARDENING_PLAN.md)
+**Security:** [SECURITY.md](../SECURITY.md) · **Architecture:** [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 

@@ -11,9 +11,13 @@ The system is designed around two main entry points:
 
 Both entry points share the same underlying analysis and transcription engines, but present different interfaces suited to their respective environments.
 
-**Completed per docs/archive/UTVECKLINGSPLAN.md (Fas 1-3)**: Advanced ASR (WhisperX, hotwords, chunking, preprocess), ABSA (aspects), emotions, role inference, trajectory/escalation, spoken normalization. All new capabilities are modular via the analysis registry and optional transcription params.
+Fas 1–3 delivered advanced ASR (WhisperX, hotwords, chunking, preprocess), ABSA, emotions, role inference, trajectory/escalation, and spoken normalization via the analysis registry.
 
-**Fas 3 – Mistral/OpenRouter LLM Integration (European-first)**: Hybrid selective deep path using `mistralai/mistral-medium-3-5` (primary) / Large 3 via OpenRouter for holistic full-conversation analysis (trajectory, root cause, actionable insights, agent assessment). Strict JSON schema + Pydantic validation. Always logged for GDPR. Local fast path remains default. See `docs/FAS3_MISTRAL_LLM_INTEGRATION.md` and `UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md`.
+**Fas 3 – Mistral/OpenRouter LLM Integration (European-first)**: Hybrid selective deep path using `mistralai/mistral-medium-3-5` (primary) via OpenRouter for holistic full-conversation analysis. Strict JSON schema + Pydantic validation. Always logged for GDPR. Local fast path remains default. See `docs/MULTI_PROVIDER_LLM.md`.
+
+## Engine vs adapter
+
+Heavy domain logic lives in engine modules (`src/sentiment.py`, `src/intent.py`, `src/negation.py`, `src/insights.py`, `src/predictive.py`, `src/topic_modeling.py`). `src/analysis/*.py` adapters register those engines in the analyzer registry. Change scoring/heuristics in the engine; change pipeline wiring in the adapter.
 
 ## Layered Architecture
 
@@ -52,8 +56,7 @@ Both entry points share the same underlying analysis and transcription engines, 
 │  Engines                                                    │
 │  • src/sentiment.py – HF transformers sentiment pipeline    │
 │  • src/transcription/ – ASR (faster, transformers, whisperx)│
-│    + preprocess.py (Task 1.4: high-pass + optional noisereduce) │
-│    + preprocess_v2.py + vad_callcenter.py (Transcription v2 A-1) │
+│    + preprocess.py (basic) + preprocess_callcenter.py + vad_callcenter.py │
 │  • src/analysis/aspect.py – ABSA (hybrid keyword + sentiment) │
 │  • src/intent.py – intent classification (heuristic/model)  │
 │  • src/summarizer.py – abstractive summarization            │

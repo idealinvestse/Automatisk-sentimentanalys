@@ -18,8 +18,8 @@ Dashboardens huvudväg (`POST /analyze_pipeline` → typed `AnalyzerResults` →
 | Pipeline + Testlabb + Edge | Stark |
 | Transcription REST + WS | Medel (job-API oanvänd i UI; WS-typer ofullständiga) |
 | Fas 4 aggregates | Medel (hot topics + agent perf; saknar semantic/QA; alerts dual path) |
-| Auth (REST + WS) | Svag för prod — ingen `NEXT_PUBLIC_API_KEY` |
-| Kontrakt / OpenAPI | Svag — `generate:types` finns, `schema.ts` saknas |
+| Auth (REST + WS) | BFF default (`SENTIMENT_API_KEY` server-side); WS via ticket |
+| Kontrakt / OpenAPI | `webui/openapi.json` + `schema.ts` + CI drift check |
 | E2E vs live backend | Svag — Playwright stubbar/mockar; smoke träffar riktig `:8000` utan stub |
 
 **Pilot-implikation:** UI kan demo:a hybridanalys, men prod med `SENTIMENT_API_KEY` kräver att API-nyckel faktiskt skickas från webui. Live `/testlab`-pass (PRODUCTION_CHECKLIST) är fortfarande nödvändig.
@@ -193,11 +193,11 @@ Inte ta bort backend. Prioritera semantic search i Insights när pilotkunden eft
 | Edge | 4 | Enkel, komplett |
 | Transcription | 3 | Funkar; jobs/partial underutnyttjade |
 | Fas 4 insights | 3 | Hot topics ja; search/QA nej |
-| Auth prod | 2 | Nyckel ej wire:ad |
-| OpenAPI sync | 2 | Manual only |
+| Auth prod | 4 | BFF default; DIRECT escape hatch |
+| OpenAPI sync | 4 | Snapshot + CI drift job |
 | E2E bevis | 2 | Stubbar/mockar |
 
-**Snitt ~3.2/5** — tillräckligt för *demo/conditional pilot*, otillräckligt för “dashboard = full API-yta”.
+**Snitt ~3.8/5** — tillräckligt för *demo/conditional pilot*; live `/testlab` still required.
 
 ---
 

@@ -152,7 +152,7 @@ def is_module_installed(module: str, python: Path | None = None) -> bool:
     """Return True if *module* can be imported by *python* (default: current interpreter)."""
     if not _is_same_interpreter(python):
         assert python is not None  # for type checkers
-        result = subprocess.run(
+        result = subprocess.run(  # type: ignore[call-overload]
             [
                 str(python),
                 "-c",
@@ -163,7 +163,7 @@ def is_module_installed(module: str, python: Path | None = None) -> bool:
             check=False,
             **_subprocess_no_window_kwargs(),
         )
-        return result.returncode == 0
+        return bool(result.returncode == 0)
     return importlib.util.find_spec(module) is not None
 
 
@@ -171,7 +171,7 @@ def _ensure_interpreter_site_packages(python: Path) -> None:
     """Make *python*'s site-packages importable in this process (launcher → venv)."""
     if _is_same_interpreter(python):
         return
-    result = subprocess.run(
+    result = subprocess.run(  # type: ignore[call-overload]
         [
             str(python),
             "-c",
@@ -235,7 +235,7 @@ def install_asr_packages(
     to_install = list(ASR_PIP_PACKAGES)
     _log(progress, f"Installerar ASR-paket: {', '.join(to_install)}")
     try:
-        subprocess.run(
+        subprocess.run(  # type: ignore[call-overload]
             [str(interpreter), "-m", "pip", "install", *to_install],
             check=True,
             cwd=str(root),
@@ -368,7 +368,7 @@ def ensure_torch_load_weights_compat() -> None:
         # lightning_fabric may pass weights_only=True explicitly; force False for
         # trusted pyannote/whisperx checkpoints that embed omegaconf objects.
         kwargs["weights_only"] = False
-        return original(*args, **kwargs)
+        return original(*args, **kwargs)  # type: ignore[arg-type,misc]
 
     _load._sentiment_weights_compat = True  # type: ignore[attr-defined]
     torch.load = _load  # type: ignore[assignment]
@@ -393,7 +393,7 @@ def ensure_speechbrain_windows_compat() -> None:
     import inspect as py_inspect
     import warnings
 
-    def ensure_module_fixed(self: object, stacklevel: int = 1) -> object:  # type: ignore[no-untyped-def]
+    def ensure_module_fixed(self: Any, stacklevel: int = 1) -> object:  # type: ignore[no-untyped-def]
         importer_frame = None
         try:
             importer_frame = py_inspect.getframeinfo(sys._getframe(stacklevel + 1))

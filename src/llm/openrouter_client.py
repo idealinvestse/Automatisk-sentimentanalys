@@ -262,18 +262,6 @@ class OpenRouterClient:
                 "unless api_key is passed at call time. Local fallback paths in pipeline/analyzer remain available."
             )
 
-    @staticmethod
-    def _try_load_key_from_file() -> str | None:
-        """
-        Deprecated internal method.
-
-        Use the public helpers instead:
-            - load_openrouter_key_from_file()
-            - get_openrouter_api_key(override=...)
-        """
-        # Delegate to the new public implementation for backward compatibility
-        return load_openrouter_key_from_file(set_as_env=False, silent=True)
-
     def _ensure_openai(self) -> OpenAI:
         """Lazy load the OpenAI client (and enforce optional dep)."""
         if not _HAS_OPENAI or OpenAI is None:
@@ -441,7 +429,7 @@ class OpenRouterClient:
         for attempt in range(self.max_retries):
             try:
                 t0 = time.time()
-                completion = client.chat.completions.create(
+                completion = client.chat.completions.create(  # type: ignore[call-overload]
                     model=model,
                     messages=messages,  # type: ignore[arg-type]  # SDK accepts list of dicts
                     response_format=response_format,  # type: ignore[arg-type]
@@ -459,7 +447,7 @@ class OpenRouterClient:
                 choice = completion.choices[0]
                 content = choice.message.content or "{}"
                 try:
-                    result: dict[str, Any] = json.loads(content)
+                    parsed: dict[str, Any] = json.loads(content)
                 except json.JSONDecodeError as je:
                     # This should be extremely rare with strict:true; still protect
                     logger.error(
@@ -469,7 +457,7 @@ class OpenRouterClient:
 
                 usage = getattr(completion, "usage", None)
                 cost = self._compute_approx_cost(usage, model)
-                meta: dict[str, Any] = {
+                call_meta: dict[str, Any] = {
                     "model": getattr(completion, "model", model),
                     "task": task_name,
                     "usage": usage.model_dump() if usage else None,
@@ -481,9 +469,9 @@ class OpenRouterClient:
                     "provider": "openrouter",
                 }
                 if "x-ratelimit" in str(completion):  # best effort
-                    meta["rate_limit_headers"] = "present"
+                    call_meta["rate_limit_headers"] = "present"
 
-                self._save_to_cache(cache_key, result, meta)
+                self._save_to_cache(cache_key, parsed, call_meta)
 
                 # Cost budget warning (Fas 3.4)
                 if self.cost_budget and (cost or 0) > self.cost_budget:
@@ -494,8 +482,8 @@ class OpenRouterClient:
                         cost or 0,
                         self.cost_budget,
                     )
-                    meta["budget_exceeded"] = True
-                    meta["budget"] = self.cost_budget
+                    call_meta["budget_exceeded"] = True
+                    call_meta["budget"] = self.cost_budget
 
                 logger.info(
                     "Mistral call OK | model=%s | task=%s | cost≈$%.5f | latency=%.2fs | cached=False",
@@ -507,7 +495,7 @@ class OpenRouterClient:
                 from ..core.metrics import record_llm_request
 
                 record_llm_request("openrouter", model, "success", latency)
-                return result, meta
+                return parsed, call_meta
 
             except RateLimitError as e:
                 last_exc = e

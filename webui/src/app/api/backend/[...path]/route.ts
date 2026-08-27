@@ -2,14 +2,44 @@
  * Next.js BFF proxy — keeps SENTIMENT_API_KEY server-side.
  *
  * Browser → /api/backend/<path> → FastAPI with X-API-Key injected.
- * Enable with NEXT_PUBLIC_USE_API_PROXY=1 and set SENTIMENT_API_BASE_URL +
- * SENTIMENT_API_KEY (server-only env vars).
+ * Default in the webui client; disable with NEXT_PUBLIC_USE_DIRECT_API=1.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const ALLOWED_PREFIXES = [
+  "health",
+  "ready",
+  "metrics",
+  "status",
+  "analyze",
+  "analyze_pipeline",
+  "analyze_conversation",
+  "agent_performance",
+  "insights",
+  "search",
+  "qa",
+  "alerts",
+  "alerting",
+  "calls",
+  "llm",
+  "upload",
+  "transcribe",
+  "batch_transcribe",
+  "batch_analyze_conversation",
+  "scan_process",
+  "transcription",
+  "ws",
+  "edge",
+] as const;
+
+function maxBodyBytes(): number {
+  const mb = Number(process.env.API_MAX_UPLOAD_SIZE_MB || "50");
+  return Math.max(1, Number.isFinite(mb) ? mb : 50) * 1024 * 1024;
+}
 
 function upstreamBase(): string {
   const base =
@@ -23,7 +53,16 @@ function apiKey(): string | undefined {
   return process.env.SENTIMENT_API_KEY?.trim() || undefined;
 }
 
+function isAllowedPath(parts: string[]): boolean {
+  const first = (parts[0] ?? "").toLowerCase();
+  return (ALLOWED_PREFIXES as readonly string[]).includes(first);
+}
+
 async function proxy(req: NextRequest, pathParts: string[]): Promise<NextResponse> {
+  if (!isAllowedPath(pathParts)) {
+    return NextResponse.json({ detail: "Path not allowed via BFF proxy" }, { status: 404 });
+  }
+
   const targetPath = pathParts.map(encodeURIComponent).join("/");
   const url = new URL(req.url);
   const upstream = `${upstreamBase()}/${targetPath}${url.search}`;
@@ -42,7 +81,14 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
     redirect: "manual",
   };
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = await req.arrayBuffer();
+    const buf = await req.arrayBuffer();
+    if (buf.byteLength > maxBodyBytes()) {
+      return NextResponse.json(
+        { detail: `Payload too large (max ${Math.round(maxBodyBytes() / (1024 * 1024))} MB)` },
+        { status: 413 },
+      );
+    }
+    init.body = buf;
   }
 
   let upstreamRes: Response;

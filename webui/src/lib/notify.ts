@@ -23,7 +23,7 @@ export function notifyApiError(err: unknown, prefix = "") {
   let msg = err instanceof Error ? err.message : String(err);
   if (err instanceof ApiError && err.status === 401) {
     msg =
-      `${prefix}Otillåten (401) — kontrollera NEXT_PUBLIC_API_KEY / SENTIMENT_API_KEY`.trim();
+      `${prefix}Otillåten (401) — kontrollera SENTIMENT_API_KEY på BFF (eller DIRECT + NEXT_PUBLIC_API_KEY)`.trim();
   } else if (err instanceof ApiError) {
     const detail = formatApiDetail(err.detail);
     const base = detail ? `${err.message}: ${detail}` : err.message;

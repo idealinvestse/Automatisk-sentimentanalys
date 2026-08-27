@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..core.version import get_package_version
+
 if TYPE_CHECKING:
     from ..alerting_state import AlertingStateManager
 
@@ -62,10 +64,10 @@ HTTP_REQUEST_DURATION_SECONDS = (
 )
 
 
-def init_app_info(version: str = "0.4.1") -> None:
+def init_app_info(version: str | None = None) -> None:
     """Set static info gauge once at startup."""
     if APP_INFO is not None:
-        APP_INFO.labels(version=version).set(1)
+        APP_INFO.labels(version=version or get_package_version()).set(1)
 
 
 def update_alerting_metrics(state: AlertingStateManager) -> None:

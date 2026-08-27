@@ -1,8 +1,4 @@
-"""Pydantic request and response models for the Swedish Sentiment API.
-
-All schemas include field-level validation where it adds value (non-empty lists,
-file/directory existence, device string format, etc.).
-"""
+"""Pydantic request and response models for the Swedish Sentiment API."""
 
 from __future__ import annotations
 
@@ -11,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from .path_validation import (
+from ..path_validation import (
     validate_audio_path,
     validate_batch_audio_input,
     validate_directory_path,
@@ -24,7 +20,6 @@ _AGENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 MAX_FAS4_CALLS = 50
 MAX_SEGMENTS_PER_CALL = 200
 MAX_ANALYZE_TEXTS = 1000
-
 
 class AsrParamsMixin(BaseModel):
     """Shared ASR parameters used across transcription-related endpoints."""
@@ -211,6 +206,213 @@ class AnalyzeConversationResponse(BaseModel):
         None,
         description="Full analyzer output when use_full_pipeline=True (agent_performance, qa, pii_redaction, ...)",
     )
+
+# ---------------------------------------------------------------------------
+# /batch_transcribe
+# ---------------------------------------------------------------------------
+
+
+class BatchTranscribeRequest(AsrParamsMixin):
+    audio_paths: list[str] | None = None
+    directory: str | None = None
+    glob: str | None = Field(None, description="Glob pattern within directory, e.g. **/*.wav")
+    recursive: bool = True
+    limit: int | None = Field(None, ge=1)
+    workers: int = Field(1, ge=1, le=8)
+    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
+    word_timestamps: bool = Field(True)
+
+    @field_validator("directory")
+    @classmethod
+    def directory_must_exist(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_directory_path(v)
+
+    @field_validator("audio_paths")
+    @classmethod
+    def audio_paths_must_be_allowed(cls, v: list[str] | None) -> list[str] | None:
+        if not v:
+            return v
+        return [validate_batch_audio_input(p) for p in v]
+
+    @model_validator(mode="after")
+    def require_audio_source(self) -> BatchTranscribeRequest:
+        if not self.audio_paths and not self.directory:
+            raise ValueError("Either audio_paths or directory must be provided")
+        return self
+
+
+class BatchTranscribeItem(BaseModel):
+    file: str
+    transcript: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class BatchTranscribeResponse(BaseModel):
+    items: list[BatchTranscribeItem]
+    ok: int
+    failed: int
+    total: int
+    timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# /upload
+# ---------------------------------------------------------------------------
+
+
+class UploadResponse(BaseModel):
+    """Response from POST /upload."""
+
+    audio_path: str = Field(..., description="Validated server-side path to uploaded file")
+    filename: str = Field(..., description="Original filename from upload")
+    size_bytes: int = Field(..., description="File size in bytes")
+    timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# /batch_analyze_conversation
+# ---------------------------------------------------------------------------
+
+
+class BatchAnalyzeConversationRequest(AsrParamsMixin):
+    audio_paths: list[str] | None = None
+    directory: str | None = None
+    glob: str | None = Field(None)
+    recursive: bool = True
+    limit: int | None = Field(None, ge=1)
+    workers: int = Field(1, ge=1, le=8)
+    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
+    word_timestamps: bool = Field(False)
+    # Sentiment
+    sentiment_profile: str = Field("callcenter", description="Sentiment profile for light path")
+    sentiment_model: str | None = Field(None)
+    sentiment_batch_size: int = Field(
+        16, ge=1, le=128, description="Batch size for sentiment inference"
+    )
+    lexicon_file: str | None = Field(None)
+    lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
+
+    @field_validator("directory")
+    @classmethod
+    def directory_must_exist(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_directory_path(v)
+
+    @field_validator("audio_paths")
+    @classmethod
+    def audio_paths_must_be_allowed(cls, v: list[str] | None) -> list[str] | None:
+        if not v:
+            return v
+        return [validate_batch_audio_input(p) for p in v]
+
+    @field_validator("lexicon_file")
+    @classmethod
+    def lexicon_file_must_be_allowed(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_lexicon_path(v)
+
+    @model_validator(mode="after")
+    def require_audio_source(self) -> BatchAnalyzeConversationRequest:
+        if not self.audio_paths and not self.directory:
+            raise ValueError("Either audio_paths or directory must be provided")
+        return self
+
+
+class BatchAnalyzeConversationItem(BaseModel):
+    file: str
+    transcript: dict[str, Any] | None = None
+    segment_sentiments: list[SegmentSentiment] | None = None
+    meta: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class BatchAnalyzeConversationResponse(BaseModel):
+    items: list[BatchAnalyzeConversationItem]
+    ok: int
+    failed: int
+    total: int
+    timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# /scan_process
+# ---------------------------------------------------------------------------
+
+
+class ScanProcessRequest(AsrParamsMixin):
+    directory: str = Field(..., description="Directory to scan")
+    pattern: str | None = Field(
+        None, description="Glob pattern relative to directory (e.g., **/*.wav)"
+    )
+    recursive: bool = True
+    batch_size: int = Field(4, ge=1, le=64, description="Number of files per processing batch")
+    max_files: int | None = Field(None, ge=1)
+    state_file: str | None = Field(None, description="Optional JSON file to track processed files")
+    workers: int = Field(1, ge=1, le=8, description="Parallel workers per batch")
+    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
+    operation: str = Field("transcribe", description="transcribe | analyze_conversation")
+    word_timestamps: bool = Field(False)
+    use_full_pipeline: bool = Field(
+        False,
+        description="When operation=analyze_conversation, use full CallAnalysisPipeline per file",
+    )
+    # Sentiment (used when operation=analyze_conversation)
+    sentiment_profile: str = Field(
+        "callcenter", description="Sentiment profile for light analyze path"
+    )
+    sentiment_model: str | None = Field(None)
+    sentiment_batch_size: int = Field(
+        16, ge=1, le=128, description="Batch size for sentiment inference"
+    )
+    lexicon_file: str | None = Field(None)
+    lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
+
+    @field_validator("directory")
+    @classmethod
+    def directory_must_exist(cls, v: str) -> str:
+        return validate_directory_path(v)
+
+    @field_validator("state_file")
+    @classmethod
+    def state_file_must_be_allowed(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_state_file_path(v)
+
+    @field_validator("lexicon_file")
+    @classmethod
+    def lexicon_file_must_be_allowed(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_lexicon_path(v)
+
+    @field_validator("operation")
+    @classmethod
+    def operation_must_be_valid(cls, v: str) -> str:
+        if v not in {"transcribe", "analyze_conversation"}:
+            raise ValueError(f"operation must be 'transcribe' or 'analyze_conversation', got {v!r}")
+        return v
+
+
+class ScanItem(BaseModel):
+    file: str
+    ok: bool
+    error: str | None = None
+    data: dict[str, Any] | None = None
+    batch_index: int
+
+
+class ScanProcessResponse(BaseModel):
+    items: list[ScanItem]
+    ok: int
+    failed: int
+    total: int
+    skipped: int
+    timestamp: str
 
 
 # ---------------------------------------------------------------------------
@@ -710,26 +912,41 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
     None so the frontend can gracefully skip them.
     """
     if not results:
-        return AnalyzerResults()
+        return AnalyzerResults.model_construct()
 
     # emotion + aspect are lists
     emotion_raw = results.get("emotion")
     emotion: list[EmotionSegmentResult] | None = None
     if isinstance(emotion_raw, list):
-        emotion = [_safe_parse(EmotionSegmentResult, e) for e in emotion_raw if isinstance(e, dict)]
-        emotion = [e for e in emotion if e is not None] or None
+        emotion_parsed: list[EmotionSegmentResult] = []
+        for item in emotion_raw:
+            if isinstance(item, dict):
+                parsed = _safe_parse(EmotionSegmentResult, item)
+                if parsed is not None:
+                    emotion_parsed.append(parsed)
+        emotion = emotion_parsed or None
 
     aspect_raw = results.get("aspect")
     aspect: list[AspectItem] | None = None
     if isinstance(aspect_raw, list):
-        aspect = [_safe_parse(AspectItem, a) for a in aspect_raw if isinstance(a, dict)]
-        aspect = [a for a in aspect if a is not None] or None
+        aspect_parsed: list[AspectItem] = []
+        for item in aspect_raw:
+            if isinstance(item, dict):
+                parsed = _safe_parse(AspectItem, item)
+                if parsed is not None:
+                    aspect_parsed.append(parsed)
+        aspect = aspect_parsed or None
 
     claims_raw = results.get("aspect_claims")
     aspect_claims: list[AspectItem] | None = None
     if isinstance(claims_raw, list):
-        aspect_claims = [_safe_parse(AspectItem, a) for a in claims_raw if isinstance(a, dict)]
-        aspect_claims = [a for a in aspect_claims if a is not None] or None
+        claims_parsed: list[AspectItem] = []
+        for item in claims_raw:
+            if isinstance(item, dict):
+                parsed = _safe_parse(AspectItem, item)
+                if parsed is not None:
+                    claims_parsed.append(parsed)
+        aspect_claims = claims_parsed or None
 
     def _parse_or_unavailable(model_cls: type[BaseModel], raw: Any) -> Any | None:
         if isinstance(raw, dict) and raw.get("status") == "unavailable":
@@ -777,214 +994,6 @@ def build_analyzer_results(results: dict[str, Any]) -> AnalyzerResults:
         partial=results.get("partial"),
         analyzer_routing=results.get("analyzer_routing"),
     )
-
-
-# ---------------------------------------------------------------------------
-# /batch_transcribe
-# ---------------------------------------------------------------------------
-
-
-class BatchTranscribeRequest(AsrParamsMixin):
-    audio_paths: list[str] | None = None
-    directory: str | None = None
-    glob: str | None = Field(None, description="Glob pattern within directory, e.g. **/*.wav")
-    recursive: bool = True
-    limit: int | None = Field(None, ge=1)
-    workers: int = Field(1, ge=1, le=8)
-    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
-    word_timestamps: bool = Field(True)
-
-    @field_validator("directory")
-    @classmethod
-    def directory_must_exist(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return validate_directory_path(v)
-
-    @field_validator("audio_paths")
-    @classmethod
-    def audio_paths_must_be_allowed(cls, v: list[str] | None) -> list[str] | None:
-        if not v:
-            return v
-        return [validate_batch_audio_input(p) for p in v]
-
-    @model_validator(mode="after")
-    def require_audio_source(self) -> BatchTranscribeRequest:
-        if not self.audio_paths and not self.directory:
-            raise ValueError("Either audio_paths or directory must be provided")
-        return self
-
-
-class BatchTranscribeItem(BaseModel):
-    file: str
-    transcript: dict[str, Any] | None = None
-    error: str | None = None
-
-
-class BatchTranscribeResponse(BaseModel):
-    items: list[BatchTranscribeItem]
-    ok: int
-    failed: int
-    total: int
-    timestamp: str
-
-
-# ---------------------------------------------------------------------------
-# /upload
-# ---------------------------------------------------------------------------
-
-
-class UploadResponse(BaseModel):
-    """Response from POST /upload."""
-
-    audio_path: str = Field(..., description="Validated server-side path to uploaded file")
-    filename: str = Field(..., description="Original filename from upload")
-    size_bytes: int = Field(..., description="File size in bytes")
-    timestamp: str
-
-
-# ---------------------------------------------------------------------------
-# /batch_analyze_conversation
-# ---------------------------------------------------------------------------
-
-
-class BatchAnalyzeConversationRequest(AsrParamsMixin):
-    audio_paths: list[str] | None = None
-    directory: str | None = None
-    glob: str | None = Field(None)
-    recursive: bool = True
-    limit: int | None = Field(None, ge=1)
-    workers: int = Field(1, ge=1, le=8)
-    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
-    word_timestamps: bool = Field(False)
-    # Sentiment
-    sentiment_profile: str = Field("callcenter", description="Sentiment profile for light path")
-    sentiment_model: str | None = Field(None)
-    sentiment_batch_size: int = Field(
-        16, ge=1, le=128, description="Batch size for sentiment inference"
-    )
-    lexicon_file: str | None = Field(None)
-    lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
-
-    @field_validator("directory")
-    @classmethod
-    def directory_must_exist(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return validate_directory_path(v)
-
-    @field_validator("audio_paths")
-    @classmethod
-    def audio_paths_must_be_allowed(cls, v: list[str] | None) -> list[str] | None:
-        if not v:
-            return v
-        return [validate_batch_audio_input(p) for p in v]
-
-    @field_validator("lexicon_file")
-    @classmethod
-    def lexicon_file_must_be_allowed(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return validate_lexicon_path(v)
-
-    @model_validator(mode="after")
-    def require_audio_source(self) -> BatchAnalyzeConversationRequest:
-        if not self.audio_paths and not self.directory:
-            raise ValueError("Either audio_paths or directory must be provided")
-        return self
-
-
-class BatchAnalyzeConversationItem(BaseModel):
-    file: str
-    transcript: dict[str, Any] | None = None
-    segment_sentiments: list[SegmentSentiment] | None = None
-    meta: dict[str, Any] | None = None
-    error: str | None = None
-
-
-class BatchAnalyzeConversationResponse(BaseModel):
-    items: list[BatchAnalyzeConversationItem]
-    ok: int
-    failed: int
-    total: int
-    timestamp: str
-
-
-# ---------------------------------------------------------------------------
-# /scan_process
-# ---------------------------------------------------------------------------
-
-
-class ScanProcessRequest(AsrParamsMixin):
-    directory: str = Field(..., description="Directory to scan")
-    pattern: str | None = Field(
-        None, description="Glob pattern relative to directory (e.g., **/*.wav)"
-    )
-    recursive: bool = True
-    batch_size: int = Field(4, ge=1, le=64, description="Number of files per processing batch")
-    max_files: int | None = Field(None, ge=1)
-    state_file: str | None = Field(None, description="Optional JSON file to track processed files")
-    workers: int = Field(1, ge=1, le=8, description="Parallel workers per batch")
-    worker_timeout: float = Field(300.0, gt=0.0, description="Per-file worker timeout in seconds")
-    operation: str = Field("transcribe", description="transcribe | analyze_conversation")
-    word_timestamps: bool = Field(False)
-    use_full_pipeline: bool = Field(
-        False,
-        description="When operation=analyze_conversation, use full CallAnalysisPipeline per file",
-    )
-    # Sentiment (used when operation=analyze_conversation)
-    sentiment_profile: str = Field(
-        "callcenter", description="Sentiment profile for light analyze path"
-    )
-    sentiment_model: str | None = Field(None)
-    sentiment_batch_size: int = Field(
-        16, ge=1, le=128, description="Batch size for sentiment inference"
-    )
-    lexicon_file: str | None = Field(None)
-    lexicon_weight: float = Field(0.0, ge=0.0, le=1.0)
-
-    @field_validator("directory")
-    @classmethod
-    def directory_must_exist(cls, v: str) -> str:
-        return validate_directory_path(v)
-
-    @field_validator("state_file")
-    @classmethod
-    def state_file_must_be_allowed(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return validate_state_file_path(v)
-
-    @field_validator("lexicon_file")
-    @classmethod
-    def lexicon_file_must_be_allowed(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return validate_lexicon_path(v)
-
-    @field_validator("operation")
-    @classmethod
-    def operation_must_be_valid(cls, v: str) -> str:
-        if v not in {"transcribe", "analyze_conversation"}:
-            raise ValueError(f"operation must be 'transcribe' or 'analyze_conversation', got {v!r}")
-        return v
-
-
-class ScanItem(BaseModel):
-    file: str
-    ok: bool
-    error: str | None = None
-    data: dict[str, Any] | None = None
-    batch_index: int
-
-
-class ScanProcessResponse(BaseModel):
-    items: list[ScanItem]
-    ok: int
-    failed: int
-    total: int
-    skipped: int
-    timestamp: str
 
 
 # ---------------------------------------------------------------------------

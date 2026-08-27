@@ -12,6 +12,12 @@ type ApiPath = keyof paths;
 
 const _clientPaths = [
   "/health",
+  "/ready",
+  "/calls",
+  "/calls/{call_id}",
+  "/llm/analysis-profiles",
+  "/llm/analysis-profiles/{perspective_id}",
+  "/llm/providers",
   "/analyze_pipeline",
   "/analyze_pipeline/partial",
   "/analyze_pipeline/compare",

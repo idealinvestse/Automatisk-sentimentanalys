@@ -1,6 +1,6 @@
 """WebSocket router for real-time transcription logs and progress.
 
-Fas 3 WebSocket – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
+WebSocket `/ws/transcription` plus ticket auth.
 """
 
 from __future__ import annotations

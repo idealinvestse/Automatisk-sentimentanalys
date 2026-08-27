@@ -1,7 +1,7 @@
 # Fas 5 — Docker staging stack (production-like)
 #
 # Usage:
-#   1. Copy .env.example to .env and set SENTIMENT_API_KEY, OPENROUTER_API_KEY (optional)
+#   1. Copy .env.example to .env and set SENTIMENT_API_KEY (required)
 #   2. docker compose -f docker-compose.staging.yml up --build
 #   Web UI:     http://localhost:3000
 #   API docs:   http://localhost:8000/docs
@@ -26,21 +26,26 @@ services:
     volumes:
       - hf_cache:/cache/hf
       - app_outputs:/app/outputs
+      - api_cache:/app/.cache
+      - api_media:/app/media
+      - api_state:/app/state
     env_file:
       - .env
     environment:
       - HF_HOME=/cache/hf
-      - API_CORS_ORIGINS=http://localhost:3000
+      - API_CORS_ORIGINS=${API_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - API_USE_REDIS_CACHE=true
       - REDIS_URL=redis://redis:6379/0
-      - API_CACHE_DIR=/tmp/aggregates
+      - API_CACHE_DIR=/app/.cache
+      - API_STATE_DIR=/app/state
       - SENTIMENT_JSON_LOGS=1
       - OTEL_ENABLED=true
       - API_PRODUCTION=true
       - API_REQUIRE_AUTH=true
       - API_REQUIRE_MEDIA_ROOT=true
-      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-staging-local-dev-key}
-      - API_MEDIA_ROOT=/tmp/media
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:?Set SENTIMENT_API_KEY in .env}
+      - API_MEDIA_ROOT=/app/media
+      - API_RATE_LIMIT_RPM=${API_RATE_LIMIT_RPM:-120}
     depends_on:
       redis:
         condition: service_healthy
@@ -57,10 +62,10 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
         NEXT_PUBLIC_USE_API_PROXY: "1"
-        NEXT_PUBLIC_API_KEY: ""
     environment:
       - SENTIMENT_API_BASE_URL=http://api:8000
-      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-staging-local-dev-key}
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:?Set SENTIMENT_API_KEY in .env}
+      - API_MAX_UPLOAD_SIZE_MB=${API_MAX_UPLOAD_SIZE_MB:-50}
     ports:
       - "3000:3000"
     depends_on:
@@ -68,7 +73,7 @@ services:
         condition: service_healthy
 
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: prom/prometheus:v2.55.1
     ports:
       - "9090:9090"
     volumes:
@@ -80,3 +85,6 @@ services:
 volumes:
   hf_cache:
   app_outputs:
+  api_cache:
+  api_media:
+  api_state:

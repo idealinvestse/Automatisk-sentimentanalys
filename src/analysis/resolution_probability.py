@@ -45,7 +45,7 @@ class ResolutionProbabilityPredictor(Analyzer):
         effort = ctx.results.get("customer_effort", {})
         empathy = ctx.results.get("empathy", {})
 
-        base = 65
+        base = 65.0
 
         # Improving sentiment trajectory bonus
         if isinstance(sentiment_results, list) and len(sentiment_results) >= 2:

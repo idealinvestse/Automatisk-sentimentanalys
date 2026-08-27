@@ -77,7 +77,7 @@ class SentimentPipeline:
         self.return_all_scores = return_all_scores
         self.max_length = max_length
         try:
-            self._nlp = pipeline(
+            self._nlp = pipeline(  # type: ignore[call-overload]
                 task="sentiment-analysis",
                 model=model_name,
                 tokenizer=model_name,

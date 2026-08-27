@@ -332,21 +332,21 @@ class FasterWhisperTranscriber:
                     if vad_parameters is not None:
                         chunk_kwargs["vad_parameters"] = vad_parameters
 
-                    segments_iter: list[Any] = []
+                    chunk_segments_iter: list[Any] = []
                     attempts = 0
                     while attempts < 3:
                         try:
-                            segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
+                            chunk_segments_iter, _ = wmodel.transcribe(chunk, **chunk_kwargs)
                             break
                         except Exception as ce:
                             attempts += 1
                             if attempts >= 3:
                                 warnings.append(f"chunk_failed:{chunk_index}")
                                 logger.warning("Chunk %d failed after retries: %s", chunk_index, ce)
-                                segments_iter = []
+                                chunk_segments_iter = []
                                 break
 
-                    for s in segments_iter:
+                    for s in chunk_segments_iter:
                         words: list[Word] = []  # type: ignore[no-redef]
                         if word_timestamps and getattr(s, "words", None):
                             for w in s.words:

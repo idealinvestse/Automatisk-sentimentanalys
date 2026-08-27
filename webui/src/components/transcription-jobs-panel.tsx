@@ -81,7 +81,7 @@ export function TranscriptionJobsPanel() {
           <EmptyState
             icon={WifiOff}
             title="API ej ansluten"
-            hint="Starta backend och sätt NEXT_PUBLIC_API_KEY om auth krävs."
+            hint="Starta backend och sätt SENTIMENT_API_KEY på Next.js-servern (BFF) om auth krävs."
           />
         ) : jobsQuery.isLoading ? (
           <div className="flex flex-col gap-2">

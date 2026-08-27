@@ -367,7 +367,7 @@ class GroqClient:
         for attempt in range(self.max_retries):
             try:
                 t0 = time.time()
-                completion = client.chat.completions.create(
+                completion = client.chat.completions.create(  # type: ignore[call-overload]
                     model=model,
                     messages=messages,  # type: ignore[arg-type]
                     response_format=response_format,  # type: ignore[arg-type]
@@ -381,14 +381,14 @@ class GroqClient:
                 choice = completion.choices[0]
                 content = choice.message.content or "{}"
                 try:
-                    result: dict[str, Any] = json.loads(content)
+                    parsed: dict[str, Any] = json.loads(content)
                 except json.JSONDecodeError as je:
                     logger.error("Groq returned non-JSON content: %s", content[:200])
                     raise LLMError(f"JSON parse failed (Groq, model={model}): {je}") from je
 
                 usage = getattr(completion, "usage", None)
                 cost = self._compute_approx_cost(usage, model)
-                meta: dict[str, Any] = {
+                call_meta: dict[str, Any] = {
                     "model": getattr(completion, "model", model),
                     "task": task_name,
                     "usage": usage.model_dump() if usage else None,
@@ -400,7 +400,7 @@ class GroqClient:
                     "provider": "groq",
                 }
 
-                self._save_to_cache(cache_key, result, meta)
+                self._save_to_cache(cache_key, parsed, call_meta)
 
                 if self.cost_budget and (cost or 0) > self.cost_budget:
                     logger.warning(
@@ -409,8 +409,8 @@ class GroqClient:
                         cost or 0,
                         self.cost_budget,
                     )
-                    meta["budget_exceeded"] = True
-                    meta["budget"] = self.cost_budget
+                    call_meta["budget_exceeded"] = True
+                    call_meta["budget"] = self.cost_budget
 
                 logger.info(
                     "Groq call OK | model=%s | task=%s | cost≈$%.5f | latency=%.2fs | cached=False",
@@ -425,7 +425,7 @@ class GroqClient:
                     record_llm_request("groq", model, "success", latency)
                 except Exception:
                     logger.debug("Failed to record Groq LLM metrics", exc_info=True)
-                return result, meta
+                return parsed, call_meta
 
             except RateLimitError as e:
                 last_exc = e

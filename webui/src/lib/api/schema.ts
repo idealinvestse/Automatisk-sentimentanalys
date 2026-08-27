@@ -13,12 +13,29 @@ export interface paths {
         };
         /**
          * Health
-         * @description Simple health check endpoint.
-         *
-         *     Returns:
-         *         ``{"status": "ok"}`` when the service is running.
+         * @description Liveness probe — process is up (no dependency checks).
          */
         get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Readiness probe — fail when production-critical deps are missing.
+         */
+        get: operations["ready_ready_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -96,7 +113,7 @@ export interface paths {
         };
         /**
          * Health Detail
-         * @description Extended health with component availability.
+         * @description Extended health with component availability and degraded signals.
          */
         get: operations["health_detail_status_health_detail_get"];
         put?: never;
@@ -454,6 +471,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Calls
+         * @description List recently saved analyzed calls (newest first).
+         */
+        get: operations["list_calls_calls_get"];
+        put?: never;
+        /**
+         * Create Call
+         * @description Create or update a saved call.
+         */
+        post: operations["create_call_calls_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calls/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Call
+         * @description Fetch a single saved call by id.
+         */
+        get: operations["get_call_calls__call_id__get"];
+        /**
+         * Upsert Call
+         * @description Create or update a saved call (id in path must match body.id).
+         */
+        put: operations["upsert_call_calls__call_id__put"];
+        post?: never;
+        /**
+         * Delete Call
+         * @description Delete a saved call.
+         */
+        delete: operations["delete_call_calls__call_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/analysis-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List selectable analysis perspectives with paid model picks */
+        get: operations["get_analysis_profiles_llm_analysis_profiles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/analysis-profiles/{perspective_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail + ranked paid models for one analysis perspective */
+        get: operations["get_analysis_profile_detail_llm_analysis_profiles__perspective_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configured LLM providers (key present?) */
+        get: operations["get_llm_providers_llm_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scan_process": {
         parameters: {
             query?: never;
@@ -666,7 +786,7 @@ export interface components {
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -748,7 +868,7 @@ export interface components {
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -1421,8 +1541,42 @@ export interface components {
         };
         /** Body_upload_audio_file_upload_post */
         Body_upload_audio_file_upload_post: {
-            /** File */
+            /**
+             * File
+             * @description Audio file to upload
+             */
             file: string;
+        };
+        /** CallListResponse */
+        CallListResponse: {
+            /** Calls */
+            calls: {
+                [key: string]: unknown;
+            }[];
+            /** Count */
+            count: number;
+        };
+        /**
+         * CallUpsertRequest
+         * @description Store or update an analyzed call.
+         */
+        CallUpsertRequest: {
+            /** Id */
+            id: string;
+            /** Transcript */
+            transcript?: {
+                [key: string]: unknown;
+            };
+            /** Report */
+            report?: {
+                [key: string]: unknown;
+            };
+            /** Meta */
+            meta?: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at?: string | null;
         };
         /** CoachingInsightItem */
         CoachingInsightItem: {
@@ -1737,7 +1891,7 @@ export interface components {
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -2046,13 +2200,18 @@ export interface components {
              */
             deep_analysis: boolean;
             /**
+             * Analysis Perspective
+             * @description Optional analysis perspective id from GET /llm/analysis-profiles (e.g. cost_saver, coaching_qa, holistic_deep). Auto-picks paid model by cost/quality.
+             */
+            analysis_perspective?: string | null;
+            /**
              * Llm Api Key
              * @description Deprecated: prefer X-OpenRouter-Key header. Requires API_ALLOW_CLIENT_LLM_KEY.
              */
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -2121,6 +2280,17 @@ export interface components {
             };
             /** @description Typed view of `results` (Fas 5). Null when no analyzers ran or for backward-compatible clients. */
             analyzer_results?: components["schemas"]["AnalyzerResults"] | null;
+            /**
+             * Degraded
+             * @description Graceful-degradation reasons (LLM skipped, analyzers unavailable, etc.). Empty = full path.
+             */
+            degraded?: string[];
+            /**
+             * Mode
+             * @description 'full' when no degradation; 'degraded' when one or more optional components were skipped.
+             * @default full
+             */
+            mode: string;
         };
         /**
          * PredictiveResult
@@ -2185,7 +2355,7 @@ export interface components {
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -2562,7 +2732,7 @@ export interface components {
             llm_api_key?: string | null;
             /**
              * Provider
-             * @description LLM provider: openrouter (default) | groq
+             * @description LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal
              * @default openrouter
              */
             provider: string;
@@ -2927,6 +3097,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    ready_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -3597,6 +3787,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_calls_calls_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_call_calls_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_call_calls__call_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_call_calls__call_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CallUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_call_calls__call_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_profiles_llm_analysis_profiles_get: {
+        parameters: {
+            query?: {
+                /** @description Alternatives per perspective */
+                top_k?: number;
+                /** @description Recompute from catalogs (false = cached snapshot) */
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_profile_detail_llm_analysis_profiles__perspective_id__get: {
+        parameters: {
+            query?: {
+                top_k?: number;
+            };
+            header?: never;
+            path: {
+                perspective_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_llm_providers_llm_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

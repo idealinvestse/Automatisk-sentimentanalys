@@ -83,7 +83,7 @@ class EmotionAnalyzer(Analyzer):
 
             if not scores:
                 scores = {"neutral": 0.9}
-            primary = max(scores, key=scores.get)
+            primary = max(scores, key=lambda k: scores[k])
             # Evidence: keyword hit or sentiment-derived signal
             evidence_spans: list[dict[str, Any]] = []
             for emotion, regex in EMOTION_REGEX.items():

@@ -1,0 +1,667 @@
+"""Audio and ASR CLI commands registered on the root Typer app."""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+
+import pandas as pd
+import typer
+from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
+
+from .cli_support import ensure_dir, parse_asr_hotwords, resolve_audio_paths, setup_logging
+from .core.config import DEFAULT_ASR_MODEL, DEFAULT_SENTIMENT_MODEL
+from .core.serialization import score_dict
+from .core.serialization import top_label as top_label_pair
+from .lexicon import blend_results_with_lexicon, load_lexicon
+from .pipeline import CallAnalysisPipeline
+from .transcription.factory import get_transcriber, resolve_preprocess_mode
+from .transcription.router import AsrRouter
+
+console = Console()
+
+
+def register_audio_commands(app: typer.Typer) -> None:
+    """Attach download-asr / transcribe / analyze-call / edge / catalog commands."""
+
+    @app.command("download-asr")
+    def download_asr_cmd(
+        backend: list[str] = typer.Option(
+            ["faster", "whisperx", "transformers"],
+            "--backend",
+            "-b",
+            help="ASR backends whose models should be pre-downloaded",
+        ),
+        model: str = typer.Option(DEFAULT_ASR_MODEL, "--model", "-m", help="ASR model name or alias"),
+        device: str = typer.Option(
+            "cpu", "--device", help="Device used for prefetch (cpu recommended)"
+        ),
+        language: str = typer.Option(
+            "sv", "--language", "-l", help="Language for WhisperX align model"
+        ),
+        revision: str | None = typer.Option(
+            "strict",
+            "--revision",
+            help="KB-Whisper revision for faster/transformers prefetch",
+        ),
+        skip_packages: bool = typer.Option(
+            False, "--skip-packages", help="Skip pip install of faster-whisper/whisperx"
+        ),
+        skip_models: bool = typer.Option(
+            False, "--skip-models", help="Only install packages, skip model download"
+        ),
+    ) -> None:
+        """Install faster-whisper & whisperx and pre-download transcription models."""
+        from src.install.asr_assets import ensure_asr_assets
+        from src.install.config_schema import UserConfig
+
+        cfg = UserConfig()
+        console.print("[cyan]Hämtar ASR-paket och transkriberingsmodeller…[/cyan]")
+        report = ensure_asr_assets(
+            cfg.resolved_app_root(),
+            backends=backend,
+            model=model,
+            device=device,
+            language=language,
+            revision=revision,
+            hf_home=cfg.resolved_hf_home(),
+            install_packages=not skip_packages,
+            download_models=not skip_models,
+            progress=lambda msg: console.print(f"[dim]… {msg}[/dim]"),
+        )
+        for step in report.steps:
+            status = "[green]OK[/green]" if step.ok else "[red]FAIL[/red]"
+            detail = f" ({step.detail})" if step.detail else ""
+            console.print(f"{status} {step.name}: {step.message}{detail}")
+        if report.ok:
+            console.print("[green]ASR-uppsättning klar[/green]")
+            raise typer.Exit(0)
+        console.print("[red]ASR-uppsättning misslyckades delvis – se steg ovan[/red]")
+        raise typer.Exit(1)
+
+
+    @app.command("transcribe")
+    def transcribe_cmd(
+        inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
+        model: str = typer.Option(DEFAULT_ASR_MODEL, help="ASR model name or HuggingFace ID"),
+        backend: str = typer.Option(
+            "faster",
+            help="ASR backend: faster (default, best Swedish WER via KB-Whisper) | transformers | whisperx (better alignment + integrated diarization)",
+        ),
+        device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
+        provider: str = typer.Option(
+            "local",
+            "--provider",
+            help="ASR provider: local (default) | cloud (Deepgram, opt-in)",
+        ),
+        cloud_fallback_local: bool = typer.Option(
+            False,
+            "--cloud-fallback-local",
+            help="Fall back to local ASR if cloud fails (default off)",
+        ),
+        language: str = typer.Option("sv", help="ASR language code (sv)"),
+        beam_size: int = typer.Option(5, min=1, max=10),
+        vad: bool = typer.Option(True, help="Enable VAD filter (faster-whisper)"),
+        word_timestamps: bool = typer.Option(True, help="Return word timestamps if supported"),
+        chunk_length_s: int = typer.Option(30, min=5, max=60, help="Chunk length (transformers)"),
+        revision: str | None = typer.Option(
+            None,
+            help="KB-Whisper revision: standard|strict|subtitle (strict recommended for call center)",
+        ),
+        diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
+        num_speakers: int | None = typer.Option(
+            None, "--num-speakers", help="Expected number of speakers"
+        ),
+        hotwords: str | None = typer.Option(
+            None,
+            "--hotwords",
+            help="Comma or space separated list of domain words to boost (e.g. 'fakturering,återbetalning,acme'). Auto-loaded from configs/callcenter_hotwords.txt for Swedish (sv) only.",
+        ),
+        no_hotwords: bool = typer.Option(
+            False,
+            "--no-hotwords",
+            help="Disable automatic Swedish callcenter hotword loading.",
+        ),
+        initial_prompt: str | None = typer.Option(
+            None,
+            "--initial-prompt",
+            help="Text prompt to condition the ASR decoder (e.g. expected names or style at start of call).",
+        ),
+        preprocess: bool = typer.Option(
+            False,
+            "--preprocess",
+            help="Enable audio preprocessing (high-pass filter + optional noise reduction) before ASR. Useful for noisy recordings.",
+        ),
+        preprocess_mode: str | None = typer.Option(
+            None,
+            "--preprocess-mode",
+            help="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD for Swedish telephony).",
+        ),
+        output_json: str | None = typer.Option(
+            None, help="Optional path to save transcript JSON (single input)"
+        ),
+        output_dir: str | None = typer.Option(
+            None, help="Directory to save per-file JSON (multiple inputs)"
+        ),
+        log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
+    ):
+        """Transcribe one or many audio files using Faster-Whisper, Transformers or WhisperX ASR.
+
+        WhisperX backend gives superior word-level timestamps (valuable for aspect
+        evidence spans) and can perform diarization in the same pass.
+        """
+        setup_logging(log_level)
+        files = resolve_audio_paths(inputs)
+        if not files:
+            console.print("[red]No audio files found. Provide files, directories or globs.[/red]")
+            raise typer.Exit(code=1)
+
+        if len(files) > 1 and not output_dir and output_json:
+            console.print(
+                "[yellow]Multiple inputs detected; ignoring --output-json and using --output-dir=outputs/transcripts[/yellow]"
+            )
+            output_dir = os.path.join("outputs", "transcripts")
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        ok, fail = 0, 0
+        start_all = time.time()
+        console.print(f"[cyan]Found {len(files)} audio file(s). Starting transcription...[/cyan]")
+
+        router = AsrRouter()
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            task = progress.add_task("Transcribing", total=len(files))
+            for idx, path in enumerate(files, start=1):
+                progress.update(task, description=f"[{idx}/{len(files)}] {os.path.basename(path)}")
+                t0 = time.time()
+                try:
+                    parsed_hotwords = parse_asr_hotwords(
+                        hotwords,
+                        language,
+                        auto_load=not no_hotwords,
+                    )
+
+                    resolved_preprocess_mode = resolve_preprocess_mode(
+                        preprocess=preprocess,
+                        preprocess_mode=preprocess_mode,
+                    )
+                    tr_obj = router.transcribe(
+                        path,
+                        provider=provider,
+                        backend=backend,
+                        model_name=model,
+                        device=device,
+                        cloud_fallback_local=cloud_fallback_local,
+                        language=language,
+                        beam_size=beam_size,
+                        vad=vad,
+                        word_timestamps=word_timestamps,
+                        chunk_length_s=chunk_length_s,
+                        revision=revision,
+                        diarize=diarize,
+                        num_speakers=num_speakers,
+                        hotwords=parsed_hotwords,
+                        initial_prompt=initial_prompt,
+                        preprocess=preprocess,
+                        preprocess_mode=resolved_preprocess_mode,
+                    )
+                    tr = tr_obj.to_dict()
+                    ok += 1
+                except Exception as e:
+                    fail += 1
+                    console.print(f"[red]ASR failed for {path}: {e}[/red]")
+                    progress.advance(task, 1)
+                    continue
+
+                dur = tr.get("processing_time")
+                segs = tr.get("segments", []) or []
+                console.print(
+                    f"[green]Done:[/green] {os.path.basename(path)} | segs={len(segs)} | time={time.time() - t0:.2f}s (ASR={dur:.2f}s)"
+                )
+
+                # Show head segments
+                head = segs[:5]
+                if head:
+                    table = Table(show_header=True, header_style="bold magenta")
+                    table.add_column("#")
+                    table.add_column("start")
+                    table.add_column("end")
+                    table.add_column("text")
+                    for i, s in enumerate(head):
+                        table.add_row(
+                            str(i),
+                            f"{s.get('start', ''):.2f}" if s.get("start") is not None else "",
+                            f"{s.get('end', ''):.2f}" if s.get("end") is not None else "",
+                            s.get("text", "")[:100],
+                        )
+                    console.print(table)
+
+                # Save results
+                try:
+                    if len(files) == 1 and output_json:
+                        ensure_dir(output_json)
+                        with open(output_json, "w", encoding="utf-8") as f:
+                            json.dump(tr, f, ensure_ascii=False, indent=2)
+                        console.print(f"[green]Saved transcript:[/green] {output_json}")
+                    elif output_dir:
+                        base = os.path.splitext(os.path.basename(path))[0]
+                        out_path = os.path.join(output_dir, f"{base}.json")
+                        with open(out_path, "w", encoding="utf-8") as f:
+                            json.dump(tr, f, ensure_ascii=False, indent=2)
+                        console.print(f"[green]Saved transcript:[/green] {out_path}")
+                except Exception as e:
+                    console.print(f"[red]Failed to save transcript for {path}: {e}[/red]")
+
+                progress.advance(task, 1)
+
+        console.print(
+            f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
+        )
+
+
+    @app.command("analyze-call")
+    def analyze_call_cmd(
+        inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
+        # ASR settings
+        model: str = typer.Option(DEFAULT_ASR_MODEL, help="ASR model name"),
+        backend: str = typer.Option(
+            "faster",
+            help="ASR backend: faster (default, best Swedish WER via KB-Whisper) | transformers | whisperx (better alignment + integrated diarization)",
+        ),
+        device: str = typer.Option("auto", help="Device: auto|cpu|cuda|cuda:0|mps"),
+        language: str = typer.Option("sv", help="ASR language code"),
+        beam_size: int = typer.Option(5, min=1, max=10),
+        vad: bool = typer.Option(True),
+        word_timestamps: bool = typer.Option(False),
+        chunk_length_s: int = typer.Option(30, min=5, max=60),
+        revision: str | None = typer.Option(None, help="KB-Whisper revision: standard|strict|subtitle"),
+        diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
+        num_speakers: int | None = typer.Option(
+            None, "--num-speakers", help="Expected number of speakers"
+        ),
+        hotwords: str | None = typer.Option(
+            None,
+            "--hotwords",
+            help="Comma/space separated domain words to boost in ASR (e.g. fakturering,återbetalning). Auto-loaded for Swedish (sv) only.",
+        ),
+        no_hotwords: bool = typer.Option(
+            False,
+            "--no-hotwords",
+            help="Disable automatic Swedish callcenter hotword loading.",
+        ),
+        initial_prompt: str | None = typer.Option(
+            None, "--initial-prompt", help="Conditioning prompt for ASR decoder."
+        ),
+        preprocess: bool = typer.Option(
+            False,
+            "--preprocess",
+            help="Enable audio preprocessing (high-pass + noise reduction) before ASR.",
+        ),
+        preprocess_mode: str | None = typer.Option(
+            None,
+            "--preprocess-mode",
+            help="Preprocess mode: off | basic | callcenter (v2 bandpass + tuned VAD for Swedish telephony).",
+        ),
+        profile: str = typer.Option(
+            "callcenter",
+            "--profile",
+            help="Analysis profile (callcenter, sales, complaint, support, teknisk_support).",
+        ),
+        selected_analyzers: str | None = typer.Option(
+            None,
+            "--selected-analyzers",
+            help="Comma-separated analyzer names (overrides profile default; deps auto-resolved).",
+        ),
+        async_analyzers: bool = typer.Option(
+            False,
+            "--async-analyzers",
+            help="Run independent analyzers in parallel within dependency levels.",
+        ),
+        # LLM / Mistral holistic (Fas 3.2+)
+        use_mistral_llm: bool = typer.Option(
+            False,
+            "--use-mistral-llm",
+            help="Enable Mistral via OpenRouter for full-conversation holistic analysis (trajectory, root cause, actionable QA recommendations, agent assessment). Requires OPENROUTER_API_KEY env var. European/GDPR-preferred models.",
+        ),
+        llm_model: str | None = typer.Option(
+            None,
+            "--llm-model",
+            help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3-5). Example: mistralai/mistral-large-3",
+        ),
+        deep_analysis: bool = typer.Option(
+            False,
+            "--deep-analysis",
+            help="Force the deep LLM path (equivalent to --use-mistral-llm for callcenter use).",
+        ),
+        provider: str = typer.Option(
+            "openrouter",
+            "--provider",
+            help="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal. Groq is US-hosted (GDPR). free_sequential rotates free-tier providers one-at-a-time.",
+        ),
+        groq_eu_residency: bool = typer.Option(
+            False,
+            "--groq-eu-residency",
+            help="GDPR gate: affirm EU data residency for Groq calls. If false, PII redaction must be active before any Groq call.",
+        ),
+        # Sentiment settings
+        sentiment_model: str = typer.Option(DEFAULT_SENTIMENT_MODEL, help="Sentiment model name"),
+        lexicon_file: str | None = typer.Option(None, help="Optional Swedish lexicon CSV/TSV"),
+        lexicon_weight: float = typer.Option(0.0, min=0.0, max=1.0, help="Blend weight [0..1]"),
+        output_csv: str | None = typer.Option(
+            None, help="Save segment sentiments to CSV (aggregate for multiple inputs)"
+        ),
+        log_level: str = typer.Option("INFO", help="Logging level: DEBUG|INFO|WARNING|ERROR"),
+    ):
+        """Transcribe Swedish call(s) and perform end-to-end sentiment, intent, and summary analysis.
+
+        Supports --backend whisperx for improved alignment and built-in diarization
+        (recommended when you need accurate per-speaker timestamps for trajectory / ABSA).
+
+        --use-mistral-llm / --deep-analysis activates the hybrid Mistral layer (Fas 3) for
+        full-conversation reasoning (trajectory, root cause, actionable QA insights, agent assessment).
+        Requires OPENROUTER_API_KEY. Uses European-preferred models by default.
+        """
+        setup_logging(log_level)
+        files = resolve_audio_paths(inputs)
+        if not files:
+            console.print("[red]No audio files found. Provide files, directories or globs.[/red]")
+            raise typer.Exit(code=1)
+
+        # Optional lexicon
+        use_lex = lexicon_file is not None and lexicon_weight > 0.0
+        lex = None
+        if use_lex:
+            try:
+                lex = load_lexicon(lexicon_file)
+                console.print(f"[green]Lexicon loaded:[/green] {lexicon_file} ({len(lex)} terms)")
+            except Exception as e:
+                console.print(
+                    f"[yellow]Warning: failed to load lexicon '{lexicon_file}': {e}. Continuing without lexicon.[/yellow]"
+                )
+                use_lex = False
+
+        all_rows = []
+        ok, fail = 0, 0
+        start_all = time.time()
+        console.print(f"[cyan]Found {len(files)} audio file(s). Starting analyze-call...[/cyan]")
+
+        # Initialize pipeline
+        # NOTE: asr_backend + asr_model are forwarded so that --backend whisperx (and --model)
+        # actually affect the transcription step inside analyze-call. Previously these
+        # CLI flags were accepted but ignored for the full pipeline command.
+        selected_list = (
+            [a.strip() for a in selected_analyzers.split(",") if a.strip()]
+            if selected_analyzers
+            else None
+        )
+        pipeline = CallAnalysisPipeline(
+            sentiment_model=sentiment_model,
+            device=device,
+            profile=profile,
+            asr_backend=backend,
+            asr_model=model,
+            use_mistral_llm=use_mistral_llm,
+            llm_model=llm_model,
+            deep_analysis=deep_analysis,
+            provider=provider,
+            groq_eu_residency=groq_eu_residency,
+            async_analyzers=async_analyzers,
+        )
+
+        if use_mistral_llm or deep_analysis:
+            provider_label = "Groq Cloud" if provider == "groq" else "Mistral/OpenRouter"
+            extra_warning = ""
+            if provider == "groq" and not groq_eu_residency:
+                extra_warning = (
+                    "\n[yellow]⚠️  GDPR WARNING: Groq data centers are US + Saudi Arabia (NO EU hosting). "
+                    "Ensure --groq-eu-residency or PII redaction is active.[/yellow]"
+                )
+            console.print(
+                f"[yellow]{provider_label} LLM deep analysis ENABLED for this run. "
+                "Full conversation (with roles) will be sent to external service. "
+                "See INFO logs for GDPR/egress notice. Cost tracked in meta.[/yellow]"
+                f"{extra_warning}"
+            )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False,
+        ) as progress:
+            task = progress.add_task("Analyzing", total=len(files))
+            for idx_file, path in enumerate(files, start=1):
+                progress.update(task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}")
+                try:
+                    parsed_hotwords = parse_asr_hotwords(
+                        hotwords,
+                        language,
+                        auto_load=not no_hotwords,
+                    )
+
+                    report = pipeline.analyze_audio(
+                        audio_path=path,
+                        num_speakers=num_speakers,
+                        language=language,
+                        run_diarization=diarize,
+                        hotwords=parsed_hotwords,
+                        initial_prompt=initial_prompt,
+                        preprocess=preprocess,
+                        preprocess_mode=preprocess_mode,
+                        selected_analyzers=selected_list,
+                        strict_asr=True,
+                    )
+                    report_dict = report.to_dict()
+                except Exception as e:
+                    fail += 1
+                    console.print(f"[red]Pipeline analysis failed for {path}: {e}[/red]")
+                    progress.advance(task, 1)
+                    continue
+
+                segments = report_dict.get("segments", []) or []
+                sentiment_results = report_dict.get("sentiment_results", []) or []
+                intent_results = report_dict.get("intent_results", []) or []
+
+                # Blend lexicon over all segments at once (no-op when use_lex=False)
+                seg_texts = [s.get("text", "").strip() for s in segments]
+                # Extract per-segment confidences so that low-confidence ASR segments
+                # automatically receive a boosted lexicon_weight (Task 1.2).
+                seg_confs = [s.get("confidence") or s.get("avg_confidence") for s in segments]
+                sentiment_results = blend_results_with_lexicon(
+                    seg_texts,
+                    sentiment_results,
+                    lexicon_file if use_lex else None,
+                    lexicon_weight,
+                    segment_confidences=seg_confs,
+                )
+
+                rows = []
+                for idx, s in enumerate(segments):
+                    text_val = seg_texts[idx]
+                    sent_val = sentiment_results[idx] if idx < len(sentiment_results) else {}
+                    sent_score = score_dict(sent_val)
+                    lbl, top_score = top_label_pair(sent_score)
+
+                    # Get intent
+                    intent_val = "other"
+                    intent_conf = 0.0
+                    if idx < len(intent_results):
+                        res_entry = intent_results[idx]
+                        intent_val = res_entry.get("intent", "other")
+                        intent_conf = float(res_entry.get("confidence", 0.0))
+
+                    row = {
+                        "file": path,
+                        "index": idx,
+                        "start": s.get("start"),
+                        "end": s.get("end"),
+                        "speaker": s.get("speaker"),
+                        "text": text_val,
+                        "label": lbl,
+                        "score": top_score,
+                        "negativ": sent_score.get("negativ"),
+                        "neutral": sent_score.get("neutral"),
+                        "positiv": sent_score.get("positiv"),
+                        "intent": intent_val,
+                        "intent_confidence": intent_conf,
+                    }
+                    rows.append(row)
+                    all_rows.append(row)
+
+                # Show preview table per file
+                table = Table(show_header=True, header_style="bold magenta")
+                for col in ["index", "start", "end", "speaker", "intent", "label", "score", "text"]:
+                    table.add_column(col)
+                for r in rows[:10]:
+                    table.add_row(
+                        str(r["index"]),
+                        f"{r['start']:.2f}" if r["start"] is not None else "",
+                        f"{r['end']:.2f}" if r["end"] is not None else "",
+                        str(r["speaker"]) if r["speaker"] is not None else "",
+                        r["intent"],
+                        r["label"],
+                        f"{r['score']:.3f}",
+                        r["text"][:80],
+                    )
+                console.print(table)
+                if len(rows) > 10:
+                    console.print(
+                        f"... showing 10 of {len(rows)} segments for {os.path.basename(path)}"
+                    )
+
+                # Print summary if available
+                summary = report_dict.get("summary", {})
+                if summary and summary.get("overall_summary"):
+                    console.print(
+                        f"\n[bold cyan]Overall Summary for {os.path.basename(path)}:[/bold cyan]"
+                    )
+                    console.print(summary.get("overall_summary"))
+                    action_items = summary.get("action_items", [])
+                    if action_items:
+                        console.print("[bold yellow]Action Items:[/bold yellow]")
+                        for item in action_items:
+                            console.print(
+                                f"- [{item.get('assignee', 'Unassigned')}] {item.get('text')}"
+                            )
+                    console.print("\n")
+
+                # Fas 4 call-center highlights (agent performance + QA) if present in results
+                # Makes the new actionable features visible in CLI (addresses plan "syns i CLI").
+                res = report_dict.get("results", {}) or {}
+                ap = res.get("agent_performance") or {}
+                if ap and isinstance(ap, dict):
+                    a = ap.get("agent", {}) or {}
+                    console.print(
+                        f"[bold green]Agent Performance (Fas4):[/bold green] "
+                        f"empathy={a.get('empathy_score', 0):.2f} "
+                        f"talk_ratio={a.get('talk_ratio', 0):.2f} "
+                        f"flags={a.get('compliance_flags', [])}"
+                    )
+                    hints = ap.get("local_coaching_hints", []) or []
+                    if hints:
+                        console.print("[yellow]Local coaching hints:[/yellow]")
+                        for h in hints[:2]:
+                            console.print(f"  - {h}")
+                qa = res.get("qa") or res.get("compliance_qa") or {}
+                if qa and isinstance(qa, dict) and "overall_qa_score" in qa:
+                    console.print(
+                        f"[bold green]QA / Compliance (Fas4):[/bold green] "
+                        f"{qa.get('overall_qa_score', 0):.1f}/100 "
+                        f"passed={qa.get('passed')} risk={qa.get('risk_level')} "
+                        f"flags={len(qa.get('compliance_flags', []))}"
+                    )
+
+                ok += 1
+                progress.advance(task, 1)
+
+        # Save aggregate CSV if requested
+        if output_csv and all_rows:
+            try:
+                ensure_dir(output_csv)
+                pd.DataFrame(all_rows).to_csv(output_csv, index=False)
+                console.print(f"[green]Saved CSV:[/green] {output_csv}")
+            except Exception as e:
+                console.print(f"[red]Failed to save CSV: {e}[/red]")
+                raise typer.Exit(code=1) from e
+
+        console.print(
+            f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
+        )
+
+
+    @app.command("edge-analyze")
+    def edge_analyze_cmd(
+        text: str | None = typer.Option(None, "--text", "-t", help="Text to analyze offline"),
+        audio: str | None = typer.Option(
+            None, "--audio", "-a", help="Audio file (local ASR + offline analysis)"
+        ),
+        profile: str = typer.Option("callcenter", "--profile", "-p", help="Sentiment profile"),
+        log_level: str = typer.Option("INFO", help="Logging level"),
+    ) -> None:
+        """Offline edge analysis — no LLM, no external network."""
+        from .edge.local_inference import analyze_segments_offline, analyze_text_offline
+
+        setup_logging(log_level)
+        if audio:
+            transcriber = get_transcriber(backend="faster", model_name=DEFAULT_ASR_MODEL, device="cpu")
+            transcript = transcriber.transcribe(audio_path=audio, language="sv", diarize=False)
+            segments = [s.to_dict() for s in (transcript.segments or [])]
+            result = analyze_segments_offline(segments, profile=profile)
+        elif text:
+            result = analyze_text_offline(text, profile=profile)
+        else:
+            console.print("[red]Ange --text eller --audio[/red]")
+            raise typer.Exit(1)
+        console.print_json(json.dumps(result.model_dump(), ensure_ascii=False, indent=2))
+
+
+    @app.command("scan-openrouter-models")
+    def scan_openrouter_models_cmd(
+        output: str = typer.Option(
+            "data/openrouter_models_catalog.json",
+            "--output",
+            "-o",
+            help="Sökväg att spara katalogen till",
+        ),
+        show_top: int = typer.Option(10, "--show-top", "-n", help="Visa de N billigaste modellerna"),
+        log_level: str = typer.Option("INFO", help="Logging level"),
+    ) -> None:
+        """Scanna OpenRouter efter modeller och spara katalog med kostnad."""
+        from .llm.model_catalog import fetch_openrouter_models_catalog
+
+        setup_logging(log_level)
+        console.print("[cyan]Scannar OpenRouter efter alla modeller...[/cyan]")
+        try:
+            catalog = fetch_openrouter_models_catalog(output_path=output)
+        except Exception as e:
+            console.print(f"[red]Kunde inte scanna: {e}[/red]")
+            raise typer.Exit(1) from e
+        console.print(f"[green]Sparade {catalog['count']} modeller till {output}[/green]")
+        models = sorted(
+            catalog["models"],
+            key=lambda m: m["pricing"]["prompt_per_million_usd"] or 999,
+        )[:show_top]
+        table = Table(title=f"Top {show_top} billigaste modeller")
+        table.add_column("ID", style="cyan")
+        table.add_column("Prompt $/M", justify="right")
+        for m in models:
+            p = m["pricing"]
+            table.add_row(m["id"], f"{p['prompt_per_million_usd']:.4f}")
+        console.print(table)
+
+
+    if __name__ == "__main__":
+        app()

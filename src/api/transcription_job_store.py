@@ -170,7 +170,7 @@ class RedisJobStore:
         data = json.loads(raw)
         data["meta"] = dict(data.get("meta") or {})
         data["cancelled"] = bool(data.get("cancelled"))
-        return data
+        return dict(data)
 
     def upsert(self, job: Any) -> None:
         key = self._job_key(job.job_id)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -22,6 +23,13 @@ def audio_wav(tmp_path: Path) -> str:
     path = tmp_path / "sample.wav"
     path.write_bytes(b"RIFF")
     return str(path)
+
+
+@pytest.mark.cloud_stt
+@pytest.mark.skipif(not os.environ.get("DEEPGRAM_API_KEY"), reason="live Deepgram opt-in")
+def test_live_deepgram_env_present() -> None:
+    """Collected only when operators opt into live cloud STT."""
+    assert os.environ.get("DEEPGRAM_API_KEY")
 
 
 def test_map_deepgram_response_segments():

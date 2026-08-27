@@ -20,10 +20,9 @@ services:
       - .env
     environment:
       - HF_HOME=/cache/hf
-      # API_CORS_ORIGINS must include the webui origin
-      - API_CORS_ORIGINS=http://localhost:3000
+      - API_CORS_ORIGINS=${API_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,10 +32,12 @@ services:
     build:
       context: ./webui
       args:
-        # Browser must reach the published API port on the host.
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-        # Bake the same key as SENTIMENT_API_KEY for authenticated pilots (trusted LAN only).
-        NEXT_PUBLIC_API_KEY: ${SENTIMENT_API_KEY:-}
+        NEXT_PUBLIC_USE_API_PROXY: "1"
+    environment:
+      - SENTIMENT_API_BASE_URL=http://api:8000
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-}
+      - API_MAX_UPLOAD_SIZE_MB=${API_MAX_UPLOAD_SIZE_MB:-50}
     ports:
       - "3000:3000"
     depends_on:

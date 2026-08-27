@@ -210,7 +210,7 @@ def run_mistral_holistic(
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
         model = ctx.llm_model
-        client = None
+        client: Any = None
         provider = (ctx.provider or "openrouter").lower()
 
         # Multi-provider router profiles
@@ -433,11 +433,13 @@ def _run_fas4_enrichment_body(
         results=results,
         result_key="agent_performance",
     ):
+        from typing import cast
+
         from .agent_performance import compute_call_agent_performance
 
         sent_res = results.get("sentiment") or []
         agent_perf = compute_call_agent_performance(
-            segments=segments or [],
+            segments=cast(list[dict[str, Any] | Segment], segments or []),
             role_map=role_map if isinstance(role_map, dict) else {},
             sentiment_results=sent_res,
             profile_name=ctx.profile,

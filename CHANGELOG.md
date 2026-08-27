@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Refactor hygiene (0.5.1 follow-up)** — single package version helper, BFF-default webui, OpenAPI drift gate, WS reconnect hardening, schema/CLI splits.
+
+## [0.5.1] - 2026-08-27
+
+### Added
 - **Ops hardening for pilot/slutprodukt-gap** — `scripts/run_pilot_gates.py` + `.env.pilot.example`; L7 smoke WAV under `samples/audio/sv/callcenter/`; synthetic DATA-01 bundle via `scripts/generate_pilot_corpus.py`; server-side `GET/POST/DELETE /calls` + webui sync; Next.js BFF proxy (`NEXT_PUBLIC_USE_API_PROXY` / `webui/src/app/api/backend/[...path]`); `/ready` readiness + degraded `/status/health/detail`; pipeline `degraded`/`mode` + UI banner; startup upload cleanup; `scripts/run_quality_gates.py` + `train_intent_smoke.py` (sklearn intent artifact); Redis WS hub test; staging compose requires auth/media-root/Redis.
 - **Multi-provider LLM + cost-aware analysis perspectives** — OpenAI-compatible clients for Mistral/NVIDIA/Cerebras/OpenRouter/Groq; `free_sequential` and `sv_optimal` router profiles with rate-limit cooldowns; multi-provider model catalog scanner (`data/model_catalogs/`); paid-model advisor with 12 analysis perspectives (cost/quality scoring); API `GET /llm/analysis-profiles` (+ detail); pipeline field `analysis_perspective`; Testlabb perspective picker UI; docs `docs/MULTI_PROVIDER_LLM.md`. OpenRouter default slug fixed to `mistralai/mistral-medium-3-5` (legacy `3.5` aliased).
 

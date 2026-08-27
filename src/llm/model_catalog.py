@@ -93,7 +93,7 @@ def _normalize_model_entry(raw: dict[str, Any], *, provider: str) -> dict[str, A
 def _http_get_json(url: str, headers: dict[str, str], timeout: float = 60.0) -> dict[str, Any]:
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        return json.loads(resp.read().decode("utf-8"))  # type: ignore[no-any-return]
 
 
 def fetch_provider_models_catalog(
@@ -301,7 +301,7 @@ def load_catalog(path: str | Path = "data/openrouter_models_catalog.json") -> di
         return None
     try:
         with p.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except Exception as e:
         logger.warning("Failed to load catalog %s: %s", p, e)
         return None

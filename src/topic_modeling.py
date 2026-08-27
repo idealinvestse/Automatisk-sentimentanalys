@@ -133,10 +133,11 @@ class TopicModeler:
 
         trends: list[dict[str, Any]] = []
         for topic_name in sorted(all_topics):
-            trend = {"topic": topic_name, "data": []}
+            data_points: list[dict[str, Any]] = []
+            trend: dict[str, Any] = {"topic": topic_name, "data": data_points}
             for r in topic_reports:
                 freq = next((t.frequency for t in r.topics if t.name == topic_name), 0)
-                trend["data"].append({"timestamp": r.timestamp, "frequency": freq})
+                data_points.append({"timestamp": r.timestamp, "frequency": freq})
             trends.append(trend)
 
         return trends

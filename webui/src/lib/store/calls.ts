@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { apiClient } from "@/lib/api/client";
+import { notifyApiError } from "@/lib/notify";
 import type { RealCall } from "@/lib/real-data";
 
 interface CallsState {
@@ -25,8 +26,8 @@ function persistToServer(call: RealCall): void {
       report: call.report as unknown as Record<string, unknown>,
       meta: { source: "webui" },
     })
-    .catch(() => {
-      /* offline / auth — localStorage remains source of truth */
+    .catch((err) => {
+      notifyApiError(err, "Kunde inte spara samtalet på servern");
     });
 }
 
@@ -46,7 +47,9 @@ export const useCallsStore = create<CallsState>()(
         set((state) => ({
           realCalls: state.realCalls.filter((c) => c.transcript.id !== id),
         }));
-        void apiClient.deleteCall(id).catch(() => undefined);
+        void apiClient.deleteCall(id).catch((err) => {
+          notifyApiError(err, "Kunde inte ta bort samtalet på servern");
+        });
       },
       clearRealCalls: () => set({ realCalls: [] }),
       syncFromServer: async () => {

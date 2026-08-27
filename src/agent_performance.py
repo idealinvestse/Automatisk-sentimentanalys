@@ -52,6 +52,8 @@ from .llm.schemas import (
 
 logger = logging.getLogger(__name__)
 
+SegmentInput = dict[str, Any] | Segment
+
 # Simple bounded cache for per-call perf (keyed by content hash). Addresses plan requirement
 # for pre-computation/smart caching "from the beginning". Invalidation is content-based (new
 # transcript/role/sentiment -> new key). For cross-call agent aggregates use time/agent keys
@@ -191,7 +193,9 @@ def _normalize_role(speaker: str, role_map: dict[str, str] | None) -> str:
 
 
 def _hash_for_cache(
-    segments: list[dict | Segment], role_map: dict | None, sentiment_sig: str | None
+    segments: list[dict[str, Any] | Segment],
+    role_map: dict[str, str] | None,
+    sentiment_sig: str | None,
 ) -> str:
     """Stable short hash for lru_cache / future redis key."""
     payload_parts: list[str] = []
@@ -209,7 +213,7 @@ def _hash_for_cache(
 
 
 def compute_talk_ratios(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
 ) -> dict[str, float]:
     """Return agent_talk_ratio, customer_talk_ratio, talk_listen_ratio."""
@@ -236,7 +240,7 @@ def compute_talk_ratios(
 
 
 def compute_question_density(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
 ) -> dict[str, float]:
     """Questions per turn for agent and customer."""
@@ -265,7 +269,7 @@ def compute_question_density(
 
 
 def compute_lexical_formality(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
 ) -> float:
     """0.0 (very casual) .. 1.0 (professional Swedish service speak)."""
@@ -284,7 +288,7 @@ def compute_lexical_formality(
 
 
 def compute_sentiment_variance(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
     sentiment_results: list[dict[str, Any]] | None = None,
 ) -> float:
@@ -321,7 +325,7 @@ def compute_sentiment_variance(
 
 
 def compute_intervention_count(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
 ) -> int:
     """Crude proxy: agent turns that follow a customer turn (normal flow) vs rapid switches.
@@ -344,7 +348,7 @@ def compute_intervention_count(
 
 
 def compute_empathy_and_deescalation(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
     sentiment_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, float]:
@@ -405,7 +409,7 @@ def compute_empathy_and_deescalation(
 
 
 def compute_compliance_flags(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
     talk_ratios: dict[str, float] | None = None,
 ) -> list[str]:
@@ -454,7 +458,7 @@ def compute_compliance_flags(
 
 
 def compute_call_agent_performance(
-    segments: list[dict[str, Any]] | list[Segment],
+    segments: list[dict[str, Any] | Segment],
     role_map: dict[str, str] | None = None,
     sentiment_results: list[dict[str, Any]] | None = None,
     profile_name: str = "callcenter",
@@ -471,12 +475,28 @@ def compute_call_agent_performance(
         zero_agent = AgentMetrics(
             talk_ratio=0.5,
             talk_listen_ratio=1.0,
+            question_density=0.0,
+            lexical_formality=0.5,
+            sentiment_variance=0.0,
+            intervention_count=0,
+            empathy_score=0.0,
+            de_escalation_effectiveness=0.0,
             num_agent_turns=0,
             num_customer_turns=0,
             total_talk_time_s=0.0,
         )
-        zero_cust = CustomerMetrics(talk_ratio=0.5)
-        return CallAgentPerformance(agent=zero_agent, customer=zero_cust)
+        zero_cust = CustomerMetrics(
+            talk_ratio=0.5,
+            sentiment_slope=0.0,
+            frustration_peaks=0,
+            question_count=0,
+            resolution_indicators=0.0,
+        )
+        return CallAgentPerformance(
+            agent=zero_agent,
+            customer=zero_cust,
+            evidence_summary=None,
+        )
 
     # Check bounded content-hash cache (see module docstring for invalidation strategy)
     cache_key = _hash_for_cache(
@@ -513,8 +533,8 @@ def compute_call_agent_performance(
         empathy_score=emp_deesc["empathy_score"],
         de_escalation_effectiveness=emp_deesc["de_escalation_effectiveness"],
         compliance_flags=flags,
-        num_agent_turns=qdens["num_agent_turns"],
-        num_customer_turns=qdens["num_customer_turns"],
+        num_agent_turns=int(qdens["num_agent_turns"]),
+        num_customer_turns=int(qdens["num_customer_turns"]),
         total_talk_time_s=sum(_segment_duration(s) for s in segments),
     )
 

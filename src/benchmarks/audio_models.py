@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -136,7 +137,7 @@ class CompareFileResult(BaseModel):
 
 class AudioCompareReport(BaseModel):
     timestamp: str
-    providers: list[str]
+    providers: Sequence[str]
     packs: list[str]
     n_files: int
     n_runs: int

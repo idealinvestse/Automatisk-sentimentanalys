@@ -67,12 +67,10 @@ class SentimentAnalyzer(Analyzer):
             # Fallback
             fallback_label = "neutral"
             if self.return_all_scores:
-                return [
-                    [
-                        {"label": "negativ", "score": 0.0},
-                        {"label": "neutral", "score": 1.0},
-                        {"label": "positiv", "score": 0.0},
-                    ]
-                    for _ in texts
-                ]  # type: ignore[return-value]
+                fallback_rows: list[dict[str, Any]] = [
+                    {"label": "negativ", "score": 0.0},
+                    {"label": "neutral", "score": 1.0},
+                    {"label": "positiv", "score": 0.0},
+                ]
+                return [fallback_rows for _ in texts]  # type: ignore[misc]
             return [{"label": fallback_label, "score": 0.0} for _ in texts]

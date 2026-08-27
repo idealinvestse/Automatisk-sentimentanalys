@@ -433,7 +433,7 @@ def collect_paid_candidates(
 def score_candidate_for_perspective(
     cand: ModelCandidate,
     perspective: dict[str, Any],
-) -> tuple[float, dict[str, float]]:
+) -> tuple[float, dict[str, Any]]:
     """Higher is better. Returns (score, breakdown)."""
     cost_p = float(perspective.get("cost_priority") or 0.5)
     qual_p = float(perspective.get("quality_priority") or 0.5)
@@ -595,7 +595,7 @@ def load_profiles_snapshot(path: str | Path | None = None) -> dict[str, Any] | N
     if not p.is_file():
         return None
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        return json.loads(p.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
     except Exception:
         return None
 

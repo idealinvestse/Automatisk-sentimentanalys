@@ -75,7 +75,7 @@ def mock_heavy_backends(monkeypatch: pytest.MonkeyPatch) -> None:
     # SentimentAnalyzer silently falls back to a constant "neutral" label
     # *before* SentimentPipeline.analyze is ever called, which would make a
     # class-level-only patch a no-op and cause confusing assertion failures
-    # unrelated to sentiment/intent logic (see docs/PROJECT_ASSESSMENT_2026-07.md).
+    # unrelated to sentiment/intent logic (missing sentencepiece / tokenizer extras).
     monkeypatch.setattr(
         "src.analysis.sentiment.SentimentAnalyzer._get_pipeline",
         lambda self: _FakeSentimentPipeline(),

@@ -5,11 +5,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # NEXT_PUBLIC_* must be present at build time (inlined into the client bundle).
+# Do not bake SENTIMENT_API_KEY / NEXT_PUBLIC_API_KEY into the image.
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-ARG NEXT_PUBLIC_API_KEY=
-ARG NEXT_PUBLIC_USE_API_PROXY=
+ARG NEXT_PUBLIC_USE_API_PROXY=1
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_API_KEY=$NEXT_PUBLIC_API_KEY
 ENV NEXT_PUBLIC_USE_API_PROXY=$NEXT_PUBLIC_USE_API_PROXY
 
 # Install dependencies using the lockfile for reproducible builds.

@@ -32,6 +32,8 @@ from ..core.errors import (
 from ..core.logging_config import configure_logging, set_job_id, set_request_id
 from ..core.status import get_status_reporter
 from ..core.tracing import init_tracing
+from ..core.version import get_package_version
+from .call_store import CallStore
 from .dependencies import require_api_key
 from .error_responses import (
     ANALYSIS_ERROR_DETAIL,
@@ -51,7 +53,6 @@ from .error_responses import (
 )
 from .metrics import init_app_info, record_http_request
 from .middleware_rate_limit import RateLimitMiddleware
-from .call_store import CallStore
 from .routers import (
     alerting,
     calls,
@@ -154,7 +155,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     )
     app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
     app.state.call_store = CallStore(settings.state_dir)
-    init_app_info(version="0.4.1")
+    init_app_info(version=get_package_version())
 
     # Startup upload retention cleanup (also runs on each upload)
     if settings.media_root:
@@ -209,7 +210,7 @@ def create_app() -> FastAPI:
     settings = get_api_settings()
     app = FastAPI(
         title="Swedish Sentiment API",
-        version="0.4.1",
+        version=get_package_version(),
         description=(
             "REST API for Swedish sentiment analysis, ASR transcription, "
             "call-center conversation analysis, and batch processing."
@@ -217,9 +218,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(RequestIdMiddleware)
+    # Starlette applies middleware LIFO. Add RateLimit first so RequestId is
+    # outer and 429 responses still get X-Request-ID.
     if settings.rate_limit_rpm > 0:
         app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.rate_limit_rpm)
+    app.add_middleware(RequestIdMiddleware)
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,

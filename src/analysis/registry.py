@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import yaml
 
@@ -152,10 +152,13 @@ def load_entry_point_analyzers(*, graceful: bool = True) -> None:
     except ImportError:
         return
 
+    eps: Any
     try:
         eps = entry_points(group="sentiment_analyzers")
     except TypeError:
-        eps = entry_points().get("sentiment_analyzers", [])
+        eps = entry_points().get("sentiment_analyzers")  # type: ignore[call-overload]
+        if eps is None:
+            eps = []
 
     for ep in eps:
         try:
@@ -194,8 +197,8 @@ def _instantiate_one(
 ) -> Analyzer | None:
     try:
         if isinstance(factory, type):
-            return factory(**kwargs)
-        return factory()
+            return cast(Analyzer | None, factory(**kwargs))
+        return cast(Analyzer | None, factory())
     except TypeError:
         try:
             return factory()  # type: ignore[misc]

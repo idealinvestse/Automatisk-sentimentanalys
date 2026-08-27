@@ -50,7 +50,7 @@ CallAnalysisReport (returned to CLI / API / Dashboard)
 | `src/analysis/`             | All analyzers (aspect, emotion, role, trajectory, intent, etc.) + registry | `registry.py`, `base.py` |
 | `src/transcription/`        | ASR backends (faster_whisper, transformers, whisperx) + preprocess     | `factory.py`, `base.py` |
 | `src/llm/`                  | Mistral/OpenRouter + Groq Cloud client, prompts, schemas, analyzers  | `mistral_analyzer.py`, `groq_analyzer.py`, `groq_client.py`, `prompts.py`, `schemas.py` |
-| `src/api/`                  | FastAPI application (`app.py` exposes `app`)                            | `app.py`, `routers/`, `schemas.py` |
+| `src/api/`                  | FastAPI application (`app.py` exposes `app`)                            | `app.py`, `routers/`, `schemas/` |
 | `src/cli.py`                | Typer-based CLI (`sentiment`, `transcribe`, `analyze-call`)             | - |
 | `src/diarization.py`        | Speaker diarization with pyannote + heuristic fallback                  | - |
 | `src/profiles.py`           | Profile resolution (forum, callcenter, news, etc.)                      | - |

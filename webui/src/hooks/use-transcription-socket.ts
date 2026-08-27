@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { apiClient } from "@/lib/api/client";
+import { ApiError, apiClient } from "@/lib/api/client";
 import type {
   DoneEvent,
   LogEvent,
@@ -15,7 +15,15 @@ import type {
 
 const BASE_DELAY_MS = 1000;
 const MAX_DELAY_MS = 30_000;
+const MAX_ATTEMPTS = 8;
 const MAX_LOGS = 300;
+const PING_INTERVAL_MS = 25_000;
+
+function backoffDelay(attempt: number): number {
+  const exp = Math.min(MAX_DELAY_MS, BASE_DELAY_MS * 2 ** attempt);
+  const jitter = Math.floor(Math.random() * 400);
+  return exp + jitter;
+}
 
 /**
  * Client for WS /ws/transcription with reconnect/backoff.
@@ -35,6 +43,7 @@ export function useTranscriptionSocket() {
   const attemptRef = React.useRef(0);
   const stoppedRef = React.useRef(true);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearRetryTimer = React.useCallback(() => {
     if (timeoutRef.current) {
@@ -42,6 +51,25 @@ export function useTranscriptionSocket() {
       timeoutRef.current = null;
     }
   }, []);
+
+  const clearPing = React.useCallback(() => {
+    if (pingRef.current) {
+      clearInterval(pingRef.current);
+      pingRef.current = null;
+    }
+  }, []);
+
+  const closeSocket = React.useCallback(() => {
+    clearPing();
+    if (wsRef.current) {
+      wsRef.current.onopen = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  }, [clearPing]);
 
   const handleEvent = React.useCallback((event: TranscriptionEvent) => {
     if (event.type === "log") {
@@ -81,8 +109,12 @@ export function useTranscriptionSocket() {
 
   const scheduleRetry = React.useCallback((targetJobId: string | null) => {
     if (stoppedRef.current) return;
+    if (attemptRef.current >= MAX_ATTEMPTS) {
+      setStatus("disconnected");
+      return;
+    }
     setStatus("reconnecting");
-    const delay = Math.min(MAX_DELAY_MS, BASE_DELAY_MS * 2 ** attemptRef.current);
+    const delay = backoffDelay(attemptRef.current);
     attemptRef.current += 1;
     timeoutRef.current = setTimeout(() => connectRef.current(targetJobId), delay);
   }, []);
@@ -91,13 +123,19 @@ export function useTranscriptionSocket() {
     connectRef.current = async (targetJobId: string | null) => {
       if (stoppedRef.current) return;
       clearRetryTimer();
+      closeSocket();
       setStatus(attemptRef.current > 0 ? "reconnecting" : "disconnected");
 
       let ws: WebSocket;
       try {
         const url = await apiClient.wsUrl();
         ws = new WebSocket(url);
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          stoppedRef.current = true;
+          setStatus("unauthorized");
+          return;
+        }
         scheduleRetry(targetJobId);
         return;
       }
@@ -106,6 +144,12 @@ export function useTranscriptionSocket() {
       ws.onopen = () => {
         attemptRef.current = 0;
         setStatus("connected");
+        clearPing();
+        pingRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "ping" }));
+          }
+        }, PING_INTERVAL_MS);
         if (targetJobId) {
           ws.send(JSON.stringify({ type: "subscribe", job_id: targetJobId }));
         }
@@ -118,8 +162,14 @@ export function useTranscriptionSocket() {
           // ignore malformed frames
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         wsRef.current = null;
+        clearPing();
+        if (ev.code === 1008) {
+          stoppedRef.current = true;
+          setStatus("unauthorized");
+          return;
+        }
         if (!stoppedRef.current) scheduleRetry(targetJobId);
         else setStatus("disconnected");
       };
@@ -127,7 +177,7 @@ export function useTranscriptionSocket() {
         ws.close();
       };
     };
-  }, [clearRetryTimer, handleEvent, scheduleRetry]);
+  }, [clearPing, clearRetryTimer, closeSocket, handleEvent, scheduleRetry]);
 
   const connect = React.useCallback((targetJobId?: string) => {
     stoppedRef.current = false;
@@ -141,10 +191,9 @@ export function useTranscriptionSocket() {
   const disconnect = React.useCallback(() => {
     stoppedRef.current = true;
     clearRetryTimer();
-    wsRef.current?.close();
-    wsRef.current = null;
+    closeSocket();
     setStatus("disconnected");
-  }, [clearRetryTimer]);
+  }, [clearRetryTimer, closeSocket]);
 
   const clearLogs = React.useCallback(() => setLogs([]), []);
 
@@ -152,9 +201,9 @@ export function useTranscriptionSocket() {
     return () => {
       stoppedRef.current = true;
       clearRetryTimer();
-      wsRef.current?.close();
+      closeSocket();
     };
-  }, [clearRetryTimer]);
+  }, [clearRetryTimer, closeSocket]);
 
   return {
     status,

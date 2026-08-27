@@ -135,6 +135,8 @@ def _scan_to_conversation_request(req: Any, audio_path: str) -> AnalyzeConversat
         lexicon_file=req.lexicon_file,
         lexicon_weight=req.lexicon_weight,
         return_all_scores=getattr(req, "return_all_scores", True),
+        provider=getattr(req, "provider", "local"),
+        cloud_fallback_local=getattr(req, "cloud_fallback_local", False),
     )
 
 

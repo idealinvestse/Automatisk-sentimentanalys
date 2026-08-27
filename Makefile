@@ -1,7 +1,7 @@
 # Makefile for Automatisk-sentimentanalys
 # Provides convenient commands for development, testing, and common tasks.
 
-.PHONY: help install install-dev install-api install-diarize install-training install-semantic test lint format check clean run-api run-dashboard intent-validate intent-benchmark
+.PHONY: help install install-dev install-api install-diarize install-training install-semantic test test-all lint format check clean run-api run-dashboard intent-validate intent-benchmark
 
 help:  ## Show this help
 	@echo "Available targets:"
@@ -36,7 +36,10 @@ install-all:  ## Install everything (dev + api + diarize + semantic)
 # Quality & Testing
 # =============================================================================
 
-test:  ## Run all tests
+test:  ## Fast test suite (excludes @pytest.mark.slow)
+	pytest -q -m "not slow"
+
+test-all:  ## Run the full test suite including slow/audio tests
 	pytest -q
 
 test-verbose:  ## Run tests with verbose output
@@ -52,6 +55,7 @@ test-api:  ## Run API tests with coverage (≥90% on src/api)
 		tests/test_api_upload.py \
 		tests/test_scan_logic.py \
 		tests/test_alerting_router.py \
+		tests/test_api_alerting_router.py \
 		tests/test_transcription_jobs.py \
 		tests/test_ws_ticket_minimal.py \
 		tests/test_ws_transcription_router.py \

@@ -34,9 +34,10 @@ notes: "Kund klagar på felaktig faktura"
 
 ## L7 smoke-fixture
 
-`callcenter/smoke_sv_billing.wav` (+ `.meta.yaml`) is a committed synthetic 1s tone
-for pack validation / L7 orchestration (`scripts/run_pilot_gates.py`). It is **not**
-representative telephony audio — replace with anonymized call recordings before WER claims.
+`callcenter/smoke_sv_billing.meta.yaml` is committed. The matching `.wav` may be
+absent from git (large/binary policy) — L7 scripts skip ML when `skip_ml: true`.
+Sidecars for stems `090932`…`104207` document expected labels; the audio files
+themselves are local-only. Do not claim WER until anonymized recordings are present.
 
 ## Köra tester
 

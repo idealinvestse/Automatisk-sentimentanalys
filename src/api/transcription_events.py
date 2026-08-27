@@ -1,6 +1,6 @@
 """Real-time transcription event hub for WebSocket clients.
 
-Fas 3 WebSocket – docs/archive/MIGRATION_TO_NICEGUI_PLAN.md §3
+Fas 3 WebSocket event hub (in-process or Redis pub/sub).
 Thread-safe emit from batch workers; async broadcast to subscribers.
 
 When Redis is available (``API_USE_REDIS_CACHE``), events are published on a
@@ -54,7 +54,10 @@ class TranscriptionEventHub:
             return
 
         async def _listen() -> None:
-            pubsub = self._redis.pubsub(ignore_subscribe_messages=True)
+            redis = self._redis
+            if redis is None:
+                return
+            pubsub = redis.pubsub(ignore_subscribe_messages=True)
             try:
                 pubsub.subscribe(_REDIS_CHANNEL)
                 while True:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import replace
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal, cast
 
 from ..core.errors import TranscriptionError
 from ..core.metrics import record_asr_transcription
@@ -131,4 +131,4 @@ def get_asr_router() -> AsrRouter:
 
 def transcribe_with_router(audio_path: str, **kwargs: object) -> Transcript:
     """Convenience wrapper around :meth:`AsrRouter.transcribe`."""
-    return get_asr_router().transcribe(audio_path, **kwargs)
+    return get_asr_router().transcribe(audio_path, **cast(dict[str, Any], kwargs))

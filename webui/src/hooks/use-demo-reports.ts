@@ -6,6 +6,7 @@ import { apiClient, type PipelineReport } from "@/lib/api/client";
 import { DEMO_TRANSCRIPTS, type DemoTranscript } from "@/lib/demo-transcripts";
 import { reportsToCallRows, type RealCall } from "@/lib/real-data";
 import { useCallsStore } from "@/lib/store/calls";
+import { useHealth } from "@/hooks/use-health";
 import type { CallRow } from "@/lib/mock-data";
 
 export interface DemoReportsResult {
@@ -31,13 +32,17 @@ export interface DemoReportsResult {
  * localStorage. Only fall back to canned demo transcripts when the store
  * is empty — so a pilot with real traffic is not mixed with synthetic demos.
  *
- * Force demos with ``NEXT_PUBLIC_FORCE_DEMO_DATA=true`` (local UX demos).
+ * Force demos with ``NEXT_PUBLIC_FORCE_DEMO_DATA=1|true|yes`` (local UX demos).
  */
+function forceDemoData(): boolean {
+  const flag = process.env.NEXT_PUBLIC_FORCE_DEMO_DATA?.trim().toLowerCase();
+  return flag === "1" || flag === "true" || flag === "yes";
+}
+
 export function useDemoReports(): DemoReportsResult {
   const realCalls = useCallsStore((state) => state.realCalls);
-  const forceDemo =
-    typeof process !== "undefined" &&
-    process.env.NEXT_PUBLIC_FORCE_DEMO_DATA === "true";
+  const health = useHealth();
+  const forceDemo = typeof process !== "undefined" && forceDemoData();
   const usingLiveData = !forceDemo && realCalls.length > 0;
   const runDemos = forceDemo || realCalls.length === 0;
 
@@ -55,10 +60,18 @@ export function useDemoReports(): DemoReportsResult {
       : [],
   });
 
+  const apiDown =
+    health.data?.status === "offline" || health.data?.status === "unauthorized";
   const isLoading = usingLiveData ? false : queries.some((q) => q.isLoading);
   const isFetched = usingLiveData ? true : queries.every((q) => q.isFetched);
-  const errorCount = usingLiveData ? 0 : queries.filter((q) => q.isError).length;
-  const isError = !usingLiveData && queries.length > 0 && errorCount === queries.length;
+  const errorCount = usingLiveData
+    ? apiDown
+      ? 1
+      : 0
+    : queries.filter((q) => q.isError).length;
+  const isError = usingLiveData
+    ? Boolean(apiDown)
+    : queries.length > 0 && errorCount === queries.length;
 
   const demoReports: RealCall[] = runDemos
     ? queries

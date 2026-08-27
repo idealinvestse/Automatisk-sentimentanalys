@@ -85,11 +85,6 @@ def extras_for_profile(profile: InstallProfile) -> list[str]:
     return mapping[profile]
 
 
-def requirements_for_profile(profile: InstallProfile) -> list[str]:
-    """Deprecated alias – returns pyproject extra names for backward compatibility."""
-    return extras_for_profile(profile)
-
-
 def venv_python_path(root: Path) -> Path:
     if sys.platform == "win32":
         return root / ".venv" / "Scripts" / "python.exe"
@@ -183,7 +178,7 @@ def _format_pip_failure(args: list[str], returncode: int, detail: str) -> str:
 
 
 def _run_pip(python: Path, root: Path, args: list[str]) -> None:
-    result = subprocess.run(
+    result = subprocess.run(  # type: ignore[call-overload]
         [str(python), "-m", "pip", *args],
         cwd=str(root),
         capture_output=True,
@@ -200,7 +195,7 @@ def _run_pip(python: Path, root: Path, args: list[str]) -> None:
 
 def _nvidia_smi_available() -> bool:
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # type: ignore[call-overload]
             ["nvidia-smi"],
             capture_output=True,
             check=False,
@@ -208,7 +203,7 @@ def _nvidia_smi_available() -> bool:
         )
     except OSError:
         return False
-    return result.returncode == 0
+    return bool(result.returncode == 0)
 
 
 def probe_cuda_torch(python: Path) -> dict[str, str | bool] | None:
@@ -222,7 +217,7 @@ def probe_cuda_torch(python: Path) -> dict[str, str | bool] | None:
         "'audiometadata': hasattr(torchaudio,'AudioMetaData')"
         "}))"
     )
-    result = subprocess.run(
+    result = subprocess.run(  # type: ignore[call-overload]
         [str(python), "-c", script],
         capture_output=True,
         text=True,

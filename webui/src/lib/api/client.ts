@@ -11,10 +11,26 @@ import "./paths";
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
-/** When true, browser REST goes through Next.js BFF (`/api/backend`) so the API key stays server-side. */
-function useApiProxy(): boolean {
-  const flag = process.env.NEXT_PUBLIC_USE_API_PROXY?.trim().toLowerCase();
+function truthyEnv(value: string | undefined): boolean {
+  const flag = value?.trim().toLowerCase();
   return flag === "1" || flag === "true" || flag === "yes";
+}
+
+function falsyEnv(value: string | undefined): boolean {
+  const flag = value?.trim().toLowerCase();
+  return flag === "0" || flag === "false" || flag === "no";
+}
+
+/** When true, browser REST talks to FastAPI directly (legacy trusted-LAN). */
+function useDirectApi(): boolean {
+  return truthyEnv(process.env.NEXT_PUBLIC_USE_DIRECT_API);
+}
+
+/** BFF proxy is the default so the API key stays server-side. */
+function useApiProxy(): boolean {
+  if (useDirectApi()) return false;
+  if (falsyEnv(process.env.NEXT_PUBLIC_USE_API_PROXY)) return false;
+  return true;
 }
 
 function getBaseUrl(): string {
@@ -26,11 +42,15 @@ function getBaseUrl(): string {
 
 /** Direct FastAPI origin for WebSocket (BFF does not proxy WS). */
 function getDirectApiBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+  const explicit =
     process.env.NEXT_PUBLIC_WS_API_BASE_URL?.trim() ||
-    DEFAULT_BASE_URL
-  ).replace(/\/$/, "");
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (useApiProxy() && !explicit) {
+    throw new ApiError(
+      "WebSocket kräver NEXT_PUBLIC_WS_API_BASE_URL eller NEXT_PUBLIC_API_BASE_URL när BFF-proxy är på",
+    );
+  }
+  return (explicit || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
 /** Browser-visible API key (legacy trusted-LAN). Unused when BFF proxy is enabled. */
@@ -49,7 +69,7 @@ export type ApiConnectionStatus = {
   reachable: boolean;
   /** null = auth not required or not probed */
   authenticated: boolean | null;
-  status: "ok" | "offline" | "unauthorized" | "auth_required";
+  status: "ok" | "offline" | "unauthorized" | "auth_required" | "degraded";
   detail?: string;
 };
 
@@ -621,11 +641,12 @@ export class ApiClient {
       this.wsTicket = response.ticket;
       this.wsTicketExpiry = now + response.expires_in * 1000;
       return this.wsTicket;
-    } catch {
-      // If ticket fetch fails (e.g., no auth), fall back to no ticket
-      // This allows the WS to work when auth is disabled
+    } catch (err) {
       this.wsTicket = null;
       this.wsTicketExpiry = 0;
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
       return "";
     }
   }
@@ -657,11 +678,24 @@ export class ApiClient {
    */
   async connectionStatus(): Promise<ApiConnectionStatus> {
     try {
-      const healthRes = await fetch(`${this.baseUrl}/health`, {
+      const healthRes = await fetch(`${this.baseUrl}/ready`, {
         signal: AbortSignal.timeout(10_000),
       });
-      if (!healthRes.ok) {
-        return { reachable: false, authenticated: null, status: "offline" };
+      if (healthRes.status >= 500) {
+        return {
+          reachable: true,
+          authenticated: null,
+          status: "degraded",
+          detail: `Backend /ready ${healthRes.status}`,
+        };
+      }
+      if (!healthRes.ok && healthRes.status !== 503) {
+        const fallback = await fetch(`${this.baseUrl}/health`, {
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!fallback.ok) {
+          return { reachable: false, authenticated: null, status: "offline" };
+        }
       }
     } catch {
       return { reachable: false, authenticated: null, status: "offline" };
@@ -683,7 +717,7 @@ export class ApiClient {
             status: "auth_required",
             detail: useApiProxy()
               ? "Backend kräver auth — sätt SENTIMENT_API_KEY på Next.js-servern (BFF)"
-              : "Backend kräver X-API-Key — sätt NEXT_PUBLIC_API_KEY eller aktivera BFF-proxy",
+              : "Backend kräver X-API-Key — sätt SENTIMENT_API_KEY på BFF eller NEXT_PUBLIC_USE_DIRECT_API=1 + NEXT_PUBLIC_API_KEY",
           };
         }
         return {
@@ -693,7 +727,14 @@ export class ApiClient {
           detail: "API-nyckel avvisad (401)",
         };
       }
-      // Ticket endpoint failed for other reasons — still reachable via /health
+      if (err instanceof ApiError && err.status != null && err.status >= 500) {
+        return {
+          reachable: true,
+          authenticated: null,
+          status: "degraded",
+          detail: err.message,
+        };
+      }
       return {
         reachable: true,
         authenticated: null,
@@ -900,13 +941,24 @@ export class ApiClient {
   async upload<T = UploadResponse>(file: File): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);
-
-    const response = await fetch(`${this.baseUrl}/upload`, {
-      method: "POST",
-      // Omit Content-Type so the browser sets multipart boundary; still send API key.
-      headers: this.headers({ json: false }),
-      body: formData,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/upload`, {
+        method: "POST",
+        headers: this.headers({ json: false }),
+        body: formData,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new ApiError(`Timeout mot /upload (${this.timeoutMs}ms)`);
+      }
+      throw new ApiError(`Kan inte ansluta till backend (${this.baseUrl}): ${String(err)}`);
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       let detail: unknown;

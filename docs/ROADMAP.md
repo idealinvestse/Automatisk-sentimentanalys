@@ -4,22 +4,21 @@ This document provides a high-level overview of the project's maturity and futur
 
 ## Current Status (July 2026)
 
-**Version**: 0.5.0
+**Version**: 0.5.1
 
 The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
 
 > **Note:** The test suite is continuously extended. Use `pytest --collect-only -q` for the authoritative current count; CI is the merge gate.
 
-### Known Gaps / Deferred Items (v0.4.1)
+### Known Gaps / Deferred Items (v0.5.1)
 
 | Component | Status | Note |
 |-----------|--------|------|
-| `src/analysis/llm_judge.py` | ✅ Implemented | Low-confidence routing with budget guard; enable via analyzer profile / `analyzer_configs`. |
-| `src/alerting.py` webhook | ✅ Implemented | `notify_webhook()` POSTs via `httpx` with retry + circuit breaker (`configs/alerting_config.yaml`). |
-| YouTube ingest (Fas 5) | ❌ Removed | Rolled back in commit `46bc04c` (experimental, not re-introduced in v0.5 scope). |
-| Pipeline size | ✅ Refactored | Fas-4/LLM in `pipeline_steps.py` (PIPE-01); `pipeline.py` < 550 LOC |
-| Analyzer DX | ✅ | `sentimentanalys new-analyzer` CLI template |
-| Dependencies | ✅ | `pyproject.toml` only (DEPS-01); no `requirements*.txt` |
+| Real telephony corpus (DATA-01) | Open | Import slot ready; needed for customer WER/F1 claims |
+| Intent model vs heuristic | Open | Promote only if model beats heuristic by +0.05 macro F1 |
+| YouTube ingest (Fas 5) | Removed | Out of scope (`46bc04c`) |
+| `TranscriptionEventHub` Redis | ✅ | Pub/sub when `API_USE_REDIS_CACHE=true` |
+| Engine / adapter split | Documented | Logic in `src/*.py`, registry adapters in `src/analysis/` |
 
 ### Completed Features
 
@@ -37,7 +36,7 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 | **Insights & Search**       | ✅ Done    | `insights_aggregator.py`, `semantic_search.py` (FAISS) |
 | **Alerting**                | ✅ Done    | `alerting.py`, per-call and aggregate alerts        |
 | **PII Protection**          | ✅ Done    | Early redaction in pipeline for `callcenter` profile |
-| **REST API (v0.4.1)**       | ✅ Done    | Full FastAPI + 5 Fas 4 endpoints, auth, rate limit, caching |
+| **REST API (v0.5.1)**       | ✅ Done    | Full FastAPI + Fas 4 endpoints, auth, rate limit, caching |
 | **CLI**                     | ✅ Done    | Rich `typer` CLI with `sentiment`, `transcribe`, `analyze-call` |
 | **Dashboard**               | ✅ Done    | Next.js webui (`webui/`) — sole dashboard |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
@@ -46,7 +45,7 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 
 ### Partially / Recently Added
 
-- **ASR dual-engine hardening (2026-07)** — router, cloud opt-in, decode hardening, persistent jobs, metrics; see `CHANGELOG.md` Unreleased.
+- **ASR dual-engine hardening (2026-07)** — router, cloud opt-in, decode hardening, persistent jobs, metrics; see `CHANGELOG.md`.
 - `diarize` optional dependency group (`pyproject.toml`)
 - Consolidated Quickstart + Hardware Requirements in README
 - `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/ROADMAP.md`
@@ -102,4 +101,4 @@ Build a complete, self-hosted or hybrid **Swedish Call Center Intelligence Platf
 
 ## Historical Plans
 
-Older detailed plans are in `docs/archive/` (see `docs/archive/README.md`). Active roadmap: **this file**.
+Active roadmap: **this file**. Historical plan docs were removed; see `CHANGELOG.md` for history.

@@ -523,7 +523,8 @@ class CallAnalysisPipeline:
             if key in {"aspect", "sentiment", "emotion", "intent", "negation"} and isinstance(
                 value, list
             ):
-                prev_list = merged.get(key) if isinstance(merged.get(key), list) else []
+                prev_raw = merged.get(key)
+                prev_list = prev_raw if isinstance(prev_raw, list) else []
                 merged[key] = list(prev_list) + list(value)
             else:
                 merged[key] = value
@@ -537,11 +538,11 @@ class CallAnalysisPipeline:
             "reconciled": False,
         }
 
-        llm_result: dict[str, Any] = (
-            merged.get("llm") if isinstance(merged.get("llm"), dict) else {}
-        )
+        llm_raw = merged.get("llm")
+        llm_result: dict[str, Any] = llm_raw if isinstance(llm_raw, dict) else {}
         if reconcile:
-            llm_result = self.reconcile_partial_with_holistic(typed_segments, merged)
+            reconciled = self.reconcile_partial_with_holistic(typed_segments, merged)
+            llm_result = reconciled if isinstance(reconciled, dict) else {}
             merged["partial"]["reconciled"] = True
 
         proc_time = round(time.time() - t0, 2)

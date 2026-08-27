@@ -68,4 +68,8 @@ export type TranscriptionEvent =
   | PongEvent
   | PartialAnalysisEvent;
 
-export type WsConnectionStatus = "connected" | "reconnecting" | "disconnected";
+export type WsConnectionStatus =
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "unauthorized";

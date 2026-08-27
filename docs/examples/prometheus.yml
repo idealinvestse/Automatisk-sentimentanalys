@@ -1,13 +1,7 @@
 # Prometheus scrape config for Swedish Sentiment API.
 #
-# Copy to your Prometheus config (or include via file_sd_config) and adjust
-# the target to match your deployment (Docker service name, host:port, etc.).
-#
-# Note: /metrics requires API key when SENTIMENT_API_KEY is set.
-# For scraping, either:
-#   (a) Disable auth for /metrics by not setting SENTIMENT_API_KEY (dev only), or
-#   (b) Put Prometheus behind the same network and use a bearer token:
-#       bearer_token: <your-SENTIMENT_API_KEY>
+# /metrics requires X-API-Key when SENTIMENT_API_KEY is set (not Bearer).
+# Replace change-me with the same key as the API, or disable API auth in dev.
 
 global:
   scrape_interval: 15s
@@ -16,13 +10,9 @@ global:
 scrape_configs:
   - job_name: sentiment-api
     metrics_path: /metrics
-    # scheme: http
     static_configs:
-      - targets: ["api:8000"]  # Docker service name; use localhost:8000 for local
-    # If API auth is enabled, uncomment and set the bearer token:
-    # bearer_token: "your-SENTIMENT_API_KEY-here"
-
-  # Optional: scrape the webui Next.js app if you add a metrics endpoint
-  # - job_name: webui
-  #   static_configs:
-  #     - targets: ["webui:3000"]
+      - targets: ["api:8000"]
+    http_headers:
+      X-API-Key:
+        values:
+          - "change-me"

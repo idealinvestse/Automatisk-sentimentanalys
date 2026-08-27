@@ -279,6 +279,8 @@ class LLMJudgeAnalyzer(Analyzer):
                 triggered_segments=0,
                 skipped_segments=skipped,
                 total_cost_usd=0.0,
+                budget_exceeded=False,
+                fallback_used=False,
             )
 
         logger.info(
@@ -304,6 +306,7 @@ class LLMJudgeAnalyzer(Analyzer):
                 triggered_segments=len(low_conf_indices),
                 skipped_segments=skipped,
                 total_cost_usd=0.0,
+                budget_exceeded=False,
                 fallback_used=True,
             )
 

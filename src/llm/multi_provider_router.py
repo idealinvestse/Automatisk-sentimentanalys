@@ -61,7 +61,7 @@ class RateLimitTracker:
     def _load(self) -> dict[str, Any]:
         if self.path.is_file():
             try:
-                return json.loads(self.path.read_text(encoding="utf-8"))
+                return json.loads(self.path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
             except Exception:
                 return {}
         return {}

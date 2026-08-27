@@ -24,6 +24,14 @@ from rich.table import Table
 from .benchmarks.audio_cli import audio_app
 from .core.logging_config import configure_logging
 from .core.status import get_status_reporter
+from .evaluation.kpis import (
+    compute_alert_trigger_rate,
+    compute_cache_hit_rate,
+    compute_coaching_precision,
+    compute_hot_topic_recall,
+    compute_pii_redaction_coverage,
+    compute_qa_score_consistency,
+)
 from .lexicon import load_lexicon, scalar_to_dist, score_text
 from .profiles import AVAILABLE_PROFILES
 from .sentiment import analyze_smart
@@ -178,11 +186,13 @@ def run_evaluation(
     status.phase("evaluate", "run", f"Utvärderar {len(texts)} texter", profile=profile)
     t0 = time.time()
 
+    raw_results: list[Any]
+    meta: dict[str, Any]
     if backend == "heuristic":
-        results, meta = _heuristic_sentiment(texts)
+        raw_results, meta = _heuristic_sentiment(texts)
         meta["profile"] = profile
     else:
-        results, meta = analyze_smart(
+        raw_results, meta = analyze_smart(
             texts,
             profile=profile,
             model_name=model,
@@ -194,17 +204,19 @@ def run_evaluation(
             lexicon_file=lexicon_file,
             lexicon_weight=lexicon_weight,
         )
+    results = raw_results
 
     # Extrahera predictioner och scores (redan blended om lexicon angavs via analyze_smart)
     y_pred: list[str] = []
     scores_list: list[dict[str, float]] = []
     for inner in results:
+        dist: dict[str, float]
         if isinstance(inner, list):
-            dist = {e.get("label", ""): float(e.get("score", 0.0)) for e in inner}
+            dist = {str(e.get("label", "")): float(e.get("score", 0.0)) for e in inner}
             for k in LABELS:
                 dist.setdefault(k, 0.0)
         elif isinstance(inner, dict):
-            label = inner.get("label", "neutral")
+            label = str(inner.get("label", "neutral"))
             score = float(inner.get("score", 0.0))
             dist = {k: 0.0 for k in LABELS}
             if label in dist:
@@ -214,7 +226,7 @@ def run_evaluation(
             dist["neutral"] = 1.0
 
         scores_list.append(dist)
-        y_pred.append(max(dist.items(), key=lambda kv: kv[1])[0])
+        y_pred.append(str(max(dist.items(), key=lambda kv: kv[1])[0]))
 
     proc_time = time.time() - t0
 
@@ -714,133 +726,6 @@ def llm_human_preference_template(
 
 
 # =============================================================================
-# Fas 4 extensions (new metrics for call center features)
-# =============================================================================
-
-
-def compute_qa_score_consistency(qa_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Fas 4.2 KPI: share of QA results that pass with low/medium risk (stability proxy).
-
-    When both ``rule_score`` and ``hybrid_score`` (or ``llm_score``) are present,
-    also report pairwise agreement within 0.15 absolute score.
-    """
-    if not qa_results:
-        return {"agreement": 0.0, "n": 0, "score_agreement": None}
-    consistent = sum(
-        1 for r in qa_results if r.get("passed") and r.get("risk_level") in ("low", "medium")
-    )
-    paired = 0
-    agree = 0
-    for r in qa_results:
-        a = r.get("rule_score")
-        b = r.get("hybrid_score", r.get("llm_score"))
-        if isinstance(a, (int, float)) and isinstance(b, (int, float)):
-            paired += 1
-            if abs(float(a) - float(b)) <= 0.15:
-                agree += 1
-    out: dict[str, Any] = {
-        "agreement": round(consistent / len(qa_results), 3),
-        "n": len(qa_results),
-    }
-    if paired:
-        out["score_agreement"] = round(agree / paired, 3)
-        out["n_paired_scores"] = paired
-    else:
-        out["score_agreement"] = None
-    return out
-
-
-def compute_coaching_precision(
-    coaching_recs: list[dict[str, Any]], human_judged_good: list[bool] | None = None
-) -> dict[str, Any]:
-    """Fas 4.1.2 KPI: precision of coaching recommendations.
-
-    With human labels: classic precision. Without: evidence-backed rate
-    (recs that include ``evidence_spans`` or non-empty ``rationale``).
-    """
-    if not coaching_recs:
-        return {"precision": 0.0, "n": 0, "note": "no recs"}
-    if human_judged_good is not None and len(human_judged_good) == len(coaching_recs):
-        good = sum(1 for g in human_judged_good if g)
-        return {"precision": round(good / len(coaching_recs), 3), "n": len(coaching_recs)}
-    with_ev = sum(
-        1
-        for r in coaching_recs
-        if r.get("evidence_spans") or (isinstance(r.get("rationale"), str) and r["rationale"].strip())
-    )
-    return {
-        "precision": round(with_ev / len(coaching_recs), 3),
-        "n": len(coaching_recs),
-        "note": "heuristic: evidence_or_rationale",
-    }
-
-
-def compute_hot_topic_recall(
-    aggregated: dict[str, Any], expected_topics: list[str]
-) -> dict[str, Any]:
-    """Fas 4.3 KPI: recall of hot topics vs an expected topic list (set overlap)."""
-    produced = {
-        ht.get("topic", "").lower()
-        for ht in aggregated.get("hot_topics", [])
-        if isinstance(ht, dict)
-    }
-    # Also accept topic strings nested under insights
-    for key in ("topics", "top_topics"):
-        for item in aggregated.get(key, []) or []:
-            if isinstance(item, str):
-                produced.add(item.lower())
-            elif isinstance(item, dict) and item.get("topic"):
-                produced.add(str(item["topic"]).lower())
-    gold = {t.lower() for t in expected_topics}
-    if not gold:
-        return {"recall": 0.0, "n_gold": 0, "n_produced": len(produced)}
-    hit = len(produced & gold)
-    return {"recall": round(hit / len(gold), 3), "n_gold": len(gold), "n_produced": len(produced)}
-
-
-def compute_pii_redaction_coverage(
-    pii_log: dict[str, Any] | None, expected_pii_types: list[str] | None = None
-) -> dict[str, Any]:
-    """Fas 4.4.1 KPI: coverage of PII types caught by the redactor."""
-    if not pii_log or not pii_log.get("events"):
-        return {"coverage": 0.0, "n_events": 0}
-    found_types = {e.get("type") for e in pii_log.get("events", []) if isinstance(e, dict)}
-    if not expected_pii_types:
-        return {"coverage": 1.0 if found_types else 0.0, "n_events": len(pii_log.get("events", []))}
-    gold = set(expected_pii_types)
-    hit = len(found_types & gold)
-    return {
-        "coverage": round(hit / len(gold), 3) if gold else 0.0,
-        "n_events": len(pii_log.get("events", [])),
-        "found_types": sorted(t for t in found_types if t),
-    }
-
-
-def compute_alert_trigger_rate(alerts: list[dict[str, Any]], total_calls: int) -> dict[str, Any]:
-    """Fas 4.4.2 KPI: fraction of calls that generated alerts, plus severity breakdown."""
-    if not total_calls:
-        return {"trigger_rate": 0.0, "n_alerts": 0}
-    n_alerts = len(alerts)
-    by_sev: dict[str, int] = {}
-    for a in alerts:
-        sev = str(a.get("severity", "medium"))
-        by_sev[sev] = by_sev.get(sev, 0) + 1
-    return {
-        "trigger_rate": round(n_alerts / total_calls, 3),
-        "n_alerts": n_alerts,
-        "by_severity": by_sev,
-    }
-
-
-def compute_cache_hit_rate(cache_hits: int, total_queries: int) -> dict[str, Any]:
-    """Fas 4.5.1 KPI: cache effectiveness for pre-computed aggregates."""
-    if not total_queries:
-        return {"hit_rate": 0.0, "total_queries": 0}
-    return {
-        "hit_rate": round(cache_hits / total_queries, 3),
-        "total_queries": total_queries,
-        "cache_hits": cache_hits,
-    }
 
 
 def _run_fas4_pipeline_validation() -> dict[str, Any]:

@@ -70,7 +70,7 @@ class TestLearnedBlender:
         assert b1 is b2
 
     @pytest.mark.skipif(
-        "sklearn" not in {pkg.key for pkg in __import__("pkg_resources").working_set},
+        __import__("importlib.util").util.find_spec("sklearn") is None,
         reason="sklearn not installed",
     )
     def test_fit_sklearn(self):

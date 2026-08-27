@@ -3,7 +3,7 @@
   "info": {
     "title": "Swedish Sentiment API",
     "description": "REST API for Swedish sentiment analysis, ASR transcription, call-center conversation analysis, and batch processing.",
-    "version": "0.4.1"
+    "version": "0.5.0"
   },
   "paths": {
     "/health": {
@@ -12,7 +12,7 @@
           "Health"
         ],
         "summary": "Health",
-        "description": "Simple health check endpoint.\n\nReturns:\n    ``{\"status\": \"ok\"}`` when the service is running.",
+        "description": "Liveness probe — process is up (no dependency checks).",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -26,6 +26,26 @@
                   "type": "object",
                   "title": "Response Health Health Get"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Ready",
+        "description": "Readiness probe — fail when production-critical deps are missing.",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -232,7 +252,7 @@
           "Status"
         ],
         "summary": "Health Detail",
-        "description": "Extended health with component availability.",
+        "description": "Extended health with component availability and degraded signals.",
         "operationId": "health_detail_status_health_detail_get",
         "responses": {
           "200": {
@@ -1069,6 +1089,415 @@
         ]
       }
     },
+    "/calls": {
+      "get": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "List Calls",
+        "description": "List recently saved analyzed calls (newest first).",
+        "operationId": "list_calls_calls_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Create Call",
+        "description": "Create or update a saved call.",
+        "operationId": "create_call_calls_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Call Calls Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calls/{call_id}": {
+      "get": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Get Call",
+        "description": "Fetch a single saved call by id.",
+        "operationId": "get_call_calls__call_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Call Calls  Call Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Upsert Call",
+        "description": "Create or update a saved call (id in path must match body.id).",
+        "operationId": "upsert_call_calls__call_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upsert Call Calls  Call Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Calls"
+        ],
+        "summary": "Delete Call",
+        "description": "Delete a saved call.",
+        "operationId": "delete_call_calls__call_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Call Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Call Calls  Call Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/llm/analysis-profiles": {
+      "get": {
+        "tags": [
+          "LLM"
+        ],
+        "summary": "List selectable analysis perspectives with paid model picks",
+        "operationId": "get_analysis_profiles_llm_analysis_profiles_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 8,
+              "minimum": 1,
+              "description": "Alternatives per perspective",
+              "default": 3,
+              "title": "Top K"
+            },
+            "description": "Alternatives per perspective"
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Recompute from catalogs (false = cached snapshot)",
+              "default": true,
+              "title": "Refresh"
+            },
+            "description": "Recompute from catalogs (false = cached snapshot)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Analysis Profiles Llm Analysis Profiles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/llm/analysis-profiles/{perspective_id}": {
+      "get": {
+        "tags": [
+          "LLM"
+        ],
+        "summary": "Detail + ranked paid models for one analysis perspective",
+        "operationId": "get_analysis_profile_detail_llm_analysis_profiles__perspective_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "perspective_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Perspective Id"
+            }
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 15,
+              "minimum": 1,
+              "default": 5,
+              "title": "Top K"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Analysis Profile Detail Llm Analysis Profiles  Perspective Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/llm/providers": {
+      "get": {
+        "tags": [
+          "LLM"
+        ],
+        "summary": "Configured LLM providers (key present?)",
+        "operationId": "get_llm_providers_llm_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Llm Providers Llm Providers Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
     "/scan_process": {
       "post": {
         "tags": [
@@ -1385,9 +1814,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {
@@ -1508,9 +1937,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {
@@ -3043,7 +3472,8 @@
           "file": {
             "type": "string",
             "contentMediaType": "application/octet-stream",
-            "title": "File"
+            "title": "File",
+            "description": "Audio file to upload"
           }
         },
         "type": "object",
@@ -3051,6 +3481,71 @@
           "file"
         ],
         "title": "Body_upload_audio_file_upload_post"
+      },
+      "CallListResponse": {
+        "properties": {
+          "calls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Calls"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "calls",
+          "count"
+        ],
+        "title": "CallListResponse"
+      },
+      "CallUpsertRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "title": "Id"
+          },
+          "transcript": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Transcript"
+          },
+          "report": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Report"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "CallUpsertRequest",
+        "description": "Store or update an analyzed call."
       },
       "CoachingInsightItem": {
         "properties": {
@@ -3599,9 +4094,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {
@@ -3943,7 +4438,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "default": "openrouter"
           },
@@ -4050,7 +4545,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "default": "openrouter"
           },
@@ -4209,6 +4704,18 @@
             "description": "Force deep LLM path",
             "default": false
           },
+          "analysis_perspective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Perspective",
+            "description": "Optional analysis perspective id from GET /llm/analysis-profiles (e.g. cost_saver, coaching_qa, holistic_deep). Auto-picks paid model by cost/quality."
+          },
           "llm_api_key": {
             "anyOf": [
               {
@@ -4223,9 +4730,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {
@@ -4310,6 +4817,20 @@
               }
             ],
             "description": "Typed view of `results` (Fas 5). Null when no analyzers ran or for backward-compatible clients."
+          },
+          "degraded": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Degraded",
+            "description": "Graceful-degradation reasons (LLM skipped, analyzers unavailable, etc.). Empty = full path."
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "description": "'full' when no degradation; 'degraded' when one or more optional components were skipped.",
+            "default": "full"
           }
         },
         "type": "object",
@@ -4418,9 +4939,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {
@@ -5119,9 +5640,9 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
-            "description": "LLM provider: openrouter (default) | groq",
+            "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
           },
           "groq_eu_residency": {

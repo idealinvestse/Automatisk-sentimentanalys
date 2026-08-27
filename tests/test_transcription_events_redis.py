@@ -8,11 +8,11 @@ from typing import Any
 
 import pytest
 
-from src.api.transcription_events import TranscriptionEventHub, _REDIS_CHANNEL
+from src.api.transcription_events import _REDIS_CHANNEL, TranscriptionEventHub
 
 
 class _FakePubSub:
-    def __init__(self, bus: "_FakeRedis") -> None:
+    def __init__(self, bus: _FakeRedis) -> None:
         self._bus = bus
         self._queue: list[dict[str, Any]] = []
         self._subscribed = False
