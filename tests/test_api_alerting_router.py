@@ -15,6 +15,10 @@ from src.api.settings import get_api_settings
 def _clear_api_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
     get_api_settings.cache_clear()
+    orig = getattr(default_app.state, "alert_engine", None)
+    yield
+    if orig is not None:
+        default_app.state.alert_engine = orig
 
 
 client = TestClient(default_app, raise_server_exceptions=False)

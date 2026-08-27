@@ -140,7 +140,7 @@ jobs:
         run: |
           pip install -e ".[min,api]"
           python scripts/export_openapi.py -o /tmp/openapi.live.json
-          python -c "import json,sys; a=json.load(open('webui/openapi.json',encoding='utf-8')); b=json.load(open('/tmp/openapi.live.json',encoding='utf-8')); missing=sorted(set(b.get('paths',{}))-set(a.get('paths',{}))); extra=sorted(set(a.get('paths',{}))-set(b.get('paths',{}))); sys.exit(0) if not missing and not extra else (print('missing',missing,'extra',extra) or sys.exit(1))"
+          python -c "import json,sys; a=json.load(open('webui/openapi.json',encoding='utf-8')); b=json.load(open('/tmp/openapi.live.json',encoding='utf-8')); assert a.get('info',{}).get('version')==b.get('info',{}).get('version'), f'Version drift: checked={a.get(\"info\",{}).get(\"version\")} live={b.get(\"info\",{}).get(\"version\")}'; missing=sorted(set(b.get('paths',{}))-set(a.get('paths',{}))); extra=sorted(set(a.get('paths',{}))-set(b.get('paths',{}))); sys.exit(0) if not missing and not extra else (print('missing',missing,'extra',extra) or sys.exit(1))"
 
   mypy:
     needs: lint

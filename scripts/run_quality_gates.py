@@ -64,9 +64,10 @@ def main() -> int:
     if _run(intent_cmd) != 0:
         failures.append("intent_heuristic")
 
-    if args.include_fas4 or not args.smoke:
-        if _run([sys.executable, "-m", "src.evaluate", "fas4-validation"]) != 0:
-            failures.append("fas4_validation")
+    if (args.include_fas4 or not args.smoke) and _run(
+        [sys.executable, "-m", "src.evaluate", "fas4-validation"]
+    ) != 0:
+        failures.append("fas4_validation")
 
     if args.include_sentiment_model:
         sent = [

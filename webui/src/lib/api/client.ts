@@ -22,19 +22,19 @@ function falsyEnv(value: string | undefined): boolean {
 }
 
 /** When true, browser REST talks to FastAPI directly (legacy trusted-LAN). */
-function useDirectApi(): boolean {
+function isDirectApiEnabled(): boolean {
   return truthyEnv(process.env.NEXT_PUBLIC_USE_DIRECT_API);
 }
 
 /** BFF proxy is the default so the API key stays server-side. */
-function useApiProxy(): boolean {
-  if (useDirectApi()) return false;
+function isApiProxyEnabled(): boolean {
+  if (isDirectApiEnabled()) return false;
   if (falsyEnv(process.env.NEXT_PUBLIC_USE_API_PROXY)) return false;
   return true;
 }
 
 function getBaseUrl(): string {
-  if (useApiProxy()) {
+  if (isApiProxyEnabled()) {
     return "/api/backend";
   }
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -45,7 +45,7 @@ function getDirectApiBaseUrl(): string {
   const explicit =
     process.env.NEXT_PUBLIC_WS_API_BASE_URL?.trim() ||
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  if (useApiProxy() && !explicit) {
+  if (isApiProxyEnabled() && !explicit) {
     throw new ApiError(
       "WebSocket kräver NEXT_PUBLIC_WS_API_BASE_URL eller NEXT_PUBLIC_API_BASE_URL när BFF-proxy är på",
     );
@@ -55,7 +55,7 @@ function getDirectApiBaseUrl(): string {
 
 /** Browser-visible API key (legacy trusted-LAN). Unused when BFF proxy is enabled. */
 function getApiKeyFromEnv(): string | undefined {
-  if (useApiProxy()) {
+  if (isApiProxyEnabled()) {
     return undefined;
   }
   const key =
@@ -580,11 +580,11 @@ export class ApiClient {
 
   /** True when a browser API key is configured, or when BFF proxy handles auth. */
   get hasApiKey(): boolean {
-    return Boolean(this.apiKey) || useApiProxy();
+    return Boolean(this.apiKey) || isApiProxyEnabled();
   }
 
   get usesProxy(): boolean {
-    return useApiProxy();
+    return isApiProxyEnabled();
   }
 
   private headers(opts: { json?: boolean } = {}): HeadersInit {
@@ -715,7 +715,7 @@ export class ApiClient {
             reachable: true,
             authenticated: false,
             status: "auth_required",
-            detail: useApiProxy()
+            detail: isApiProxyEnabled()
               ? "Backend kräver auth — sätt SENTIMENT_API_KEY på Next.js-servern (BFF)"
               : "Backend kräver X-API-Key — sätt SENTIMENT_API_KEY på BFF eller NEXT_PUBLIC_USE_DIRECT_API=1 + NEXT_PUBLIC_API_KEY",
           };
@@ -938,11 +938,12 @@ export class ApiClient {
   }
 
   /** Upload an audio file (POST /upload). */
-  async upload<T = UploadResponse>(file: File): Promise<T> {
+  async upload<T = UploadResponse>(file: File, options: { timeoutMs?: number } = {}): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);
+    const timeoutMs = options.timeoutMs ?? 300_000; // 5 minute default for audio uploads up to 200MB
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/upload`, {
@@ -953,7 +954,7 @@ export class ApiClient {
       });
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new ApiError(`Timeout mot /upload (${this.timeoutMs}ms)`);
+        throw new ApiError(`Timeout mot /upload (${timeoutMs}ms)`);
       }
       throw new ApiError(`Kan inte ansluta till backend (${this.baseUrl}): ${String(err)}`);
     } finally {
@@ -976,7 +977,7 @@ export class ApiClient {
   /** ws:// or wss:// URL for the live transcription event stream. */
   async wsUrl(path = "/ws/transcription"): Promise<string> {
     // WebSocket cannot go through the REST BFF — always use the direct API origin.
-    const origin = useApiProxy() ? getDirectApiBaseUrl() : this.baseUrl;
+    const origin = isApiProxyEnabled() ? getDirectApiBaseUrl() : this.baseUrl;
     const url = new URL(origin.startsWith("http") ? origin : DEFAULT_BASE_URL);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     url.pathname = path;

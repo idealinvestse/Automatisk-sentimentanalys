@@ -38,11 +38,11 @@ def main() -> int:
         print("Run: python scripts/prepare_intent_data.py --per-intent 120 --val-ratio 0.25")
         return 1
 
+    import joblib
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import f1_score
     from sklearn.pipeline import Pipeline
-    import joblib
 
     def load(path: Path) -> tuple[list[str], list[str]]:
         texts, labels = [], []

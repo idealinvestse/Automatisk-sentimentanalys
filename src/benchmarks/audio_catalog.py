@@ -149,7 +149,7 @@ def _as_str_list(value: Any) -> list[str]:
         return []
     if isinstance(value, str):
         return [value] if value.strip() else []
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [str(item) for item in value if str(item).strip()]
     return [str(value)] if str(value).strip() else []
 

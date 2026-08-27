@@ -58,7 +58,7 @@ class TestAnalyzeCallE2E:
             "llm": {"fallback": True},
         }
 
-        with patch("src.cli.CallAnalysisPipeline") as mock_pipe:
+        with patch("src.cli_audio.CallAnalysisPipeline") as mock_pipe:
             inst = mock_pipe.return_value
             inst.analyze_audio.return_value = fake_report
             from src.cli import app as cli_app

@@ -21,7 +21,7 @@ def compute_qa_score_consistency(qa_results: list[dict[str, Any]]) -> dict[str, 
     for r in qa_results:
         a = r.get("rule_score")
         b = r.get("hybrid_score", r.get("llm_score"))
-        if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        if isinstance(a, int | float) and isinstance(b, int | float):
             paired += 1
             if abs(float(a) - float(b)) <= 0.15:
                 agree += 1

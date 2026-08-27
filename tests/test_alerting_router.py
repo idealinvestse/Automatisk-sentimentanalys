@@ -4,12 +4,21 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api import app as default_app
 from src.api.settings import get_api_settings
 
 client = TestClient(default_app, raise_server_exceptions=False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_alert_engine() -> None:
+    orig = getattr(default_app.state, "alert_engine", None)
+    yield
+    if orig is not None:
+        default_app.state.alert_engine = orig
 
 
 def test_alerting_status_returns_webhook_health() -> None:

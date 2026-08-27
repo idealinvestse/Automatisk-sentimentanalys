@@ -22,12 +22,14 @@ const STATUS_LABEL: Record<WsConnectionStatus, string> = {
   connected: "Ansluten",
   reconnecting: "Återansluter…",
   disconnected: "Frånkopplad",
+  unauthorized: "Ej auktoriserad",
 };
 
-const STATUS_VARIANT: Record<WsConnectionStatus, "success" | "warning" | "secondary"> = {
+const STATUS_VARIANT: Record<WsConnectionStatus, "success" | "warning" | "secondary" | "destructive"> = {
   connected: "success",
   reconnecting: "warning",
   disconnected: "secondary",
+  unauthorized: "destructive",
 };
 
 const LEVEL_CLASS: Record<string, string> = {

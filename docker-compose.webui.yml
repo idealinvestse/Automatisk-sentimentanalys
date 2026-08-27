@@ -37,7 +37,7 @@ services:
     environment:
       - SENTIMENT_API_BASE_URL=http://api:8000
       - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-}
-      - API_MAX_UPLOAD_SIZE_MB=${API_MAX_UPLOAD_SIZE_MB:-50}
+      - API_MAX_UPLOAD_SIZE_MB=${API_MAX_UPLOAD_SIZE_MB:-200}
     ports:
       - "3000:3000"
     depends_on:

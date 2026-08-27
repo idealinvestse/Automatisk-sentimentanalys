@@ -3,7 +3,7 @@
   "info": {
     "title": "Swedish Sentiment API",
     "description": "REST API for Swedish sentiment analysis, ASR transcription, call-center conversation analysis, and batch processing.",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "paths": {
     "/health": {

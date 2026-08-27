@@ -41,6 +41,7 @@ export function useTranscriptionSocket() {
 
   const wsRef = React.useRef<WebSocket | null>(null);
   const attemptRef = React.useRef(0);
+  const authRetryRef = React.useRef(0);
   const stoppedRef = React.useRef(true);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
@@ -143,6 +144,7 @@ export function useTranscriptionSocket() {
 
       ws.onopen = () => {
         attemptRef.current = 0;
+        authRetryRef.current = 0;
         setStatus("connected");
         clearPing();
         pingRef.current = setInterval(() => {
@@ -166,6 +168,11 @@ export function useTranscriptionSocket() {
         wsRef.current = null;
         clearPing();
         if (ev.code === 1008) {
+          if (authRetryRef.current === 0) {
+            authRetryRef.current = 1;
+            scheduleRetry(targetJobId);
+            return;
+          }
           stoppedRef.current = true;
           setStatus("unauthorized");
           return;
@@ -182,6 +189,7 @@ export function useTranscriptionSocket() {
   const connect = React.useCallback((targetJobId?: string) => {
     stoppedRef.current = false;
     attemptRef.current = 0;
+    authRetryRef.current = 0;
     setJobId(targetJobId ?? null);
     setDone(null);
     setPartialAnalysis(null);

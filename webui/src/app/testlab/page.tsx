@@ -49,7 +49,9 @@ export default function TestLabPage() {
     React.useEffect(() => {
       if (!connected || !useLlm) return;
       let cancelled = false;
-      setPerspectiveLoading(true);
+      queueMicrotask(() => {
+        if (!cancelled) setPerspectiveLoading(true);
+      });
       apiClient
         .getAnalysisProfiles({ top_k: 3, refresh: true })
         .then((res) => {

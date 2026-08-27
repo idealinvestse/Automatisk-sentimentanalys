@@ -523,8 +523,9 @@ async def _run_analyzers_async_body(
                 continue
             logger.debug("Scheduling analyzer (async level): %s", name)
 
-            async def _run(n: str = name, a: Analyzer = analyzer) -> None:
-                await _run_single_async(n, a, ctx, validation_mode)
+            async def _run(n: str = name, a: Analyzer | None = analyzer) -> None:
+                if a is not None:
+                    await _run_single_async(n, a, ctx, validation_mode)
 
             tasks.append(_run())
         if tasks:

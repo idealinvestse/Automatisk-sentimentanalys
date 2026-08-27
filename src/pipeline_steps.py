@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from .analysis import resolve_analyzers_for_profile, run_analyzers, run_analyzers_async
 from .core.models import AnalysisContext, Segment
@@ -433,8 +433,6 @@ def _run_fas4_enrichment_body(
         results=results,
         result_key="agent_performance",
     ):
-        from typing import cast
-
         from .agent_performance import compute_call_agent_performance
 
         sent_res = results.get("sentiment") or []

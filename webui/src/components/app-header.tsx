@@ -12,6 +12,9 @@ function healthBadge(status: ReturnType<typeof useHealth>["data"]) {
   if (!status || status.status === "offline") {
     return { variant: "warning" as const, label: "API ej tillgänglig" };
   }
+  if (status.status === "degraded") {
+    return { variant: "warning" as const, label: "API degraderad" };
+  }
   if (status.status === "unauthorized") {
     return { variant: "destructive" as const, label: "API 401 – fel nyckel" };
   }

@@ -10,10 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Excludes raw Prometheus metrics and sensitive operational routes from browser exposure
 const ALLOWED_PREFIXES = [
   "health",
   "ready",
-  "metrics",
   "status",
   "analyze",
   "analyze_pipeline",
@@ -37,8 +37,9 @@ const ALLOWED_PREFIXES = [
 ] as const;
 
 function maxBodyBytes(): number {
-  const mb = Number(process.env.API_MAX_UPLOAD_SIZE_MB || "50");
-  return Math.max(1, Number.isFinite(mb) ? mb : 50) * 1024 * 1024;
+  // Aligns with FastAPI default of 200MB (max_upload_size_mb = 200)
+  const mb = Number(process.env.API_MAX_UPLOAD_SIZE_MB || "200");
+  return Math.max(1, Number.isFinite(mb) ? mb : 200) * 1024 * 1024;
 }
 
 function upstreamBase(): string {
@@ -49,7 +50,10 @@ function upstreamBase(): string {
   return base.replace(/\/$/, "");
 }
 
-function apiKey(): string | undefined {
+function apiKey(req: NextRequest): string | undefined {
+  // Allow client-supplied key if provided, otherwise fallback to server environment key
+  const clientKey = req.headers.get("x-api-key")?.trim();
+  if (clientKey) return clientKey;
   return process.env.SENTIMENT_API_KEY?.trim() || undefined;
 }
 
@@ -72,17 +76,26 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   if (contentType) headers.set("content-type", contentType);
   const requestId = req.headers.get("x-request-id");
   if (requestId) headers.set("x-request-id", requestId);
-  const key = apiKey();
+  const authHeader = req.headers.get("authorization");
+  if (authHeader) headers.set("authorization", authHeader);
+  const key = apiKey(req);
   if (key) headers.set("x-api-key", key);
+
+  // Upstream fetch timeout (5 minutes for heavy analysis / upload)
+  const controller = new AbortController();
+  const timeoutMs = 300_000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const init: RequestInit = {
     method: req.method,
     headers,
     redirect: "manual",
+    signal: controller.signal,
   };
   if (req.method !== "GET" && req.method !== "HEAD") {
     const buf = await req.arrayBuffer();
     if (buf.byteLength > maxBodyBytes()) {
+      clearTimeout(timeoutId);
       return NextResponse.json(
         { detail: `Payload too large (max ${Math.round(maxBodyBytes() / (1024 * 1024))} MB)` },
         { status: 413 },
@@ -95,10 +108,18 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   try {
     upstreamRes = await fetch(upstream, init);
   } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === "AbortError";
     return NextResponse.json(
-      { detail: `Upstream API unreachable: ${String(err)}` },
-      { status: 502 },
+      {
+        detail: isTimeout
+          ? `Upstream API request timed out (${timeoutMs}ms)`
+          : `Upstream API unreachable: ${String(err)}`,
+      },
+      { status: isTimeout ? 504 : 502 },
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const outHeaders = new Headers();

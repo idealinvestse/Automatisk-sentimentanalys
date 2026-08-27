@@ -477,8 +477,57 @@ class IntentClassifier:
         return label, round(confidence, 3)
 
 
+def generate_intent_dataset(
+    n_samples_per_intent: int = 50, seed: int = 42
+) -> list[dict[str, Any]]:
+    """Generate synthetic intent dataset for testing and baseline training (deprecated).
+
+    .. deprecated:: 0.5.1
+        Use ``data/intent_train.jsonl`` or domain training scripts instead.
+    """
+    import random
+    import warnings
+
+    warnings.warn(
+        "generate_intent_dataset is deprecated and will be removed in v0.6.0; "
+        "use verified datasets in data/ or scripts/validate_intent_corpus.py instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    rng = random.Random(seed)
+    templates = [
+        "Jag vill {kw}",
+        "Kan ni hjälpa mig med {kw}?",
+        "Det gäller {kw}",
+        "Hej, jag har problem med {kw}",
+        "Angående {kw}",
+        "Hur gör jag med {kw}?",
+        "Vi behöver ordna {kw}",
+        "Min {kw} fungerar inte",
+    ]
+
+    dataset: list[dict[str, Any]] = []
+    for label, info in CALL_CENTER_INTENTS.items():
+        keywords = info.get("keywords", [label])
+        for _ in range(n_samples_per_intent):
+            kw = rng.choice(keywords)
+            tmpl = rng.choice(templates)
+            text = tmpl.format(kw=kw)
+            dataset.append(
+                {
+                    "text": text,
+                    "label": label,
+                    "intent_id": info.get("id", 0),
+                }
+            )
+    rng.shuffle(dataset)
+    return dataset
+
+
 __all__ = [
     "CALL_CENTER_INTENTS",
     "INTENT_LABELS",
     "IntentClassifier",
+    "generate_intent_dataset",
 ]

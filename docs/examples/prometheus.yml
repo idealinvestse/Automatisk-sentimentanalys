@@ -1,7 +1,8 @@
 # Prometheus scrape config for Swedish Sentiment API.
 #
-# /metrics requires X-API-Key when SENTIMENT_API_KEY is set (not Bearer).
-# Replace change-me with the same key as the API, or disable API auth in dev.
+# /metrics requires X-API-Key when SENTIMENT_API_KEY is set on the API.
+# Set the header value below to match your API's SENTIMENT_API_KEY.
+# If API_REQUIRE_AUTH is false or SENTIMENT_API_KEY is empty, X-API-Key is optional.
 
 global:
   scrape_interval: 15s
@@ -15,4 +16,4 @@ scrape_configs:
     http_headers:
       X-API-Key:
         values:
-          - "change-me"
+          - "change-me"  # Set to match $SENTIMENT_API_KEY

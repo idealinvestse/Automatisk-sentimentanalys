@@ -46,7 +46,6 @@ import type {
   DegradationInfo,
   AnalyzerRouting,
   OverrideProvenanceEntry,
-  PipelineReport,
 } from "@/lib/api/client";
 
 // ---------------------------------------------------------------------------
