@@ -20,7 +20,7 @@ def _clear_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     get_api_settings.cache_clear()
 
 
-def test_webui_openapi_contains_live_paths() -> None:
+def test_webui_openapi_matches_live_contract() -> None:
     live = TestClient(create_app()).get("/openapi.json").json()
     checked = json.loads(WEBUI_OPENAPI.read_text(encoding="utf-8"))
 
@@ -36,4 +36,27 @@ def test_webui_openapi_contains_live_paths() -> None:
     extra = sorted(checked_paths - live_paths)
     assert not missing and not extra, (
         f"webui/openapi.json path drift: missing={missing}, extra={extra}"
+    )
+
+    live_schemas = (live.get("components") or {}).get("schemas") or {}
+    checked_schemas = (checked.get("components") or {}).get("schemas") or {}
+    missing_schemas = sorted(set(live_schemas) - set(checked_schemas))
+    extra_schemas = sorted(set(checked_schemas) - set(live_schemas))
+    changed_schemas = sorted(
+        name
+        for name in set(live_schemas) & set(checked_schemas)
+        if live_schemas[name] != checked_schemas[name]
+    )
+    assert not missing_schemas and not extra_schemas and not changed_schemas, (
+        "webui/openapi.json schema drift: "
+        f"missing={missing_schemas}, extra={extra_schemas}, changed={changed_schemas}"
+    )
+
+    changed_operations = sorted(
+        path
+        for path in live_paths & checked_paths
+        if live["paths"][path] != checked["paths"][path]
+    )
+    assert not changed_operations, (
+        f"webui/openapi.json operation drift: changed={changed_operations}"
     )

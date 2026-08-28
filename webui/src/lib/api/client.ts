@@ -8,6 +8,7 @@
  */
 
 import "./paths";
+import type { OpenApiPipelineResponse } from "./paths";
 
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
@@ -73,8 +74,16 @@ export type ApiConnectionStatus = {
   detail?: string;
 };
 
-/** Loose shape of a CallAnalysisReport dict returned by /analyze_pipeline. */
-export interface PipelineReport {
+/**
+ * Runtime-friendly view of the generated PipelineResponse contract.
+ *
+ * `results` remains open for backward-compatible analyzers, while all
+ * unchanged envelope fields stay coupled to `schema.ts`.
+ */
+export type PipelineReport = Omit<
+  OpenApiPipelineResponse,
+  "sentiment_results" | "results" | "llm" | "risks" | "insights" | "analyzer_results" | "degraded" | "mode"
+> & {
   sentiment_results?: { label?: string; score?: number }[];
   results?: {
     qa?: { overall_qa_score?: number | null; [key: string]: unknown };
@@ -97,7 +106,7 @@ export interface PipelineReport {
   /** 'full' | 'degraded' */
   mode?: string;
   [key: string]: unknown;
-}
+};
 
 export interface ModelCompareResult {
   model: string;
@@ -644,10 +653,10 @@ export class ApiClient {
     } catch (err) {
       this.wsTicket = null;
       this.wsTicketExpiry = 0;
-      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-        throw err;
-      }
-      return "";
+      // Never silently open an unauthenticated socket after the authenticated
+      // ticket request failed. The caller can then render/retry the actual
+      // failure rather than masking it as a WS connection problem.
+      throw err;
     }
   }
 
@@ -738,7 +747,7 @@ export class ApiClient {
       return {
         reachable: true,
         authenticated: null,
-        status: "ok",
+        status: "degraded",
         detail: err instanceof Error ? err.message : String(err),
       };
     }
@@ -995,6 +1004,11 @@ export class ApiClient {
   /** List server-persisted analyzed calls. */
   listCalls<T = { calls: unknown[]; count: number }>(limit = 50) {
     return this.get<T>("/calls", { limit });
+  }
+
+  /** Fetch one persisted call for a reload-safe call-detail deep link. */
+  getCall<T = Record<string, unknown>>(id: string) {
+    return this.get<T>(`/calls/${encodeURIComponent(id)}`);
   }
 
   /** Persist an analyzed call on the server (localStorage remains a cache). */

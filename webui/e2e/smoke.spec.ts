@@ -44,7 +44,6 @@ test("theme toggle switches dark mode", async ({ page }) => {
   await page.goto("/");
   const html = page.locator("html");
   const before = await html.getAttribute("class");
-  await page.getByRole("button", { name: /theme|tema|mörk|ljus/i }).first().click();
-  const after = await html.getAttribute("class");
-  expect(before).not.toEqual(after);
+  await page.getByRole("button", { name: "Växla ljust/mörkt tema" }).click();
+  await expect(html).not.toHaveClass(before ?? "", { timeout: 15_000 });
 });

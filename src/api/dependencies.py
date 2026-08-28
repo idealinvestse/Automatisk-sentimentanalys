@@ -98,8 +98,6 @@ def create_pipeline(
                 deep_analysis = True
             use_mistral_llm = True
         except Exception as exc:
-            import logging
-
             logging.getLogger(__name__).warning(
                 "analysis_perspective=%s resolve failed: %s", analysis_perspective, exc
             )

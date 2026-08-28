@@ -40,6 +40,7 @@ import type {
   MultiTurnJourneyResult,
   UpsellResult,
   ComplianceRiskResult,
+  DialectSensitivityResult,
   RoleClassifierResult,
   PredictiveResult,
   DeepPathCCP,
@@ -980,6 +981,49 @@ export function ComplianceRiskCard({ compliance }: { compliance: ComplianceRiskR
 }
 
 // ---------------------------------------------------------------------------
+// DialectSensitivityCard — dialect and slang signals
+// ---------------------------------------------------------------------------
+
+export function DialectSensitivityCard({ dialect }: { dialect: DialectSensitivityResult | null }) {
+  if (!dialect) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="size-4" />
+          Dialekt- och slangsignaler
+        </CardTitle>
+        <CardDescription>
+          Indikationer på språkvariation som kan påverka tolkning eller coachning.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Risknivå</span>
+          <Badge variant={riskBadgeVariant(dialect.dialect_risk_level)}>
+            {dialect.dialect_risk_level}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="block text-xs text-muted-foreground">Dialektträffar</span>
+            <span className="font-medium">{dialect.total_dialect_hits}</span>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Slangträffar</span>
+            <span className="font-medium">{dialect.slang_count}</span>
+          </div>
+        </div>
+        {dialect.recommendation ? (
+          <p className="text-xs text-muted-foreground">{dialect.recommendation}</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // SummaryCard — call summary (uses top-level summary field)
 // ---------------------------------------------------------------------------
 
@@ -1025,6 +1069,32 @@ export interface TrustSurfaceData {
   deepPathCCP: DeepPathCCP | null;
   analyzerRouting: AnalyzerRouting | null;
   overrideProvenance: OverrideProvenanceEntry[];
+}
+
+/** Makes deliberate deep-path omissions visible instead of silently hiding cards. */
+export function UnavailableAnalyzersCard({ analyzers }: { analyzers: string[] }) {
+  if (analyzers.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertTriangle className="size-4" />
+          Ej tillgängliga analyser
+        </CardTitle>
+        <CardDescription>
+          Dessa analyser har uttryckligen hoppats över i den aktuella körningen.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-1.5">
+        {analyzers.map((analyzer) => (
+          <Badge key={analyzer} variant="warning">
+            {analyzer}
+          </Badge>
+        ))}
+      </CardContent>
+    </Card>
+  );
 }
 
 export function TrustSurfaceCard({ trust }: { trust: TrustSurfaceData | null }) {

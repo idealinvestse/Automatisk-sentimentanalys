@@ -10,7 +10,7 @@ import { useDemoReports } from "@/hooks/use-demo-reports";
 import { useAgentPerformance } from "@/hooks/use-agent-performance";
 
 export default function AgentsPage() {
-  const { calls, reports, isLoading: reportsLoading, isError } = useDemoReports();
+  const { calls, reports, isLoading: reportsLoading, isError, usingLiveData } = useDemoReports();
   const { rows: agents, isLoading: agentsLoading } = useAgentPerformance(calls, reports);
   const isLoading = reportsLoading || (calls.length > 0 && agentsLoading && agents.length === 0);
 
@@ -20,7 +20,8 @@ export default function AgentsPage() {
         <h1 className="text-xl font-semibold tracking-tight">Agentprestanda</h1>
         <p className="text-sm text-muted-foreground">
           Sentiment, QA-poäng och larm per agent, aggregerat via{" "}
-          <code>POST /agent_performance/&#123;agent_id&#125;</code> över demo-samtalen.
+          <code>POST /agent_performance/&#123;agent_id&#125;</code> över{" "}
+          {usingLiveData ? "sparade samtal." : "demosamtalen."}
         </p>
       </div>
 
@@ -52,12 +53,17 @@ export default function AgentsPage() {
                     <CardDescription>{agent.calls} samtal</CardDescription>
                   </div>
                 </div>
-                {agent.alertCount > 0 ? (
-                  <Badge variant="warning" className="gap-1">
-                    <AlertTriangle className="size-3" />
-                    {agent.alertCount}
+                <div className="flex items-center gap-1.5">
+                  <Badge variant={agent.source === "api" ? "outline" : "warning"}>
+                    {agent.source === "api" ? "API" : "Lokal fallback"}
                   </Badge>
-                ) : null}
+                  {agent.alertCount > 0 ? (
+                    <Badge variant="warning" className="gap-1">
+                      <AlertTriangle className="size-3" />
+                      {agent.alertCount}
+                    </Badge>
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-0.5">

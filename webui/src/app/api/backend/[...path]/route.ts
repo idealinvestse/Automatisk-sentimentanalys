@@ -10,31 +10,39 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Excludes raw Prometheus metrics and sensitive operational routes from browser exposure
-const ALLOWED_PREFIXES = [
+/**
+ * Browser-facing FastAPI paths.
+ *
+ * This is deliberately an exact allowlist instead of a router-prefix list:
+ * the BFF adds a server-side credential, so exposing an extra admin or
+ * filesystem-oriented endpoint would otherwise amplify browser privileges.
+ */
+const ALLOWED_PATHS = new Set([
   "health",
   "ready",
-  "status",
-  "analyze",
+  "ws/transcription/ticket",
   "analyze_pipeline",
-  "analyze_conversation",
-  "agent_performance",
-  "insights",
-  "search",
-  "qa",
+  "analyze_pipeline/partial",
+  "analyze_pipeline/compare",
+  "agent_performance/:id",
+  "insights/hot_topics",
+  "search/semantic",
+  "qa/score",
   "alerts",
-  "alerting",
+  "alerting/status",
+  "alerting/reset-circuit-breaker",
   "calls",
-  "llm",
+  "calls/:id",
+  "llm/analysis-profiles",
+  "llm/analysis-profiles/:id",
   "upload",
   "transcribe",
-  "batch_transcribe",
-  "batch_analyze_conversation",
-  "scan_process",
-  "transcription",
-  "ws",
-  "edge",
-] as const;
+  "transcription/jobs",
+  "transcription/jobs/:id",
+  "transcription/jobs/:id/cancel",
+  "edge/analyze-text",
+  "edge/analyze-segments",
+]);
 
 function maxBodyBytes(): number {
   // Aligns with FastAPI default of 200MB (max_upload_size_mb = 200)
@@ -50,16 +58,28 @@ function upstreamBase(): string {
   return base.replace(/\/$/, "");
 }
 
-function apiKey(req: NextRequest): string | undefined {
-  // Allow client-supplied key if provided, otherwise fallback to server environment key
-  const clientKey = req.headers.get("x-api-key")?.trim();
-  if (clientKey) return clientKey;
+function apiKey(): string | undefined {
+  // The BFF credential is authoritative. Never let a browser-supplied key
+  // override it, or an obsolete public key can turn a working BFF into 401s.
   return process.env.SENTIMENT_API_KEY?.trim() || undefined;
 }
 
 function isAllowedPath(parts: string[]): boolean {
-  const first = (parts[0] ?? "").toLowerCase();
-  return (ALLOWED_PREFIXES as readonly string[]).includes(first);
+  const path = parts.map((part) => part.toLowerCase()).join("/");
+  const normalized = path
+    .split("/")
+    .map((part, index) => {
+      if (
+        (index === 1 && ["agent_performance", "calls"].includes(parts[0]?.toLowerCase() ?? "")) ||
+        (index === 2 && parts[0]?.toLowerCase() === "llm") ||
+        (index === 2 && parts[0]?.toLowerCase() === "transcription")
+      ) {
+        return ":id";
+      }
+      return part;
+    })
+    .join("/");
+  return ALLOWED_PATHS.has(normalized);
 }
 
 async function proxy(req: NextRequest, pathParts: string[]): Promise<NextResponse> {
@@ -78,12 +98,14 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   if (requestId) headers.set("x-request-id", requestId);
   const authHeader = req.headers.get("authorization");
   if (authHeader) headers.set("authorization", authHeader);
-  const key = apiKey(req);
+  const key = apiKey();
   if (key) headers.set("x-api-key", key);
 
-  // Upstream fetch timeout (5 minutes for heavy analysis / upload)
+  // The client permits model comparison for nine minutes and ASR for ten.
+  // Keep the server-side boundary at least as long so the BFF path is not a
+  // shorter, surprising deadline.
   const controller = new AbortController();
-  const timeoutMs = 300_000;
+  const timeoutMs = 600_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const init: RequestInit = {

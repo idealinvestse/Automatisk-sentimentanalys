@@ -24,8 +24,10 @@ import {
   RoleMetricsCard,
   PredictiveCard,
   ComplianceRiskCard,
+  DialectSensitivityCard,
   SummaryCard,
   TrustSurfaceCard,
+  UnavailableAnalyzersCard,
 } from "@/components/analyzer-cards";
 import { RiskBadge, SentimentBadge } from "@/components/status-badges";
 import { useDemoReports } from "@/hooks/use-demo-reports";
@@ -127,6 +129,7 @@ export default function AnalysisPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <TrustSurfaceCard trust={detail.trust} />
+            <UnavailableAnalyzersCard analyzers={detail.unavailableAnalyzers} />
             <EmotionCard emotion={detail.emotion} />
             <AspectCard
               aspects={detail.aspects}
@@ -144,6 +147,7 @@ export default function AnalysisPage() {
             <RoleMetricsCard role={detail.roleMetrics} />
             <PredictiveCard predictive={detail.predictive} />
             <ComplianceRiskCard compliance={detail.complianceRisk} />
+            <DialectSensitivityCard dialect={detail.dialect} />
             <SummaryCard summary={(selectedCall.report.summary as Record<string, unknown> | null) ?? null} />
           </div>
         </>

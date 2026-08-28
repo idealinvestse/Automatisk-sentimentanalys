@@ -71,14 +71,15 @@ function KpiCard({
 }
 
 export default function ExecutivePage() {
-  const { summary, isLoading, isError } = useExecutiveSummary();
+  const { summary, isLoading, isError, usingLiveData } = useExecutiveSummary();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Executive Insights</h1>
         <p className="text-sm text-muted-foreground">
-          Aggregerade KPI:er över alla demo-samtal — risker, QA, agentprestanda och LLM-kostnad.
+          Aggregerade KPI:er över alla {usingLiveData ? "sparade samtal" : "demosamtal"} — risker,
+          QA, agentprestanda och LLM-kostnad.
         </p>
       </div>
 

@@ -7,13 +7,30 @@
  */
 
 import type {
-  PipelineReport,
+  ActiveListeningResult,
+  AnalyzerRouting,
+  AspectItem,
+  CoachingResult,
+  ComplianceRiskResult,
+  CustomerEffortResult,
   DeepPathCCP,
   DegradationInfo,
-  AnalyzerRouting,
+  DialectSensitivityResult,
+  EmotionSegmentResult,
+  EmpathyResult,
+  MultiTurnJourneyResult,
   OverrideProvenanceEntry,
+  PipelineReport,
+  PredictiveResult,
+  ResolutionProbabilityResult,
+  RoleClassifierResult,
+  RootCauseResult,
+  TrajectoryResult,
+  UpsellResult,
 } from "@/lib/api/client";
-import type { DemoTranscript } from "@/lib/demo-transcripts";
+import type {
+  DemoTranscript,
+} from "@/lib/demo-transcripts";
 import type { CallRow, RiskLevel, SentimentLabel } from "@/lib/mock-data";
 
 const SENTIMENT_SCORE_MAP: Record<string, number> = {
@@ -279,24 +296,6 @@ export function extractQa(report: PipelineReport): CallQa | null {
 // falls back to raw results dict for backward compatibility)
 // ---------------------------------------------------------------------------
 
-import type {
-  EmotionSegmentResult,
-  AspectItem,
-  TrajectoryResult,
-  RootCauseResult,
-  CoachingResult,
-  CustomerEffortResult,
-  ActiveListeningResult,
-  EmpathyResult,
-  ResolutionProbabilityResult,
-  MultiTurnJourneyResult,
-  UpsellResult,
-  DialectSensitivityResult,
-  ComplianceRiskResult,
-  RoleClassifierResult,
-  PredictiveResult,
-} from "@/lib/api/client";
-
 /** Extract emotion labels per segment. Returns [] if analyzer didn't run. */
 export function extractEmotion(report: PipelineReport): EmotionSegmentResult[] {
   const typed = report.analyzer_results?.emotion;
@@ -353,6 +352,15 @@ function isUnavailableResult(value: unknown): boolean {
     "status" in value &&
     (value as { status?: string }).status === "unavailable"
   );
+}
+
+/** Names of analyzers that explicitly reported honest-degradation unavailability. */
+export function extractUnavailableAnalyzers(report: PipelineReport): string[] {
+  const source = report.analyzer_results ?? report.results;
+  if (!source || typeof source !== "object") return [];
+  return Object.entries(source)
+    .filter(([, value]) => isUnavailableResult(value))
+    .map(([name]) => name);
 }
 
 /** Extract trajectory result. Returns null if analyzer didn't run or unavailable. */
@@ -595,6 +603,7 @@ export interface RealCallDetail {
   complianceRisk: ComplianceRiskResult | null;
   roleMetrics: RoleClassifierResult | null;
   predictive: PredictiveResult | null;
+  unavailableAnalyzers: string[];
   trust: {
     degradation: DegradationInfo | null;
     deepPathCCP: DeepPathCCP | null;
@@ -652,6 +661,7 @@ export function buildCallDetail({ transcript, report }: RealCall): RealCallDetai
     complianceRisk: extractComplianceRisk(report),
     roleMetrics: extractRoleMetrics(report),
     predictive: extractPredictive(report),
+    unavailableAnalyzers: extractUnavailableAnalyzers(report),
     trust: extractTrustSurface(report),
   };
 }

@@ -69,7 +69,7 @@ export default function TranscriptionPage() {
       const segments = (rawSegments || []).map((s) => {
         const speakerLower = s.speaker.toLowerCase();
         const normalizedSpeaker: "Agent" | "Kund" =
-          speakerLower.includes("agent") || speakerLower.includes("agent") ? "Agent" : "Kund";
+          speakerLower.includes("agent") || speakerLower.includes("speaker_0") ? "Agent" : "Kund";
         return {
           speaker: normalizedSpeaker,
           text: s.text,
@@ -77,6 +77,12 @@ export default function TranscriptionPage() {
           end: s.end ?? s.start + 1,
         };
       });
+
+      if (segments.length === 0) {
+        throw new ApiError(
+          "Transkriberingen innehöll inget tal som kan analyseras. Kontrollera ljudfilen och försök igen.",
+        );
+      }
 
       // Calculate duration from segments
       const durationS = segments.length > 0 ? segments[segments.length - 1].end : 0;

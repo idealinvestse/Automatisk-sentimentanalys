@@ -39,7 +39,9 @@ from .error_responses import (
     ANALYSIS_ERROR_DETAIL,
     CONFIGURATION_ERROR_DETAIL,
     ERROR_CODE_CONFLICT,
+    ERROR_CODE_FORBIDDEN,
     ERROR_CODE_INTERNAL,
+    ERROR_CODE_NOT_FOUND,
     ERROR_CODE_PAYLOAD_TOO_LARGE,
     ERROR_CODE_RATE_LIMITED,
     ERROR_CODE_UNAUTHORIZED,
@@ -257,6 +259,10 @@ def create_app() -> FastAPI:
             code = ERROR_CODE_PAYLOAD_TOO_LARGE
         elif exc.status_code == 409:
             code = ERROR_CODE_CONFLICT
+        elif exc.status_code == 403:
+            code = ERROR_CODE_FORBIDDEN
+        elif exc.status_code == 404:
+            code = ERROR_CODE_NOT_FOUND
         else:
             code = ERROR_CODE_INTERNAL
         return error_response(request, exc.status_code, exc.detail, error_code=code)

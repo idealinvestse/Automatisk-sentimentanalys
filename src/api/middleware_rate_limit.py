@@ -15,7 +15,7 @@ from .settings import get_api_settings
 
 logger = logging.getLogger(__name__)
 
-_EXEMPT_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})
+_EXEMPT_PATHS = frozenset({"/health", "/ready", "/docs", "/openapi.json", "/redoc"})
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

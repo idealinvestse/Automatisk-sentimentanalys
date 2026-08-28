@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, XCircle, Quote, FileSearch } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,19 +31,39 @@ import {
   RoleMetricsCard,
   PredictiveCard,
   ComplianceRiskCard,
+  DialectSensitivityCard,
   SummaryCard,
   TrustSurfaceCard,
+  UnavailableAnalyzersCard,
 } from "@/components/analyzer-cards";
 import { useDemoReports } from "@/hooks/use-demo-reports";
-import { buildCallDetail } from "@/lib/real-data";
+import { apiClient, type PipelineReport } from "@/lib/api/client";
+import { buildCallDetail, type RealCall } from "@/lib/real-data";
 
 export default function CallDetailPage() {
   const params = useParams<{ id: string }>();
   const { reports, isLoading, isError } = useDemoReports();
+  const persistedCall = useQuery({
+    queryKey: ["call", params.id],
+    queryFn: () =>
+      apiClient.getCall<{
+        transcript?: RealCall["transcript"];
+        report?: PipelineReport;
+      }>(params.id),
+    retry: false,
+    staleTime: 60_000,
+    // Canonical demo IDs resolve from the already-loaded reports; do not
+    // generate a needless server 404 for a known synthetic call.
+    enabled: !params.id.startsWith("CALL-"),
+  });
 
-  const realCall = reports.find((r) => r.transcript.id === params.id);
+  const remoteCall =
+    persistedCall.data?.transcript && persistedCall.data.report
+      ? { transcript: persistedCall.data.transcript, report: persistedCall.data.report }
+      : null;
+  const realCall = remoteCall ?? reports.find((r) => r.transcript.id === params.id);
 
-  if (!isLoading && !realCall && !isError) {
+  if (!isLoading && !persistedCall.isLoading && !realCall && !isError) {
     notFound();
   }
 
@@ -168,6 +189,7 @@ export default function CallDetailPage() {
                   <RoleMetricsCard role={detail.roleMetrics} />
                   <PredictiveCard predictive={detail.predictive} />
                   <ComplianceRiskCard compliance={detail.complianceRisk} />
+                  <DialectSensitivityCard dialect={detail.dialect} />
                   <SummaryCard summary={(realCall?.report.summary as Record<string, unknown> | null) ?? null} />
                 </div>
               </div>
@@ -175,6 +197,7 @@ export default function CallDetailPage() {
 
             <div className="flex flex-col gap-4">
               <TrustSurfaceCard trust={detail.trust} />
+              <UnavailableAnalyzersCard analyzers={detail.unavailableAnalyzers} />
               {detail.qa && (
                 <Card>
                   <CardHeader>

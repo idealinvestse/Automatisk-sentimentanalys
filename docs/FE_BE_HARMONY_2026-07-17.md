@@ -191,17 +191,46 @@ Inte ta bort backend. Prioritera semantic search i Insights när pilotkunden eft
 | Pipeline typed results | 5 | Stark spegling Fas 5 |
 | Testlabb A/B | 5 | Bästa kontraktytan |
 | Edge | 4 | Enkel, komplett |
-| Transcription | 3 | Funkar; jobs/partial underutnyttjade |
-| Fas 4 insights | 3 | Hot topics ja; search/QA nej |
+| Transcription | 4 | Jobs/cancel, WS och pipeline är exponerade; L7 CUDA-ASR passerar, men browser-upload→sparad detail återstår |
+| Fas 4 insights | 4 | Hot topics, semantic search och QA score har UI-vägar |
 | Auth prod | 4 | BFF default; DIRECT escape hatch |
-| OpenAPI sync | 4 | Snapshot + CI drift job |
-| E2E bevis | 2 | Stubbar/mockar |
+| OpenAPI sync | 5 | Genererad spec/typer, schema-snapshot och CI drift job |
+| E2E bevis | 4 | 28 stubbade deterministiska resor samt en manuell live-pipeline-passning |
 
-**Snitt ~3.8/5** — tillräckligt för *demo/conditional pilot*; live `/testlab` still required.
+**Verdict:** teknisk frontend/backend-harmoni är verifierad för text-pipelinen. Detta är fortfarande endast *conditional pilot*: lokal CUDA-ASR, riktig upload→transcribe-kedja, L8/L9 och DATA-01 är separata releasegates.
 
 ---
 
-## 8. Källor (interna)
+## 8. Verifieringsbevis (2026-08-28)
+
+Körda utan kunddata eller externa LLM-anrop:
+
+- `webui`: `npm run lint` (0 fel, två kända React Compiler-varningar från TanStack), `npm run typecheck`, `npm run build` och `npm run test:e2e` — **28 passed**.
+- Python i projektets `.venv`: `python -m mypy src` — **173 source files, inga fel**; de relevanta API-, alerting-, Fas 4- och OpenAPI-kontraktstesterna — **17 passed**.
+- `python scripts/run_quality_gates.py --smoke` — **pass** (heuristic intent macro-F1 **0.8403**, över gränsen 0.75).
+- `python scripts/verify_pilot_policy.py --strict` — **pass** för lokal ASR och callcenter-redaktion. Miljön har en Groq-nyckel, vilket är tillåtet för dev men får inte förekomma för kund-PII-pilot.
+- Båda compose-filerna validerades med en tillfällig processmiljö-nyckel; ingen hemlighet lästes eller dokumenterades.
+- Manuell livepassning på Windows: FastAPI `/health` och `/ready`, BFF-statusen **API ansluten**, samt `/testlab` med ett syntetiskt svenskt tvåsegmentsamtal. Pipelinen återgav `Analys klar`, sentiment och QA-poäng.
+- Live BFF REST-passning med den PII-fria svenska `090932.wav`-fixturen: `upload` → lokal CUDA `transcribe` → normaliserade segment → `analyze_pipeline` gav **200 → 200 → 200**, 23 segment och förväntat `degraded`-läge utan extern LLM. Browserns WS-ticket hämtades via BFF och anslutningen nådde **Ansluten**.
+
+### Kvarvarande avvikelser och risker
+
+- **P1 — browser-persistens:** L7 CUDA-smoke passerade lokalt för en svensk 118,86-sekunders fixture med `faster-whisper`/`kb-whisper-large`: 23 segment på 36,15 sekunder. BFF REST-kedjan passerar också, men just denna browser-harness får bara välja filer under `C:\Users\Django`; användarpolicyn förbjuder kopiering av fixturen dit. Därför är browser-upload och reloadad localStorage-baserad call-detail inte manuellt bevisade, även om den deterministiska Playwright-resan täcker den klientkedjan.
+- **P2 — releasegate:** L8 (extern LLM, endast om deep path ska användas), L9-staging och DATA-01 är inte del av vanlig PR-CI och är inte bevisade här.
+
+Reproducerbart efter att backend och BFF-webui startats:
+
+```powershell
+cd webui
+npm run lint; npm run typecheck; npm run build; npm run test:e2e
+cd ..
+.\.venv\Scripts\python.exe -m pytest tests/contracts/test_openapi_webui_snapshot.py tests/contracts/test_api_error_contract.py tests/test_alerting_router.py tests/test_api_alerting_router.py tests/test_fas4_e2e.py -q
+.\.venv\Scripts\python.exe -m src.evaluate audio smoke --device cuda --pack sv_callcenter --limit 1
+```
+
+---
+
+## 9. Källor (interna)
 
 - `webui/src/lib/api/client.ts`
 - `webui/src/hooks/*`, `webui/src/app/**/page.tsx`
@@ -209,7 +238,3 @@ Inte ta bort backend. Prioritera semantic search i Insights när pilotkunden eft
 - `src/api/app.py`, `src/api/routers/*`, `src/api/schemas.py`
 - `src/api/transcription_events.py`, `src/api/ws_tickets.py`
 - `docs/API.md`, `docs/PRODUCTION_CHECKLIST.md`
-
----
-
-*Analys only — ingen produktkod ändrad i detta dokument. Nästa implementation bör börja med H1–H4.*

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppHeader } from "@/components/app-header";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar, MobileNavigation } from "@/components/app-sidebar";
 import { CallSync } from "@/components/call-sync";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -40,6 +40,7 @@ export default function RootLayout({
           <QueryProvider>
             <CallSync />
             <AppHeader />
+            <MobileNavigation />
             <div className="flex flex-1 overflow-hidden">
               <AppSidebar />
               <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>

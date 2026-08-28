@@ -42,6 +42,22 @@ def test_error_contract_internal(client: TestClient) -> None:
     assert "request_id" in body
 
 
+def test_error_contract_not_found(client: TestClient) -> None:
+    r = client.get("/calls/missing-call")
+    assert r.status_code == 404
+    body = r.json()
+    assert body["error_code"] == "not_found"
+    assert "request_id" in body
+
+
+def test_ready_probe_is_exempt_from_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_RATE_LIMIT_RPM", "1")
+    get_api_settings.cache_clear()
+    limited = TestClient(create_app(), raise_server_exceptions=False)
+    assert limited.get("/ready").status_code == 200
+    assert limited.get("/ready").status_code == 200
+
+
 def test_error_contract_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("API_RATE_LIMIT_RPM", "2")
     get_api_settings.cache_clear()

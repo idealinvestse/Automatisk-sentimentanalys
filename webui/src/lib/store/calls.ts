@@ -67,10 +67,16 @@ export const useCallsStore = create<CallsState>()(
               transcript: c.transcript as RealCall["transcript"],
               report: c.report as RealCall["report"],
             }));
-          if (remote.length === 0) return;
+          if (remote.length === 0) {
+            // A successful empty response means the server history is empty;
+            // do not keep deleted calls alive solely in localStorage.
+            set({ realCalls: [] });
+            return;
+          }
           const local = get().realCalls;
           const byId = new Map<string, RealCall>();
-          for (const call of [...remote, ...local]) {
+          // Server is authoritative; localStorage is an offline cache only.
+          for (const call of [...local, ...remote]) {
             byId.set(call.transcript.id, call);
           }
           set({ realCalls: [...byId.values()] });

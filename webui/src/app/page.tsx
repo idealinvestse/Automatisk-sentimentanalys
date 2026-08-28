@@ -18,7 +18,7 @@ export default function OverviewPage() {
   const router = useRouter();
   const { data: health } = useHealth();
   const connected = isApiConnected(health);
-  const { calls, reports, isLoading, isError, errorCount } = useDemoReports();
+  const { calls, reports, isLoading, isError, errorCount, usingLiveData } = useDemoReports();
   const kpis = summarizeKpis(calls);
 
   // Fas 5: aggregate analyzer KPIs across all demo reports
@@ -48,7 +48,9 @@ export default function OverviewPage() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Översikt</h1>
           <p className="text-sm text-muted-foreground">
-            Senaste samtal, KPI:er och status för call center-analysen.
+            {usingLiveData
+              ? "Senaste sparade samtal och KPI:er från backendens pipeline-resultat."
+              : "Kanoniska demosamtal och KPI:er från backendens pipeline-resultat."}
           </p>
         </div>
         <Badge variant={connected ? "success" : "warning"}>
@@ -71,7 +73,12 @@ export default function OverviewPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Samtal idag" value={String(kpis.totalCalls)} icon={PhoneCall} hint="Senaste 24h (demo)" />
+            <KpiCard
+              label="Samtal idag"
+              value={String(kpis.totalCalls)}
+              icon={PhoneCall}
+              hint={usingLiveData ? "Sparade samtal" : "Demo"}
+            />
             <KpiCard
               label="Snitt-sentiment"
               value={`${Math.round(kpis.avgSentiment * 100)}%`}
@@ -145,10 +152,8 @@ export default function OverviewPage() {
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        Samtalen ovan är kanoniska svenska demo-transkript (se{" "}
-        <code>src/lib/demo-transcripts.ts</code>), men sentiment, QA-poäng och risknivå beräknas av
-        den riktiga backend-pipelinen via <code>POST /analyze_pipeline</code> — inga hårdkodade
-        siffror.
+        {usingLiveData ? "Sparade samtal visas." : "Kanoniska svenska demo-transkript visas."} Sentiment,
+        QA-poäng och risknivå kommer från <code>POST /analyze_pipeline</code> — inga hårdkodade siffror.
       </p>
     </div>
   );

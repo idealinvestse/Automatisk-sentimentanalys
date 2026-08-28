@@ -20,7 +20,7 @@ const LEGEND_COLORS = [
 ];
 
 export default function AnalyticsPage() {
-  const { calls, isLoading, isError } = useDemoReports();
+  const { calls, isLoading, isError, usingLiveData } = useDemoReports();
   const categories = summarizeCategories(calls);
 
   return (
@@ -28,8 +28,8 @@ export default function AnalyticsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Analys & Trender</h1>
         <p className="text-sm text-muted-foreground">
-          Sentiment och volym per samtalskategori, beräknat av den riktiga pipelinen på
-          demo-samtalen.
+          Sentiment och volym per samtalskategori, beräknat av den riktiga pipelinen från{" "}
+          {usingLiveData ? "sparade samtal." : "demosamtalen."}
         </p>
       </div>
 

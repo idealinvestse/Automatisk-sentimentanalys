@@ -26,6 +26,8 @@ ERROR_CODE_UNAUTHORIZED = "unauthorized"
 ERROR_CODE_RATE_LIMITED = "rate_limit_exceeded"
 ERROR_CODE_PAYLOAD_TOO_LARGE = "payload_too_large"
 ERROR_CODE_CONFLICT = "conflict"
+ERROR_CODE_FORBIDDEN = "forbidden"
+ERROR_CODE_NOT_FOUND = "not_found"
 
 PUBLIC_ERROR_DETAIL = "An internal error occurred. Please try again later."
 CONFIGURATION_ERROR_DETAIL = "Invalid configuration."

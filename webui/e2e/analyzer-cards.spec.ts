@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { stubDashboardApi } from "./helpers/mock-api";
+
 /**
  * E2E tests for the Fas 5 analyzer-cards UI.
  *
@@ -168,38 +170,13 @@ MOCK_PIPELINE_RESPONSE.analyzer_results = {
 // ---------------------------------------------------------------------------
 
 async function mockBackend(page: Page) {
-  // Stub health check + auth ticket probe (connectionStatus)
-  await page.route("**/health", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' }),
-  );
-  await page.route("**/ws/transcription/ticket", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ ticket: "e2e-no-auth", expires_in: 300 }),
-    }),
-  );
+  await stubDashboardApi(page);
   // Stub /analyze_pipeline — return the same rich response for any request body
   await page.route("**/analyze_pipeline", (r) =>
     r.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(MOCK_PIPELINE_RESPONSE),
-    }),
-  );
-  // Stub Fas 4 aggregate endpoints (return empty but valid shapes)
-  await page.route("**/insights/hot_topics", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ hot_topics: [], meta: {}, timestamp: new Date().toISOString() }),
-    }),
-  );
-  await page.route("**/alerts", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ alerts: [], timestamp: new Date().toISOString() }),
     }),
   );
 }
@@ -226,7 +203,7 @@ test.describe("/analysis page — analyzer cards", () => {
     await expect(page.getByText("Frustration", { exact: true })).toBeVisible();
 
     // AspectCard
-    await expect(page.getByRole("heading", { name: /Aspektbaserad Sentiment/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Aspekt-evidens/i })).toBeVisible();
     await expect(page.getByText("fakturering pris")).toBeVisible();
 
     // TrajectoryCard
@@ -310,7 +287,7 @@ test.describe("/calls/[id] page — analyzer cards", () => {
     // Wait for the page to load
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 15000 });
     // The "Analysdetaljer" section header should appear
-    await expect(page.getByText("Analysdetaljer").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: "Analysdetaljer" })).toBeVisible({ timeout: 15000 });
     // EmotionCard should render (use heading role to avoid strict-mode violation)
     await expect(page.getByRole("heading", { name: "Känslolabels" })).toBeVisible();
   });

@@ -27,6 +27,22 @@ const SMOKE_PIPELINE = {
   analyzer_results: null,
 };
 
+const EDGE_ANALYSIS = {
+  profile: "callcenter",
+  offline: true,
+  llm_used: false,
+  segments: [
+    {
+      text: "Tack för hjälpen",
+      sentiment_label: "positiv",
+      sentiment_score: 0.92,
+      intent: "resolution",
+    },
+  ],
+  summary: "Positiv kundrespons.",
+  limitations: ["Ingen LLM"],
+};
+
 /** Stub health + auth ticket + common dashboard API routes. */
 export async function stubDashboardApi(page: Page): Promise<void> {
   await page.route("**/health", (r) =>
@@ -46,11 +62,58 @@ export async function stubDashboardApi(page: Page): Promise<void> {
       body: JSON.stringify({ ticket: "e2e-no-auth", expires_in: 300 }),
     }),
   );
+  await page.route("**/api/backend/calls", (r) => {
+    if (r.request().method() === "POST") {
+      return r.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    }
+    return r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ calls: [], count: 0 }),
+    });
+  });
+  await page.route("**/api/backend/calls?*", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ calls: [], count: 0 }),
+    }),
+  );
+  await page.route("**/api/backend/calls/**", (r) =>
+    r.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Call not found", error_code: "not_found" }),
+    }),
+  );
   await page.route("**/analyze_pipeline*", (r) =>
     r.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(SMOKE_PIPELINE),
+    }),
+  );
+  await page.route("**/analyze_pipeline/partial", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...SMOKE_PIPELINE,
+        results: { ...SMOKE_PIPELINE.results, partial: { incremental: true, reconciled: false } },
+      }),
+    }),
+  );
+  await page.route("**/analyze_pipeline/compare", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        models: ["fast", "balanced", "deep"],
+        results: {},
+        total_processing_time_s: 0.03,
+        budget_exceeded: false,
+        timestamp: new Date().toISOString(),
+      }),
     }),
   );
   await page.route("**/insights/hot_topics", (r) =>
@@ -127,4 +190,34 @@ export async function stubDashboardApi(page: Page): Promise<void> {
       body: JSON.stringify({ jobs: [], timestamp: new Date().toISOString() }),
     });
   });
+  await page.route("**/upload", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audio_path: "uploads/e2e.wav",
+        filename: "e2e.wav",
+        size_bytes: 8,
+        timestamp: new Date().toISOString(),
+      }),
+    }),
+  );
+  await page.route("**/transcribe", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        transcript: {
+          segments: [{ speaker: "Agent", text: "Hej", start: 0, end: 1 }],
+        },
+        timestamp: new Date().toISOString(),
+      }),
+    }),
+  );
+  await page.route("**/edge/analyze-text", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(EDGE_ANALYSIS) }),
+  );
+  await page.route("**/edge/analyze-segments", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(EDGE_ANALYSIS) }),
+  );
 }

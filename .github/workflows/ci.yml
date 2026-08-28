@@ -101,6 +101,7 @@ jobs:
             tests/test_api_cors.py \
             tests/contracts/test_api_error_contract.py \
             tests/contracts/test_openapi_snapshot.py \
+            tests/contracts/test_openapi_webui_snapshot.py \
             -q --cov=src/api --cov-report=term-missing --cov-fail-under=90
 
   docker:
@@ -180,6 +181,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify generated OpenAPI client is current
+        run: |
+          npm run sync:openapi
+          git diff --exit-code -- openapi.json src/lib/api/schema.ts
 
       - name: Lint
         run: npm run lint

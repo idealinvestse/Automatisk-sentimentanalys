@@ -26,7 +26,9 @@ export function notifyApiError(err: unknown, prefix = "") {
       `${prefix}Otillåten (401) — kontrollera SENTIMENT_API_KEY på BFF (eller DIRECT + NEXT_PUBLIC_API_KEY)`.trim();
   } else if (err instanceof ApiError) {
     const detail = formatApiDetail(err.detail);
-    const base = detail ? `${err.message}: ${detail}` : err.message;
+    const errorCode = extractApiErrorCode(err.detail);
+    const suffix = [errorCode, detail].filter(Boolean).join(": ");
+    const base = suffix ? `${err.message}: ${suffix}` : err.message;
     msg = err.status
       ? `${prefix}${base} (HTTP ${err.status})`.trim()
       : `${prefix}${base}`.trim();
@@ -34,6 +36,19 @@ export function notifyApiError(err: unknown, prefix = "") {
     msg = `${prefix}${msg}`;
   }
   notifyError(msg);
+}
+
+/** Extract the stable backend error code without displaying internal fields. */
+function extractApiErrorCode(detail: unknown): string {
+  if (
+    typeof detail === "object" &&
+    detail !== null &&
+    "error_code" in detail &&
+    typeof (detail as { error_code?: unknown }).error_code === "string"
+  ) {
+    return (detail as { error_code: string }).error_code;
+  }
+  return "";
 }
 
 /** Flatten FastAPI / custom API error payloads for toasts. */

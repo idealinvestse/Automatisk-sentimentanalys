@@ -125,8 +125,17 @@ export function CallsTable({
               <tr
                 key={row.id}
                 onClick={() => onSelectCall?.(row.original.callId)}
+                onKeyDown={(event) => {
+                  if (onSelectCall && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    onSelectCall(row.original.callId);
+                  }
+                }}
+                tabIndex={onSelectCall ? 0 : undefined}
+                role={onSelectCall ? "button" : undefined}
+                aria-label={onSelectCall ? `Öppna samtal ${row.original.title}` : undefined}
                 className={cn(
-                  "border-t border-border transition-colors",
+                  "border-t border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   onSelectCall && "cursor-pointer hover:bg-accent/50",
                 )}
               >
