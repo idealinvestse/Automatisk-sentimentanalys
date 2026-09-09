@@ -23,8 +23,11 @@ See UTVECKLINGSPLAN_Mistral_OpenRouter_LLM_Integration.md for roadmap and privac
 from __future__ import annotations
 
 # Re-exports (populated as modules are implemented)
+from .client_factory import ResolvedLLMClient, resolve_llm_client
+from .context_budget import ContextBudget, resolve_context_budget
 from .groq_analyzer import GroqAnalyzer
 from .groq_client import GroqClient, get_groq_api_key
+from .lmstudio_client import LMStudioClient, LMStudioModelStatus
 from .mistral_analyzer import ConversationMistralAnalyzer
 from .model_catalog import (
     fetch_all_provider_catalogs,
@@ -70,6 +73,12 @@ from .schemas import (
 __all__ = [
     "OpenRouterClient",
     "OpenAICompatClient",
+    "LMStudioClient",
+    "LMStudioModelStatus",
+    "ResolvedLLMClient",
+    "resolve_llm_client",
+    "ContextBudget",
+    "resolve_context_budget",
     "RouterBackedClient",
     "MultiProviderRouter",
     "RouterProfile",

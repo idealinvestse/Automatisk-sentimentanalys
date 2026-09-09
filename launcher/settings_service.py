@@ -179,6 +179,18 @@ def validate_draft(
             issues.append(
                 ValidationIssue("llm", "LLM aktiverat med Groq men ingen API-nyckel konfigurerad.")
             )
+        if draft.llm.provider == "lmstudio":
+            try:
+                from src.llm.lmstudio_client import validate_loopback_base_url
+
+                validate_loopback_base_url(draft.llm.lmstudio_base_url)
+            except Exception:
+                issues.append(
+                    ValidationIssue(
+                        "llm.lmstudio_base_url",
+                        "LM Studio måste använda en numerisk lokal loopback-adress.",
+                    )
+                )
 
     if draft.runtime.alerting.webhook_enabled and not draft.runtime.alerting.webhook_url.strip():
         issues.append(

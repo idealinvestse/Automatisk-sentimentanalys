@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, cast
 
 from ..core.models import Segment
 
@@ -15,24 +15,37 @@ def build_role_labeled_transcript(
 ) -> str:
     """Turn segments into a clean, role-aware transcript for LLM prompts."""
     lines: list[str] = []
-    for seg in segments:
+    if role_map and isinstance(role_map.get("roles"), dict):
+        role_map = cast(dict[str, str], role_map["roles"])
+    for index, seg in enumerate(segments):
         if isinstance(seg, dict):
-            text = seg.get("text", "").strip()
+            text = str(seg.get("text", "")).strip()
             speaker = seg.get("speaker") or seg.get("speaker_label") or "UNKNOWN"
+            start = seg.get("start")
+            end = seg.get("end")
+            segment_id = seg.get("segment_id", seg.get("id", index))
         else:
             text = getattr(seg, "text", "").strip()
             speaker = getattr(seg, "speaker", None) or "UNKNOWN"
+            start = getattr(seg, "start", None)
+            end = getattr(seg, "end", None)
+            segment_id = getattr(seg, "segment_id", index)
+        if not text:
+            continue
 
         role = "UNKNOWN"
         if role_map and speaker in role_map:
-            role = role_map[speaker].upper()
+            role = str(role_map[speaker]).upper()
         elif speaker and "agent" in str(speaker).lower():
             role = "AGENT"
         elif speaker and "customer" in str(speaker).lower():
             role = "CUSTOMER"
 
         prefix = f"[{role}]" if role != "UNKNOWN" else f"[{speaker}]"
-        lines.append(f"{prefix} {text}")
+        timing = ""
+        if start is not None or end is not None:
+            timing = f" start={start if start is not None else '?'} end={end if end is not None else '?'}"
+        lines.append(f"{prefix} {text} [segment={segment_id}{timing}]")
 
     return "\n".join(lines)
 

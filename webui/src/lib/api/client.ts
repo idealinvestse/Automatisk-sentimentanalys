@@ -477,6 +477,18 @@ export interface TranscriptionJobListResponse {
   [key: string]: unknown;
 }
 
+export interface AnalysisJobStatus {
+  job_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  phase: string;
+  error_code?: string | null;
+  result_available: boolean;
+  cancel_requested: boolean;
+  meta: Record<string, unknown>;
+}
+
 /** Edge AI: single segment result from offline analysis. */
 export interface EdgeSegmentResult {
   text: string;
@@ -778,6 +790,38 @@ export class ApiClient {
     // analyzers) can take 30–60s per call on CPU. Use a generous timeout so
     // the demo transcripts don't get aborted mid-analysis.
     return this.post<T>("/analyze_pipeline", { segments, profile: "callcenter", ...options }, 180_000);
+  }
+
+  createAnalysisJob(
+    segments: unknown[],
+    options: Record<string, unknown> = {},
+    idempotencyKey?: string,
+  ) {
+    const headers = idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined;
+    return this.request<AnalysisJobStatus>(
+      "/analysis/jobs",
+      {
+        method: "POST",
+        body: JSON.stringify({ segments, profile: "callcenter", provider: "lmstudio", ...options }),
+        headers,
+      },
+      30_000,
+    );
+  }
+
+  getAnalysisJob(jobId: string) {
+    return this.get<AnalysisJobStatus>(`/analysis/jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  getAnalysisJobResult(jobId: string) {
+    return this.get<PipelineReport>(`/analysis/jobs/${encodeURIComponent(jobId)}/result`);
+  }
+
+  cancelAnalysisJob(jobId: string) {
+    return this.post<{ job_id: string; status: string }>(
+      `/analysis/jobs/${encodeURIComponent(jobId)}/cancel`,
+      {},
+    );
   }
 
   analyzePipelinePartial<T = PipelineReport>(

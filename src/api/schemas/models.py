@@ -19,6 +19,8 @@ _AGENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 MAX_FAS4_CALLS = 50
 MAX_SEGMENTS_PER_CALL = 200
+MAX_ANALYSIS_JOB_SEGMENTS = 5000
+MAX_ANALYSIS_JOB_TEXT_CHARS = 1_000_000
 MAX_ANALYZE_TEXTS = 1000
 
 class AsrParamsMixin(BaseModel):
@@ -459,7 +461,7 @@ class PipelineRequest(BaseModel):
     provider: str = Field(
         "openrouter",
         description="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
-        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
     )
     groq_eu_residency: bool = Field(
         False,
@@ -474,6 +476,55 @@ class PipelineRequest(BaseModel):
         if len(v) > MAX_SEGMENTS_PER_CALL:
             raise ValueError(f"segments must have at most {MAX_SEGMENTS_PER_CALL} items")
         return v
+
+
+class AnalysisJobRequest(BaseModel):
+    """Long-running post-transcription analysis submitted to the bounded local queue."""
+
+    segments: list[dict[str, Any]]
+    profile: str = "callcenter"
+    selected_analyzers: list[str] | None = None
+    sentiment_model: str | None = None
+    device: Literal["cpu"] = "cpu"
+    use_mistral_llm: bool = True
+    llm_model: str | None = None
+    deep_analysis: bool = True
+    provider: Literal["lmstudio"] = "lmstudio"
+
+    @field_validator("segments")
+    @classmethod
+    def validate_long_segments(cls, value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not value:
+            raise ValueError("segments must not be empty")
+        if len(value) > MAX_ANALYSIS_JOB_SEGMENTS:
+            raise ValueError(f"segments must have at most {MAX_ANALYSIS_JOB_SEGMENTS} items")
+        chars = sum(len(str(segment.get("text") or "")) for segment in value)
+        if chars > MAX_ANALYSIS_JOB_TEXT_CHARS:
+            raise ValueError(
+                f"segment text must have at most {MAX_ANALYSIS_JOB_TEXT_CHARS} characters"
+            )
+        return value
+
+
+class AnalysisJobStatusResponse(BaseModel):
+    """Public state for a queued or completed analysis job."""
+
+    job_id: str
+    status: str
+    created_at: str
+    updated_at: str
+    phase: str
+    error_code: str | None = None
+    result_available: bool = False
+    cancel_requested: bool = False
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class AnalysisJobCancelResponse(BaseModel):
+    """Cancellation acknowledgement for an analysis job."""
+
+    job_id: str
+    status: str
 
 
 class PartialPipelineRequest(BaseModel):
@@ -502,7 +553,7 @@ class PartialPipelineRequest(BaseModel):
         None,
         description="Deprecated: prefer X-OpenRouter-Key header.",
     )
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$")
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$")
     groq_eu_residency: bool = False
 
     @field_validator("segments")
@@ -854,7 +905,7 @@ class PipelineCompareRequest(BaseModel):
         description="Total USD budget across all model runs (default: profile cost_budget_per_call)",
     )
     llm_api_key: str | None = None
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$")
+    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$")
     groq_eu_residency: bool = False
 
     @field_validator("segments")
@@ -1034,7 +1085,7 @@ class Fas4LlmFlags(BaseModel):
     provider: str = Field(
         "openrouter",
         description="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
-        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
     )
     groq_eu_residency: bool = Field(
         False,

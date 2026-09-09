@@ -90,13 +90,14 @@ export default function TestLabPage() {
       }
       const segArr = segments as unknown[];
             const effectiveTier = resolveEffectiveTier(routingTier, segArr.length, useLlm);
-            const sel = selectedPerspective?.selectable;
+            const localProvider = provider === "lmstudio";
+            const sel = localProvider ? undefined : selectedPerspective?.selectable;
             const llmModel =
-              useLlm
+              useLlm && !localProvider
                 ? sel?.llm_model || tierToModel(effectiveTier)
                 : undefined;
-            const llmProvider = useLlm ? sel?.provider || provider : provider;
-            const perspective = useLlm ? selectedPerspective?.id : undefined;
+            const llmProvider = localProvider ? "lmstudio" : useLlm ? sel?.provider || provider : provider;
+            const perspective = useLlm && !localProvider ? selectedPerspective?.id : undefined;
             if (partialMode) {
               return apiClient.analyzePipelinePartial(segments, {
                 previous_results: partialPrevious,
@@ -216,6 +217,7 @@ export default function TestLabPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="openrouter">openrouter</SelectItem>
+                                <SelectItem value="lmstudio">lmstudio (lokal)</SelectItem>
                                 <SelectItem value="mistral">mistral</SelectItem>
                                 <SelectItem value="nvidia">nvidia</SelectItem>
                                 <SelectItem value="cerebras">cerebras</SelectItem>
@@ -238,7 +240,7 @@ export default function TestLabPage() {
                         </div>
                       ) : null}
 
-                      {useLlm ? (
+                      {useLlm && provider !== "lmstudio" ? (
                         <AnalysisPerspectivePicker
                           items={perspectiveMenu}
                           value={perspectiveId}

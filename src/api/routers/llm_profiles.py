@@ -103,6 +103,33 @@ def get_analysis_profile_detail(
 @router.get("/providers", summary="Configured LLM providers (key present?)")
 def get_llm_providers() -> dict[str, Any]:
     def _run() -> dict[str, Any]:
-        return {"providers": list_configured_providers()}
+        providers = list_configured_providers()
+        lmstudio: dict[str, Any] = {"configured": providers.get("lmstudio", False)}
+        try:
+            from ...llm.client_factory import resolve_llm_client
+
+            resolved = resolve_llm_client("lmstudio")
+            if resolved.client is None:
+                raise RuntimeError("LM Studio client was not resolved")
+            status = resolved.client.model_status(resolved.model)
+            lmstudio.update(status.to_dict())
+            lmstudio["reachable"] = True
+            lmstudio["context_ready"] = bool(
+                status.loaded_context and status.loaded_context >= resolved.client.requested_context
+            )
+            lmstudio["reasoning_ready"] = status.reasoning_default in {None, "off"}
+            lmstudio["ready"] = bool(lmstudio["context_ready"])
+            lmstudio["requested_context"] = resolved.client.requested_context
+        except Exception as exc:
+            lmstudio.update(
+                {
+                    "reachable": False,
+                    "context_ready": False,
+                    "reasoning_ready": False,
+                    "ready": False,
+                    "error_code": getattr(exc, "error_code", "lmstudio_unavailable"),
+                }
+            )
+        return {"providers": providers, "lmstudio": lmstudio}
 
     return run_route_sync("llm.providers", _run)

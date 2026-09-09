@@ -270,7 +270,7 @@ def _score_with_llm_if_needed(
         rule_sc, rule_pas, rule_ev, rule_sp = _compute_rule_based(criterion, segments, role_map)
         return rule_sc, rule_pas, rule_ev, rule_sp, False
 
-    # Build tiny transcript slice (first + last + any frustration area) to save tokens.
+    # Build the complete redacted transcript so late compliance events are not omitted.
     # ``redact_segments`` always returns list[dict], but be defensive in case a
     # future caller passes list[Segment] and redaction is a no-op.
     def _seg_text(s: Any) -> str:
@@ -280,17 +280,16 @@ def _score_with_llm_if_needed(
         return str(s.get("speaker", "") if isinstance(s, dict) else getattr(s, "speaker", ""))
 
     transcript = "\n".join(
-        f"[{role_map.get(_seg_speaker(s), _seg_speaker(s)) if role_map else _seg_speaker(s)}] {_seg_text(s)[:120]}"
-        for s in segments_for_qa_llm[:12]  # limit
+        f"[{role_map.get(_seg_speaker(s), _seg_speaker(s)) if role_map else _seg_speaker(s)}] {_seg_text(s)}"
+        for s in segments_for_qa_llm
     )
 
     if analyzer is not None and getattr(analyzer, "client", None):
         try:
-            # Use a lightweight structured call via the analyzer's client if possible.
-            # For simplicity we fall back to a direct client call here.
-            from .llm.openrouter_client import OpenRouterClient
-
-            client = getattr(analyzer, "client", None) or OpenRouterClient()
+            # Use the analyzer's resolved client (provider-neutral via client_factory).
+            client = getattr(analyzer, "client", None)
+            if client is None:
+                raise RuntimeError("QA analyzer has no LLM client")
             sys_prompt = "Du är en strikt QA-granskare för svensk kundtjänst. Svara ENDAST med exakt giltig JSON, ingen annan text eller markdown."
             user = f"""Bedöm kriteriet: {criterion["description"]}
 Prompt hint: {prompt_hint}
@@ -307,31 +306,27 @@ Returnera exakt:
             ]
             # We use non-strict text for robustness; in prod use json_schema
             # chat_completion returns (content: str, meta: dict)
-            try:
-                content, meta = client.chat_completion(
-                    messages=messages, model=None, temperature=0.1, max_tokens=300
-                )
-                txt = content or "{}"
-                meta = {"used": "chat_completion", **(meta or {})}
-            except Exception:
-                raw, meta = client.structured_chat(
-                    messages=messages,
-                    model=None,
-                    temperature=0.1,
-                    max_tokens=300,
-                    task_name="qa_criterion_judge",
-                )
-                txt = raw.get("content", "{}") if isinstance(raw, dict) else str(raw)
-            data = {}
-            try:
-                # extract json
-                import re
-
-                m = re.search(r"\{.*\}", txt, re.DOTALL)
-                if m:
-                    data = json.loads(m.group(0))
-            except Exception:
-                data = {}
+            qa_schema = {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number", "minimum": 0, "maximum": 1},
+                    "passed": {"type": "boolean"},
+                    "evidence": {"type": "array", "items": {"type": "string"}},
+                    "reason": {"type": "string"},
+                },
+                "required": ["score", "passed", "evidence", "reason"],
+                "additionalProperties": False,
+            }
+            # extract json
+            data, meta = client.structured_chat(
+                messages=messages,
+                json_schema=qa_schema,
+                model=None,
+                temperature=0.1,
+                max_tokens=300,
+                task_name="qa_criterion_judge",
+            )
+            txt = json.dumps(data, ensure_ascii=False)
             sc = max(0.0, min(1.0, float(data.get("score", 0.5))))
             pas = bool(data.get("passed", sc >= 0.6))
             ev = data.get("evidence", [])[:3] or [txt[:100]]

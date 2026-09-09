@@ -61,6 +61,7 @@ from ..core.models import Segment
 from .openrouter_client import OpenRouterClient
 from .pii_redactor import redact_segments
 from .prompts import build_user_prompt, get_system_prompt
+from .response_validation import validate_call_llm_response
 from .schemas import LLM_OUTPUT_JSON_SCHEMA, CallLLMOutput
 from .transcript_utils import build_role_labeled_transcript, make_transcript_hash
 
@@ -187,6 +188,8 @@ class ConversationMistralAnalyzer:
                 task_name="full_holistic_call_analysis",
                 transcript_hash=transcript_hash,
             )
+
+            validate_call_llm_response(result_dict, tasks=tasks, segments=segments_for_llm)
 
             # Validate + normalize
             validated = CallLLMOutput.model_validate(result_dict)

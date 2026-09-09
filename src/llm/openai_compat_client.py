@@ -78,6 +78,10 @@ class OpenAICompatClient:
             }
             if self.extra_headers:
                 kwargs["default_headers"] = self.extra_headers
+            if self.provider == "lmstudio":
+                import httpx
+
+                kwargs["http_client"] = httpx.Client(trust_env=False, follow_redirects=False)
             self._client = OpenAI(**kwargs)
         return self._client
 
@@ -90,9 +94,23 @@ class OpenAICompatClient:
         messages: list[dict[str, str]],
         json_schema: dict[str, Any] | None,
         task_name: str,
+        *,
+        temperature: float,
+        max_tokens: int,
     ) -> str:
         blob = json.dumps(
-            {"p": self.provider, "m": model, "t": task_name, "msg": messages, "s": json_schema},
+            {
+                "v": 3,
+                "p": self.provider,
+                "u": self.base_url,
+                "m": model,
+                "t": task_name,
+                "msg": messages,
+                "s": json_schema,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "local": self.provider == "lmstudio",
+            },
             sort_keys=True,
             ensure_ascii=False,
         ).encode("utf-8")
@@ -139,14 +157,23 @@ class OpenAICompatClient:
                 details={"provider": self.provider, "task": task_name, "reason": "missing_api_key"},
             )
         model = model or self.default_model
-        cache_key = self._make_cache_key(model, messages, json_schema, task_name)
+        cache_key = self._make_cache_key(
+            model,
+            messages,
+            json_schema,
+            task_name,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         cached = self._load_cache(cache_key)
         if cached:
             return cached
 
         client = self._ensure_client()
+        call_kind = "LOCAL LLM CALL" if self.provider == "lmstudio" else "EXTERNAL LLM CALL"
         logger.info(
-            "EXTERNAL LLM CALL (%s) | model=%s | task=%s | chars≈%d",
+            "%s (%s) | model=%s | task=%s | chars≈%d",
+            call_kind,
             self.provider,
             model,
             task_name,
@@ -174,6 +201,12 @@ class OpenAICompatClient:
                         },
                     )
                 except Exception as schema_exc:
+                    if self.provider == "lmstudio":
+                        raise LLMError(
+                            "LM Studio strict JSON schema request failed",
+                            error_code="lmstudio_schema_request_failed",
+                            details={"task": task_name, "model": model},
+                        ) from schema_exc
                     logger.debug(
                         "%s strict json_schema unsupported (%s); retrying json_object",
                         self.provider,
@@ -187,8 +220,28 @@ class OpenAICompatClient:
                         response_format={"type": "json_object"},
                     )
 
-                content = completion.choices[0].message.content or "{}"
+                choice = completion.choices[0]
+                content = choice.message.content or ""
+                finish_reason = getattr(choice, "finish_reason", None)
+                if not content.strip():
+                    raise LLMError(
+                        f"{self.provider} returned no final content",
+                        error_code="llm_empty_content",
+                        details={"provider": self.provider, "task": task_name},
+                    )
+                if finish_reason == "length":
+                    raise LLMError(
+                        f"{self.provider} response exceeded max_tokens",
+                        error_code="llm_output_truncated",
+                        details={"provider": self.provider, "task": task_name},
+                    )
                 parsed = json.loads(content)
+                if not isinstance(parsed, dict) or not parsed:
+                    raise LLMError(
+                        f"{self.provider} returned an empty structured result",
+                        error_code="llm_empty_result",
+                        details={"provider": self.provider, "task": task_name},
+                    )
                 usage = getattr(completion, "usage", None)
                 meta = {
                     "model": getattr(completion, "model", model),
@@ -206,6 +259,8 @@ class OpenAICompatClient:
             except (APITimeoutError, AuthenticationError) as exc:
                 last_exc = exc
                 break
+            except LLMError:
+                raise
             except Exception as exc:
                 last_exc = exc
                 logger.warning("%s call failed attempt %d: %s", self.provider, attempt, exc)
@@ -237,7 +292,8 @@ class OpenAICompatClient:
             )
         model = model or self.default_model
         client = self._ensure_client()
-        logger.info("EXTERNAL LLM (plain) %s model=%s", self.provider, model)
+        call_kind = "LOCAL LLM" if self.provider == "lmstudio" else "EXTERNAL LLM"
+        logger.info("%s (plain) %s model=%s", call_kind, self.provider, model)
         completion = client.chat.completions.create(
             model=model,
             messages=messages,  # type: ignore[arg-type]

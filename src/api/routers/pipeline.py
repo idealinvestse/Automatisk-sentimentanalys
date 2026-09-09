@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from ...alerting import AlertEngine
 from ...caching import AggregateCache
@@ -26,6 +26,9 @@ from ..schemas import (
     AgentPerformanceResponse,
     AlertsRequest,
     AlertsResponse,
+    AnalysisJobCancelResponse,
+    AnalysisJobRequest,
+    AnalysisJobStatusResponse,
     HotTopicsRequest,
     HotTopicsResponse,
     ModelCompareResult,
@@ -101,6 +104,86 @@ async def analyze_pipeline(
         return _report_to_pipeline_response(report)
 
     return await run_route("analyze_pipeline", _do)
+
+
+@router.post("/analysis/jobs", response_model=AnalysisJobStatusResponse, status_code=202)
+async def create_analysis_job(
+    req: AnalysisJobRequest,
+    request: Request,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> AnalysisJobStatusResponse:
+    """Submit a PII-redacted long-context LM Studio analysis."""
+    if idempotency_key and len(idempotency_key) > 128:
+        raise HTTPException(status_code=400, detail="Idempotency-Key must be at most 128 characters")
+    try:
+        from ...llm.pii_redactor import redact_segments
+
+        redacted_segments = redact_segments(req.segments, profile_name=req.profile)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="PII redaction failed; analysis job rejected") from exc
+
+    payload = req.model_dump()
+    payload["segments"] = redacted_segments
+
+    def _runner(job_payload: dict[str, Any]) -> dict[str, Any]:
+        pipe = create_pipeline(
+            cache=cache,
+            profile=str(job_payload["profile"]),
+            sentiment_model=job_payload.get("sentiment_model"),
+            device="cpu",
+            use_mistral_llm=True,
+            llm_model=job_payload.get("llm_model"),
+            deep_analysis=True,
+            provider="lmstudio",
+        )
+        report = pipe.analyze_segments(
+            job_payload["segments"],
+            job_payload.get("selected_analyzers"),
+        )
+        return _report_to_pipeline_response(report).model_dump(mode="json")
+
+    try:
+        job = request.app.state.analysis_jobs.submit(
+            payload,
+            _runner,
+            idempotency_key=idempotency_key,
+        )
+    except OverflowError as exc:
+        raise HTTPException(status_code=429, detail="Analysis job queue is full") from exc
+    return AnalysisJobStatusResponse(**job.to_dict())
+
+
+@router.get("/analysis/jobs/{job_id}", response_model=AnalysisJobStatusResponse)
+async def get_analysis_job(job_id: str, request: Request) -> AnalysisJobStatusResponse:
+    """Return status for a long-context analysis job."""
+    job = request.app.state.analysis_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+    return AnalysisJobStatusResponse(**job.to_dict())
+
+
+@router.get("/analysis/jobs/{job_id}/result", response_model=PipelineResponse)
+async def get_analysis_job_result(job_id: str, request: Request) -> PipelineResponse:
+    """Return the persisted report for a completed analysis job."""
+    job = request.app.state.analysis_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+    result = request.app.state.analysis_jobs.result(job_id)
+    if result is None:
+        raise HTTPException(status_code=409, detail=f"Analysis result not ready: {job.status}")
+    return PipelineResponse.model_validate(result)
+
+
+@router.post("/analysis/jobs/{job_id}/cancel", response_model=AnalysisJobCancelResponse)
+async def cancel_analysis_job(job_id: str, request: Request) -> AnalysisJobCancelResponse:
+    """Request cancellation without releasing an active inference slot early."""
+    outcome = request.app.state.analysis_jobs.cancel(job_id)
+    if outcome == "not_found":
+        raise HTTPException(status_code=404, detail="Analysis job not found")
+    if outcome == "already_finished":
+        raise HTTPException(status_code=409, detail="Analysis job already finished")
+    return AnalysisJobCancelResponse(job_id=job_id, status=outcome)
 
 
 @router.post("/analyze_pipeline/partial", response_model=PipelineResponse)

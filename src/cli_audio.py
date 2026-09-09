@@ -332,12 +332,12 @@ def register_audio_commands(app: typer.Typer) -> None:
         use_mistral_llm: bool = typer.Option(
             False,
             "--use-mistral-llm",
-            help="Enable Mistral via OpenRouter for full-conversation holistic analysis (trajectory, root cause, actionable QA recommendations, agent assessment). Requires OPENROUTER_API_KEY env var. European/GDPR-preferred models.",
+            help="Enable full-conversation LLM analysis. Use --provider lmstudio for local Qwen without a cloud API key.",
         ),
         llm_model: str | None = typer.Option(
             None,
             "--llm-model",
-            help="Mistral model slug on OpenRouter (default from profile or mistralai/mistral-medium-3-5). Example: mistralai/mistral-large-3",
+            help="Provider-specific model ID. Omit to use that provider's configured default.",
         ),
         deep_analysis: bool = typer.Option(
             False,
@@ -347,7 +347,7 @@ def register_audio_commands(app: typer.Typer) -> None:
         provider: str = typer.Option(
             "openrouter",
             "--provider",
-            help="LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal. Groq is US-hosted (GDPR). free_sequential rotates free-tier providers one-at-a-time.",
+            help="LLM provider: lmstudio|openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal. lmstudio is loopback-only and has no cloud fallback.",
         ),
         groq_eu_residency: bool = typer.Option(
             False,
@@ -405,6 +405,9 @@ def register_audio_commands(app: typer.Typer) -> None:
             if selected_analyzers
             else None
         )
+        if provider == "lmstudio" and device != "cpu":
+            device = "cpu"
+            console.print("[yellow]LM Studio-profil: ASR och lokala analyzers körs på CPU.[/yellow]")
         pipeline = CallAnalysisPipeline(
             sentiment_model=sentiment_model,
             device=device,
@@ -420,7 +423,11 @@ def register_audio_commands(app: typer.Typer) -> None:
         )
 
         if use_mistral_llm or deep_analysis:
-            provider_label = "Groq Cloud" if provider == "groq" else "Mistral/OpenRouter"
+            provider_label = (
+                "LM Studio (lokal)"
+                if provider == "lmstudio"
+                else "Groq Cloud" if provider == "groq" else "Mistral/OpenRouter"
+            )
             extra_warning = ""
             if provider == "groq" and not groq_eu_residency:
                 extra_warning = (

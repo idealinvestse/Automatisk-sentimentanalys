@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 # Fallback defaults when configs/llm_providers.yaml is unavailable
 _PROVIDER_KEY_SPEC: dict[str, dict[str, Any]] = {
+    "lmstudio": {
+        "env_keys": [],
+        "key_files": [],
+        "auth_required": False,
+    },
     "openrouter": {
         "env_keys": ["OPENROUTER_API_KEY"],
         "key_files": ["configs/openrouter.key", "openrouter.key", "OPENROUTER_API_KEY.txt"],
@@ -124,7 +129,10 @@ def list_configured_providers(config: dict[str, Any] | None = None) -> dict[str,
         if isinstance(spec, dict) and spec.get("enabled", True) is False:
             out[name] = False
             continue
-        out[name] = bool(get_provider_api_key(name, config=cfg))
+        out[name] = bool(
+            spec.get("auth_required", True) is False
+            or get_provider_api_key(name, config=cfg)
+        )
     return out
 
 

@@ -21,7 +21,10 @@ def segments_fingerprint(segments: list[dict[str, Any]]) -> str:
 
 def report_cache_key(pipe: CallAnalysisPipeline, segments: list[dict[str, Any]]) -> str:
     fp = segments_fingerprint(segments)
-    return f"report:{pipe.profile}:{pipe.sentiment_model}:{pipe.device}:{fp}"
+    provider = getattr(pipe, "provider", "openrouter")
+    model = getattr(pipe, "llm_model", None) or "provider-default"
+    deep = bool(getattr(pipe, "use_mistral_llm", False) or getattr(pipe, "deep_analysis", False))
+    return f"report:v2:{pipe.profile}:{pipe.sentiment_model}:{pipe.device}:{provider}:{model}:{deep}:{fp}"
 
 
 def resolve_reports(

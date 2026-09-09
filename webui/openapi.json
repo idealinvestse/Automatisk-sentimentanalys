@@ -749,6 +749,215 @@
         ]
       }
     },
+    "/analysis/jobs": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Create Analysis Job",
+        "description": "Submit a PII-redacted long-context LM Studio analysis.",
+        "operationId": "create_analysis_job_analysis_jobs_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisJobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analysis/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Analysis Job",
+        "description": "Return status for a long-context analysis job.",
+        "operationId": "get_analysis_job_analysis_jobs__job_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisJobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analysis/jobs/{job_id}/result": {
+      "get": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Get Analysis Job Result",
+        "description": "Return the persisted report for a completed analysis job.",
+        "operationId": "get_analysis_job_result_analysis_jobs__job_id__result_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analysis/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "Pipeline"
+        ],
+        "summary": "Cancel Analysis Job",
+        "description": "Request cancellation without releasing an active inference slot early.",
+        "operationId": "cancel_analysis_job_analysis_jobs__job_id__cancel_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisJobCancelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analyze_pipeline/partial": {
       "post": {
         "tags": [
@@ -1814,7 +2023,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
@@ -1937,7 +2146,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
@@ -2008,6 +2217,166 @@
           "timestamp"
         ],
         "title": "AlertsResponse"
+      },
+      "AnalysisJobCancelResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "AnalysisJobCancelResponse",
+        "description": "Cancellation acknowledgement for an analysis job."
+      },
+      "AnalysisJobRequest": {
+        "properties": {
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "callcenter"
+          },
+          "selected_analyzers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Analyzers"
+          },
+          "sentiment_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment Model"
+          },
+          "device": {
+            "type": "string",
+            "const": "cpu",
+            "title": "Device",
+            "default": "cpu"
+          },
+          "use_mistral_llm": {
+            "type": "boolean",
+            "title": "Use Mistral Llm",
+            "default": true
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "deep_analysis": {
+            "type": "boolean",
+            "title": "Deep Analysis",
+            "default": true
+          },
+          "provider": {
+            "type": "string",
+            "const": "lmstudio",
+            "title": "Provider",
+            "default": "lmstudio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "AnalysisJobRequest",
+        "description": "Long-running post-transcription analysis submitted to the bounded local queue."
+      },
+      "AnalysisJobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "result_available": {
+            "type": "boolean",
+            "title": "Result Available",
+            "default": false
+          },
+          "cancel_requested": {
+            "type": "boolean",
+            "title": "Cancel Requested",
+            "default": false
+          },
+          "meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "created_at",
+          "updated_at",
+          "phase"
+        ],
+        "title": "AnalysisJobStatusResponse",
+        "description": "Public state for a queued or completed analysis job."
       },
       "AnalyzeConversationRequest": {
         "properties": {
@@ -4094,7 +4463,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
@@ -4438,7 +4807,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "default": "openrouter"
           },
@@ -4545,7 +4914,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "default": "openrouter"
           },
@@ -4730,7 +5099,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
@@ -4939,7 +5308,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"
@@ -5640,7 +6009,7 @@
           },
           "provider": {
             "type": "string",
-            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal|router)$",
+            "pattern": "^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
             "title": "Provider",
             "description": "LLM provider: openrouter|groq|mistral|nvidia|cerebras|auto|free_sequential|sv_optimal",
             "default": "openrouter"

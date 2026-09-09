@@ -100,11 +100,11 @@ class CallAnalysisPipeline:
             llm_spec = (spec or {}).get("llm", {}) or {}
             if not self.use_mistral_llm and not self.deep_analysis:
                 self.use_mistral_llm = bool(llm_spec.get("enabled", False))
-            if self.llm_model is None:
-                self.llm_model = llm_spec.get("default_model")
             # Auto-detect provider from profile config
             if self.provider == "openrouter" and llm_spec.get("provider"):
                 self.provider = str(llm_spec.get("provider", "openrouter"))
+            if self.llm_model is None and self.provider != "lmstudio":
+                self.llm_model = llm_spec.get("default_model")
             # Groq GDPR gate from profile
             if self.provider == "groq" and not self.groq_eu_residency:
                 groq_cfg = (spec or {}).get("groq", {}) or {}
@@ -139,7 +139,7 @@ class CallAnalysisPipeline:
                 "max_segments_per_call": 5,
                 "max_cost_usd": 0.10,
                 "provider": self.provider,
-                "model": self.llm_model or "llama-3.1-8b-instant",
+                "model": self.llm_model,
                 "api_key": self.llm_api_key,
             },
         }
@@ -604,12 +604,26 @@ class CallAnalysisPipeline:
                 else:
                     from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
+                    aggregate_client: Any = None
+                    aggregate_model = self.llm_model
+                    if self.provider in {"lmstudio", "mistral", "nvidia", "cerebras", "openrouter"}:
+                        from .llm.client_factory import resolve_llm_client
+
+                        resolved = resolve_llm_client(
+                            self.provider,
+                            model=self.llm_model,
+                            api_key=self.llm_api_key,
+                        )
+                        aggregate_client = resolved.client
+                        aggregate_model = resolved.model
                     mistral = ConversationMistralAnalyzer(
-                        model=self.llm_model,
+                        client=aggregate_client,
+                        model=aggregate_model,
                         api_key=self.llm_api_key,
                     )
                     logger.info(
-                        "Fas 4.3 aggregator using Mistral for cluster/topic descriptions (selective)"
+                        "Fas 4.3 aggregator using %s for cluster/topic descriptions (selective)",
+                        self.provider,
                     )
 
             agg_dict = aggregate_call_reports(reports, mistral_analyzer=mistral)

@@ -45,6 +45,7 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 
 ### Partially / Recently Added
 
+- **LM Studio lokal LLM-integration (2026-09)** — `lmstudio` provider för Qwen 3.5 9B The Defiant (Q4_K_S) vid 70k total kontext; delad klientfactory för holistisk/QA/judge/insights; strukturerad utdata + evidensvalidering; beständiga bakgrundsjobb (`/analysis/jobs`); WebUI-panel + CLI `--provider lmstudio`; CPU-ASR-alternativ. Reasoning-off kan inte garanteras via OpenAI-kompatibelt API (se `docs/LM_STUDIO_LOCAL.md`). Ej pilot-godkänd.
 - **ASR dual-engine hardening (2026-07)** — router, cloud opt-in, decode hardening, persistent jobs, metrics; see `CHANGELOG.md`.
 - `diarize` optional dependency group (`pyproject.toml`)
 - Consolidated Quickstart + Hardware Requirements in README

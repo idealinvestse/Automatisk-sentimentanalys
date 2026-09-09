@@ -9,6 +9,12 @@
 | nvidia     | `https://integrate.api.nvidia.com/v1` | `NVIDIA_API_KEY` / `configs/nvidia.key` |
 | cerebras   | `https://api.cerebras.ai/v1` | `CEREBRAS_API_KEY` / `configs/cerebras.key` |
 | groq       | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` (dev-only; GDPR) |
+| lmstudio   | `http://127.0.0.1:1234/v1` | ingen nyckel (lokal; placeholder `lm-studio`) |
+
+`lmstudio` är en lokal provider som inte kräver cloud-nyckel. Se
+[`docs/LM_STUDIO_LOCAL.md`](LM_STUDIO_LOCAL.md) för operationsdetaljer,
+70k kontextpolicy och reasoning-kompatibilitetsbegränsningar. Ingen automatisk
+cloud fallback sker om LM Studio misslyckas.
 
 Keys are **gitignored** (`*.key`, `.env`). Never commit them.
 

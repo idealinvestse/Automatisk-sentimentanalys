@@ -534,8 +534,10 @@ def evaluate_llm_quality(
     use_real_llm: bool = typer.Option(
         False,
         "--use-real-llm",
-        help="Actually call Mistral if OPENROUTER_API_KEY is set (otherwise fallback path)",
+        help="Explicitly permit live LLM inference; otherwise this command is network-free.",
     ),
+    provider: str = typer.Option("openrouter", "--provider"),
+    llm_model: str | None = typer.Option(None, "--llm-model"),
 ):
     """Utvärdera kvalitet på Mistral holistisk analys (Fas 3.3.3).
 
@@ -559,13 +561,18 @@ def evaluate_llm_quality(
     schema_pass = 0
     deep_path_hits = 0
 
-    analyzer = ConversationMistralAnalyzer()
+    analyzer: ConversationMistralAnalyzer | None = None
+    if use_real_llm:
+        from .llm.client_factory import resolve_llm_client
+
+        resolved = resolve_llm_client(provider, model=llm_model)
+        analyzer = ConversationMistralAnalyzer(client=resolved.client, model=resolved.model)
     llm_ctx = PipelineLLMContext(
         profile="callcenter",
-        provider="openrouter",
+        provider=provider,
         use_mistral_llm=use_real_llm,
         deep_analysis=use_real_llm,
-        llm_model=None,
+        llm_model=llm_model,
         llm_api_key=None,
         groq_eu_residency=False,
     )
@@ -575,9 +582,16 @@ def evaluate_llm_quality(
         if should_use_any_llm(segs, llm_ctx):
             deep_path_hits += 1
         for run in range(2):
-            out = analyzer.analyze_full_conversation(
-                segments=segs,
-                role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"},
+            out = (
+                analyzer.analyze_full_conversation(
+                    segments=segs,
+                    role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"},
+                )
+                if analyzer is not None
+                else {
+                    "fallback": True,
+                    "meta": {"llm_used": False, "fallback_reason": "live_llm_disabled"},
+                }
             )
             meta = out.get("meta", {})
             cost = meta.get("cost_usd") or 0.0
@@ -630,6 +644,8 @@ def evaluate_llm_quality(
         "schema_pass_rate": round(schema_pass / max(1, n), 4),
         "total_cost_usd": round(sum(costs), 6),
         "use_real_llm": use_real_llm,
+        "provider": provider,
+        "llm_model": llm_model,
         "consistency_note": "Second run on identical input should be cached (cost ~0) if client cache works.",
     }
 
@@ -642,7 +658,7 @@ def evaluate_llm_quality(
             "timestamp": datetime.now(UTC).isoformat(),
             "metrics": metrics,
             "details": results,
-            "note": "Run with --use-real-llm (and OPENROUTER_API_KEY) for real Mistral numbers. Human preference study recommended for true insight quality.",
+            "note": "Run with --use-real-llm and an explicit provider for live numbers. Human preference study recommended for true insight quality.",
         }
         with open(output, "w", encoding="utf-8") as f:
             json.dump(full, f, ensure_ascii=False, indent=2)

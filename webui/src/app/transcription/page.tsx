@@ -4,8 +4,10 @@ import * as React from "react";
 import { Radio, Play, Square, Trash2, Upload, FileAudio } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
+import { AnalysisJobPanel } from "@/components/analysis-job-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -43,6 +45,13 @@ export default function TranscriptionPage() {
     useTranscriptionSocket();
   const [jobIdInput, setJobIdInput] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [useLocalLlm, setUseLocalLlm] = React.useState(false);
+  const [analysisSegments, setAnalysisSegments] = React.useState<unknown[]>([]);
+  const [pendingCall, setPendingCall] = React.useState<{
+    title: string;
+    durationS: number;
+    segments: Array<{ speaker: string; text: string; start: number; end: number }>;
+  } | null>(null);
   const logEndRef = React.useRef<HTMLDivElement>(null);
   const addRealCall = useCallsStore((state) => state.addRealCall);
 
@@ -57,6 +66,7 @@ export default function TranscriptionPage() {
         backend: "faster",
         model: "kb-whisper-large",
         language: "sv",
+        device: useLocalLlm ? "cpu" : "auto",
         word_timestamps: true,
         vad: true,
       };
@@ -65,18 +75,12 @@ export default function TranscriptionPage() {
       // Convert transcript to segments format for analyzePipeline
       const transcript = transcribeResult.transcript as Record<string, unknown>;
       const rawSegments = transcript.segments as Array<{ speaker: string; text: string; start: number; end?: number }> | undefined;
-      // Normalize speaker values to "Agent" or "Kund" and ensure end value
-      const segments = (rawSegments || []).map((s) => {
-        const speakerLower = s.speaker.toLowerCase();
-        const normalizedSpeaker: "Agent" | "Kund" =
-          speakerLower.includes("agent") || speakerLower.includes("speaker_0") ? "Agent" : "Kund";
-        return {
-          speaker: normalizedSpeaker,
-          text: s.text,
-          start: s.start,
-          end: s.end ?? s.start + 1,
-        };
-      });
+      const segments = (rawSegments || []).map((s) => ({
+        speaker: s.speaker || "UNKNOWN",
+        text: s.text,
+        start: s.start,
+        end: s.end ?? s.start + 1,
+      }));
 
       if (segments.length === 0) {
         throw new ApiError(
@@ -86,6 +90,12 @@ export default function TranscriptionPage() {
 
       // Calculate duration from segments
       const durationS = segments.length > 0 ? segments[segments.length - 1].end : 0;
+
+      if (useLocalLlm) {
+        setAnalysisSegments(segments);
+        setPendingCall({ title: selectedFile.name, durationS, segments });
+        return transcribeResult;
+      }
 
       // Run pipeline analysis
       const report = await apiClient.analyzePipeline<PipelineReport>(segments, { profile: "callcenter" });
@@ -110,11 +120,44 @@ export default function TranscriptionPage() {
       return transcribeResult;
     },
     onSuccess: () => {
-      notifySuccess("Transkribering och analys klar - samtal sparat i dashboard");
+      notifySuccess(
+        useLocalLlm
+          ? "Transkribering klar - starta den lokala analysen nedan"
+          : "Transkribering och analys klar - samtal sparat i dashboard",
+      );
       setSelectedFile(null);
     },
     onError: (err) => notifyApiError(err, "Transkriberingsfel: "),
   });
+
+  const completeLocalAnalysis = React.useCallback(
+    async (jobId: string) => {
+      if (!pendingCall) return;
+      try {
+        const report = await apiClient.getAnalysisJobResult(jobId);
+        addRealCall({
+          transcript: {
+            id: `real-${Date.now()}`,
+            title: pendingCall.title,
+            meta: {
+              agent: "Okänd",
+              customer: "Okänd",
+              duration_s: pendingCall.durationS,
+              category: "uppladdad",
+            },
+            segments: pendingCall.segments,
+          },
+          report,
+        });
+        setPendingCall(null);
+        setAnalysisSegments([]);
+        notifySuccess("Lokal LM Studio-analys klar - samtal sparat i dashboard");
+      } catch (err) {
+        notifyApiError(err, "Kunde inte hämta lokal analys: ");
+      }
+    },
+    [addRealCall, pendingCall],
+  );
 
   React.useEffect(() => {
     logEndRef.current?.scrollIntoView({ block: "end" });
@@ -181,6 +224,8 @@ export default function TranscriptionPage() {
 
       <TranscriptionJobsPanel />
 
+      <AnalysisJobPanel segments={analysisSegments} onCompleted={completeLocalAnalysis} />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -192,6 +237,13 @@ export default function TranscriptionPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={useLocalLlm}
+              onCheckedChange={(checked) => setUseLocalLlm(checked === true)}
+            />
+            Kör efteranalys lokalt med LM Studio (CPU-ASR, 70k-profil)
+          </label>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="audio-file" className="text-xs font-medium text-muted-foreground">
               Välj ljudfil

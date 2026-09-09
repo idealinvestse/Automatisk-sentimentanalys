@@ -119,7 +119,7 @@ def _build_judge_prompt(
     user_content = (
         "Du är en svensk sentiment-judge för callcenter-transkript. "
         "Ta hänsyn till talarroll (AGENT/CUSTOMER) och negation. "
-        "Bedöm varje segment nedan och returnera ENDAST en JSON-lista "
+        "Bedöm varje segment nedan och returnera ENDAST ett JSON-objekt med nyckeln verdicts, en lista "
         "där varje objekt har: segment_index, judge_label (positive/negative/neutral), judge_confidence (0-1), "
         "reasoning (1-2 meningar på svenska).\n\n" + "\n".join(lines)
     )
@@ -189,7 +189,7 @@ class LLMJudgeAnalyzer(Analyzer):
         )
         self.max_cost_usd = max_cost_usd if max_cost_usd is not None else DEFAULT_MAX_COST_USD
         self.provider = (provider or DEFAULT_PROVIDER).lower()
-        self.model = model or DEFAULT_MODEL
+        self.model = model or ("" if self.provider == "lmstudio" else DEFAULT_MODEL)
         self.api_key = api_key
         self._client: Any = None
 
@@ -206,7 +206,21 @@ class LLMJudgeAnalyzer(Analyzer):
         if self._client is not None:
             return self._client
 
-        if self.provider == "groq":
+        if self.provider == "lmstudio":
+            try:
+                from ..llm.client_factory import resolve_llm_client
+
+                resolved = resolve_llm_client(
+                    self.provider,
+                    model=self.model or None,
+                    api_key=self.api_key,
+                )
+                self._client = resolved.client
+                self.model = resolved.model
+            except Exception as e:
+                logger.warning("Failed to instantiate LM Studio client: %s", e)
+                return None
+        elif self.provider == "groq":
             if not _HAS_GROQ or GroqClient is None:
                 logger.warning("Groq client requested but groq_client module unavailable")
                 return None
@@ -338,8 +352,10 @@ class LLMJudgeAnalyzer(Analyzer):
                 )
 
                 # Log EXTERNAL LLM CALL (mandatory)
+                call_kind = "LOCAL LLM CALL" if self.provider == "lmstudio" else "EXTERNAL LLM CALL"
                 logger.info(
-                    "EXTERNAL LLM CALL (LLMJudge) | provider=%s | model=%s | segments=%d | task=llm_judge_low_conf",
+                    "%s (LLMJudge) | provider=%s | model=%s | segments=%d | task=llm_judge_low_conf",
+                    call_kind,
                     self.provider,
                     self.model,
                     len(batch_indices),
@@ -354,7 +370,39 @@ class LLMJudgeAnalyzer(Analyzer):
                     try:
                         raw, meta = client.structured_chat(
                             messages=messages,
-                            json_schema={"type": "array", "items": {"type": "object"}},
+                            json_schema={
+                                "type": "object",
+                                "properties": {
+                                    "verdicts": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "segment_index": {"type": "integer", "minimum": 0},
+                                                "judge_label": {
+                                                    "type": "string",
+                                                    "enum": ["positive", "negative", "neutral"],
+                                                },
+                                                "judge_confidence": {
+                                                    "type": "number",
+                                                    "minimum": 0,
+                                                    "maximum": 1,
+                                                },
+                                                "reasoning": {"type": "string"},
+                                            },
+                                            "required": [
+                                                "segment_index",
+                                                "judge_label",
+                                                "judge_confidence",
+                                                "reasoning",
+                                            ],
+                                            "additionalProperties": False,
+                                        },
+                                    }
+                                },
+                                "required": ["verdicts"],
+                                "additionalProperties": False,
+                            },
                             task_name="llm_judge",
                             model=self.model,
                         )

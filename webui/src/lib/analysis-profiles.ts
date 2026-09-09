@@ -4,6 +4,7 @@
  */
 
 export type AnalysisPerspectiveId =
+  | "local_lmstudio"
   | "cost_saver"
   | "batch_throughput"
   | "sentiment_refine"
@@ -50,6 +51,22 @@ export interface AnalysisProfilesResponse {
 
 /** Fallback menu if API is offline — still selectable with sensible defaults. */
 export const FALLBACK_ANALYSIS_MENU: AnalysisProfileMenuItem[] = [
+  {
+    id: "local_lmstudio",
+    label: "Lokal LLM (LM Studio)",
+    description: "Qwen 3.5 9B The Defiant, 70k kontext, reasoning av. Loopback-only, ingen cloud-fallback.",
+    use_when: "Lokal-first analys utan molnberoende",
+    provider: "lmstudio",
+    model: null,
+    blended_usd_per_m: 0,
+    est_cost_per_call_usd: 0,
+    selectable: {
+      provider: "lmstudio",
+      llm_model: null,
+      use_mistral_llm: true,
+      deep_analysis: true,
+    },
+  },
   {
     id: "balanced_ops",
     label: "Balanserad drift",

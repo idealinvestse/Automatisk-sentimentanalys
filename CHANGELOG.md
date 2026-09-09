@@ -8,7 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **LM Studio lokal LLM-integration** — första klassens provider `lmstudio` för lokalt hostad Qwen 3.5 9B The Defiant Fable (Q4_K_S) med 70k total kontextpolicy. Ny `LMStudioClient` (`src/llm/lmstudio_client.py`) med OpenAI-kompatibla anrop, native modellstatus, tokenizer-baserad tokenräkning, loopback-validering och reasoning-kompatibilitetshantering. Delad `client_factory` (`src/llm/client_factory.py`) kopplar holistisk analys, QA, LLM-judge och insights-aggregation till vald provider utan automatisk cloud fallback. Strikt svars-/evidensvalidering (`src/llm/response_validation.py`). Beständiga bakgrundsjobb (`POST /analysis/jobs`, `GET /analysis/jobs/{id}`, `GET /analysis/jobs/{id}/result`, `POST /analysis/jobs/{id}/cancel`) med SQLite-backad lagring, idempotens, restart-återhämtning och 2 MiB-payloadgräns. WebUI: `AnalysisJobPanel` + `useAnalysisJob`-hook med pollning och återanslutning. CLI `--provider lmstudio` och CPU-ASR-alternativ. Launcher/preflight validerar LM Studio-konfiguration utan att ändra modellinställningar. Live-prov bekräftar strukturerad `CallLLMOutput` validerar vid 70k kontext, men **reasoning av kan inte garanteras** via OpenAI-kompatibelt API (se `docs/LM_STUDIO_LOCAL.md`).
 - **Refactor hygiene (0.5.1 follow-up)** — single package version helper, BFF-default webui, OpenAPI drift gate, WS reconnect hardening, schema/CLI splits.
+
+### Fixed
+- **LM Studio reasoning hard-fail blockerade all användning** — `_preflight` raiseade `LLMError` när `reasoning_default != off`, vilket gjorde LM Studio helt oanvändbar i aktuell konfiguration. Ändrat till varning + metadata; validering av `content` hanterar reasoning-on säkert.
+- **Bakgrundsjobb queue limit off-by-one** — `AnalysisJobManager.submit` tillät `max_queued + 1` jobb istället för `max_queued`. Fixat gränskontroll.
+- **Död OpenRouterClient-fallback i QA-LLM-väg** — `compliance_qa.py` hade `or OpenRouterClient()` fallback inuti en redan truthy-guardad block, vilket var död kod men kunde läcka cloud-fallback vid framtida refaktorering. Borttagen.
+- **QA/insights/holistic bypassade client_factory** — för openrouter/mistral/nvidia/cerebras skapades ingen klient via factoryn, utan `ConversationMistralAnalyzer` föll tillbaka till sin egen `OpenRouterClient`. Alla LLM-vägar routas nu genom `resolve_llm_client` för konsekvent provider-policy.
+- **Preflight visade fel meddelande** — rapporterade "loaded with context=None" även när modellen inte var laddad. Konditionellt meddelande lagt till.
+- **Cache-nyckel saknade lokal/reasoning-identitet** — cache-nyckel version höjd till v3 med `local`-flagga för att separera LM Studio- och cloud-cacheposter.
+- **LLM-status API blockerade reasoning-on** — `/llm/providers` rapporterade `ready: False` när reasoning var på, trots att strukturerad utda fungerar. `ready` kräver nu endast `context_ready`; `reasoning_ready` är informativt.
+- **WebUI saknade lokal profil i fallback-menyn** — `FALLBACK_ANALYSIS_MENU` hade ingen "Lokal LLM"-ingång. Ny `local_lmstudio`-profil tillagd separerad från molnprofiler.
 
 ## [0.5.1] - 2026-08-27
 

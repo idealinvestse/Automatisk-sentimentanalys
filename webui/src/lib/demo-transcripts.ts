@@ -11,11 +11,12 @@ export interface DemoSegment {
   start: number;
   end: number;
   text: string;
-  speaker: "Agent" | "Kund";
+  speaker: string;
 }
 
 export interface DemoTranscriptMeta {
   agent: string;
+  customer?: string;
   duration_s: number;
   category: string;
 }

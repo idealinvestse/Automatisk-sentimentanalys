@@ -187,6 +187,33 @@ def _check_webui(report: PreflightReport, cfg: UserConfig) -> None:
     )
 
 
+def _check_lmstudio(report: PreflightReport, cfg: UserConfig) -> None:
+    if not cfg.llm.enabled or cfg.llm.provider != "lmstudio":
+        return
+    try:
+        from ..llm.client_factory import resolve_llm_client
+
+        resolved = resolve_llm_client("lmstudio", model=cfg.llm.default_model)
+        if resolved.client is None:
+            raise RuntimeError("LM Studio client was not resolved")
+        status = resolved.client.model_status(resolved.model)
+        context_ready = bool(
+            status.loaded_context and status.loaded_context >= cfg.llm.lmstudio_context_length
+        )
+        report.add(
+            "lmstudio",
+            status.loaded and context_ready,
+            (
+                f"LM Studio model loaded with context={status.loaded_context}"
+                if status.loaded
+                else f"LM Studio model not loaded: {resolved.model}"
+            ),
+            "Reload the selected model with 70000 context tokens" if not context_ready else "",
+        )
+    except Exception as exc:
+        report.add("lmstudio", False, "LM Studio local provider unavailable", str(exc))
+
+
 def run_preflight(
     cfg: UserConfig | None = None,
     *,
@@ -218,8 +245,13 @@ def run_preflight(
         _check_writable(report, cfg.resolved_data_root(), "data_root")
         _check_disk(report, cfg.resolved_data_root())
 
-    need_or = require_openrouter if require_openrouter is not None else cfg.llm.enabled
+    need_or = (
+        require_openrouter
+        if require_openrouter is not None
+        else cfg.llm.enabled and cfg.llm.provider == "openrouter"
+    )
     _check_secrets(report, cfg, require_openrouter=need_or)
+    _check_lmstudio(report, cfg)
     _check_api_deps(report, cfg)
     _check_webui(report, cfg)
 

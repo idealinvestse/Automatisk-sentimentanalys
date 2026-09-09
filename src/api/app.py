@@ -69,6 +69,7 @@ from .routers import (
     transcription,
     ws_transcription,
 )
+from .services.analysis_jobs import AnalysisJobManager
 from .settings import get_api_settings, validate_production_settings
 from .transcription_events import JOB_HEADER, TranscriptionEventHub
 from .transcription_job_store import create_job_store
@@ -108,10 +109,19 @@ def _init_app_state(application: FastAPI) -> None:
         )
     if not hasattr(application.state, "call_store"):
         application.state.call_store = CallStore(settings.state_dir)
+    if not hasattr(application.state, "analysis_jobs"):
+        application.state.analysis_jobs = AnalysisJobManager(settings.state_dir)
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        if request.url.path == "/analysis/jobs":
+            content_length = request.headers.get("content-length")
+            if content_length and content_length.isdigit() and int(content_length) > 2 * 1024 * 1024:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "Analysis job payload exceeds 2 MiB"},
+                )
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         job_id = request.headers.get(JOB_HEADER) or request_id
         request.state.request_id = request_id
@@ -157,6 +167,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     )
     app.state.ws_tickets = TicketStore(redis_client=app.state.cache.redis_client)
     app.state.call_store = CallStore(settings.state_dir)
+    app.state.analysis_jobs = AnalysisJobManager(settings.state_dir)
     init_app_info(version=get_package_version())
 
     # Startup upload retention cleanup (also runs on each upload)
@@ -192,6 +203,7 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
         hub.backend,
     )
     yield
+    app.state.analysis_jobs.shutdown()
     await hub.stop_redis_listener()
     reporter.phase("api", "shutdown", "Swedish Sentiment API shutting down")
     logger.info("Swedish Sentiment API shutting down")

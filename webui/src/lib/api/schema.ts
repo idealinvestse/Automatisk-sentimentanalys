@@ -331,6 +331,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analysis/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Analysis Job
+         * @description Submit a PII-redacted long-context LM Studio analysis.
+         */
+        post: operations["create_analysis_job_analysis_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analysis/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Analysis Job
+         * @description Return status for a long-context analysis job.
+         */
+        get: operations["get_analysis_job_analysis_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analysis/jobs/{job_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Analysis Job Result
+         * @description Return the persisted report for a completed analysis job.
+         */
+        get: operations["get_analysis_job_result_analysis_jobs__job_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analysis/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Analysis Job
+         * @description Request cancellation without releasing an active inference slot early.
+         */
+        post: operations["cancel_analysis_job_analysis_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analyze_pipeline/partial": {
         parameters: {
             query?: never;
@@ -900,6 +980,91 @@ export interface components {
             }[];
             /** Timestamp */
             timestamp: string;
+        };
+        /**
+         * AnalysisJobCancelResponse
+         * @description Cancellation acknowledgement for an analysis job.
+         */
+        AnalysisJobCancelResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * AnalysisJobRequest
+         * @description Long-running post-transcription analysis submitted to the bounded local queue.
+         */
+        AnalysisJobRequest: {
+            /** Segments */
+            segments: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Profile
+             * @default callcenter
+             */
+            profile: string;
+            /** Selected Analyzers */
+            selected_analyzers?: string[] | null;
+            /** Sentiment Model */
+            sentiment_model?: string | null;
+            /**
+             * Device
+             * @default cpu
+             * @constant
+             */
+            device: "cpu";
+            /**
+             * Use Mistral Llm
+             * @default true
+             */
+            use_mistral_llm: boolean;
+            /** Llm Model */
+            llm_model?: string | null;
+            /**
+             * Deep Analysis
+             * @default true
+             */
+            deep_analysis: boolean;
+            /**
+             * Provider
+             * @default lmstudio
+             * @constant
+             */
+            provider: "lmstudio";
+        };
+        /**
+         * AnalysisJobStatusResponse
+         * @description Public state for a queued or completed analysis job.
+         */
+        AnalysisJobStatusResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: string;
+            /** Updated At */
+            updated_at: string;
+            /** Phase */
+            phase: string;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Result Available
+             * @default false
+             */
+            result_available: boolean;
+            /**
+             * Cancel Requested
+             * @default false
+             */
+            cancel_requested: boolean;
+            /** Meta */
+            meta?: {
+                [key: string]: unknown;
+            };
         };
         /** AnalyzeConversationRequest */
         AnalyzeConversationRequest: {
@@ -3545,6 +3710,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_analysis_job_analysis_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisJobRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_job_analysis_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analysis_job_result_analysis_jobs__job_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_analysis_job_analysis_jobs__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobCancelResponse"];
                 };
             };
             /** @description Validation Error */

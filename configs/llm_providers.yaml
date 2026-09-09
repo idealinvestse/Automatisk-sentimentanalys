@@ -6,6 +6,23 @@
 #   sv_optimal       — best Swedish-capable models per provider (seq or parallel fan-out)
 
 providers:
+  lmstudio:
+    enabled: true
+    base_url: "http://127.0.0.1:1234"
+    env_keys: []
+    key_files: []
+    auth_required: false
+    models_path: "/api/v1/models"
+    default_model: "qwen3.5-9b-the-defiant-fable-uncensored-heretic-neo-imatrix-max-mtp"
+    requested_context: 70000
+    output_tokens: 8192
+    safety_margin_tokens: 2048
+    timeout_seconds: 900
+    enable_cache: false
+    max_concurrency: 1
+    reasoning: "off"
+    allow_cloud_failover: false
+
   openrouter:
     enabled: true
     base_url: "https://openrouter.ai/api/v1"

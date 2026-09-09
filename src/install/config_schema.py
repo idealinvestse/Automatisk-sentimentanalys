@@ -59,6 +59,31 @@ class LlmConfig(BaseModel):
     cost_budget_per_call: float = 0.08
     anonymize_before_llm: bool = False
     log_external_calls: bool = True
+    lmstudio_base_url: str = "http://127.0.0.1:1234"
+    lmstudio_context_length: int = 70000
+    lmstudio_reasoning: str = "off"
+    lmstudio_max_concurrency: int = 1
+
+    @field_validator("lmstudio_context_length")
+    @classmethod
+    def _validate_lmstudio_context(cls, value: int) -> int:
+        if not 8192 <= value <= 262144:
+            raise ValueError("LM Studio context length must be between 8192 and 262144")
+        return value
+
+    @field_validator("lmstudio_reasoning")
+    @classmethod
+    def _validate_lmstudio_reasoning(cls, value: str) -> str:
+        if value != "off":
+            raise ValueError("LM Studio reasoning must be off")
+        return value
+
+    @field_validator("lmstudio_max_concurrency")
+    @classmethod
+    def _single_lmstudio_inference(cls, value: int) -> int:
+        if value != 1:
+            raise ValueError("LM Studio max concurrency must be 1")
+        return value
 
 
 class ServicesConfig(BaseModel):

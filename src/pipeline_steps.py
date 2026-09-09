@@ -214,7 +214,17 @@ def run_mistral_holistic(
         provider = (ctx.provider or "openrouter").lower()
 
         # Multi-provider router profiles
-        if provider in {"auto", "free_sequential", "sv_optimal", "router"}:
+        if provider == "lmstudio":
+            from .llm.client_factory import resolve_llm_client
+
+            resolved = resolve_llm_client(
+                provider,
+                model=model,
+                api_key=ctx.llm_api_key,
+            )
+            client = resolved.client
+            model = resolved.model
+        elif provider in {"auto", "free_sequential", "sv_optimal", "router"}:
             from .llm.router_client import RouterBackedClient
 
             profile = "sv_optimal" if provider == "sv_optimal" else "free_sequential"
@@ -236,7 +246,16 @@ def run_mistral_holistic(
                 extra_headers=dict(spec.get("headers_extra") or {}),
             )
         else:
-            # openrouter default
+            # openrouter default — route through shared factory for consistency
+            from .llm.client_factory import resolve_llm_client
+
+            resolved = resolve_llm_client(
+                "openrouter",
+                model=model,
+                api_key=ctx.llm_api_key,
+            )
+            client = resolved.client
+            model = resolved.model
             if not model:
                 from .llm.routing import RoutingTier, select_model
 
@@ -250,6 +269,8 @@ def run_mistral_holistic(
         mistral = ConversationMistralAnalyzer(
             client=client,
             model=model,
+            temperature=0.2 if provider == "lmstudio" else 0.15,
+            max_tokens=8192 if provider == "lmstudio" else 4096,
             api_key=ctx.llm_api_key,
         )
         llm_out = mistral.analyze_full_conversation(
@@ -301,6 +322,8 @@ def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
     if ctx.llm_api_key:
         return True
     provider = (ctx.provider or "openrouter").lower()
+    if provider == "lmstudio":
+        return True
     if provider == "groq":
         try:
             from .llm.groq_client import get_groq_api_key
@@ -554,8 +577,31 @@ def _run_fas4_enrichment_body(
             else:
                 from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
+                qa_client: Any = None
+                qa_model = ctx.llm_model
+                if ctx.provider == "lmstudio":
+                    from .llm.client_factory import resolve_llm_client
+
+                    resolved = resolve_llm_client(
+                        ctx.provider,
+                        model=ctx.llm_model,
+                        api_key=ctx.llm_api_key,
+                    )
+                    qa_client = resolved.client
+                    qa_model = resolved.model
+                elif ctx.provider in {"mistral", "nvidia", "cerebras", "openrouter"}:
+                    from .llm.client_factory import resolve_llm_client
+
+                    resolved = resolve_llm_client(
+                        ctx.provider,
+                        model=ctx.llm_model,
+                        api_key=ctx.llm_api_key,
+                    )
+                    qa_client = resolved.client
+                    qa_model = resolved.model
                 qa_analyzer = ConversationMistralAnalyzer(
-                    model=ctx.llm_model,
+                    client=qa_client,
+                    model=qa_model,
                     api_key=ctx.llm_api_key,
                 )
         qa_res = score_call_with_default_scorecard(
