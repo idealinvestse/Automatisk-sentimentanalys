@@ -187,6 +187,7 @@ markers = [
     "slow: tests that load ML models or run ASR",
     "audio: tests that require samples/audio files",
     "cloud_stt: tests that call live Deepgram API (opt-in only)",
+    "lmstudio_live: tests that call a live LM Studio local server (opt-in only)",
 ]
 
 [tool.coverage.run]

@@ -41,10 +41,11 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 | **Dashboard**               | ✅ Done    | Next.js webui (`webui/`) — sole dashboard |
 | **Evaluation Framework**    | ✅ Done    | `evaluate.py` + `fas4-validation` + LLM quality metrics |
 | **HTTP Metrics (OBS-01)**     | ✅ Done    | `http_requests_total`, `http_request_duration_seconds` in `src/api/metrics.py` |
-| **Pipeline Refactoring**      | ✅ Done    | PIPE-01: `pipeline_steps.py`; `pipeline.py` < 550 LOC |
+| **Pipeline Refactoring**      | ✅ Done    | PIPE-01: `pipeline_steps.py`; orchestration in `pipeline.py` (~725 LOC) |
 
 ### Partially / Recently Added
 
+- **Våg 2 (2026-09-12)** — QA delar client-resolver med holistic; LM Studio-UI bara vid DIRECT_API; Testlabb visar serversegment efter PII.
 - **LM Studio lokal LLM-integration (2026-09)** — `lmstudio` provider för Qwen 3.5 9B The Defiant (Q4_K_S) vid 70k total kontext; delad klientfactory för holistisk/QA/judge/insights; strukturerad utdata + evidensvalidering; beständiga bakgrundsjobb (`/analysis/jobs`); WebUI-panel + CLI `--provider lmstudio`; CPU-ASR-alternativ. Reasoning-off kan inte garanteras via OpenAI-kompatibelt API (se `docs/LM_STUDIO_LOCAL.md`). Ej pilot-godkänd.
 - **ASR dual-engine hardening (2026-07)** — router, cloud opt-in, decode hardening, persistent jobs, metrics; see `CHANGELOG.md`.
 - `diarize` optional dependency group (`pyproject.toml`)

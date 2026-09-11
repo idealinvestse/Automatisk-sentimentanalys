@@ -2430,6 +2430,20 @@ export interface components {
             /** Timestamp */
             timestamp: string;
             /**
+             * Segments
+             * @description Server-side segments after early PII redaction (may differ from the request).
+             */
+            segments?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Diarization
+             * @description Diarization payload when the audio path ran speaker attribution.
+             */
+            diarization?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Llm
              * @description Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)
              */

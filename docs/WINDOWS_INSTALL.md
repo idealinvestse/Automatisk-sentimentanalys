@@ -105,7 +105,7 @@ barnprocesser via `config_to_env`. Du behöver normalt **inte** underhålla
 | Inställning | Synkas till |
 |-------------|-------------|
 | API-host/port / Dashboard → API URL | `NEXT_PUBLIC_API_BASE_URL` (+ `SENTIMENT_API_BASE_URL`) |
-| API-nyckel (`runtime.api.api_key`) | `SENTIMENT_API_KEY` + `NEXT_PUBLIC_API_KEY` (pilot/LAN) |
+| API-nyckel (`runtime.api.api_key`) | `SENTIMENT_API_KEY` (BFF). Spegla inte till `NEXT_PUBLIC_API_KEY` |
 | Tom CORS + dashboard på | `API_CORS_ORIGINS` = `http://localhost:{dashboard_port}` och `http://127.0.0.1:{…}` |
 
 - Byte av API-port uppdaterar automatiskt lokal `api_base_url` om den fortfarande
@@ -133,7 +133,7 @@ Common variables (can be set in Windows Environment Variables or via `.env`):
 - `OPENROUTER_API_KEY`
 - `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN`
 - `DEEPGRAM_API_KEY` or `CLOUD_STT_API_KEY` (cloud STT only; opt-in via `asr.provider=cloud`)
-- `SENTIMENT_API_KEY` (for API authentication; launcher mirrors to `NEXT_PUBLIC_API_KEY` for webui)
+- `SENTIMENT_API_KEY` (API auth; launcher enables BFF via `NEXT_PUBLIC_USE_API_PROXY=1` and does not mirror the key into the browser)
 - `NEXT_PUBLIC_API_BASE_URL` (set by launcher from Dashboard → API URL / API-port)
 - `API_CORS_ORIGINS` (empty → launcher fills local dashboard origins)
 - `API_MEDIA_ROOT`

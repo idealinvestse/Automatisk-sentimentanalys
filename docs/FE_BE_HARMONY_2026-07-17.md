@@ -140,7 +140,9 @@ flowchart TB
 | Projekt | Backend `X-API-Key`; WS ticket via authenticated GET |
 | Frontend | `apiKey` stöds i klassen men singleton får den aldrig |
 
-**Verdict:** För pilot: sätt `NEXT_PUBLIC_API_KEY` från samma secret som `SENTIMENT_API_KEY` **endast** i betrodda interna nät (nyckel syns i browser). Medellång sikt: Next.js BFF/route-handler som håller nyckeln server-side. Reject “auth disabled in prod”.
+**Verdict (superseded 2026-09):** Spegla **inte** `SENTIMENT_API_KEY` till `NEXT_PUBLIC_API_KEY`. Pilot default är Next.js BFF (`NEXT_PUBLIC_USE_API_PROXY=1`); nyckeln stannar server-side. `NEXT_PUBLIC_API_KEY` + `NEXT_PUBLIC_USE_DIRECT_API=1` är bara trusted-LAN / LM Studio-labb, inte kundpilot. Reject “auth disabled in prod”.
+
+**Verdict (historisk 2026-07):** För dåvarande LAN-pilot: sätt `NEXT_PUBLIC_API_KEY` från samma secret som `SENTIMENT_API_KEY` **endast** i betrodda interna nät (nyckel syns i browser). Det är inte längre rekommendationen — se stycket ovan.
 
 ### 5.2 OpenAPI-genererade typer — **Adopt**
 

@@ -8,7 +8,9 @@ from scripts.verify_pilot_policy import (
     check_anonymize_default,
     check_asr_schema_default,
     check_cloud_keys,
+    check_llm_enabled_profiles_anonymize,
     check_production_guards,
+    check_runtime_pilot_locks,
 )
 
 
@@ -16,6 +18,34 @@ def test_anonymize_default_true() -> None:
     ok, msg = check_anonymize_default()
     assert ok is True
     assert "True" in msg
+
+
+def test_llm_enabled_profiles_require_anonymize() -> None:
+    ok, msg = check_llm_enabled_profiles_anonymize()
+    assert ok is True
+    assert "anonymize_before_llm" in msg
+
+
+def test_runtime_locks_fail_lmstudio_in_strict_prod(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_PRODUCTION", "true")
+    monkeypatch.delenv("SENTIMENT_PILOT_ALLOW_LMSTUDIO", raising=False)
+    monkeypatch.delenv("API_ALLOW_CLIENT_LLM_KEY", raising=False)
+
+    class _Cfg:
+        class llm:
+            enabled = True
+            provider = "lmstudio"
+
+        class asr:
+            provider = "local"
+
+    monkeypatch.setattr(
+        "src.install.user_config.load_user_config",
+        lambda: _Cfg(),
+    )
+    ok, messages = check_runtime_pilot_locks(strict=True)
+    assert ok is False
+    assert any("lmstudio" in m.lower() for m in messages)
 
 
 def test_asr_schema_default_local() -> None:

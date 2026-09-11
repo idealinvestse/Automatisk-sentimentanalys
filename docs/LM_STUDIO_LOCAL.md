@@ -154,7 +154,8 @@ Faser: `local_analysis`, `llm_holistic`, `qa`, `validating`, `persisting`.
 
 ## PII och säkerhet
 
-- Oredigerad PII skickas aldrig till LM Studio när anonymisering krävs.
+- Analysis jobs tvingar PII-redaction (`force=True`) oavsett profil innan persist.
+- Oredigerad PII skickas inte till LM Studio när `anonymize_before_llm` är satt (alla `llm.enabled`-profiler) eller när jobs `force=True`. Profiler utan flaggan no-opar fortfarande i den vanliga pipeline-vägen.
 - Om tidig PII-redaction misslyckas och profilen kräver anonymisering, hoppas
   all LLM-anrikning över.
 - Prompts, transkriptioner, reasoning-innehåll och råa svar loggas aldrig.

@@ -24,6 +24,7 @@ def test_analysis_job_persists_status_and_result(tmp_path: Path) -> None:
     )
     assert _wait(manager, job.job_id) == "completed"
     assert manager.result(job.job_id) == {"ok": True, "degraded": [], "count": 1}
+    assert not (tmp_path / "analysis_jobs" / f"{job.job_id}.input.json").exists()
     manager.shutdown()
 
 

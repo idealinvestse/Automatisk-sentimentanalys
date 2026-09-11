@@ -17,6 +17,7 @@ import { ModelComparePanel } from "@/components/model-compare-panel";
 import { apiClient, ApiError, type PipelineCompareResponse, type PipelineReport } from "@/lib/api/client";
 import { extractTrustSurface } from "@/lib/real-data";
 import { TrustSurfaceCard } from "@/components/analyzer-cards";
+import { DegradedBanner } from "@/components/degraded-banner";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { isApiConnected, useHealth } from "@/hooks/use-health";
 import { type RoutingTier, resolveEffectiveTier, tierToModel } from "@/lib/routing-tier";
@@ -156,6 +157,17 @@ export default function TestLabPage() {
   const sentimentLabels = report?.sentiment_results?.slice(0, 5).map((s) => s.label ?? "?") ?? [];
   const qaScore = report?.results?.qa?.overall_qa_score;
   const actionableProblem = report?.llm?.actionable_summary?.problem;
+  const serverSegments = Array.isArray(report?.segments) ? report.segments : [];
+  let inputSegments: unknown[] = [];
+  try {
+    const parsed = JSON.parse(segmentsInput.trim() || "[]");
+    if (Array.isArray(parsed)) inputSegments = parsed;
+  } catch {
+    inputSegments = [];
+  }
+  const segmentsChanged =
+    serverSegments.length > 0 &&
+    JSON.stringify(serverSegments) !== JSON.stringify(inputSegments);
 
   return (
     <div className="flex flex-col gap-6">
@@ -340,6 +352,20 @@ export default function TestLabPage() {
               <Badge variant="success" className="w-fit">
                 Analys klar
               </Badge>
+              <DegradedBanner mode={report?.mode} degraded={report?.degraded} />
+              {serverSegments.length > 0 ? (
+                <div className="rounded-md border p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Serversegment efter PII
+                    {segmentsChanged
+                      ? " — skiljer sig från inklistrad JSON"
+                      : " — oförändrade mot input"}
+                  </p>
+                  <pre className="mt-2 max-h-48 overflow-auto text-xs">
+                    {JSON.stringify(serverSegments, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
               {sentimentLabels.length > 0 ? (
                 <p className="text-sm">
                   Sentiment (första segment): {sentimentLabels.join(", ")}

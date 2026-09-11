@@ -6,7 +6,7 @@ GDPR-vänligt, skalbart och byggt för svenska kundtjänstsamtal.
 
 > **Status och roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md)  
 > **För agenter:** [AGENTS.md](AGENTS.md) → [docs/LLM_AGENT_GUIDE.md](docs/LLM_AGENT_GUIDE.md)  
-> **Last updated:** 2026-07-13
+> **Last updated:** 2026-09-12
 
 ## Snabbstart
 

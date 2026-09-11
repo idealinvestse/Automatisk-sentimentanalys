@@ -22,8 +22,8 @@ function falsyEnv(value: string | undefined): boolean {
   return flag === "0" || flag === "false" || flag === "no";
 }
 
-/** When true, browser REST talks to FastAPI directly (legacy trusted-LAN). */
-function isDirectApiEnabled(): boolean {
+/** When true, browser REST talks to FastAPI directly (legacy trusted-LAN / lab). */
+export function isDirectApiEnabled(): boolean {
   return truthyEnv(process.env.NEXT_PUBLIC_USE_DIRECT_API);
 }
 

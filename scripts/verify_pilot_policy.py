@@ -40,6 +40,20 @@ def check_anonymize_default() -> tuple[bool, str]:
     return False, "callcenter.anonymize_before_llm is not True (required for pilot)"
 
 
+def check_llm_enabled_profiles_anonymize() -> tuple[bool, str]:
+    from src.profiles import PROFILE_SPECS
+
+    missing = [
+        name
+        for name, spec in PROFILE_SPECS.items()
+        if (spec.get("llm") or {}).get("enabled")
+        and not (spec.get("llm") or {}).get("anonymize_before_llm")
+    ]
+    if missing:
+        return False, f"LLM-enabled profiles missing anonymize_before_llm: {missing}"
+    return True, "all llm.enabled profiles set anonymize_before_llm"
+
+
 def check_asr_schema_default() -> tuple[bool, str]:
     from src.install.config_schema import AsrDefaults
 
@@ -89,12 +103,60 @@ def check_cloud_keys(*, strict: bool) -> tuple[bool, list[str]]:
     return True, messages
 
 
+def check_runtime_pilot_locks(*, strict: bool) -> tuple[bool, list[str]]:
+    """Fail closed on LM Studio / cloud ASR / client LLM keys in production."""
+    messages: list[str] = []
+    prod = os.environ.get("API_PRODUCTION", "").lower() in {"1", "true", "yes"}
+    allow_lmstudio = os.environ.get("SENTIMENT_PILOT_ALLOW_LMSTUDIO", "").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+    if os.environ.get("API_ALLOW_CLIENT_LLM_KEY", "").lower() in {"1", "true", "yes"}:
+        msg = "API_ALLOW_CLIENT_LLM_KEY is set — clients may send LLM keys in the body"
+        if strict and prod:
+            return False, [f"FAIL: {msg}"]
+        messages.append(f"WARN: {msg}")
+    else:
+        messages.append("OK: API_ALLOW_CLIENT_LLM_KEY unset")
+
+    try:
+        from src.install.user_config import load_user_config
+
+        cfg = load_user_config()
+    except Exception as exc:
+        messages.append(f"WARN: user_config not loaded ({exc})")
+        return True, messages
+
+    if cfg.llm.enabled and cfg.llm.provider.lower() == "lmstudio":
+        msg = (
+            "user_config llm.provider=lmstudio — not customer-pilot approved "
+            "(set SENTIMENT_PILOT_ALLOW_LMSTUDIO=1 only for isolated lab)"
+        )
+        if strict and prod and not allow_lmstudio:
+            return False, [f"FAIL: {msg}"]
+        messages.append(f"WARN: {msg}")
+    else:
+        messages.append(f"OK: user_config llm.provider={cfg.llm.provider}")
+
+    if cfg.asr.provider == "cloud":
+        msg = "user_config asr.provider=cloud — pilot requires local ASR for PII calls"
+        if strict and prod:
+            return False, [f"FAIL: {msg}"]
+        messages.append(f"WARN: {msg}")
+    else:
+        messages.append("OK: user_config asr.provider=local")
+
+    return True, messages
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify pilot policy configuration")
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="Fail if Groq/Deepgram keys present while API_PRODUCTION=true",
+        help="Fail if Groq/Deepgram/LM Studio/cloud ASR violate production pilot locks",
     )
     parser.add_argument(
         "--no-dotenv",
@@ -108,7 +170,12 @@ def main() -> int:
     hard_ok = True
     print("=== Pilot policy verification ===")
 
-    for check in (check_anonymize_default, check_asr_schema_default, check_production_guards):
+    for check in (
+        check_anonymize_default,
+        check_llm_enabled_profiles_anonymize,
+        check_asr_schema_default,
+        check_production_guards,
+    ):
         ok, msg = check()
         print(("OK: " if ok else "FAIL: ") + msg)
         hard_ok = hard_ok and ok
@@ -117,6 +184,11 @@ def main() -> int:
     for line in cloud_msgs:
         print(line)
     hard_ok = hard_ok and cloud_ok
+
+    runtime_ok, runtime_msgs = check_runtime_pilot_locks(strict=args.strict)
+    for line in runtime_msgs:
+        print(line)
+    hard_ok = hard_ok and runtime_ok
 
     if hard_ok:
         print("RESULT: PASS")

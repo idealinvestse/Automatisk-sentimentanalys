@@ -858,6 +858,14 @@ class PipelineResponse(BaseModel):
     risks: dict[str, Any]
     processing_time_s: float
     timestamp: str
+    segments: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Server-side segments after early PII redaction (may differ from the request).",
+    )
+    diarization: dict[str, Any] | None = Field(
+        None,
+        description="Diarization payload when the audio path ran speaker attribution.",
+    )
     llm: dict[str, Any] = Field(
         default_factory=dict,
         description="Mistral/OpenRouter holistic analysis (when --use-mistral-llm or deep path enabled)",

@@ -15,7 +15,13 @@ import { EmptyState } from "@/components/empty-state";
 import { TranscriptionJobsPanel } from "@/components/transcription-jobs-panel";
 import { useTranscriptionSocket } from "@/hooks/use-transcription-socket";
 import { useCallsStore } from "@/lib/store/calls";
-import { apiClient, ApiError, type TranscribeRequest, type PipelineReport } from "@/lib/api/client";
+import {
+  apiClient,
+  ApiError,
+  isDirectApiEnabled,
+  type TranscribeRequest,
+  type PipelineReport,
+} from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import type { WsConnectionStatus } from "@/lib/transcription-events";
@@ -41,6 +47,7 @@ const LEVEL_CLASS: Record<string, string> = {
 };
 
 export default function TranscriptionPage() {
+  const labEnabled = isDirectApiEnabled();
   const { status, logs, progress, done, partialAnalysis, connect, disconnect, clearLogs } =
     useTranscriptionSocket();
   const [jobIdInput, setJobIdInput] = React.useState("");
@@ -66,7 +73,7 @@ export default function TranscriptionPage() {
         backend: "faster",
         model: "kb-whisper-large",
         language: "sv",
-        device: useLocalLlm ? "cpu" : "auto",
+        device: labEnabled && useLocalLlm ? "cpu" : "auto",
         word_timestamps: true,
         vad: true,
       };
@@ -91,7 +98,7 @@ export default function TranscriptionPage() {
       // Calculate duration from segments
       const durationS = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
-      if (useLocalLlm) {
+      if (labEnabled && useLocalLlm) {
         setAnalysisSegments(segments);
         setPendingCall({ title: selectedFile.name, durationS, segments });
         return transcribeResult;
@@ -121,7 +128,7 @@ export default function TranscriptionPage() {
     },
     onSuccess: () => {
       notifySuccess(
-        useLocalLlm
+        labEnabled && useLocalLlm
           ? "Transkribering klar - starta den lokala analysen nedan"
           : "Transkribering och analys klar - samtal sparat i dashboard",
       );
@@ -224,7 +231,9 @@ export default function TranscriptionPage() {
 
       <TranscriptionJobsPanel />
 
-      <AnalysisJobPanel segments={analysisSegments} onCompleted={completeLocalAnalysis} />
+      {labEnabled ? (
+        <AnalysisJobPanel segments={analysisSegments} onCompleted={completeLocalAnalysis} />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -237,13 +246,15 @@ export default function TranscriptionPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={useLocalLlm}
-              onCheckedChange={(checked) => setUseLocalLlm(checked === true)}
-            />
-            Kör efteranalys lokalt med LM Studio (CPU-ASR, 70k-profil)
-          </label>
+          {labEnabled ? (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={useLocalLlm}
+                onCheckedChange={(checked) => setUseLocalLlm(checked === true)}
+              />
+              Kör efteranalys lokalt med LM Studio (CPU-ASR, 70k-profil)
+            </label>
+          ) : null}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="audio-file" className="text-xs font-medium text-muted-foreground">
               Välj ljudfil

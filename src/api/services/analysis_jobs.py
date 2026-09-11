@@ -130,6 +130,7 @@ class AnalysisJobManager:
                 job.phase = "cancelled"
                 job.updated_at = self._now()
                 self._persist_status(job)
+                self._forget_input(job_id)
                 return
             job.status = "running"
             job.phase = "local_analysis"
@@ -150,6 +151,7 @@ class AnalysisJobManager:
                     job.phase = "persisting"
                 job.updated_at = self._now()
                 self._persist_status(job)
+            self._forget_input(job_id)
         except Exception as exc:
             with self._lock:
                 job = self._jobs[job_id]
@@ -158,6 +160,15 @@ class AnalysisJobManager:
                 job.error_code = getattr(exc, "error_code", "analysis_job_failed")
                 job.updated_at = self._now()
                 self._persist_status(job)
+            self._forget_input(job_id)
+
+    def _forget_input(self, job_id: str) -> None:
+        """Drop persisted transcript input after the job leaves the queue."""
+        path = self._input_path(job_id)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def get(self, job_id: str) -> AnalysisJob | None:
         """Return one job status."""

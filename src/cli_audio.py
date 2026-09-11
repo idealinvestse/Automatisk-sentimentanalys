@@ -423,11 +423,17 @@ def register_audio_commands(app: typer.Typer) -> None:
         )
 
         if use_mistral_llm or deep_analysis:
-            provider_label = (
-                "LM Studio (lokal)"
-                if provider == "lmstudio"
-                else "Groq Cloud" if provider == "groq" else "Mistral/OpenRouter"
-            )
+            if provider == "lmstudio":
+                provider_label = "LM Studio (lokal)"
+                egress_note = "Conversation stays on loopback (not customer-pilot approved)."
+            elif provider == "groq":
+                provider_label = "Groq Cloud"
+                egress_note = "Full conversation (with roles) will be sent to Groq."
+            else:
+                provider_label = f"LLM ({provider})"
+                egress_note = (
+                    "Full conversation (with roles) will be sent to the selected provider."
+                )
             extra_warning = ""
             if provider == "groq" and not groq_eu_residency:
                 extra_warning = (
@@ -436,7 +442,7 @@ def register_audio_commands(app: typer.Typer) -> None:
                 )
             console.print(
                 f"[yellow]{provider_label} LLM deep analysis ENABLED for this run. "
-                "Full conversation (with roles) will be sent to external service. "
+                f"{egress_note} "
                 "See INFO logs for GDPR/egress notice. Cost tracked in meta.[/yellow]"
                 f"{extra_warning}"
             )

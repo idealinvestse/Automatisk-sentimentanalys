@@ -241,8 +241,9 @@ def config_to_env(cfg: UserConfig) -> dict[str, str]:
     api_rt = cfg.runtime.api
     if api_rt.api_key:
         env["SENTIMENT_API_KEY"] = api_rt.api_key
-        # Pilot/LAN: webui browser client reads NEXT_PUBLIC_API_KEY.
-        env["NEXT_PUBLIC_API_KEY"] = api_rt.api_key
+        # BFF (default) keeps the key server-side. Do not mirror it into
+        # NEXT_PUBLIC_* unless the operator explicitly chooses direct API.
+        env["NEXT_PUBLIC_USE_API_PROXY"] = "1"
     cors_csv = effective_cors_origins_csv(cfg)
     if cors_csv:
         env["API_CORS_ORIGINS"] = cors_csv

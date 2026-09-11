@@ -19,6 +19,7 @@ __all__ = [
     "run_registry_analyzers",
     "run_registry_analyzers_async",
     "should_use_any_llm",
+    "should_run_llm_qa",
     "run_llm_holistic",
     "run_fas4_enrichment",
 ]
@@ -198,6 +199,130 @@ def should_use_any_llm(segments: list, ctx: PipelineLLMContext) -> bool:
     return should_use_mistral_llm(segments, ctx)
 
 
+_LLM_QA_NO_RETRY_REASONS = frozenset(
+    {
+        "missing_api_key",
+        "ccp_failed",
+        "llm_error",
+        "llm_error_or_disabled",
+        "groq_gdpr_gate",
+        "groq_llm_error_or_disabled",
+        "lmstudio_unreachable",
+        "lmstudio_model_missing",
+        "lmstudio_model_not_loaded",
+    }
+)
+
+
+def _holistic_fallback_payload(
+    *,
+    reason: str,
+    provider: str,
+    error: str | None = None,
+) -> dict[str, Any]:
+    """Return a holistic fallback dict with meta QA can read (no second egress)."""
+    payload: dict[str, Any] = {
+        "llm_used": False,
+        "llm_fallback_reason": reason,
+        "fallback": True,
+        "meta": {
+            "llm_used": False,
+            "llm_fallback_reason": reason,
+            "provider": provider,
+        },
+    }
+    if error:
+        payload["error"] = error
+        payload["meta"]["error"] = error
+    return payload
+
+
+def should_run_llm_qa(
+    ctx: PipelineLLMContext,
+    llm_result: dict[str, Any],
+    *,
+    credentials_available: bool,
+) -> bool:
+    """Run LLM QA only after a successful holistic call, never as a retry."""
+    if not credentials_available:
+        return False
+    if not isinstance(llm_result, dict):
+        return False
+    meta = llm_result.get("meta") if isinstance(llm_result.get("meta"), dict) else {}
+    if meta.get("llm_used"):
+        return True
+    reason = str(meta.get("llm_fallback_reason") or llm_result.get("llm_fallback_reason") or "")
+    if reason in _LLM_QA_NO_RETRY_REASONS:
+        return False
+    if llm_result.get("error") or llm_result.get("fallback") or meta.get("llm_used") is False:
+        return False
+    return bool(ctx.use_mistral_llm) and not llm_result
+
+
+def _resolve_mistral_compat_client(
+    ctx: PipelineLLMContext,
+    *,
+    segment_count: int,
+) -> tuple[Any, str | None]:
+    """Client used by holistic and QA for every provider except Groq.
+
+    Router profiles must stay on ``RouterBackedClient``. Falling through to
+    ``ConversationMistralAnalyzer()`` would silently construct OpenRouter.
+    """
+    from .llm.client_factory import resolve_llm_client
+
+    provider = (ctx.provider or "openrouter").lower()
+    model = ctx.llm_model
+
+    if provider == "lmstudio":
+        resolved = resolve_llm_client(
+            provider,
+            model=model,
+            api_key=ctx.llm_api_key,
+        )
+        return resolved.client, resolved.model
+
+    if provider in {"auto", "free_sequential", "sv_optimal", "router"}:
+        from .llm.router_client import RouterBackedClient
+
+        profile = "sv_optimal" if provider == "sv_optimal" else "free_sequential"
+        client = RouterBackedClient(profile=profile, tier="balanced", default_model=model)
+        return client, model or client.default_model
+
+    if provider in {"mistral", "nvidia", "cerebras"}:
+        from .llm.openai_compat_client import OpenAICompatClient
+        from .llm.provider_secrets import get_provider_api_key, load_provider_config
+
+        cfg = load_provider_config()
+        spec = (cfg.get("providers") or {}).get(provider) or {}
+        curated = (spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}
+        model = model or curated.get("balanced") or curated.get("fast") or "mistral-small-latest"
+        client = OpenAICompatClient(
+            provider=provider,
+            api_key=ctx.llm_api_key or get_provider_api_key(provider, config=cfg),
+            base_url=str(spec.get("base_url") or ""),
+            default_model=model,
+            extra_headers=dict(spec.get("headers_extra") or {}),
+        )
+        return client, model
+
+    resolved = resolve_llm_client(
+        "openrouter",
+        model=model,
+        api_key=ctx.llm_api_key,
+    )
+    model = resolved.model
+    if not model:
+        from .llm.routing import RoutingTier, select_model
+
+        model = select_model(
+            RoutingTier.BALANCED,
+            segment_count=segment_count,
+            deep_analysis=ctx.deep_analysis or ctx.use_mistral_llm,
+        )
+    return resolved.client, model
+
+
 def run_mistral_holistic(
     segments: list[Segment] | list[dict[str, Any]],
     results: dict[str, Any],
@@ -209,62 +334,8 @@ def run_mistral_holistic(
 
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
-        model = ctx.llm_model
-        client: Any = None
         provider = (ctx.provider or "openrouter").lower()
-
-        # Multi-provider router profiles
-        if provider == "lmstudio":
-            from .llm.client_factory import resolve_llm_client
-
-            resolved = resolve_llm_client(
-                provider,
-                model=model,
-                api_key=ctx.llm_api_key,
-            )
-            client = resolved.client
-            model = resolved.model
-        elif provider in {"auto", "free_sequential", "sv_optimal", "router"}:
-            from .llm.router_client import RouterBackedClient
-
-            profile = "sv_optimal" if provider == "sv_optimal" else "free_sequential"
-            client = RouterBackedClient(profile=profile, tier="balanced", default_model=model)
-            model = model or client.default_model
-        elif provider in {"mistral", "nvidia", "cerebras"}:
-            from .llm.openai_compat_client import OpenAICompatClient
-            from .llm.provider_secrets import get_provider_api_key, load_provider_config
-
-            cfg = load_provider_config()
-            spec = (cfg.get("providers") or {}).get(provider) or {}
-            curated = (spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}
-            model = model or curated.get("balanced") or curated.get("fast") or "mistral-small-latest"
-            client = OpenAICompatClient(
-                provider=provider,
-                api_key=ctx.llm_api_key or get_provider_api_key(provider, config=cfg),
-                base_url=str(spec.get("base_url") or ""),
-                default_model=model,
-                extra_headers=dict(spec.get("headers_extra") or {}),
-            )
-        else:
-            # openrouter default — route through shared factory for consistency
-            from .llm.client_factory import resolve_llm_client
-
-            resolved = resolve_llm_client(
-                "openrouter",
-                model=model,
-                api_key=ctx.llm_api_key,
-            )
-            client = resolved.client
-            model = resolved.model
-            if not model:
-                from .llm.routing import RoutingTier, select_model
-
-                tier = RoutingTier.BALANCED
-                model = select_model(
-                    tier,
-                    segment_count=len(seg_dicts),
-                    deep_analysis=ctx.deep_analysis or ctx.use_mistral_llm,
-                )
+        client, model = _resolve_mistral_compat_client(ctx, segment_count=len(seg_dicts))
 
         mistral = ConversationMistralAnalyzer(
             client=client,
@@ -293,7 +364,11 @@ def run_mistral_holistic(
         return llm_out
     except Exception as exc:
         logger.warning("Mistral holistic step failed (will use local only): %s", exc)
-        return {"llm_used": False, "llm_fallback_reason": str(exc), "error": str(exc)}
+        return _holistic_fallback_payload(
+            reason="llm_error",
+            provider=(ctx.provider or "openrouter"),
+            error=str(exc),
+        )
 
 
 def run_llm_holistic(
@@ -312,9 +387,50 @@ def run_llm_holistic(
             },
             "fallback": True,
         }
+    if (ctx.provider or "").lower() == "lmstudio":
+        ready = _lmstudio_ready(ctx)
+        if ready is not None:
+            return ready
     if ctx.provider == "groq":
         return run_groq_holistic(segments, results, ctx)
     return run_mistral_holistic(segments, results, ctx)
+
+
+def _lmstudio_ready(ctx: PipelineLLMContext) -> dict[str, Any] | None:
+    """Fail fast when the local server or model is not loaded (avoid 900s hangs)."""
+    try:
+        from .llm.client_factory import resolve_llm_client
+
+        resolved = resolve_llm_client(
+            "lmstudio",
+            model=ctx.llm_model,
+            api_key=ctx.llm_api_key,
+        )
+        status = resolved.client.model_status()
+        if not status.loaded:
+            return _holistic_fallback_payload(
+                reason="lmstudio_model_not_loaded",
+                provider="lmstudio",
+            )
+    except Exception as exc:
+        reason = getattr(exc, "error_code", None) or "lmstudio_unreachable"
+        return _holistic_fallback_payload(
+            reason=str(reason),
+            provider="lmstudio",
+            error=str(exc),
+        )
+    return None
+
+
+def _profile_anonymize_before_llm(profile_name: str) -> bool:
+    """True when the named profile requires PII redaction before any LLM egress."""
+    try:
+        from .profiles import resolve_profile
+
+        _, spec = resolve_profile(profile=profile_name)
+        return bool((spec.get("llm") or {}).get("anonymize_before_llm"))
+    except Exception:
+        return False
 
 
 def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
@@ -367,13 +483,13 @@ def run_groq_holistic(
 
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
+        pii_info = results.get("pii_redaction")
         pii_redacted = bool(
-            results.get("pii_redaction", {}).get("total_redacted", 0) > 0
-            if isinstance(results.get("pii_redaction"), dict)
-            else False
+            isinstance(pii_info, dict) and pii_info.get("total_redacted", 0) > 0
         )
+        profile_anon = _profile_anonymize_before_llm(ctx.profile)
 
-        if not ctx.groq_eu_residency and not pii_redacted:
+        if not ctx.groq_eu_residency and not pii_redacted and not profile_anon:
             logger.warning(
                 "GROQ GDPR GATE: groq_eu_residency=OFF and no PII redaction detected. "
                 "Groq data centers are US/Saudi Arabia (no EU hosting). "
@@ -413,12 +529,11 @@ def run_groq_holistic(
         return llm_out
     except Exception as exc:
         logger.warning("Groq holistic step failed (will use local only): %s", exc)
-        return {
-            "llm_used": False,
-            "llm_fallback_reason": str(exc),
-            "error": str(exc),
-            "meta": {"provider": "groq"},
-        }
+        return _holistic_fallback_payload(
+            reason="llm_error",
+            provider="groq",
+            error=str(exc),
+        )
 
 
 def run_fas4_enrichment(
@@ -545,28 +660,16 @@ def _run_fas4_enrichment_body(
     with degrading_phase("pipeline", "qa_scoring", results=results, result_key="qa"):
         from .compliance_qa import score_call_with_default_scorecard
 
-        llm_meta = (results.get("llm") or {}).get("meta") or {}
-        llm_used = bool(llm_meta.get("llm_used"))
-        fallback_reason = str(llm_meta.get("llm_fallback_reason") or "")
         creds_ok = _llm_credentials_available(ctx)
-        # Avoid OpenRouter retry storms: no LLM QA without credentials, and no
-        # second attempt after holistic already failed for missing/invalid auth.
-        use_llm_qa = creds_ok and (
-            llm_used
-            or (
-                ctx.use_mistral_llm
-                and fallback_reason
-                not in {
-                    "missing_api_key",
-                    "ccp_failed",
-                    "llm_error",
-                    "llm_error_or_disabled",
-                }
-            )
+        # Avoid retry storms: QA LLM only after a successful holistic call.
+        use_llm_qa = should_run_llm_qa(
+            ctx,
+            results.get("llm") if isinstance(results.get("llm"), dict) else {},
+            credentials_available=creds_ok,
         )
         qa_analyzer: Any | None = None
         if use_llm_qa:
-            if ctx.provider == "groq":
+            if (ctx.provider or "").lower() == "groq":
                 from .llm.groq_analyzer import GroqAnalyzer
 
                 qa_analyzer = GroqAnalyzer(
@@ -577,28 +680,10 @@ def _run_fas4_enrichment_body(
             else:
                 from .llm.mistral_analyzer import ConversationMistralAnalyzer
 
-                qa_client: Any = None
-                qa_model = ctx.llm_model
-                if ctx.provider == "lmstudio":
-                    from .llm.client_factory import resolve_llm_client
-
-                    resolved = resolve_llm_client(
-                        ctx.provider,
-                        model=ctx.llm_model,
-                        api_key=ctx.llm_api_key,
-                    )
-                    qa_client = resolved.client
-                    qa_model = resolved.model
-                elif ctx.provider in {"mistral", "nvidia", "cerebras", "openrouter"}:
-                    from .llm.client_factory import resolve_llm_client
-
-                    resolved = resolve_llm_client(
-                        ctx.provider,
-                        model=ctx.llm_model,
-                        api_key=ctx.llm_api_key,
-                    )
-                    qa_client = resolved.client
-                    qa_model = resolved.model
+                qa_client, qa_model = _resolve_mistral_compat_client(
+                    ctx,
+                    segment_count=len(segments or []),
+                )
                 qa_analyzer = ConversationMistralAnalyzer(
                     client=qa_client,
                     model=qa_model,

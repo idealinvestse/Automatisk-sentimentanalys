@@ -153,3 +153,39 @@ def test_redact_segments_with_profile(sample_segments, monkeypatch):
     redacted, log = redact_segments(sample_segments, profile_name="callcenter", return_log=True)
     assert log.total_redacted > 0
     assert any("4111111111111111" not in seg["text"] for seg in redacted)
+
+
+def test_redact_segments_skips_without_anonymize_flag(sample_segments, monkeypatch):
+    import src.profiles as prof_mod
+
+    monkeypatch.setattr(
+        prof_mod,
+        "resolve_profile",
+        lambda *args, **kwargs: (None, {"llm": {"anonymize_before_llm": False}}),
+    )
+    redacted, log = redact_segments(sample_segments, profile_name="sales", return_log=True)
+    assert log.total_redacted == 0
+    assert log.applied_to_local is False
+    assert "4111111111111111" in redacted[0]["text"]
+
+
+def test_redact_segments_force_ignores_profile_flag(sample_segments, monkeypatch):
+    import src.profiles as prof_mod
+
+    monkeypatch.setattr(
+        prof_mod,
+        "resolve_profile",
+        lambda *args, **kwargs: (None, {"llm": {"anonymize_before_llm": False}}),
+    )
+    redacted, log = redact_segments(
+        sample_segments, profile_name="sales", return_log=True, force=True
+    )
+    assert log.total_redacted > 0
+    assert "4111111111111111" not in redacted[0]["text"]
+
+
+def test_complaint_and_support_profiles_anonymize_by_default() -> None:
+    from src.profiles import PROFILE_SPECS
+
+    for name in ("complaint", "support", "callcenter"):
+        assert PROFILE_SPECS[name]["llm"]["anonymize_before_llm"] is True

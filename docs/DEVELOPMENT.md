@@ -113,7 +113,7 @@ CI is the floor (fast, deterministic); release/staging covers what CI deliberate
 | L8 LLM quality | Live provider (cost) | `python -m src.evaluate llm-quality` | before release with LLM on |
 | L9 Staging | Compose + observability | `docker-compose.staging.yml` + smoke script | deploy candidate |
 
-Do **not** put L7/L8 into the PR CI floor — keep them on the release path (see [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) § Release verification).
+Do **not** put L7/L8 into the PR CI floor — keep them on the release path (see [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) § Release verification). The `test` CI job excludes `@pytest.mark.slow`, `lmstudio_live`, and `cloud_stt`.
 
 ### When to run what
 
@@ -134,7 +134,7 @@ pytest tests/test_pipeline.py tests/test_callcenter_golden.py -q
 
 **B. Pull request (CI floor)** — already in `.github/workflows/ci.yml`:
 
-1. lint → pytest (3.11/3.12, `src` cov ≥80 %) → api-test (`src/api` cov ≥90 %). Lokalt: `pyproject.toml` `fail_under = 85` för hela `src/`.
+1. lint → pytest (3.11/3.12, `src` cov ≥80 %, `-m "not slow and not lmstudio_live and not cloud_stt"`) → api-test (`src/api` cov ≥90 %). Lokalt: `pyproject.toml` `fail_under = 85` för hela `src/`.
 2. mypy, docker config/build
 3. analyzer-accuracy + finetune-smoke
 4. webui lint/build/e2e

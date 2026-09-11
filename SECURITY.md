@@ -25,7 +25,8 @@ This project is designed for processing sensitive customer service conversations
 - **Audio & Transcripts**: Never commit real customer audio or transcripts to the repository.
 - **API Keys**: `OPENROUTER_API_KEY`, `SENTIMENT_API_KEY`, and Hugging Face tokens are loaded from environment variables or secure secret stores (never hardcoded).
 - **PII Redaction**: The pipeline includes early PII redaction for the `callcenter` profile (see `src/pipeline.py` and `pii_redactor.py`).
-- **External LLM Calls**: All calls to OpenRouter/Mistral are explicitly logged with the prefix `EXTERNAL LLM CALL`. Transcripts are only sent when explicitly enabled via `--use-mistral-llm` or profile settings.
+- **External LLM Calls**: Cloud egress is logged as `EXTERNAL LLM CALL` (OpenRouter/Groq/compat). Local LM Studio is logged as `LOCAL LLM CALL` and is **not** customer-pilot approved (uncensored reference model; loopback only).
+- **PII**: `anonymize_before_llm` is required on every `llm.enabled` profile (`callcenter`, `complaint`, `support`). Analysis jobs force redaction before persist.
 - **Data at Rest**: Use `.cache/`, `state/`, and `outputs/` (all ignored in `.gitignore`).
 
 ## Pilot / production policy (2026-07)

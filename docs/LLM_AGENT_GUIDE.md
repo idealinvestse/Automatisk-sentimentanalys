@@ -20,26 +20,23 @@
 ```
 Audio / Text Input
        ↓
-Transcription + Diarization (src/transcription/ + diarization.py)
+ASR via AsrRouter (local factory or opt-in cloud Deepgram) + diarization
        ↓
-PII Redaction (early, profile-dependent)
+PII Redaction (early; required when profile llm.anonymize_before_llm)
        ↓
-Analysis Registry (src/analysis/registry.py) → multiple analyzers run in topological order
+Analysis Registry (src/analysis/registry.py) → topological + living routing
        ↓
-Agent Performance + QA/Compliance scoring
+Fas 4: local agent_performance → optional holistic LLM (CCP) → QA → alerts
        ↓
-Optional Mistral LLM holistic analysis (src/llm/)
-       ↓
-Alerting + Insights aggregation
-       ↓
-CallAnalysisReport (returned to CLI / API / Dashboard)
+CallAnalysisReport → CLI / FastAPI / webui (BFF default)
 ```
 
 **Key Integration Points**:
 - `src/pipeline.py`: `CallAnalysisPipeline` orchestrates everything.
+- `src/pipeline_steps.py`: PII, registry, holistic LLM, QA, alerts.
 - `src/analysis/registry.py`: Central place to register new analyzers.
-- `src/transcription/factory.py`: Chooses ASR backend.
-- `src/llm/`: Mistral/OpenRouter integration with strict structured output.
+- `src/transcription/router.py`: Local vs cloud ASR; `factory.py` caches local engines.
+- `src/llm/client_factory.py`: Provider resolution (`openrouter`, `groq`, `lmstudio`, compat/router).
 
 ## 3. Directory Structure & Responsibilities
 
@@ -49,7 +46,7 @@ CallAnalysisReport (returned to CLI / API / Dashboard)
 | `src/pipeline.py`           | Core orchestration (`CallAnalysisPipeline`)                             | Most important file |
 | `src/analysis/`             | All analyzers (aspect, emotion, role, trajectory, intent, etc.) + registry | `registry.py`, `base.py` |
 | `src/transcription/`        | ASR backends (faster_whisper, transformers, whisperx) + preprocess     | `factory.py`, `base.py` |
-| `src/llm/`                  | Mistral/OpenRouter + Groq Cloud client, prompts, schemas, analyzers  | `mistral_analyzer.py`, `groq_analyzer.py`, `groq_client.py`, `prompts.py`, `schemas.py` |
+| `src/llm/`                  | LLM clients (OpenRouter, Groq, LM Studio, OpenAI-compat) + factory   | `client_factory.py`, `mistral_analyzer.py`, `lmstudio_client.py`, `prompts.py`, `schemas.py` |
 | `src/api/`                  | FastAPI application (`app.py` exposes `app`)                            | `app.py`, `routers/`, `schemas/` |
 | `src/cli.py`                | Typer-based CLI (`sentiment`, `transcribe`, `analyze-call`)             | - |
 | `src/diarization.py`        | Speaker diarization with pyannote + heuristic fallback                  | - |
@@ -127,17 +124,17 @@ The pipeline runs in this order (non-fatal errors are caught per step):
 1. Transcription + Diarization
 2. PII Redaction
 3. Text Analysis via Registry
-4. Agent Performance
-5. Optional Mistral LLM (`_should_use_mistral_llm`)
-6. QA / Compliance
+4. Fas 4 local agent performance
+5. Optional holistic LLM (`run_llm_holistic` via `should_use_any_llm` + CCP)
+6. QA / Compliance (LLM QA only after successful holistic; same client resolver as holistic — no silent OpenRouter fallback for router providers)
 7. Alerting
 
 When modifying pipeline logic, keep error isolation (`try/except` + logging + continue).
 
 ### 5.3 LLM Integration (`src/llm/`)
 
-- Two providers: **Mistral/OpenRouter** (default, EU/GDPR) and **Groq Cloud** (fast/cheap, US/Saudi-hosted).
-- Use `provider=` flag (`"openrouter"` | `"groq"`) to select.
+- Providers: **OpenRouter/Mistral** (default, EU/GDPR), **Groq** (dev/lab; GDPR grind), **LM Studio** (loopback lab only, not customer-pilot), plus compat/router names (`mistral`, `nvidia`, `cerebras`, `auto`, `sv_optimal`).
+- Resolve clients through `src/llm/client_factory.py`. The flag `use_mistral_llm` enables holistic LLM for **any** selected provider.
 - Use strict structured output with Pydantic + `response_format`.
 - Always log `"EXTERNAL LLM CALL (Groq/Mistral)"` when calling external APIs.
 - Cache results in `.cache/llm/`.

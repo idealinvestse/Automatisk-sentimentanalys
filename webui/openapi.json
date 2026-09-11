@@ -5164,6 +5164,28 @@
             "type": "string",
             "title": "Timestamp"
           },
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "Server-side segments after early PII redaction (may differ from the request)."
+          },
+          "diarization": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diarization",
+            "description": "Diarization payload when the audio path ran speaker attribution."
+          },
           "llm": {
             "additionalProperties": true,
             "type": "object",

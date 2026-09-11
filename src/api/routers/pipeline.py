@@ -119,9 +119,16 @@ async def create_analysis_job(
     try:
         from ...llm.pii_redactor import redact_segments
 
-        redacted_segments = redact_segments(req.segments, profile_name=req.profile)
+        redacted_segments, pii_log = redact_segments(
+            req.segments,
+            profile_name=req.profile,
+            return_log=True,
+            force=True,
+        )
     except Exception as exc:
         raise HTTPException(status_code=422, detail="PII redaction failed; analysis job rejected") from exc
+    if pii_log.error:
+        raise HTTPException(status_code=422, detail="PII redaction failed; analysis job rejected")
 
     payload = req.model_dump()
     payload["segments"] = redacted_segments
@@ -237,6 +244,8 @@ def _report_to_pipeline_response(report: Any) -> PipelineResponse:
         risks=report.risks,
         processing_time_s=report.processing_time_s,
         timestamp=utc_now_iso(),
+        segments=list(report.segments) if isinstance(report.segments, list) else [],
+        diarization=report.diarization if isinstance(report.diarization, dict) else None,
         llm=report.llm,
         results=report.results,
         analyzer_results=build_analyzer_results(report.results),

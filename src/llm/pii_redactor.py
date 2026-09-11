@@ -346,6 +346,7 @@ def redact_segments(
     profile_name: str = ...,
     *,
     return_log: Literal[True],
+    force: bool = ...,
 ) -> tuple[list[dict[str, Any]], PiiRedactionLog]: ...
 
 
@@ -354,6 +355,8 @@ def redact_segments(
     segments: Sequence[dict[str, Any] | Any],
     profile_name: str = ...,
     return_log: Literal[False] = ...,
+    *,
+    force: bool = ...,
 ) -> list[dict[str, Any]]: ...
 
 
@@ -361,12 +364,14 @@ def redact_segments(
     segments: Sequence[dict[str, Any] | Any],
     profile_name: str = "callcenter",
     return_log: bool = False,
+    *,
+    force: bool = False,
 ) -> tuple[list[dict[str, Any]], PiiRedactionLog] | list[dict[str, Any]]:
     # The overloads above give precise return types for mypy; this body
     # signature keeps the runtime-compatible union for dynamic callers.
     """Redact PII in segments list (early pipeline for Fas 4.4.1).
 
-    If profile llm.anonymize_before_llm is True:
+    If profile llm.anonymize_before_llm is True, or ``force`` is True:
       - Redacts text for BOTH local analysis (sentiment etc) and LLM.
       - The returned segments have redacted .text (report will reflect redacted data for privacy).
 
@@ -391,7 +396,7 @@ def redact_segments(
 
         _, spec = resolve_profile(profile=profile_name)
         llm_spec = spec.get("llm", {}) or {}
-        if not llm_spec.get("anonymize_before_llm"):
+        if not force and not llm_spec.get("anonymize_before_llm"):
             if return_log:
                 log = PiiRedactionLog(
                     events=[],
@@ -403,6 +408,8 @@ def redact_segments(
                 return seg_list, log
             return seg_list
     except Exception:
+        if force:
+            raise
         if return_log:
             log = PiiRedactionLog(
                 events=[],

@@ -141,13 +141,14 @@ def test_save_draft_preserves_custom_api_base_url_on_port_change(
     assert loaded.runtime.dashboard.api_base_url == "https://api.example.com"
 
 
-def test_config_to_env_mirrors_api_key_to_next_public() -> None:
+def test_config_to_env_keeps_api_key_server_side_for_bff() -> None:
     from src.install.user_config import config_to_env
 
     cfg = UserConfig(runtime={"api": {"api_key": "pilot-secret"}})
     env = config_to_env(cfg)
     assert env["SENTIMENT_API_KEY"] == "pilot-secret"
-    assert env["NEXT_PUBLIC_API_KEY"] == "pilot-secret"
+    assert env["NEXT_PUBLIC_USE_API_PROXY"] == "1"
+    assert "NEXT_PUBLIC_API_KEY" not in env
 
 
 def test_config_to_env_omits_next_public_api_key_when_unset() -> None:

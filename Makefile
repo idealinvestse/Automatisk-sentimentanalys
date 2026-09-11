@@ -57,6 +57,8 @@ test-api:  ## Run API tests with coverage (≥90% on src/api)
 		tests/test_alerting_router.py \
 		tests/test_api_alerting_router.py \
 		tests/test_transcription_jobs.py \
+		tests/test_analysis_jobs.py \
+		tests/test_analysis_jobs_api.py \
 		tests/test_ws_ticket_minimal.py \
 		tests/test_ws_transcription_router.py \
 		tests/test_ws_tickets.py \

@@ -91,6 +91,8 @@ def test_analyze_pipeline_happy(monkeypatch):
     fake_report.processing_time_s = 0.12
     fake_report.llm = {}
     fake_report.results = {}
+    fake_report.segments = [{"text": "[REDACTED_PNR]", "start": 0, "end": 1}]
+    fake_report.diarization = None
 
     with patch("src.api.dependencies.CallAnalysisPipeline") as mock_pipe:
         inst = mock_pipe.return_value
@@ -103,6 +105,7 @@ def test_analyze_pipeline_happy(monkeypatch):
         data = r.json()
         assert "sentiment_results" in data
         assert "timestamp" in data
+        assert data["segments"][0]["text"] == "[REDACTED_PNR]"
 
 
 def test_agent_performance_endpoint(monkeypatch):
@@ -254,6 +257,8 @@ def _fake_pipeline_report(**overrides):
     fake.processing_time_s = overrides.get("processing_time_s", 0.5)
     fake.llm = overrides.get("llm", {"meta": {"cost_usd": 0.01}})
     fake.results = overrides.get("results", {"qa": {"overall_qa_score": 82}})
+    fake.segments = overrides.get("segments", [])
+    fake.diarization = overrides.get("diarization", None)
     return fake
 
 

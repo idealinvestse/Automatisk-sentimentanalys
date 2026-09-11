@@ -68,7 +68,7 @@ Profil: `callcenter` (PII-redaction på). Starta API med staging-compose eller G
 
 ### Webui auth (H1)
 
-**Prefererad:** Next.js BFF-proxy så API-nyckeln stannar server-side:
+**Prefererad:** Next.js BFF-proxy så API-nyckeln stannar server-side. Spegla **inte** nyckeln till `NEXT_PUBLIC_API_KEY`.
 
 ```bash
 # webui/.env.local
@@ -78,11 +78,13 @@ SENTIMENT_API_BASE_URL=http://localhost:8000
 SENTIMENT_API_KEY=<samma-som-backend>
 ```
 
-**Legacy trusted-LAN:** nyckel synlig i browser-bundle:
+**Legacy trusted-LAN / LM Studio-labb:** nyckel synlig i browser-bundle. Krävs för `NEXT_PUBLIC_USE_DIRECT_API=1` (jobs-panelen). **Inte** kundpilot.
 
 ```bash
+NEXT_PUBLIC_USE_DIRECT_API=1
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_API_KEY=<samma-som-SENTIMENT_API_KEY>
+# SENTIMENT_PILOT_ALLOW_LMSTUDIO=1   # bara isolerad labb + verify_pilot_policy --strict
 ```
 
 Se `webui/.env.production.example` och [FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY_2026-07-17.md).

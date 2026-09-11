@@ -166,7 +166,7 @@ class LMStudioClient(OpenAICompatClient):
         try:
             with lms.Client(host) as client:
                 model = client.llm.model(self.default_model)
-                formatted = model.apply_prompt_template(messages)
+                formatted = model.apply_prompt_template({"messages": messages})
                 return len(model.tokenize(formatted))
         except Exception as exc:
             raise LLMError(
