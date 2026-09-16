@@ -141,7 +141,7 @@ When modifying pipeline logic, keep error isolation (`try/except` + logging + co
 - Fallback to local analysis on any LLM failure.
 - GDPR gate: Groq requires `groq_eu_residency=True` or `anonymize_before_llm=True`.
 - Prompts live in `prompts.py`. Schemas in `schemas.py`.
-- See `docs/LLM_PROVIDERS.md` for full comparison matrix.
+- See `docs/MULTI_PROVIDER_LLM.md` for the provider/router comparison.
 
 #### Holistic LLM dual-path (Mistral vs Groq)
 

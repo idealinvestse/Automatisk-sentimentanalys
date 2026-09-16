@@ -383,7 +383,6 @@ Synthetic data from `scripts/prepare_callcenter_data.py` is for development only
 
 - `AGENTS.md` – Entry point for LLM coding agents
 - `docs/LLM_AGENT_GUIDE.md` – Detailed guide for agents
-- `docs/LLM_AGENT_QUICKREF.md` – Minimal context quick reference
 - `docs/ROADMAP.md` – Current project status
 - `STRATEGY.md` – Product strategy anchor
 - `docs/DECISION_REPORT_2026-07-17.md` – Pilot go/no-go decision pack

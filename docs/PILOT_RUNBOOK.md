@@ -1,12 +1,68 @@
 # Pilot Runbook — Conditional go
 
 **Skapad:** 2026-07-17  
+**Uppdaterad:** 2026-09-17 (beslutsregister + driftlägen)  
 **Källa:** [DECISION_REPORT_2026-07-17.md](DECISION_REPORT_2026-07-17.md), [STRATEGY.md](../STRATEGY.md)  
-**Syfte:** Operativ checklista för kontrollerad kundpilot utan okvalificerad production-pitch.
+**Syfte:** Operativ checklista för kontrollerad kundpilot utan okvalificerad production-pitch.  
+**Ägare:** Oscar Delerud (korpus, annotering, kvalitetsgodkännande, go/no-go, kundpåståenden)
 
 ---
 
-## 1. Policy (låst)
+## 0. Beslutsregister och driftlägen (2026-09-17)
+
+### 0.1 Beslutsregister
+
+Alla beslut ägs och fattas av **Oscar Delerud**.
+
+| ID | Beslut | Status | Godkännandepunkt / blockerad aktivering |
+|----|-------|--------|----------------------------------------|
+| R01 | Pilotmiljö: Windows 11, CUDA, NVIDIA RTX 5070 12 GB VRAM | **Beslutad** | Hårdvara fastställd. Numeriska kapacitetsmål (latens, RTF, volym) beslutas efter teknisk baslinjemätning. |
+| R02 | Primär nytta: QA-stöd och coachning. Automatisering omfattar analys, bedömningar och rekommendationer — **inte** verkställande externa åtgärder | **Beslutad** | Inga externa webhook-/åtgärdsvägar aktiveras i piloten. |
+| R03 | Kund-ID i ljudfilens **originalfilnamn** identifierar **kundorganisationen** som styr konfiguration | **Beslutad (princip)** | Blockerad för skarp import: filnamnsformat (R04) och faktiska kundmappningar saknas. |
+| R04 | Filnamnets konkreta format beslutas senare | **Öppet** | Blockerar skarp filidentifiering — inte dokumentation eller syntetiska resolvertester. |
+| R05 | Extern bearbetning får omfatta **text och råljud** när kundprofilen tillåter det, förutsatt lokal lagring av underlag och resultat | **Beslutad (princip)** | Blockerad per leverantör: vald provider, dataskyddsläge, försökstak och budget kräver uttrycklig kundprofil + Oscars aktivering. Lokal kopia ≠ leverantören saknar kopia. |
+| R06 | Moln-STT som reserv efter lokal ASR väljs **per kundprofil** | **Beslutad (princip)** | Blockerad per kund: uttrycklig aktivering i kundprofilen krävs. Ingen generell automatisk molnreserv. |
+| R07 | Lokal/extern analysordning väljs **per kundprofil** | **Beslutad (princip)** | Blockerad per kund: första kundprofilens modeller/providerkedja måste konfigureras. |
+| R08 | Oscar Delerud äger korpus, annotering, kvalitetsgodkännande, go/no-go och godkännande av kundpåståenden | **Beslutad** | Löpande. Ingen annan part får godkänna kundkvalitet. |
+| R09 | Leveransen omfattar dokumentation **och** tekniskt genomförande av nödvändiga nya funktioner | **Beslutad** | Genomförs etappvis enligt godkänd plan; varje etapp verifieras innan nästa. |
+
+### 0.2 Två driftlägen
+
+| Läge | Beskrivning | Styrande policy |
+|------|-------------|-----------------|
+| **A. Operatörspilot** (ny, aktiv utveckling) | Lokal drift på Oscars Windows 11/RTX 5070-dator. Kundorganisation identifieras från filnamn och styr bearbetning enligt beslutsregistret ovan. | Beslutsregistret (§0.1) + kundprofilens konfiguration. Extern bearbetning endast efter uttrycklig kundprofil + aktivering (R05–R07). |
+| **B. Kundpilot** (befintlig, låst) | Kontrollerad kundpilot enligt beslutsrapporten 2026-07-17: lokal ASR, anonymize-före-LLM, Groq avstängd. | §1 Policy nedan + `verify_pilot_policy.py`. Gäller fortfarande för kundfacing drift utöver operatörspiloten. |
+
+Läge A och B är separata driftformer. Att ett läge tillåter en handling betyder inte att det andra gör det.
+
+### 0.3 Spårbarhetsmatris — granskningsytor → dokumentation
+
+| # | Yta | Primär dokumentation | Status |
+|---|-----|----------------------|--------|
+| 1 | Produktmandat | STRATEGY.md | Uppdaterad 2026-09 |
+| 2 | Användningsfall | STRATEGY.md, docs/PILOT_ONE_PAGER.md | Uppdaterad |
+| 3 | Begrepp och mätetal | docs/ANALYZER_STRATEGY.md | Delvis — mätdefinitioner konsolideras i Etapp 7 |
+| 4 | Systemgränser | docs/ARCHITECTURE.md | Uppdaterad med as-is/to-be |
+| 5 | Huvudflöden | docs/ARCHITECTURE.md | Uppdaterad |
+| 6 | Analyskatalog | docs/ANALYZER_STRATEGY.md | Befintlig tiers-modell |
+| 7 | AI-/modellstyrning | docs/MULTI_PROVIDER_LLM.md, docs/LM_STUDIO_LOCAL.md | Uppdaterad; kundstyrd routing policy är to-be (Etapp 4) |
+| 8 | Konfiguration | docs/WINDOWS_INSTALL.md + `src/install/config_schema.py` | Befintlig; kundregister to-be (Etapp 2) |
+| 9 | Data och proveniens | SECURITY.md, docs/DATA_01_CORPUS_SPEC.md | Uppdaterad; artefaktproveniens to-be (Etapp 3) |
+| 10 | Integritet och juridik | SECURITY.md, denna runbook | Uppdaterad; DPIA/avtalsläge för valda leverantörer är öppet (R05) |
+| 11 | Säkerhet och åtkomst | SECURITY.md | Uppdaterad; användaridentitet/fleranvändaråtkomst är öppen fråga |
+| 12 | Persistens och återställning | docs/PRODUCTION_CHECKLIST.md | Uppdaterad; RPO/RTO ej satta |
+| 13 | Vetenskaplig validering | docs/DATA_01_CORPUS_SPEC.md, docs/DEVELOPMENT.md | DATA-01 levereras externt av Oscar |
+| 14 | Test- och releasebevis | docs/DEVELOPMENT.md, docs/PRODUCTION_CHECKLIST.md | Gatestatus (PASS/FAIL/SKIP/BLOCKED/NOT RUN) separeras i Etapp 7 |
+| 15 | Drift och kapacitet | docs/PRODUCTION_CHECKLIST.md, docs/WINDOWS_INSTALL.md | Kapacitetsmål ej satta (R01) |
+| 16 | UX och tillit | docs/FE_BE_HARMONY_2026-07-17.md | Befintlig; kundkontext i UI to-be (Etapp 6) |
+| 17 | Integration och distribution | README.md, docs/WINDOWS_INSTALL.md | Befintlig |
+| 18 | Leverans- och dokumentstyrning | Denna runbook §0 | Uppdaterad |
+
+---
+
+## 1. Policy (låst) — gäller Läge B: Kundpilot
+
+> Dessa regler gäller den kundfacing piloten (Läge B). Operatörspiloten (Läge A) styrs av beslutsregistret §0.1 och respektive kundprofil — men kan aldrig vara *mindre* skyddad än detta golv vid kunddatahantering.
 
 | Yta | Pilot/prod-regel |
 |-----|------------------|
@@ -46,7 +102,7 @@ Skriptet kontrollerar bl.a.:
 
 ---
 
-## 3. Rekommenderad `.env` för pilot
+## 3. Rekommenderad `.env` för pilot (Läge B: Kundpilot)
 
 ```bash
 API_PRODUCTION=true

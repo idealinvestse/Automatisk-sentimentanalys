@@ -10,9 +10,10 @@
 Ett **analyslager** ovanpå era samtal — inte en ersättning för er contact-center-plattform (Genesys, NICE, m.fl.).
 
 - Transkription på **svenska** med lokal talmodell (KB-Whisper) som standard
-- Sentiment, intent, QA-stöd, insikter och agentöversikt
-- Djupare AI-resonemang (sammanfattning, coaching) **selektivt**, efter att personuppgifter maskerats
-- Datahantering som utgår från **lokal bearbetning först** och EU-orienterade AI-leverantörer när moln används
+- Sentiment, intent, QA-stöd, insikter och agentöversikt — **QA-stöd och coachning är pilotens primärnytta**
+- Djupare AI-resonemang (sammanfattning, coaching) **selektivt** enligt er kundprofil
+- Bearbetning som utgår från **lokal drift först** (pilotmiljö: Windows/CUDA); externa AI-leverantörer används endast när er kundprofil uttryckligen tillåter det och underlag/resultat sparas lokalt
+- Er kundorganisation identifieras och styr sin egen analys-, QA- och leverantörskonfiguration
 
 ---
 
@@ -21,17 +22,19 @@ Ett **analyslager** ovanpå era samtal — inte en ersättning för er contact-c
 | Fokus | Betydelse |
 |-------|-----------|
 | Svenska i telefoni | Optimerat för nordisk kundtjänst, inte bara engelska demos |
-| Local-first | Ljud behöver inte lämna er miljö för grundtranskription |
-| Ärliga gränser | Vi lovar inte “100 % QM” eller suite-paritet utan uppmätta resultat på *er* data |
+| Local-first | Grundtranskription och analys sker i pilotmiljön utan krav på moln |
+| Kundstyrd bearbetning | Vilka data som får behandlas externt (text/råljud) och av vilka leverantörer bestäms av er kundprofil — aldrig tyst |
+| Ärliga gränser | Vi lovar inte "100 % QM" eller suite-paritet utan uppmätta resultat på *er* data |
 
 ---
 
 ## Villkor i piloten (kort)
 
-1. Transkription körs **lokalt** (moln-STT används inte för kundsamtal med personuppgifter).
-2. Moln-AI (om aktiverad) får endast **redigerad** text; leverantörer och avtal dokumenteras i DPIA.
+1. Transkription körs **lokalt** som standard; moln-STT används endast om er kundprofil aktiverar det uttryckligen.
+2. Extern AI-behandling (om er profil tillåter den) sker med dokumenterade leverantörer och dataskyddsläge; leverantörsval och avtalsläge godkänns av pilotägaren innan aktivering.
 3. Kvalitetstal (t.ex. felord i transkription) redovisas först efter mätning på **era** anonymiserade samtal.
-4. Pilotens syfte är att validera värde i er miljö — inte att ersätta hela WFM-/CCaaS-sviten.
+4. Pilotens syfte är att validera värde i er miljö — inte att ersätta hela WFM-/CCaaS-svitan.
+5. Automatiseringen omfattar analyser, bedömningar och rekommendationer — inte automatiskt verkställda åtgärder utanför analysverktyget.
 
 ---
 

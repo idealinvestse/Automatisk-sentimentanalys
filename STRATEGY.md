@@ -1,6 +1,6 @@
 ---
 name: Automatisk-sentimentanalys
-last_updated: 2026-07-17
+last_updated: 2026-09-17
 ---
 
 # Automatisk-sentimentanalys Strategy
@@ -11,7 +11,17 @@ Nordiska kontaktcenter och QA-team behöver förstå svenska kundsamtal i stor s
 
 ## Our approach
 
-Bygg ett hybrid **local-first** Call Center Intelligence-lager: svensk ASR (KB-Whisper) och lokala analyzers som default, selektiv EU-alignad LLM endast för högvärdesresonemang efter PII-redaction. Konkurrera på språk + residency + ärlig degradation — inte på att ersätta hela CCaaS/WFM-sviter.
+Bygg ett hybrid **local-first** Call Center Intelligence-lager: svensk ASR (KB-Whisper) och lokala analyzers som default, selektiv LLM endast för högvärdesresonemang med dataskyddsläge (PII-redaction eller uttryckligt godkänd rådata) styrt per kundprofil. Konkurrera på språk + residency + ärlig degradation — inte på att ersätta hela CCaaS/WFM-sviter.
+
+### Aktuell pilotinriktning (2026-09, beslutsägare: Oscar Delerud)
+
+- **Primär nytta:** QA-stöd och coachning. Automatiseringen omfattar analyser, bedömningar och rekommendationer — inte verkställande externa åtgärder.
+- **Pilotmiljö:** Windows 11 med NVIDIA RTX 5070 (12 GB VRAM) och lokal CUDA-transkribering som ASR-baslinje. Hårdvaruvalet är beslutat; numeriska kapacitetsmål (latens, RTF, volym) beslutas efter teknisk baslinjemätning.
+- **Kundstyrd bearbetning:** ett identifikationsnummer i ljudfilens namn identifierar **kundorganisationen**, som därefter styr analysprofil, QA-scorecard, ASR-inställningar och tillåten lokal/extern bearbetning. Filnamnets slutliga format är ett öppet beslut.
+- **Extern bearbetning:** text och råljud får skickas till externa API-leverantörer när kundprofilen tillåter det, förutsatt att underlag och resultat sparas lokalt. Lokal kopia innebär inte att leverantören saknar kopia.
+- **Driftform:** lokal operatörsdrift på en dator; ingen fleranvändar- eller publik nätverksexponering i första versionen. Kund-ID är routingunderlag — inte användarautentisering.
+
+Fullständigt beslutsregister med status och godkännandepunkter: [docs/PILOT_RUNBOOK.md](docs/PILOT_RUNBOOK.md).
 
 ## Who it's for
 
@@ -47,7 +57,7 @@ _Why it serves the approach:_ Köparen betalar för beslut (QA, coaching, hot to
 
 ## Milestones
 
-- **2026-Q3** - Conditional kundpilot under local-ASR + DPIA + DATA-01 minikorpus
+- **2026-Q3** - Operatörspilot på Windows 11/RTX 5070: kundidentifiering från filnamn, lokal CUDA-ASR, kundstyrd QA/coaching-kedja och lokal artefaktpersistens. Historisk "conditional kundpilot" (DPIA + DATA-01) gäller fortfarande för kundfacing drift utöver operatörspiloten.
 - **2026-Q4** - Domain-validerade sentiment/intent-gates på riktig korpus; intent-modell endast om +0.05 F1
 
 ## Not working on
@@ -55,7 +65,8 @@ _Why it serves the approach:_ Köparen betalar för beslut (QA, coaching, hot to
 - YouTube / multichannel ingest (Fas 5) som kärnprodukt
 - Full WS-first realtidsprodukt-rewrite i närtid
 - Feature-parity-race mot NICE/Genesys WFM-sviter
-- Groq eller cloud-STT som production default för PII-samtal
+- Cloud-STT/LLM som omarkerad default — extern bearbetning är per kundprofil, uttryckligt vald och spårad
+- Fleranvändar-/SaaS-drift i första pilotversionen (lokal operatörsdrift först)
 
 ## Marketing
 

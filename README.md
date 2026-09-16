@@ -5,8 +5,9 @@
 GDPR-vänligt, skalbart och byggt för svenska kundtjänstsamtal.
 
 > **Status och roadmap:** [docs/ROADMAP.md](docs/ROADMAP.md)  
+> **Pilotinriktning (2026-09):** QA-stöd och coachning på Windows 11/RTX 5070 med kundstyrd bearbetning per kundorganisation — beslutsregister i [docs/PILOT_RUNBOOK.md](docs/PILOT_RUNBOOK.md) §0  
 > **För agenter:** [AGENTS.md](AGENTS.md) → [docs/LLM_AGENT_GUIDE.md](docs/LLM_AGENT_GUIDE.md)  
-> **Last updated:** 2026-09-12
+> **Last updated:** 2026-09-17
 
 ## Snabbstart
 

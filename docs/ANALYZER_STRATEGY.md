@@ -43,6 +43,8 @@ Implemented in `src/pipeline_steps.py`:
 
 ## Profile defaults (`configs/analyzer_profiles.yaml`)
 
+> **To-be (operatörspilot, Etapp 2):** dessa generiska profiler kompletteras med ett **kundorganisationsregister** där kund-ID (från ljudfilens namn) väljer analysprofil, QA-scorecard och tillåtna providers per kund. I kundstyrt läge är okänd profil/kund ett fel — inte tyst `default`. Generiska profiler och YAML-konventionen består som underlag för kundkonfigurationen.
+
 **callcenter `default_selected`:** sentiment, intent, role, emotion, negation, compliance_risk, customer_effort, active_listening, aspect
 
 **callcenter `optional`:** summary, topics, resolution_probability, predictive, multi_turn_journey, empathy, trajectory, root_cause, actionable_coaching, insights, llm_judge, upsell_opportunity, spoken_normalizer, dialect_sensitivity
