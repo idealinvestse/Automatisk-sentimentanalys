@@ -112,7 +112,7 @@ def test_batch_transcribe_ok_and_worker_error(audio_file):
 
     def fake_helper(audio_path, **_kwargs):
         if audio_path == a:
-            return {"segments": [], "model": "t"}
+            return {"segments": [{"text": "hej"}], "model": "t"}
         raise ValueError("fail b")
 
     with (
@@ -416,7 +416,7 @@ def test_helpers_transcribe_helper():
         mock_router_cls.return_value.transcribe.return_value = mock_transcript
         from src.api.helpers import transcribe_helper
 
-        out = transcribe_helper(audio_path="/tmp/x.wav")
+        out = transcribe_helper(audio_path="/tmp/x.wav", require_speech=False)
     assert out == {"segments": [], "provider": "local"}
 
 
@@ -539,3 +539,76 @@ def test_health_has_request_id_header():
 def test_request_id_middleware_preserves_header():
     mw = RequestIdMiddleware(app=MagicMock())
     assert mw is not None
+
+
+def test_api_compat_modules_import():
+    from src.api import server
+    from src.api.schemas import analyze, fas4, pipeline, transcription
+
+    assert server.app is not None
+    assert analyze.AnalyzeRequest is not None
+    assert fas4.AlertsRequest is not None
+    assert pipeline.PipelineRequest is not None
+    assert transcription.TranscribeRequest is not None
+
+
+def test_helpers_fail_closed_and_llm_ceiling():
+    from types import SimpleNamespace
+
+    from src.api.helpers import (
+        apply_llm_ceiling,
+        classify_asr_error,
+        require_usable_transcript,
+        transcribe_helper,
+        usable_segment_count,
+    )
+    from src.customers import CustomerExecutionPolicy
+
+    assert usable_segment_count(None) == 0
+    assert usable_segment_count({"segments": [{"text": "  "}]}) == 0
+    assert usable_segment_count(SimpleNamespace(segments=[SimpleNamespace(text="hej")])) == 1
+    with pytest.raises(TranscriptionError, match="no speech"):
+        require_usable_transcript({"segments": []})
+
+    assert classify_asr_error(ImportError("missing")) == "asr_init_failed"
+    assert classify_asr_error(RuntimeError("CUDA out of memory")) == "asr_init_failed"
+    assert classify_asr_error(RuntimeError("failed to load checkpoint")) == "asr_init_failed"
+    assert classify_asr_error(RuntimeError("unreadable audio frame")) == "asr_decode_failed"
+
+    policy = CustomerExecutionPolicy(
+        analyzer_profile="callcenter",
+        qa_scorecard="standard_support_v1",
+        asr_provider="local",
+        cloud_fallback_local=False,
+        llm_enabled=None,
+    )
+    pipe = SimpleNamespace(use_mistral_llm=True, deep_analysis=True, provider="openrouter")
+    apply_llm_ceiling(pipe, policy)
+    assert pipe.use_mistral_llm is True
+    apply_llm_ceiling(pipe, policy.model_copy(update={"llm_enabled": False}))
+    assert pipe.use_mistral_llm is False
+    assert pipe.deep_analysis is False
+    apply_llm_ceiling(
+        pipe,
+        policy.model_copy(update={"llm_enabled": True, "llm_provider": "lmstudio"}),
+    )
+    assert pipe.provider == "lmstudio"
+    assert pipe.use_mistral_llm is True
+
+    with patch("src.api.helpers.AsrRouter") as router_cls:
+        router_cls.return_value.transcribe.side_effect = RuntimeError("hub download failed")
+        with pytest.raises(TranscriptionError) as exc:
+            transcribe_helper("a.wav", require_speech=False)
+        assert exc.value.error_code == "asr_init_failed"
+
+
+def test_persist_helpers_none_customer_and_report_fallback():
+    from types import SimpleNamespace
+
+    from src.api.call_persistence import customer_meta, customer_ref, report_as_dict
+
+    assert customer_ref(None) is None
+    assert customer_meta(None) is None
+    assert report_as_dict(SimpleNamespace(results={"qa": 1})) == {"results": {"qa": 1}}
+    assert report_as_dict(SimpleNamespace(results=None)) == {"results": {}}
+    assert report_as_dict(SimpleNamespace(to_dict=lambda: {"mode": "full"})) == {"mode": "full"}

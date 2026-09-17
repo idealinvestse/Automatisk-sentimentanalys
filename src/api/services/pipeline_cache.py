@@ -24,7 +24,12 @@ def report_cache_key(pipe: CallAnalysisPipeline, segments: list[dict[str, Any]])
     provider = getattr(pipe, "provider", "openrouter")
     model = getattr(pipe, "llm_model", None) or "provider-default"
     deep = bool(getattr(pipe, "use_mistral_llm", False) or getattr(pipe, "deep_analysis", False))
-    return f"report:v2:{pipe.profile}:{pipe.sentiment_model}:{pipe.device}:{provider}:{model}:{deep}:{fp}"
+    customer_id = getattr(pipe, "customer_id", None) or "-"
+    config_fp = getattr(pipe, "config_fingerprint", None) or "-"
+    return (
+        f"report:v3:{pipe.profile}:{pipe.sentiment_model}:{pipe.device}:"
+        f"{provider}:{model}:{deep}:{customer_id}:{config_fp}:{fp}"
+    )
 
 
 def resolve_reports(

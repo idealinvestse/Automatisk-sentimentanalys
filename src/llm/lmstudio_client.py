@@ -145,11 +145,15 @@ class LMStudioClient(OpenAICompatClient):
             model=model,
             loaded=bool(instance),
             loaded_context=int(config["context_length"]) if config.get("context_length") else None,
-            max_context=int(entry["max_context_length"]) if entry.get("max_context_length") else None,
+            max_context=int(entry["max_context_length"])
+            if entry.get("max_context_length")
+            else None,
             instance_id=str(instance.get("id")) if isinstance(instance, dict) else None,
             quantization=str(quantization.get("name")) if quantization.get("name") else None,
             reasoning_default=(
-                str(reasoning.get("default")) if isinstance(reasoning, dict) and reasoning.get("default") else None
+                str(reasoning.get("default"))
+                if isinstance(reasoning, dict) and reasoning.get("default")
+                else None
             ),
         )
 
@@ -166,7 +170,7 @@ class LMStudioClient(OpenAICompatClient):
         try:
             with lms.Client(host) as client:
                 model = client.llm.model(self.default_model)
-                formatted = model.apply_prompt_template({"messages": messages})
+                formatted = model.apply_prompt_template({"messages": messages})  # type: ignore[typeddict-item]
                 return len(model.tokenize(formatted))
         except Exception as exc:
             raise LLMError(

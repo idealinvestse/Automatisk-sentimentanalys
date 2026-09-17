@@ -259,11 +259,14 @@ def test_derive_job_status():
     assert summary["current_phase"] == "complete"
 
 
-def test_status_processes_endpoint():
+def test_status_processes_endpoint(monkeypatch: pytest.MonkeyPatch):
     from fastapi.testclient import TestClient
 
     from src.api.app import create_app
+    from src.api.settings import get_api_settings
 
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
     app = create_app()
     client = TestClient(app)
     response = client.get("/status/processes?limit=5&component=pipeline")
@@ -272,12 +275,15 @@ def test_status_processes_endpoint():
     assert "events" in body
 
 
-def test_job_status_endpoint():
+def test_job_status_endpoint(monkeypatch: pytest.MonkeyPatch):
     from fastapi.testclient import TestClient
 
     from src.api.app import create_app
+    from src.api.settings import get_api_settings
     from src.core.status import get_status_reporter
 
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
     get_status_reporter().phase("pipeline", "transcribe", "start", job_id="job-xyz")
     app = create_app()
     client = TestClient(app)
@@ -288,11 +294,14 @@ def test_job_status_endpoint():
     assert body["found"] is True
 
 
-def test_health_detail_endpoint():
+def test_health_detail_endpoint(monkeypatch: pytest.MonkeyPatch):
     from fastapi.testclient import TestClient
 
     from src.api.app import create_app
+    from src.api.settings import get_api_settings
 
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    get_api_settings.cache_clear()
     app = create_app()
     client = TestClient(app)
     response = client.get("/status/health/detail")

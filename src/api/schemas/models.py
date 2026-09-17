@@ -23,6 +23,7 @@ MAX_ANALYSIS_JOB_SEGMENTS = 5000
 MAX_ANALYSIS_JOB_TEXT_CHARS = 1_000_000
 MAX_ANALYZE_TEXTS = 1000
 
+
 class AsrParamsMixin(BaseModel):
     """Shared ASR parameters used across transcription-related endpoints."""
 
@@ -105,6 +106,10 @@ class AnalyzeResponse(BaseModel):
 
 class TranscribeRequest(AsrParamsMixin):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
+    )
     word_timestamps: bool = Field(True)
     preprocess: bool = Field(False, description="Enable audio preprocessing before ASR")
     preprocess_mode: str | None = Field(
@@ -128,6 +133,12 @@ class TranscribeResponse(BaseModel):
     partial_analysis: dict[str, Any] | None = Field(
         None,
         description="Incremental partial pipeline snapshot when run_partial_analysis=true",
+    )
+    customer: CustomerRef | None = Field(
+        None, description="Resolved customer routing context when a registry is active"
+    )
+    call_id: str | None = Field(
+        None, description="Server-issued call identity for persisted artifacts"
     )
 
 
@@ -158,6 +169,10 @@ class TranscribeJobCancelResponse(BaseModel):
 
 class AnalyzeConversationRequest(AsrParamsMixin):
     audio_path: str = Field(..., description="Path to audio file accessible by the server")
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
+    )
     word_timestamps: bool = Field(False)
     return_all_scores: bool = Field(True)
     use_full_pipeline: bool = Field(
@@ -208,6 +223,7 @@ class AnalyzeConversationResponse(BaseModel):
         None,
         description="Full analyzer output when use_full_pipeline=True (agent_performance, qa, pii_redaction, ...)",
     )
+
 
 # ---------------------------------------------------------------------------
 # /batch_transcribe
@@ -264,12 +280,28 @@ class BatchTranscribeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CustomerRef(BaseModel):
+    """Customer identity resolved from the original filename.
+
+    Routing context only — not authentication or authorization.
+    """
+
+    customer_id: str
+    display_name: str
+    analyzer_profile: str
+    registry_version: int
+    config_fingerprint: str
+
+
 class UploadResponse(BaseModel):
     """Response from POST /upload."""
 
     audio_path: str = Field(..., description="Validated server-side path to uploaded file")
     filename: str = Field(..., description="Original filename from upload")
     size_bytes: int = Field(..., description="File size in bytes")
+    customer: CustomerRef | None = Field(
+        None, description="Resolved customer context when a customer registry is active"
+    )
     timestamp: str
 
 
@@ -467,6 +499,14 @@ class PipelineRequest(BaseModel):
         False,
         description="GDPR gate for Groq: affirm EU data residency (default: OFF).",
     )
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
+    )
+    call_id: str | None = Field(
+        None,
+        description="Server-issued call id from POST /transcribe; reused for report persistence",
+    )
 
     @field_validator("segments")
     @classmethod
@@ -490,6 +530,8 @@ class AnalysisJobRequest(BaseModel):
     llm_model: str | None = None
     deep_analysis: bool = True
     provider: Literal["lmstudio"] = "lmstudio"
+    original_filename: str | None = None
+    call_id: str | None = None
 
     @field_validator("segments")
     @classmethod
@@ -553,8 +595,15 @@ class PartialPipelineRequest(BaseModel):
         None,
         description="Deprecated: prefer X-OpenRouter-Key header.",
     )
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$")
+    provider: str = Field(
+        "openrouter",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
+    )
     groq_eu_residency: bool = False
+    original_filename: str | None = Field(
+        None, description="Original upload filename for customer identification"
+    )
+    call_id: str | None = None
 
     @field_validator("segments")
     @classmethod
@@ -886,6 +935,15 @@ class PipelineResponse(BaseModel):
         "full",
         description="'full' when no degradation; 'degraded' when one or more optional components were skipped.",
     )
+    customer: CustomerRef | None = Field(
+        None, description="Resolved customer routing context when a registry is active"
+    )
+    call_id: str | None = Field(
+        None, description="Server-issued call identity for persisted artifacts"
+    )
+    persisted: bool = Field(
+        False, description="True when report + customer metadata were written to the call store"
+    )
 
 
 class PipelineCompareRequest(BaseModel):
@@ -913,8 +971,15 @@ class PipelineCompareRequest(BaseModel):
         description="Total USD budget across all model runs (default: profile cost_budget_per_call)",
     )
     llm_api_key: str | None = None
-    provider: str = Field("openrouter", pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$")
+    provider: str = Field(
+        "openrouter",
+        pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
+    )
     groq_eu_residency: bool = False
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
+    )
 
     @field_validator("segments")
     @classmethod
@@ -1098,6 +1163,10 @@ class Fas4LlmFlags(BaseModel):
     groq_eu_residency: bool = Field(
         False,
         description="GDPR gate for Groq: affirm EU data residency (default: OFF).",
+    )
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
     )
 
 

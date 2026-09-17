@@ -15,6 +15,37 @@ Fas 1–3 delivered advanced ASR (WhisperX, hotwords, chunking, preprocess), ABS
 
 **Fas 3 – Mistral/OpenRouter LLM Integration (European-first)**: Hybrid selective deep path using `mistralai/mistral-medium-3-5` (primary) via OpenRouter for holistic full-conversation analysis. Strict JSON schema + Pydantic validation. Always logged for GDPR. Local fast path remains default. See `docs/MULTI_PROVIDER_LLM.md`.
 
+## Kundstyrd bearbetning — operatörspilot (Läge A)
+
+Målflöde för operatörspiloten (beslutsregister i `docs/PILOT_RUNBOOK.md` §0):
+
+```
+Ljudfil
+  → lokal lagring + stabilt samtals-ID (serverutfärdat)
+  → kundidentifiering från originalfilnamnet
+  → fryst kundkonfiguration (version + hash per jobb)
+  → lokal CUDA-ASR (RTX 5070, Windows 11)
+      → eventuell kundtillåten moln-STT-reserv
+  → lokalt sparat transkript (före eventuell extern analys)
+  → lokala analyzers (registry)
+  → kundvald lokal/extern LLM-kedja (holistic → QA → judge)
+  → validerad QA/coaching-rapport med evidens
+  → lokal rapportpersistens
+  → webui (BFF) — visar kund, route, fallbackorsak och lagringsstatus
+```
+
+**Status (2026-09):**
+
+| Komponent | As-is | To-be |
+|-----------|-------|-------|
+| Kundidentifiering | **Etapp 2 landad:** resolver + fryst `CustomerContext` på intag; `analyzer_profile` och `qa_scorecard` styr pipeline/QA. Request får bara smalna ASR/LLM (kläm i `clamp_execution_policy`). Okänd kund → hårdfel. Default `customers.mode: disabled` tills R04. | Full klassificerad fallback + delad budget (Etapp 4) |
+| Persistens | **Etapp 3 landad:** serverutfärdat `call_id`, transkript persisteras före LLM (`transcript_hook` / `/transcribe` / batch / scan), rapport + `meta.customer` + fingerprint i `CallStore`. Idempotens `customer+källa+fingerprint`. Jobb `completed` efter lyckad store-skrivning; fail-provenance är best-effort. | RPO/RTO och per-kund kataloglayout kan förfinas |
+| Routing | ASR/LLM-request kläms mot kundens allowlist (vidgning → 422). `MultiProviderRouter` kan fortfarande lägga till providers *inom* den klämdan kedjan. | Klassificerad fallback + försökstak (Etapp 4) |
+| GPU-resurser | ASR och LM Studio har separata lås; laddade modeller ligger kvar i VRAM | Gemensam resursreservation per tungt steg; verifierbar modellavlastning; faktisk CUDA-enhet rapporteras |
+| Cache | Rapportcache-key `report:v3` inkluderar `customer_id` + `config_fingerprint` | Aggregatnycklar kan följa samma mönster |
+
+Dessa komponenter implementeras etappvis; denna tabell uppdateras när respektive etapp landar. Beteendet ovan är **mål**, inte nuvarande implementation, om inte raden i tabellen anger annat.
+
 ## Engine vs adapter
 
 Heavy domain logic lives in engine modules (`src/sentiment.py`, `src/intent.py`, `src/negation.py`, `src/insights.py`, `src/predictive.py`, `src/topic_modeling.py`). `src/analysis/*.py` adapters register those engines in the analyzer registry. Change scoring/heuristics in the engine; change pipeline wiring in the adapter.

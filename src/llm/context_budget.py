@@ -28,7 +28,12 @@ class ContextBudget:
     @property
     def remaining_tokens(self) -> int:
         """Tokens remaining after the complete request allocation."""
-        return self.effective_context - self.input_tokens - self.output_tokens - self.safety_margin_tokens
+        return (
+            self.effective_context
+            - self.input_tokens
+            - self.output_tokens
+            - self.safety_margin_tokens
+        )
 
     @property
     def fits(self) -> bool:

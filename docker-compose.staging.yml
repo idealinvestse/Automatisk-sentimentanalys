@@ -30,7 +30,8 @@ services:
       - api_media:/app/media
       - api_state:/app/state
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       - HF_HOME=/cache/hf
       - API_CORS_ORIGINS=${API_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}

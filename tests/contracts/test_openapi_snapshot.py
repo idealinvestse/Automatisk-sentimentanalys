@@ -29,7 +29,7 @@ REQUIRED_BODY_FIELDS = {
     ("/analyze_pipeline", "post"): {"segments"},
     ("/analyze_pipeline/partial", "post"): {"segments"},
     ("/transcribe", "post"): {"audio_path"},
-    ("/calls/{call_id}", "put"): {"id"},
+    ("/calls/{call_id}", "put"): set(),
 }
 
 

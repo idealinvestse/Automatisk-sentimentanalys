@@ -18,7 +18,9 @@ from ..router_errors import run_route_sync
 router = APIRouter(prefix="/llm", tags=["LLM"])
 
 
-@router.get("/analysis-profiles", summary="List selectable analysis perspectives with paid model picks")
+@router.get(
+    "/analysis-profiles", summary="List selectable analysis perspectives with paid model picks"
+)
 def get_analysis_profiles(
     top_k: int = Query(3, ge=1, le=8, description="Alternatives per perspective"),
     refresh: bool = Query(True, description="Recompute from catalogs (false = cached snapshot)"),
@@ -39,8 +41,11 @@ def get_analysis_profiles(
                             "use_when": p.get("use_when"),
                             "icon": p.get("icon"),
                             "model": (p.get("recommended") or {}).get("model_id"),
-                            "provider": (p.get("recommended") or {}).get("provider") or p.get("provider"),
-                            "blended_usd_per_m": (p.get("recommended") or {}).get("blended_per_m_usd"),
+                            "provider": (p.get("recommended") or {}).get("provider")
+                            or p.get("provider"),
+                            "blended_usd_per_m": (p.get("recommended") or {}).get(
+                                "blended_per_m_usd"
+                            ),
                             "est_cost_per_call_usd": (p.get("recommended") or {}).get(
                                 "est_cost_per_call_usd"
                             ),

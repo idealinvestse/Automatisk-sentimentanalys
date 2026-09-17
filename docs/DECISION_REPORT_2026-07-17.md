@@ -1,5 +1,10 @@
 # Executive Decision Pack — Automatisk-sentimentanalys
 
+> **HISTORISKT DOKUMENT (2026-07-17).** Detta beslutsunderlag speglar läget per 2026-07-17 och behålls som historik.
+> Aktuell pilotinriktning och gällande beslut (QA/coaching som primärnytta, Windows 11/RTX 5070-operatörspilot, kundstyrd bearbetning per kundorganisation) dokumenteras i:
+> [STRATEGY.md](../STRATEGY.md) § Aktuell pilotinriktning och [docs/PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) § Beslutsregister.
+> Bedömningar och gates nedan har inte körts om för aktuell version och ska inte läsas som aktuella verifieringsbevis.
+
 **Datum:** 2026-07-17  
 **Version underlag:** 0.5.0 (production-ready beta)  
 **Syfte:** Underlag för pilot go/no-go, compliance-läge och 90-dagars prioritering  

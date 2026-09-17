@@ -29,9 +29,20 @@ This project is designed for processing sensitive customer service conversations
 - **PII**: `anonymize_before_llm` is required on every `llm.enabled` profile (`callcenter`, `complaint`, `support`). Analysis jobs force redaction before persist.
 - **Data at Rest**: Use `.cache/`, `state/`, and `outputs/` (all ignored in `.gitignore`).
 
-## Pilot / production policy (2026-07)
+## Pilot / production policy (2026-07, uppdaterad 2026-09)
 
-For controlled customer pilots, keep **local ASR**, **Groq unset** for PII workloads, and **PII redaction before LLM** (`callcenter` profile default). Operational checklist: [docs/PILOT_RUNBOOK.md](docs/PILOT_RUNBOOK.md). Verify with `python scripts/verify_pilot_policy.py` (add `--strict` when `API_PRODUCTION=true`).
+Two pilot modes exist (see [docs/PILOT_RUNBOOK.md](docs/PILOT_RUNBOOK.md) §0):
+
+**Läge B — Kundpilot (låst):** keep **local ASR**, **Groq unset** for PII workloads, and **PII redaction before LLM** (`callcenter` profile default). Verify with `python scripts/verify_pilot_policy.py` (add `--strict` when `API_PRODUCTION=true`).
+
+**Läge A — Operatörspilot (lokal drift, beslutsägare Oscar Delerud):** körs på en enskild Windows 11/RTX 5070-dator under operatörens kontroll. Principer:
+
+- Kundorganisation (identifierad från ljudfilens namn) styr sin bearbetningspolicy — inklusive om **text och råljud** får skickas till utvalda externa leverantörer.
+- Extern bearbetning är **alltid** per kundprofil, uttryckligt vald och spårad — aldrig en omarkerad default. Underlag och resultat ska vara sparade lokalt innan något skickas externt.
+- Lokal kopia hos operatören innebär **inte** att leverantören saknar kopia; leverantörsval, retention och avtalsläge är separata godkännanden (blockerade tills Oscar aktiverar dem).
+- PII-redaktion före externa anrop behålls som default för profiler med `anonymize_before_llm`; en kundprofil som tillåter rådata ut gör det genom ett uttryckligt, spårbart beslut — en trasig maskeringsväg är aldrig implicit tillåtelse.
+- Kund-ID är routingunderlag, inte användarautentisering. Åtkomst till maskinen och API-nycklar hanteras av operatören; fleranvändaråtkomst kräver separat design.
+- Automatiseringen omfattar analyser och rekommendationer — inga automatiskt verkställda externa åtgärder.
 
 ## Cloud STT (opt-in)
 

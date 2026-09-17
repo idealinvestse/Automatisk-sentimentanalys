@@ -323,4 +323,3 @@ def sentiment_cmd(
             console.print(f"[green]Resultat sparade till CSV:[/green] {output}")
         except Exception as e:
             console.print(f"[red]Kunde inte spara till CSV: {e}[/red]")
-

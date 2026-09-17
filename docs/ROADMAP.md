@@ -6,9 +6,13 @@ This document provides a high-level overview of the project's maturity and futur
 
 **Version**: 0.5.1
 
-The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
+The project is an **operatörspilot under uppbyggnad** (v0.5.1-linje). Fas 4-backend finns, men kvalitetsbevis (DATA-01) och L7–L9 är öppna — etiketten “production-ready beta” ska inte läsas som kundklar drift.
 
 > **Note:** The test suite is continuously extended. Use `pytest --collect-only -q` for the authoritative current count; CI is the merge gate.
+
+### Pilot direction (2026-09, decision owner: Oscar Delerud)
+
+Aktuell utvecklingsriktning är en **operatörspilot** (Läge A) på Windows 11/RTX 5070 12 GB: QA-stöd och coachning som primärnytta, kundorganisation identifierad från ljudfilens namn, lokal CUDA-ASR som baslinje och per-kundprofil valbar lokal/extern bearbetning med lokal artefaktpersistens. Fullständigt beslutsregister: [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) §0. Filnamnsformat, faktiska kundmappningar, leverantörsval, budget och retention är öppna beslut som blockerar skarp aktivering — inte dokumentation eller syntetisk verifiering. Implementationsstatus för kundstyrd bearbetning redovisas per etapp här i takt med att den landar.
 
 ### Known Gaps / Deferred Items (v0.5.1)
 
@@ -59,24 +63,29 @@ The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backe
 - **Privacy by design**: Explicit logging of external LLM calls, PII redaction, no hardcoded secrets.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 
-## Strategy & decision pack (2026-07)
+## Strategy & decision pack (2026-07, updated 2026-09)
 
 Canonical product strategy: **[STRATEGY.md](../STRATEGY.md)**.  
-Executive go/no-go + 90-day plan: **[docs/DECISION_REPORT_2026-07-17.md](DECISION_REPORT_2026-07-17.md)**.  
-Operational pilot locks: **[docs/PILOT_RUNBOOK.md](PILOT_RUNBOOK.md)** · corpus spec: **[docs/DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md)**.  
+Executive go/no-go + 90-day plan: **[docs/DECISION_REPORT_2026-07-17.md](DECISION_REPORT_2026-07-17.md)** (historiskt).  
+Operational pilot locks + beslutsregister R01–R09: **[docs/PILOT_RUNBOOK.md](PILOT_RUNBOOK.md)** · corpus spec: **[docs/DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md)**.  
 Frontend ↔ backend harmony: **[docs/FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY_2026-07-17.md)**.
 
-**Verdict:** *conditional go* for a controlled pilot (local ASR, anonymize LLM, Groq off, DATA-01 + L7–L9).
+**Verdict (2026-07, Läge B):** *conditional go* for a controlled pilot (local ASR, anonymize LLM, Groq off, DATA-01 + L7–L9).  
+**Riktning (2026-09, Läge A):** operatörspilot enligt [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) §0.
 
 ## Next Priorities (post v0.5)
 
 | Priority | Area | Description |
 |----------|------|-------------|
+| High | **Operatörspilot — kundkontext** (Läge A) | ✅ Etapp 2: resolver, fryst kontext, profil/scorecard-wiring, ASR/LLM-kläm (smalna only). Skarp `required` väntar på R04. |
+| High | **Operatörspilot — lokal datalivscykel** (Läge A) | ✅ Etapp 3: server-`call_id`, transkript före LLM, persist + idempotens customer+källa+fingerprint |
+| High | **Operatörspilot — exekveringspolicy** (Läge A) | Kundstyrd ASR/LLM-routing med strikt tillåtelselista, klassificerad fallback, gemensam försök-/budgetkontext (Etapp 4) |
+| High | **Operatörspilot — GPU/resurser** (Läge A) | Gemensam resursreservation ASR/LLM, verifierad CUDA-enhet och modellavlastning på RTX 5070 (Etapp 5) |
 | High | **Real corpus** | Replace synthetic DATA-01 bundle (`generate_pilot_corpus.py`) with anonymized telephony via `--pilot-gate` — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md) |
 | High | **Pilot release gates** | Run `scripts/run_pilot_gates.py` (L7 fixture + policy); close L8/L9 + live `/testlab` before customer pilot — [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) |
 | High | **Intent fine-tune** | Promote model that beats heuristic + 0.05 macro F1 (`train_intent_smoke.py` / `train_intent.py` + `run_quality_gates.py`) |
 | Medium | **OTLP tracing** | Replace console OTEL exporter with production OTLP endpoint |
-| Medium | **Dashboard polish** | Correlation heatmap, executive drill-downs |
+| Medium | **Dashboard polish** | Correlation heatmap, executive drill-downs; kundkontext i UI (Etapp 6) |
 | Low | **Fine-tuning UX** | Easier domain adaptation workflow for call center data |
 
 ### Ops hardening landed (post-genomlysning)

@@ -130,8 +130,7 @@ def list_configured_providers(config: dict[str, Any] | None = None) -> dict[str,
             out[name] = False
             continue
         out[name] = bool(
-            spec.get("auth_required", True) is False
-            or get_provider_api_key(name, config=cfg)
+            spec.get("auth_required", True) is False or get_provider_api_key(name, config=cfg)
         )
     return out
 

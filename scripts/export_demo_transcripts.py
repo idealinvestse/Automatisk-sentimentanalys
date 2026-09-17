@@ -26,7 +26,9 @@ def main() -> None:
     from app.services.data_services import DEMO_TRANSCRIPTS
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(DEMO_TRANSCRIPTS, ensure_ascii=False, indent=2), encoding="utf-8")
+    args.output.write_text(
+        json.dumps(DEMO_TRANSCRIPTS, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     if args.check:
         ts = (ROOT / "webui" / "src" / "lib" / "demo-transcripts.ts").read_text(encoding="utf-8")

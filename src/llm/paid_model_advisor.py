@@ -297,7 +297,9 @@ def _blended_cost(prompt_m: float, completion_m: float, pin_ratio: float = 0.4) 
     return prompt_m * pin_ratio + completion_m * (1.0 - pin_ratio)
 
 
-def _est_call_cost(prompt_m: float, completion_m: float, in_tok: int = 4000, out_tok: int = 1500) -> float:
+def _est_call_cost(
+    prompt_m: float, completion_m: float, in_tok: int = 4000, out_tok: int = 1500
+) -> float:
     return (in_tok / 1_000_000) * prompt_m + (out_tok / 1_000_000) * completion_m
 
 
@@ -388,7 +390,9 @@ def collect_paid_candidates(
             # Negative / nonsense pricing (router meta models) → skip
             if pin < 0 or pout < 0 or pin > 500 or pout > 2000:
                 continue
-            is_free = bool(m.get("is_free")) or mid.endswith(":free") or (pin == 0.0 and pout == 0.0)
+            is_free = (
+                bool(m.get("is_free")) or mid.endswith(":free") or (pin == 0.0 and pout == 0.0)
+            )
             if is_free and not include_free:
                 # Native catalogs often lack pricing → treat curated non-free carefully
                 if provider != "openrouter" and pin == 0.0 and pout == 0.0:
@@ -514,7 +518,8 @@ def recommend_for_perspective(
         "llm_model": recommended["model_id"] if recommended else None,
         "analysis_perspective": perspective_id,
         "use_mistral_llm": True,
-        "deep_analysis": perspective_id in {"holistic_deep", "premium_reasoning", "root_cause", "coaching_qa"},
+        "deep_analysis": perspective_id
+        in {"holistic_deep", "premium_reasoning", "root_cause", "coaching_qa"},
     }
 
     return PerspectiveRecommendation(
@@ -602,10 +607,12 @@ def load_profiles_snapshot(path: str | Path | None = None) -> dict[str, Any] | N
 
 if __name__ == "__main__":
     snap = list_analysis_profiles()
-    print(json.dumps({"count": len(snap["profiles"]), "generated_at": snap["generated_at"]}, indent=2))
+    print(
+        json.dumps({"count": len(snap["profiles"]), "generated_at": snap["generated_at"]}, indent=2)
+    )
     for p in snap["profiles"]:
         rec = p.get("recommended") or {}
         print(
-            f"- {p['id']:20} → {rec.get('provider','?'):10} {rec.get('model_id','(none)')} "
-            f"${rec.get('blended_per_m_usd','?')}/M  est/call=${rec.get('est_cost_per_call_usd','?')}"
+            f"- {p['id']:20} → {rec.get('provider', '?'):10} {rec.get('model_id', '(none)')} "
+            f"${rec.get('blended_per_m_usd', '?')}/M  est/call=${rec.get('est_cost_per_call_usd', '?')}"
         )

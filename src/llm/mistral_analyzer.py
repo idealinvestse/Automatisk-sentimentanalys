@@ -100,7 +100,9 @@ class ConversationMistralAnalyzer:
             self.client = client
         else:
             self.client = OpenRouterClient(api_key=api_key) if api_key else OpenRouterClient()
-        self.model = model or getattr(self.client, "default_model", None) or OpenRouterClient.DEFAULT_MODEL
+        self.model = (
+            model or getattr(self.client, "default_model", None) or OpenRouterClient.DEFAULT_MODEL
+        )
         self.temperature = temperature
         self.max_tokens = max_tokens
 

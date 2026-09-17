@@ -19,6 +19,8 @@ const SMOKE_PIPELINE = {
   },
   processing_time_s: 0.01,
   timestamp: new Date().toISOString(),
+  call_id: "e2e-server-call",
+  persisted: true,
   llm: {},
   results: {
     qa: { overall_qa_score: 70, passed: true, criteria_results: [], compliance_flags: [] },
@@ -199,6 +201,7 @@ export async function stubDashboardApi(page: Page): Promise<void> {
         filename: "e2e.wav",
         size_bytes: 8,
         timestamp: new Date().toISOString(),
+        customer: null,
       }),
     }),
   );
@@ -211,6 +214,7 @@ export async function stubDashboardApi(page: Page): Promise<void> {
           segments: [{ speaker: "Agent", text: "Hej", start: 0, end: 1 }],
         },
         timestamp: new Date().toISOString(),
+        call_id: "e2e-server-call",
       }),
     }),
   );

@@ -6,12 +6,21 @@ from unittest.mock import patch
 
 from src.api.helpers import asr_kwargs_from, transcribe_helper
 from src.api.schemas import TranscribeRequest
-from src.core.models import Transcript
+from src.api.settings import get_api_settings
+from src.core.models import Segment, Transcript
 from src.transcription.base import resolve_model_name
 
 
 def test_transcribe_helper_uses_router():
-    fake = Transcript("m", "faster", "sv", 1.0, 0.1, provider="local")
+    fake = Transcript(
+        "m",
+        "faster",
+        "sv",
+        1.0,
+        0.1,
+        segments=[Segment(0.0, 1.0, "hej")],
+        provider="local",
+    )
     with patch("src.api.helpers.AsrRouter") as R:
         R.return_value.transcribe.return_value = fake
         d = transcribe_helper("a.wav", provider="local")
@@ -19,7 +28,11 @@ def test_transcribe_helper_uses_router():
     assert d["provider"] == "local"
 
 
-def test_asr_kwargs_from_includes_provider_defaults(tmp_path):
+def test_asr_kwargs_from_includes_provider_defaults(tmp_path, monkeypatch):
+    monkeypatch.delenv("API_MEDIA_ROOT", raising=False)
+    monkeypatch.delenv("API_PRODUCTION", raising=False)
+    monkeypatch.delenv("API_REQUIRE_MEDIA_ROOT", raising=False)
+    get_api_settings.cache_clear()
     audio = tmp_path / "x.wav"
     audio.write_bytes(b"RIFF")
     req = TranscribeRequest(audio_path=str(audio))
@@ -29,7 +42,15 @@ def test_asr_kwargs_from_includes_provider_defaults(tmp_path):
 
 
 def test_transcribe_helper_default_provider_local():
-    fake = Transcript("m", "faster", "sv", 1.0, 0.1, provider="local")
+    fake = Transcript(
+        "m",
+        "faster",
+        "sv",
+        1.0,
+        0.1,
+        segments=[Segment(0.0, 1.0, "hej")],
+        provider="local",
+    )
     with patch("src.api.helpers.AsrRouter") as R:
         R.return_value.transcribe.return_value = fake
         transcribe_helper("a.wav")

@@ -17,6 +17,7 @@ export interface DemoSegment {
 export interface DemoTranscriptMeta {
   agent: string;
   customer?: string;
+  customer_id?: string;
   duration_s: number;
   category: string;
 }

@@ -10,7 +10,8 @@
 
 **Core Philosophy**:
 - **Hybrid-first**: Local models + heuristics are the default/fast/private path. Mistral (via OpenRouter) is used selectively for high-value reasoning.
-- **Graceful degradation**: Missing optional components (pyannote, whisperx, etc.) must fall back automatically.
+- **Graceful degradation**: Missing optional components (pyannote, whisperx, etc.) must fall back automatically. This does **not** apply to empty/failed ASR on API paths.
+- **Fail-closed ASR**: `analyze_audio(..., strict_asr=True)` is the default. Noll användbara segment är fel (`asr_empty_transcript`). Ingen QA/coaching-rapport och ingen LLM på tomt transkript. Pass `strict_asr=False` only for explicit library degrade experiments.
 - **Privacy by design**: Explicit logging of external LLM calls. Early PII redaction for callcenter profile.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 - **Production realism**: Error isolation, caching, and non-fatal failures where possible.
@@ -20,22 +21,28 @@
 ```
 Audio / Text Input
        ↓
-ASR via AsrRouter (local factory or opt-in cloud Deepgram) + diarization
+Customer resolve from original filename (src/customers.py) → frozen CustomerContext
+       ↓
+ASR via AsrRouter (local factory; cloud only if customer policy allows)
+       ↓  fail / empty speech → hard fail (no QA report)
+Transcript persist (CallStore) before any external LLM
        ↓
 PII Redaction (early; required when profile llm.anonymize_before_llm)
        ↓
 Analysis Registry (src/analysis/registry.py) → topological + living routing
        ↓
-Fas 4: local agent_performance → optional holistic LLM (CCP) → QA → alerts
+Fas 4: local agent_performance → optional holistic LLM (CCP) → kund-scorecard QA → alerts
        ↓
-CallAnalysisReport → CLI / FastAPI / webui (BFF default)
+CallAnalysisReport + meta.customer + fingerprint → CLI / FastAPI / webui (BFF default)
 ```
 
 **Key Integration Points**:
-- `src/pipeline.py`: `CallAnalysisPipeline` orchestrates everything.
+- `src/pipeline.py`: `CallAnalysisPipeline` orchestrates everything (`strict_asr`, `qa_scorecard`, `transcript_hook`).
+- `src/customers.py`: Filename → organisation. Request may only narrow ASR/LLM (`clamp_execution_policy`).
 - `src/pipeline_steps.py`: PII, registry, holistic LLM, QA, alerts.
 - `src/analysis/registry.py`: Central place to register new analyzers.
 - `src/transcription/router.py`: Local vs cloud ASR; `factory.py` caches local engines.
+- `src/api/call_store.py` + `call_persistence.py`: Server `call_id`, idempotency `customer+source+fingerprint`.
 - `src/llm/client_factory.py`: Provider resolution (`openrouter`, `groq`, `lmstudio`, compat/router).
 
 ## 3. Directory Structure & Responsibilities
@@ -44,6 +51,8 @@ CallAnalysisReport → CLI / FastAPI / webui (BFF default)
 |-----------------------------|-------------------------------------------------------------------------|-------------------|
 | `src/`                      | Main source code                                                        | - |
 | `src/pipeline.py`           | Core orchestration (`CallAnalysisPipeline`)                             | Most important file |
+| `src/customers.py`          | Kundregister, filename-resolver, ASR/LLM-kläm (smalna only)            | `CustomerRegistry`, `clamp_execution_policy` |
+| `src/api/call_store.py`     | Serverutfärdat samtals-ID + JSON-persistens                            | `new_call_id`, `call_idempotency_key` |
 | `src/analysis/`             | All analyzers (aspect, emotion, role, trajectory, intent, etc.) + registry | `registry.py`, `base.py` |
 | `src/transcription/`        | ASR backends (faster_whisper, transformers, whisperx) + preprocess     | `factory.py`, `base.py` |
 | `src/llm/`                  | LLM clients (OpenRouter, Groq, LM Studio, OpenAI-compat) + factory   | `client_factory.py`, `mistral_analyzer.py`, `lmstudio_client.py`, `prompts.py`, `schemas.py` |
@@ -141,7 +150,7 @@ When modifying pipeline logic, keep error isolation (`try/except` + logging + co
 - Fallback to local analysis on any LLM failure.
 - GDPR gate: Groq requires `groq_eu_residency=True` or `anonymize_before_llm=True`.
 - Prompts live in `prompts.py`. Schemas in `schemas.py`.
-- See `docs/LLM_PROVIDERS.md` for full comparison matrix.
+- See `docs/MULTI_PROVIDER_LLM.md` for the provider/router comparison.
 
 #### Holistic LLM dual-path (Mistral vs Groq)
 
@@ -233,6 +242,7 @@ Quick map:
 
 - Unit: `tests/test_*.py` — prefer `pytest -m "not slow"` locally
 - Pipeline / golden: `tests/test_pipeline.py`, `tests/test_callcenter_golden.py`
+- Customer + fail-closed: `tests/test_customer_profiles.py`, `tests/test_call_store.py`
 - API: `tests/test_api*.py` + `tests/contracts/` (target ≥90% on `src/api`)
 - Quality gates: `scripts/benchmark_intent.py`, `scripts/benchmark_analyzers.py --check-thresholds`
 - Webui: `cd webui && npm run test:e2e` (Playwright; backend stubbed in CI)
@@ -255,7 +265,15 @@ When changing analyzers or heuristics, do not skip golden + quality gates. Do no
 
 ## 11. What NOT to Do
 
-- Do not remove graceful fallback logic.
+- Do not restore silent empty-ASR fallback (`analyze_audio(..., strict_asr=False)` on operator/API/CLI paths, or skipping `require_usable_transcript`).
+- Do not treat customer 422s as generic `validation_error` — keep the dedicated `error_code` values.
+- Do not skip customer resolve on Fas4/compare when `original_filename` is missing; required mode must 422.
+- Do not swallow store-write failures on completed batch/scan jobs (`persist_intake_file(..., must_succeed=True)`).
+- Do not let a request widen a customer's ASR provider, cloud fallback, or LLM allowlist.
+- Do not treat a silent LLM request as "LLM off". `requested_llm_enabled=None` inherits the customer allowlist or profile default; only an explicit `False` forces the ceiling off. `/analyze_conversation` full pipeline has no LLM fields and must inherit.
+- Do not invent a filename convention or set `customers.mode: required` — R04 is Oscar-owned; default install stays `disabled`.
+- Do not treat filename customer-id as authentication.
+- Do not remove graceful fallback logic for optional analyzers (pyannote, whisperx, LLM).
 - Do not send transcripts to LLM without explicit user flag or profile setting.
 - Do not hardcode paths or API keys.
 - Do not bypass the analyzer registry for new analysis features.

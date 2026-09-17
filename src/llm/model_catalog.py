@@ -130,7 +130,9 @@ def fetch_provider_models_catalog(
         # Seed from curated lists when provider forbids model listing (e.g. Cerebras 403)
         curated = list(spec.get("curated_free") or []) + [
             v
-            for v in ((spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}).values()
+            for v in (
+                (spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}
+            ).values()
         ]
         if curated and e.code in {401, 403, 404}:
             logger.warning(
@@ -140,7 +142,7 @@ def fetch_provider_models_catalog(
                 len(curated),
             )
             catalog_models = []
-            seen=set()
+            seen = set()
             for mid in curated:
                 if not mid or mid in seen:
                     continue
@@ -253,7 +255,10 @@ def fetch_all_provider_catalogs(
     all_providers = list((cfg.get("providers") or {}).keys())
     targets = providers or all_providers
 
-    results: dict[str, Any] = {"scanned_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "providers": {}}
+    results: dict[str, Any] = {
+        "scanned_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "providers": {},
+    }
     for name in targets:
         spec = (cfg.get("providers") or {}).get(name) or {}
         if spec.get("enabled", True) is False:
@@ -277,7 +282,9 @@ def fetch_all_provider_catalogs(
             logger.exception("scan failed for %s", name)
             results["providers"][name] = {"ok": False, "error": str(exc)}
 
-    index_path = Path((cfg.get("catalog") or {}).get("index_file") or "data/model_catalogs/index.json")
+    index_path = Path(
+        (cfg.get("catalog") or {}).get("index_file") or "data/model_catalogs/index.json"
+    )
     index_path.parent.mkdir(parents=True, exist_ok=True)
     index_path.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     # Legacy openrouter path convenience
@@ -307,7 +314,9 @@ def load_catalog(path: str | Path = "data/openrouter_models_catalog.json") -> di
         return None
 
 
-def load_provider_catalog(provider: str, config: dict[str, Any] | None = None) -> dict[str, Any] | None:
+def load_provider_catalog(
+    provider: str, config: dict[str, Any] | None = None
+) -> dict[str, Any] | None:
     cfg = config or load_provider_config()
     path = _catalog_dir(cfg) / f"{provider}.json"
     if provider == "openrouter" and not path.exists():

@@ -92,3 +92,90 @@ def test_run_analyze_conversation_full_pipeline(audio_file, cache):
     assert out.pipeline_results is not None
     assert out.pipeline_results.get("qa")
     assert out.meta.get("pipeline") is True
+
+
+def _conversation_customer(*, llm_enabled: bool = True):
+    from src.customers import CustomerAsrPolicy, CustomerContext, CustomerLlmPolicy
+
+    return CustomerContext(
+        customer_id="0042",
+        display_name="Testkund AB",
+        analyzer_profile="callcenter",
+        qa_scorecard="standard_support_v1",
+        asr=CustomerAsrPolicy(),
+        llm=CustomerLlmPolicy(
+            enabled=llm_enabled,
+            provider_allowlist=["lmstudio"] if llm_enabled else [],
+        ),
+        registry_version=1,
+        config_fingerprint="fp-1",
+        source_filename="kund-0042_a.wav",
+    )
+
+
+def test_full_pipeline_inherits_customer_llm(audio_file, cache):
+    from src.api.schemas import AnalyzeConversationRequest
+
+    req = AnalyzeConversationRequest(audio_path=audio_file, use_full_pipeline=True)
+    fake_report = CallAnalysisReport(
+        segments=[{"text": "hej", "start": 0, "end": 1}],
+        sentiment_results=[{"label": "positiv", "score": 0.9}],
+        results={"qa": {"overall_qa_score": 80}},
+    )
+    captured: dict[str, object] = {}
+
+    def _fake_analyze(self, *args, **kwargs):
+        captured["use_mistral_llm"] = self.use_mistral_llm
+        captured["provider"] = self.provider
+        return fake_report
+
+    with patch.object(CallAnalysisPipeline, "analyze_audio", _fake_analyze):
+        run_analyze_conversation(req, cache=cache, customer=_conversation_customer())
+    assert captured["use_mistral_llm"] is True
+    assert captured["provider"] == "lmstudio"
+
+
+def test_full_pipeline_respects_disabled_customer_llm(audio_file, cache):
+    from src.api.schemas import AnalyzeConversationRequest
+
+    req = AnalyzeConversationRequest(audio_path=audio_file, use_full_pipeline=True)
+    fake_report = CallAnalysisReport(
+        segments=[{"text": "hej", "start": 0, "end": 1}],
+        results={"qa": {"overall_qa_score": 80}},
+    )
+    captured: dict[str, object] = {}
+
+    def _fake_analyze(self, *args, **kwargs):
+        captured["use_mistral_llm"] = self.use_mistral_llm
+        captured["deep_analysis"] = self.deep_analysis
+        return fake_report
+
+    with patch.object(CallAnalysisPipeline, "analyze_audio", _fake_analyze):
+        run_analyze_conversation(
+            req, cache=cache, customer=_conversation_customer(llm_enabled=False)
+        )
+    assert captured["use_mistral_llm"] is False
+    assert captured["deep_analysis"] is False
+
+
+def test_full_pipeline_without_customer_keeps_callcenter_profile_llm(audio_file, cache):
+    from src.api.schemas import AnalyzeConversationRequest
+
+    req = AnalyzeConversationRequest(
+        audio_path=audio_file,
+        use_full_pipeline=True,
+        sentiment_profile="callcenter",
+    )
+    fake_report = CallAnalysisReport(
+        segments=[{"text": "hej", "start": 0, "end": 1}],
+        results={},
+    )
+    captured: dict[str, object] = {}
+
+    def _fake_analyze(self, *args, **kwargs):
+        captured["use_mistral_llm"] = self.use_mistral_llm
+        return fake_report
+
+    with patch.object(CallAnalysisPipeline, "analyze_audio", _fake_analyze):
+        run_analyze_conversation(req, cache=cache)
+    assert captured["use_mistral_llm"] is True

@@ -2034,6 +2034,18 @@
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "segments_list": {
             "items": {
               "items": {
@@ -2156,6 +2168,18 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "segments_list": {
             "anyOf": [
@@ -2309,6 +2333,28 @@
             "const": "lmstudio",
             "title": "Provider",
             "default": "lmstudio"
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
           }
         },
         "type": "object",
@@ -2497,6 +2543,18 @@
             "type": "string",
             "title": "Audio Path",
             "description": "Path to audio file accessible by the server"
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "word_timestamps": {
             "type": "boolean",
@@ -3876,10 +3934,17 @@
       "CallUpsertRequest": {
         "properties": {
           "id": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "pattern": "^[A-Za-z0-9._-]+$",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "transcript": {
@@ -3907,12 +3972,31 @@
               }
             ],
             "title": "Created At"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           }
         },
         "type": "object",
-        "required": [
-          "id"
-        ],
         "title": "CallUpsertRequest",
         "description": "Store or update an analyzed call."
       },
@@ -4067,6 +4151,40 @@
         },
         "type": "object",
         "title": "CustomerEffortSegment"
+      },
+      "CustomerRef": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "analyzer_profile": {
+            "type": "string",
+            "title": "Analyzer Profile"
+          },
+          "registry_version": {
+            "type": "integer",
+            "title": "Registry Version"
+          },
+          "config_fingerprint": {
+            "type": "string",
+            "title": "Config Fingerprint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "display_name",
+          "analyzer_profile",
+          "registry_version",
+          "config_fingerprint"
+        ],
+        "title": "CustomerRef",
+        "description": "Customer identity resolved from the original filename.\n\nRouting context only — not authentication or authorization."
       },
       "DerivedCallSentiment": {
         "properties": {
@@ -4474,6 +4592,18 @@
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "segments_list": {
             "items": {
               "items": {
@@ -4815,6 +4945,29 @@
             "type": "boolean",
             "title": "Groq Eu Residency",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename for customer identification"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
           }
         },
         "type": "object",
@@ -4922,6 +5075,18 @@
             "type": "boolean",
             "title": "Groq Eu Residency",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           }
         },
         "type": "object",
@@ -5109,6 +5274,30 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id",
+            "description": "Server-issued call id from POST /transcribe; reused for report persistence"
           }
         },
         "type": "object",
@@ -5222,6 +5411,35 @@
             "title": "Mode",
             "description": "'full' when no degradation; 'degraded' when one or more optional components were skipped.",
             "default": "full"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomerRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved customer routing context when a registry is active"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id",
+            "description": "Server-issued call identity for persisted artifacts"
+          },
+          "persisted": {
+            "type": "boolean",
+            "title": "Persisted",
+            "description": "True when report + customer metadata were written to the call store",
+            "default": false
           }
         },
         "type": "object",
@@ -5340,6 +5558,18 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "segments": {
             "items": {
@@ -6042,6 +6272,18 @@
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "segments_list": {
             "items": {
               "items": {
@@ -6371,6 +6613,18 @@
             "title": "Audio Path",
             "description": "Path to audio file accessible by the server"
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "word_timestamps": {
             "type": "boolean",
             "title": "Word Timestamps",
@@ -6430,6 +6684,29 @@
             ],
             "title": "Partial Analysis",
             "description": "Incremental partial pipeline snapshot when run_partial_analysis=true"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomerRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved customer routing context when a registry is active"
+          },
+          "call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id",
+            "description": "Server-issued call identity for persisted artifacts"
           }
         },
         "type": "object",
@@ -6498,6 +6775,17 @@
             "type": "integer",
             "title": "Size Bytes",
             "description": "File size in bytes"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomerRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resolved customer context when a customer registry is active"
           },
           "timestamp": {
             "type": "string",

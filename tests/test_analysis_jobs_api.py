@@ -18,7 +18,9 @@ def test_analysis_job_rejects_when_redaction_raises() -> None:
         "src.llm.pii_redactor.redact_segments",
         side_effect=RuntimeError("redaction engine crashed"),
     ):
-        response = client.post("/analysis/jobs", json={"segments": _SEGMENTS, "profile": "complaint"})
+        response = client.post(
+            "/analysis/jobs", json={"segments": _SEGMENTS, "profile": "complaint"}
+        )
     assert response.status_code == 422
     assert "redaction" in response.text.lower()
 

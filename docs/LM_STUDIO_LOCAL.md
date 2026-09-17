@@ -163,10 +163,12 @@ Faser: `local_analysis`, `llm_holistic`, `qa`, `validating`, `persisting`.
 
 ## Pilotpolicy
 
-Pilot-runbook (`docs/PILOT_RUNBOOK.md`) auktoriserar för närvarande endast
-OpenRouter → Mistral EU/ZDR och lokal ASR. **LM Studio för kunddata kräver en
-separat policybeslut** innan pilotbruk. Denna integration är tekniskt redo men
-inte automatiskt pilot-godkänd.
+Pilot-runbook (`docs/PILOT_RUNBOOK.md` §0) skiljer på två lägen:
+
+- **Läge B (kundpilot):** auktoriserar endast OpenRouter → Mistral EU/ZDR och lokal ASR.
+- **Läge A (operatörspilot):** lokal drift på Windows 11/RTX 5070. OBS: denna dokumentation beskriver **CPU-ASR + LM Studio på GPU** som driftsform. Operatörspilotens ASR-baslinje är **CUDA** — kombinationen CUDA-ASR + lokal LM Studio-LLM på 12 GB VRAM är *inte* verifierad och kräver verifierad modellavlastning eller vald extern reserv (Etapp 5 i planen).
+
+**LM Studio för kunddata kräver ett separat policybeslut** innan pilotbruk i något läge. Integrationen är tekniskt redo men inte automatiskt pilot-godkänd.
 
 ## Manuell LM Studio-konfiguration
 

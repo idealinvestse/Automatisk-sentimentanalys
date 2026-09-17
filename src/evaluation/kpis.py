@@ -53,7 +53,8 @@ def compute_coaching_precision(
     with_ev = sum(
         1
         for r in coaching_recs
-        if r.get("evidence_spans") or (isinstance(r.get("rationale"), str) and r["rationale"].strip())
+        if r.get("evidence_spans")
+        or (isinstance(r.get("rationale"), str) and r["rationale"].strip())
     )
     return {
         "precision": round(with_ev / len(coaching_recs), 3),

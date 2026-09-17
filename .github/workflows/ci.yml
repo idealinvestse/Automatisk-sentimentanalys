@@ -21,7 +21,7 @@ jobs:
       - name: Install dev dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install "ruff==0.11.5"
 
       - name: Ruff check
         run: ruff check src/ launcher/ tests/ scripts/ app/
@@ -98,6 +98,7 @@ jobs:
             tests/test_batch.py \
             tests/test_status_api.py \
             tests/test_call_store.py \
+            tests/test_customer_profiles.py \
             tests/test_ready_and_degradation.py \
             tests/test_llm_profiles_api.py \
             tests/test_api_auth_matrix.py \
@@ -162,6 +163,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[min,api,install,dev]"
+          pip install "mypy==1.16.1"
 
       - name: Mypy (src)
         run: mypy src --config-file pyproject.toml
@@ -235,7 +237,7 @@ jobs:
           pip install -e ".[training,min,dev]"
 
       - name: Fine-tune config and corpus tests
-        run: pytest tests/test_finetune.py tests/test_train_intent.py tests/test_validate_intent_corpus.py -q
+        run: pytest tests/test_finetune.py tests/test_train_intent.py tests/test_validate_intent_corpus.py -q --benchmark-disable
 
       - name: Validate domain corpus
         run: python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500
@@ -271,7 +273,7 @@ jobs:
             --output reports/intent_baseline.json --min-macro-f1 0.75
 
       - name: Intent and DATA-01 workflow tests
-        run: pytest tests/test_intent_model_backend.py tests/test_import_domain_corpus.py tests/test_quality_gate.py -q
+        run: pytest tests/test_intent_model_backend.py tests/test_import_domain_corpus.py tests/test_quality_gate.py -q --benchmark-disable
 
       - name: Benchmark analyzers (fast heuristic sentiment)
         run: |

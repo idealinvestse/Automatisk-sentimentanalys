@@ -479,11 +479,13 @@ def score_call_with_default_scorecard(
     profile_name: str = "callcenter",
     use_llm: bool = False,
     analyzer: Any | None = None,
+    scorecard_path: str = "standard_support_v1",
 ) -> dict[str, Any]:
-    """Quick entry: load default + optional analyzer, return dict."""
+    """Quick entry: load named scorecard + optional analyzer, return dict."""
     try:
         scorer = QAScorer(
-            scorecard_path="standard_support_v1", analyzer=analyzer if use_llm else None
+            scorecard_path=scorecard_path or "standard_support_v1",
+            analyzer=analyzer if use_llm else None,
         )
         result = scorer.score_conversation(
             segments, role_map=role_map, local_signals=local_signals, profile_name=profile_name

@@ -32,11 +32,11 @@ def test_runtime_locks_fail_lmstudio_in_strict_prod(monkeypatch: pytest.MonkeyPa
     monkeypatch.delenv("API_ALLOW_CLIENT_LLM_KEY", raising=False)
 
     class _Cfg:
-        class llm:
+        class llm:  # noqa: N801
             enabled = True
             provider = "lmstudio"
 
-        class asr:
+        class asr:  # noqa: N801
             provider = "local"
 
     monkeypatch.setattr(

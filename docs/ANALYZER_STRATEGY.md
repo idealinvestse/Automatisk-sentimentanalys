@@ -43,6 +43,8 @@ Implemented in `src/pipeline_steps.py`:
 
 ## Profile defaults (`configs/analyzer_profiles.yaml`)
 
+> **Etapp 2 landad:** kundorganisationsregistret (`src/customers.py`) väljer analysprofil, QA-scorecard och klämd ASR/LLM-policy från filnamnets kund-ID. I kontrollerade lägen är okänd/tvetydig kund ett fel — inte tyst `default`. Default install är `mode: disabled` tills R04. Generiska profiler och YAML-konventionen består som underlag.
+
 **callcenter `default_selected`:** sentiment, intent, role, emotion, negation, compliance_risk, customer_effort, active_listening, aspect
 
 **callcenter `optional`:** summary, topics, resolution_probability, predictive, multi_turn_journey, empathy, trajectory, root_cause, actionable_coaching, insights, llm_judge, upsell_opportunity, spoken_normalizer, dialect_sensitivity

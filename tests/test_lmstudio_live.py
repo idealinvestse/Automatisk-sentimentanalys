@@ -31,7 +31,6 @@ from src.llm.mistral_analyzer import ConversationMistralAnalyzer
 from src.llm.prompts import build_user_prompt, get_system_prompt
 from src.llm.schemas import LLM_OUTPUT_JSON_SCHEMA, CallLLMOutput
 from src.llm.transcript_utils import build_role_labeled_transcript, make_transcript_hash
-
 from tests.fixtures.lmstudio_test_texts import (
     EDGE_CASES,
     KORTA_TEXTER,
@@ -57,6 +56,7 @@ REQUESTED_CONTEXT = int(os.environ.get("LMSTUDIO_CONTEXT", "65536"))  # 65k
 # =============================================================================
 # Helper: kontrollera om LM Studio är nåbar och modellen är laddad
 # =============================================================================
+
 
 def _lmstudio_available() -> tuple[bool, str]:
     """Return (reachable, reason). Gör ett snabbt anrop till LM Studio."""
@@ -87,6 +87,7 @@ def _lmstudio_available() -> tuple[bool, str]:
 # =============================================================================
 # Helper: klampa numeriska värden till giltiga intervall
 # =============================================================================
+
 
 def _clamp(value: float, lo: float, hi: float) -> float:
     """Begränsa value till [lo, hi]."""
@@ -174,12 +175,14 @@ def _analyze_with_clamping(
     clamped = _clamp_llm_output(dict(result_dict))
     return CallLLMOutput.model_validate(clamped)
 
+
 pytestmark = [pytest.mark.lmstudio_live]
 
 
 # =============================================================================
 # Session-scoped client fixture
 # =============================================================================
+
 
 @pytest.fixture(scope="module", autouse=True)
 def _require_lmstudio_live() -> None:
@@ -220,14 +223,13 @@ def analyzer(lmstudio_client: LMStudioClient) -> ConversationMistralAnalyzer:
 # Test 1: Modellstatus och contextbudget
 # =============================================================================
 
+
 def test_model_loaded_with_65k_context(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska vara laddad med minst 65k context för Qwen 3.5 9B."""
     status = lmstudio_client.model_status()
     assert status.loaded, f"Modell inte laddad: {status.model}"
     assert status.loaded_context is not None
-    assert status.loaded_context >= 65536, (
-        f"Loaded context {status.loaded_context} < 65536 (65k)"
-    )
+    assert status.loaded_context >= 65536, f"Loaded context {status.loaded_context} < 65536 (65k)"
     assert status.max_context is not None
     assert status.max_context >= 65536
 
@@ -238,9 +240,7 @@ def test_context_budget_fits_for_short_prompt(lmstudio_client: LMStudioClient) -
         {"role": "system", "content": "Du är en svensk kundtjänstanalytiker."},
         {"role": "user", "content": "Sammanfatta: kund klagar på faktura, agent krediterar."},
     ]
-    budget = lmstudio_client._preflight(
-        messages, model=DEFAULT_MODEL, output_tokens=2048
-    )
+    budget = lmstudio_client._preflight(messages, model=DEFAULT_MODEL, output_tokens=2048)
     assert budget.fits, f"Budget exceeds: {budget.to_dict()}"
     assert budget.remaining_tokens > 0
     assert budget.loaded_context >= 65536
@@ -250,8 +250,11 @@ def test_context_budget_fits_for_short_prompt(lmstudio_client: LMStudioClient) -
 # Test 2: chat_completion — svensk textgenerering
 # =============================================================================
 
+
 @pytest.mark.parametrize("text_case", KORTA_TEXTER, ids=lambda tc: tc["prompt"][:40])
-def test_chat_completion_swedish(lmstudio_client: LMStudioClient, text_case: dict[str, str]) -> None:
+def test_chat_completion_swedish(
+    lmstudio_client: LMStudioClient, text_case: dict[str, str]
+) -> None:
     """chat_completion ska generera begriplig svensk text för korta prompts."""
     messages = [
         {"role": "user", "content": text_case["prompt"]},
@@ -269,14 +272,13 @@ def test_chat_completion_swedish(lmstudio_client: LMStudioClient, text_case: dic
     # Kontrollera att förväntade nyckelord finns (case-insensitive)
     text_lower = text.lower()
     for expected in text_case["expect_contains"]:
-        assert expected.lower() in text_lower, (
-            f"Förväntade '{expected}' i svar: {text[:200]}"
-        )
+        assert expected.lower() in text_lower, f"Förväntade '{expected}' i svar: {text[:200]}"
 
 
 # =============================================================================
 # Test 3: structured_chat — JSON-schema-constrained output
 # =============================================================================
+
 
 def test_structured_chat_simple_json(lmstudio_client: LMStudioClient) -> None:
     """structured_chat ska returnera giltig JSON enligt ett enkelt schema."""
@@ -329,6 +331,7 @@ def test_structured_chat_simple_json(lmstudio_client: LMStudioClient) -> None:
 # Test 4: Full pipeline — ConversationMistralAnalyzer med LM Studio
 # =============================================================================
 
+
 @pytest.mark.parametrize("scenario", SCENARIER, ids=lambda s: s["namn"])
 def test_full_analysis_pipeline(
     analyzer: ConversationMistralAnalyzer,
@@ -355,9 +358,9 @@ def test_full_analysis_pipeline(
         # Fallback pga schema-validering — dokumenterat beteende för 9B modell
         # Verifiera att fallback-orsaken är schema-relaterad (inte nätverksfel)
         error = result.get("error", "")
-        assert "validation" in error.lower() or "llm_error" in result.get("meta", {}).get("fallback_reason", ""), (
-            f"Oväntad fallback-orsak: {error}"
-        )
+        assert "validation" in error.lower() or "llm_error" in result.get("meta", {}).get(
+            "fallback_reason", ""
+        ), f"Oväntad fallback-orsak: {error}"
         pytest.skip(
             f"Schema-validering fallerade för {scenario['namn']} (förväntat för 9B): {error[:100]}"
         )
@@ -410,14 +413,13 @@ def test_full_analysis_pipeline(
     if scenario["expect_coaching"]:
         recs = validated.agent_assessment.specific_coaching_recommendations
         if len(recs) == 0:
-            pytest.skip(
-                f"Inga coaching-recs i {scenario['namn']} (modellvariabilitet för 9B)"
-            )
+            pytest.skip(f"Inga coaching-recs i {scenario['namn']} (modellvariabilitet för 9B)")
 
 
 # =============================================================================
 # Test 4b: Direkt structured_chat med klamping (visar att modellen kan producera rätt struktur)
 # =============================================================================
+
 
 @pytest.mark.parametrize("scenario", SCENARIER, ids=lambda s: s["namn"])
 def test_structured_chat_with_clamping(
@@ -471,7 +473,17 @@ def test_structured_chat_with_clamping(
     # Verifiera svensk text i output
     if validated.trajectory and validated.trajectory.summary:
         summary = validated.trajectory.summary.lower()
-        swedish_markers = ["kund", "samtal", "agent", "problem", "frustr", "arg", "missnöj", "faktura", "service"]
+        swedish_markers = [
+            "kund",
+            "samtal",
+            "agent",
+            "problem",
+            "frustr",
+            "arg",
+            "missnöj",
+            "faktura",
+            "service",
+        ]
         assert any(m in summary for m in swedish_markers), (
             f"Saknar svenska markörer i summary: {summary[:200]}"
         )
@@ -480,6 +492,7 @@ def test_structured_chat_with_clamping(
 # =============================================================================
 # Test 5: Svensk språkkvalitet — output ska vara på svenska
 # =============================================================================
+
 
 def test_swedish_language_output(lmstudio_client: LMStudioClient) -> None:
     """LLM-output ska vara på svenska i textfält (inte engelska)."""
@@ -520,6 +533,7 @@ def test_swedish_language_output(lmstudio_client: LMStudioClient) -> None:
 # =============================================================================
 # Test 6: Evidensbaserad output — evidence_spans ska referera till transkript
 # =============================================================================
+
 
 def test_evidence_spans_reference_transcript(
     lmstudio_client: LMStudioClient,
@@ -567,20 +581,16 @@ def test_evidence_spans_reference_transcript(
     matched_any = False
     for span_text in span_texts:
         words = [w for w in span_text.lower().split() if len(w) > 3]
-        if words and any(
-            any(word in t for word in words[:3])
-            for t in transcript_texts
-        ):
+        if words and any(any(word in t for word in words[:3]) for t in transcript_texts):
             matched_any = True
             break
-    assert matched_any, (
-        f"Ingen evidence span matchar transkriptet. Spans: {span_texts[:3]}"
-    )
+    assert matched_any, f"Ingen evidence span matchar transkriptet. Spans: {span_texts[:3]}"
 
 
 # =============================================================================
 # Test 7: Lång konversation — context budget med 65k
 # =============================================================================
+
 
 def test_long_conversation_context_budget(
     lmstudio_client: LMStudioClient,
@@ -607,6 +617,7 @@ def test_long_conversation_context_budget(
 # =============================================================================
 # Test 8: Svarstid och prestanda
 # =============================================================================
+
 
 def test_response_time_reasonable(
     lmstudio_client: LMStudioClient,
@@ -635,6 +646,7 @@ def test_response_time_reasonable(
 # =============================================================================
 # Test 9: Repeterbarhet — samma input ger liknande sentiment-riktning
 # =============================================================================
+
 
 def test_repeatability_sentiment_direction(
     lmstudio_client: LMStudioClient,
@@ -668,10 +680,9 @@ def test_repeatability_sentiment_direction(
 # Test 10: Sentimentklassifikation — parametriserad chat_completion
 # =============================================================================
 
+
 @pytest.mark.parametrize("case", SENTIMENT_KLASSIFIKATION, ids=lambda c: c["text"][:30])
-def test_sentiment_classification(
-    lmstudio_client: LMStudioClient, case: dict[str, str]
-) -> None:
+def test_sentiment_classification(lmstudio_client: LMStudioClient, case: dict[str, str]) -> None:
     """Klassificera sentiment i svenska kundmeddelanden (positiv/neutral/negativ)."""
     messages = [
         {
@@ -683,18 +694,15 @@ def test_sentiment_classification(
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.0, max_tokens=256
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.0, max_tokens=256)
     text_lower = text.lower().strip()
-    assert case["expect"] in text_lower, (
-        f"Förväntade '{case['expect']}' i: '{text[:100]}'"
-    )
+    assert case["expect"] in text_lower, f"Förväntade '{case['expect']}' i: '{text[:100]}'"
 
 
 # =============================================================================
 # Test 11: structured_chat — sentiment-schema (enkel enum)
 # =============================================================================
+
 
 def test_structured_chat_sentiment_enum(lmstudio_client: LMStudioClient) -> None:
     """structured_chat med en enkel sentiment-enum ska returnera giltigt värde."""
@@ -712,7 +720,10 @@ def test_structured_chat_sentiment_enum(lmstudio_client: LMStudioClient) -> None
         "additionalProperties": False,
     }
     messages = [
-        {"role": "user", "content": "Analysera: 'Jag är jättearg på er dåliga service!' Returnera JSON."},
+        {
+            "role": "user",
+            "content": "Analysera: 'Jag är jättearg på er dåliga service!' Returnera JSON.",
+        },
     ]
     result, _meta = lmstudio_client.structured_chat(
         messages,
@@ -722,12 +733,13 @@ def test_structured_chat_sentiment_enum(lmstudio_client: LMStudioClient) -> None
         max_tokens=4096,
     )
     assert result["label"] in ("positiv", "neutral", "negativ")
-    assert isinstance(result["score"], (int, float))
+    assert isinstance(result["score"], int | float)
 
 
 # =============================================================================
 # Test 12: structured_chat — entitetsextraktion (nested array)
 # =============================================================================
+
 
 def test_structured_chat_entity_extraction(lmstudio_client: LMStudioClient) -> None:
     """structured_chat med nested array-schema för entitetsextraktion."""
@@ -740,7 +752,10 @@ def test_structured_chat_entity_extraction(lmstudio_client: LMStudioClient) -> N
                 "items": {
                     "type": "object",
                     "properties": {
-                        "type": {"type": "string", "enum": ["person", "belopp", "datum", "telefon"]},
+                        "type": {
+                            "type": "string",
+                            "enum": ["person", "belopp", "datum", "telefon"],
+                        },
                         "value": {"type": "string"},
                     },
                     "required": ["type", "value"],
@@ -772,14 +787,13 @@ def test_structured_chat_entity_extraction(lmstudio_client: LMStudioClient) -> N
     assert len(result["entities"]) > 0
     # Minst en entitet ska ha rätt typ
     types = {e.get("type") for e in result["entities"]}
-    assert types & {"person", "belopp", "datum", "telefon"}, (
-        f"Inga giltiga entitetstyper: {types}"
-    )
+    assert types & {"person", "belopp", "datum", "telefon"}, f"Inga giltiga entitetstyper: {types}"
 
 
 # =============================================================================
 # Test 13: structured_chat — coaching-rekommendationer (nested objekt)
 # =============================================================================
+
 
 def test_structured_chat_coaching_recommendations(lmstudio_client: LMStudioClient) -> None:
     """structured_chat med nested coaching-rekommendationer."""
@@ -838,6 +852,7 @@ def test_structured_chat_coaching_recommendations(lmstudio_client: LMStudioClien
 # Test 14: structured_chat — risknivå-bedömning
 # =============================================================================
 
+
 def test_structured_chat_risk_assessment(lmstudio_client: LMStudioClient) -> None:
     """structured_chat för risknivå-bedömning av kundmeddelande."""
     schema = {
@@ -880,6 +895,7 @@ def test_structured_chat_risk_assessment(lmstudio_client: LMStudioClient) -> Non
 # Test 15: Pipeline edge cases — endast agent, endast kund, okända talare
 # =============================================================================
 
+
 @pytest.mark.parametrize("edge", EDGE_CASES, ids=lambda e: e["namn"])
 def test_pipeline_edge_cases(
     lmstudio_client: LMStudioClient,
@@ -904,6 +920,7 @@ def test_pipeline_edge_cases(
 # Test 16: Task subsetting — bara trajectory
 # =============================================================================
 
+
 def test_task_subsetting_trajectory_only(lmstudio_client: LMStudioClient) -> None:
     """Begär endast trajectory — andra fält ska vara None eller tomma."""
     segments = [
@@ -924,6 +941,7 @@ def test_task_subsetting_trajectory_only(lmstudio_client: LMStudioClient) -> Non
 # =============================================================================
 # Test 17: Task subsetting — bara root_cause
 # =============================================================================
+
 
 def test_task_subsetting_root_cause_only(lmstudio_client: LMStudioClient) -> None:
     """Begär endast root_cause — ska returnera giltig root cause."""
@@ -947,6 +965,7 @@ def test_task_subsetting_root_cause_only(lmstudio_client: LMStudioClient) -> Non
 # Test 18: Sarkasm-detection — modellen ska känna igen sarkasm
 # =============================================================================
 
+
 def test_sarcasm_detection(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska identifiera sarkasm i svenskt kundmeddelande."""
     messages = [
@@ -958,17 +977,14 @@ def test_sarcasm_detection(lmstudio_client: LMStudioClient) -> None:
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.0, max_tokens=256
-    )
-    assert "ja" in text.lower().strip(), (
-        f"Modellen missade sarkasm. Svar: '{text[:100]}'"
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.0, max_tokens=256)
+    assert "ja" in text.lower().strip(), f"Modellen missade sarkasm. Svar: '{text[:100]}'"
 
 
 # =============================================================================
 # Test 19: Code-switching — modellen ska förstå blandat språk
 # =============================================================================
+
 
 def test_code_switching_understanding(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska förstå svenskt text med engelska IT-termer."""
@@ -982,9 +998,7 @@ def test_code_switching_understanding(lmstudio_client: LMStudioClient) -> None:
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.2, max_tokens=512
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.2, max_tokens=512)
     text_lower = text.lower()
     # Modellen ska nämna router, internet eller connection
     problem_markers = ["router", "internet", "connection", "led", "röd", "firmware", "uppkoppling"]
@@ -997,6 +1011,7 @@ def test_code_switching_understanding(lmstudio_client: LMStudioClient) -> None:
 # Test 20: Formell vs informell svenska — omformulering
 # =============================================================================
 
+
 def test_formal_to_informal_reformulation(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska kunna omformulera formellt till informellt svenska."""
     messages = [
@@ -1008,9 +1023,7 @@ def test_formal_to_informal_reformulation(lmstudio_client: LMStudioClient) -> No
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.3, max_tokens=512
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.3, max_tokens=512)
     text_lower = text.lower()
     # Informella markörer
     informal_markers = ["kolla", "titta", "snälla", "kan du", "faktura"]
@@ -1027,10 +1040,9 @@ def test_formal_to_informal_reformulation(lmstudio_client: LMStudioClient) -> No
 # Test 21: PII-detection — modellen ska identifiera känslig data
 # =============================================================================
 
+
 @pytest.mark.parametrize("pii_case", PII_TEST_TEXTER, ids=lambda p: p["expect_pii_type"])
-def test_pii_detection(
-    lmstudio_client: LMStudioClient, pii_case: dict[str, str]
-) -> None:
+def test_pii_detection(lmstudio_client: LMStudioClient, pii_case: dict[str, str]) -> None:
     """Modellen ska identifiera PII i svensk kundtjänsttext."""
     messages = [
         {
@@ -1041,9 +1053,7 @@ def test_pii_detection(
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.1, max_tokens=512
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.1, max_tokens=512)
     text_lower = text.lower()
     for expected in pii_case["expect_contains"]:
         assert expected.lower() in text_lower, (
@@ -1054,6 +1064,7 @@ def test_pii_detection(
 # =============================================================================
 # Test 22: Compliance-flags — modellen ska identifiera processfel
 # =============================================================================
+
 
 def test_compliance_flags_detection(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska identifiera compliance-flags i agentens beteende."""
@@ -1082,11 +1093,15 @@ def test_compliance_flags_detection(lmstudio_client: LMStudioClient) -> None:
 # Test 23: Risk level — actionable_summary ska ha giltig risk_level
 # =============================================================================
 
+
 def test_risk_level_in_actionable_summary(lmstudio_client: LMStudioClient) -> None:
     """actionable_summary.risk_level ska vara low/medium/high."""
     segments = [
         {"speaker": "SPEAKER_00", "text": "Välkommen, vad gäller det?"},
-        {"speaker": "SPEAKER_01", "text": "Om ni inte löser det här idag säger jag upp mig och går till ARN."},
+        {
+            "speaker": "SPEAKER_01",
+            "text": "Om ni inte löser det här idag säger jag upp mig och går till ARN.",
+        },
         {"speaker": "SPEAKER_00", "text": "Jag förstår att du är arg. Låt mig titta på det."},
         {"speaker": "SPEAKER_01", "text": "Det har ni sagt fem gånger nu. Ingenting händer."},
     ]
@@ -1107,6 +1122,7 @@ def test_risk_level_in_actionable_summary(lmstudio_client: LMStudioClient) -> No
 # =============================================================================
 # Test 24: Evidence i refined_aspects
 # =============================================================================
+
 
 def test_evidence_in_refined_aspects(lmstudio_client: LMStudioClient) -> None:
     """refined_aspects ska innehålla evidence spans som refererar till transkriptet."""
@@ -1135,20 +1151,18 @@ def test_evidence_in_refined_aspects(lmstudio_client: LMStudioClient) -> None:
             for span in aspect.evidence:
                 words = [w for w in span.text.lower().split() if len(w) > 3]
                 if words:
-                    matched = any(
-                        any(word in t for word in words[:3])
-                        for t in transcript_texts
-                    )
+                    matched = any(any(word in t for word in words[:3]) for t in transcript_texts)
                     if matched:
                         return  # Success
     if not has_evidence:
         pytest.skip("Inga evidence spans i refined_aspects (modellvariabilitet)")
-    assert False, "Evidence spans matchar inte transkriptet"
+    raise AssertionError("Evidence spans matchar inte transkriptet")
 
 
 # =============================================================================
 # Test 25: Emotion trajectory — punkter ska ha giltiga värden
 # =============================================================================
+
 
 def test_emotion_trajectory_values(lmstudio_client: LMStudioClient) -> None:
     """emotion_trajectory punkter ska ha sentiment i [-1, 1] och score i [0, 1]."""
@@ -1170,18 +1184,15 @@ def test_emotion_trajectory_values(lmstudio_client: LMStudioClient) -> None:
         pytest.skip("Ingen emotion_trajectory (modellvariabilitet)")
 
     for point in validated.emotion_trajectory:
-        assert -1.0 <= point.sentiment <= 1.0, (
-            f"sentiment {point.sentiment} utanför [-1, 1]"
-        )
-        assert 0.0 <= point.score <= 1.0, (
-            f"score {point.score} utanför [0, 1]"
-        )
+        assert -1.0 <= point.sentiment <= 1.0, f"sentiment {point.sentiment} utanför [-1, 1]"
+        assert 0.0 <= point.score <= 1.0, f"score {point.score} utanför [0, 1]"
         assert point.turn >= 0
 
 
 # =============================================================================
 # Test 26: Batch-prestanda — flera korta analyser sekventiellt
 # =============================================================================
+
 
 def test_batch_short_analyses(lmstudio_client: LMStudioClient) -> None:
     """Tre korta analyser sekventiellt ska alla producera giltig output."""
@@ -1210,9 +1221,7 @@ def test_batch_short_analyses(lmstudio_client: LMStudioClient) -> None:
     ]
     results = []
     for segments, role_map in cases:
-        validated = _analyze_with_clamping(
-            lmstudio_client, segments, role_map, ["trajectory"]
-        )
+        validated = _analyze_with_clamping(lmstudio_client, segments, role_map, ["trajectory"])
         results.append(validated)
 
     # Alla tre ska ha giltig trajectory
@@ -1225,6 +1234,7 @@ def test_batch_short_analyses(lmstudio_client: LMStudioClient) -> None:
 # Test 27: Token-räkning — count_chat_tokens vs faktisk output
 # =============================================================================
 
+
 def test_token_counting_accuracy(lmstudio_client: LMStudioClient) -> None:
     """count_chat_tokens ska ge ett rimligt värde jämfört med kort text."""
     messages = [
@@ -1233,27 +1243,28 @@ def test_token_counting_accuracy(lmstudio_client: LMStudioClient) -> None:
     ]
     token_count = lmstudio_client.count_chat_tokens(messages)
     # En kort svensk prompt ska vara mellan 10 och 200 tokens
-    assert 5 < token_count < 500, (
-        f"Token-räkning {token_count} verkar orimlig för kort prompt"
-    )
+    assert 5 < token_count < 500, f"Token-räkning {token_count} verkar orimlig för kort prompt"
 
 
 # =============================================================================
 # Test 28: Context budget gränsfall — stor prompt
 # =============================================================================
 
+
 def test_context_budget_large_prompt(lmstudio_client: LMStudioClient) -> None:
     """En stor prompt (många segment) ska fortfarande passa i 65k budget."""
     # Bygg en prompt med ~50 segment
     segments = []
     for i in range(50):
-        segments.append({
-            "speaker": "SPEAKER_00" if i % 2 == 0 else "SPEAKER_01",
-            "text": f"Det här är segment nummer {i} i en lång konversation om kundservice.",
-            "segment_id": i,
-            "start": i * 5.0,
-            "end": (i + 1) * 5.0,
-        })
+        segments.append(
+            {
+                "speaker": "SPEAKER_00" if i % 2 == 0 else "SPEAKER_01",
+                "text": f"Det här är segment nummer {i} i en lång konversation om kundservice.",
+                "segment_id": i,
+                "start": i * 5.0,
+                "end": (i + 1) * 5.0,
+            }
+        )
     transcript = build_role_labeled_transcript(
         segments,
         {"SPEAKER_00": "agent", "SPEAKER_01": "customer"},
@@ -1262,9 +1273,7 @@ def test_context_budget_large_prompt(lmstudio_client: LMStudioClient) -> None:
         {"role": "system", "content": get_system_prompt()},
         {"role": "user", "content": build_user_prompt(transcript, tasks=["trajectory"])},
     ]
-    budget = lmstudio_client._preflight(
-        messages, model=DEFAULT_MODEL, output_tokens=8192
-    )
+    budget = lmstudio_client._preflight(messages, model=DEFAULT_MODEL, output_tokens=8192)
     assert budget.fits, f"Budget exceeds för 50 segment: {budget.to_dict()}"
     assert budget.remaining_tokens > 0
 
@@ -1272,6 +1281,7 @@ def test_context_budget_large_prompt(lmstudio_client: LMStudioClient) -> None:
 # =============================================================================
 # Test 29: Trunkerad output — låg max_tokens ska hanteras graceful
 # =============================================================================
+
 
 def test_truncated_output_handling(lmstudio_client: LMStudioClient) -> None:
     """Låg max_tokens (256) ska antingen fungera eller fallera graceful."""
@@ -1300,14 +1310,18 @@ def test_truncated_output_handling(lmstudio_client: LMStudioClient) -> None:
         assert isinstance(result_dict, dict)
     except Exception as exc:
         # Trunkerad output kan ge LLMError — det är acceptabelt
-        assert "truncat" in str(exc).lower() or "length" in str(exc).lower() or "empty" in str(exc).lower() or "failed" in str(exc).lower(), (
-            f"Oväntat fel vid trunkering: {exc}"
-        )
+        assert (
+            "truncat" in str(exc).lower()
+            or "length" in str(exc).lower()
+            or "empty" in str(exc).lower()
+            or "failed" in str(exc).lower()
+        ), f"Oväntat fel vid trunkering: {exc}"
 
 
 # =============================================================================
 # Test 30: Svenska nyanser — artighet och underförstådd mening
 # =============================================================================
+
 
 def test_swedish_nuance_politeness(lmstudio_client: LMStudioClient) -> None:
     """Modellen ska förstå svensk artighet och underförstådd frustration."""
@@ -1321,9 +1335,7 @@ def test_swedish_nuance_politeness(lmstudio_client: LMStudioClient) -> None:
             ),
         },
     ]
-    text, _meta = lmstudio_client.chat_completion(
-        messages, temperature=0.0, max_tokens=256
-    )
+    text, _meta = lmstudio_client.chat_completion(messages, temperature=0.0, max_tokens=256)
     text_lower = text.lower().strip()
     # Sarkasm är det troliga svaret
     assert "sarkasm" in text_lower or "faktiskt" in text_lower, (
@@ -1334,6 +1346,7 @@ def test_swedish_nuance_politeness(lmstudio_client: LMStudioClient) -> None:
 # =============================================================================
 # Test 31: root_cause customer_unresolved flag
 # =============================================================================
+
 
 def test_root_cause_unresolved_flag(lmstudio_client: LMStudioClient) -> None:
     """root_cause.customer_unresolved ska vara True för olösta samtal."""
@@ -1362,12 +1375,19 @@ def test_root_cause_unresolved_flag(lmstudio_client: LMStudioClient) -> None:
 # Test 32: Empatiskt samtal — agent_assessment ska ha hög empathy_score
 # =============================================================================
 
+
 def test_empathy_score_high_for_good_agent(lmstudio_client: LMStudioClient) -> None:
     """En agent som gör allt rätt ska få hög empathy_score."""
     segments = [
-        {"speaker": "SPEAKER_00", "text": "Hej! Jag förstår att du är orolig. Låt oss lösa det tillsammans."},
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Hej! Jag förstår att du är orolig. Låt oss lösa det tillsammans.",
+        },
         {"speaker": "SPEAKER_01", "text": "Tack, det känns bra att höra."},
-        {"speaker": "SPEAKER_00", "text": "Jag krediterar beloppet och sätter ett lösenordsskydd åt dig."},
+        {
+            "speaker": "SPEAKER_00",
+            "text": "Jag krediterar beloppet och sätter ett lösenordsskydd åt dig.",
+        },
         {"speaker": "SPEAKER_01", "text": "Wow, tack för all hjälp!"},
         {"speaker": "SPEAKER_00", "text": "Varsågod! Är det något annat jag kan hjälpa med?"},
     ]
@@ -1388,6 +1408,7 @@ def test_empathy_score_high_for_good_agent(lmstudio_client: LMStudioClient) -> N
 # =============================================================================
 # Test 33: Dålig agent — agent_assessment ska ha låg empathy_score
 # =============================================================================
+
 
 def test_empathy_score_low_for_bad_agent(lmstudio_client: LMStudioClient) -> None:
     """En agent som missar empati ska få låg empathy_score."""
@@ -1415,6 +1436,7 @@ def test_empathy_score_low_for_bad_agent(lmstudio_client: LMStudioClient) -> Non
 # =============================================================================
 # Test 34: Escalation events — innehåller citat
 # =============================================================================
+
 
 def test_escalation_events_contain_text(lmstudio_client: LMStudioClient) -> None:
     """escalation_events ska innehålla text som refererar till samtalet."""
@@ -1448,14 +1470,13 @@ def test_escalation_events_contain_text(lmstudio_client: LMStudioClient) -> None
         if event_words & transcript_words:
             matched = True
             break
-    assert matched, (
-        f"Ingen escalation event matchar transkriptet. Events: {events[:2]}"
-    )
+    assert matched, f"Ingen escalation event matchar transkriptet. Events: {events[:2]}"
 
 
 # =============================================================================
 # Test 35: Svenska i actionable_summary recommendations
 # =============================================================================
+
 
 def test_recommendations_in_swedish(lmstudio_client: LMStudioClient) -> None:
     """recommendations_for_qa ska vara på svenska."""
@@ -1475,7 +1496,17 @@ def test_recommendations_in_swedish(lmstudio_client: LMStudioClient) -> None:
     recs = validated.actionable_summary.recommendations_for_qa
     if not recs:
         pytest.skip("Inga recommendations (modellvariabilitet)")
-    swedish_markers = ["kund", "agent", "säg", "använd", "visa", "empathi", "förstår", "bekräfta", "fras"]
+    swedish_markers = [
+        "kund",
+        "agent",
+        "säg",
+        "använd",
+        "visa",
+        "empathi",
+        "förstår",
+        "bekräfta",
+        "fras",
+    ]
     for rec in recs:
         rec_lower = rec.lower()
         assert any(m in rec_lower for m in swedish_markers), (

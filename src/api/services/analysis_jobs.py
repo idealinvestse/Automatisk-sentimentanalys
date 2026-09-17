@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import threading
 import uuid
@@ -165,10 +166,8 @@ class AnalysisJobManager:
     def _forget_input(self, job_id: str) -> None:
         """Drop persisted transcript input after the job leaves the queue."""
         path = self._input_path(job_id)
-        try:
+        with contextlib.suppress(OSError):
             path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     def get(self, job_id: str) -> AnalysisJob | None:
         """Return one job status."""
@@ -192,7 +191,13 @@ class AnalysisJobManager:
             job = self._jobs.get(job_id)
             if job is None:
                 return "not_found"
-            if job.status in {"completed", "completed_degraded", "failed", "cancelled", "interrupted"}:
+            if job.status in {
+                "completed",
+                "completed_degraded",
+                "failed",
+                "cancelled",
+                "interrupted",
+            }:
                 return "already_finished"
             job.cancel_requested = True
             job.status = "cancel_requested" if job.status == "running" else "cancelled"

@@ -25,6 +25,10 @@ function persistToServer(call: RealCall): void {
       transcript: call.transcript as unknown as Record<string, unknown>,
       report: call.report as unknown as Record<string, unknown>,
       meta: { source: "webui" },
+      customer_id:
+        typeof call.transcript.meta?.customer_id === "string"
+          ? call.transcript.meta.customer_id
+          : undefined,
     })
     .catch((err) => {
       notifyApiError(err, "Kunde inte spara samtalet på servern");

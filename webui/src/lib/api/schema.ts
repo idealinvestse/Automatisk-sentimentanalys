@@ -877,6 +877,11 @@ export interface components {
              */
             groq_eu_residency: boolean;
             /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
+            /**
              * Segments List
              * @description List of segment lists (one per call)
              */
@@ -958,6 +963,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments List */
             segments_list?: {
                 [key: string]: unknown;
@@ -1033,6 +1043,10 @@ export interface components {
              * @constant
              */
             provider: "lmstudio";
+            /** Original Filename */
+            original_filename?: string | null;
+            /** Call Id */
+            call_id?: string | null;
         };
         /**
          * AnalysisJobStatusResponse
@@ -1148,6 +1162,11 @@ export interface components {
              * @description Path to audio file accessible by the server
              */
             audio_path: string;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /**
              * Word Timestamps
              * @default false
@@ -1727,7 +1746,7 @@ export interface components {
          */
         CallUpsertRequest: {
             /** Id */
-            id: string;
+            id?: string | null;
             /** Transcript */
             transcript?: {
                 [key: string]: unknown;
@@ -1742,6 +1761,10 @@ export interface components {
             };
             /** Created At */
             created_at?: string | null;
+            /** Customer Id */
+            customer_id?: string | null;
+            /** Status */
+            status?: string | null;
         };
         /** CoachingInsightItem */
         CoachingInsightItem: {
@@ -1829,6 +1852,24 @@ export interface components {
              * @default 0
              */
             effort_score: number;
+        };
+        /**
+         * CustomerRef
+         * @description Customer identity resolved from the original filename.
+         *
+         *     Routing context only — not authentication or authorization.
+         */
+        CustomerRef: {
+            /** Customer Id */
+            customer_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Analyzer Profile */
+            analyzer_profile: string;
+            /** Registry Version */
+            registry_version: number;
+            /** Config Fingerprint */
+            config_fingerprint: string;
         };
         /**
          * DerivedCallSentiment
@@ -2066,6 +2107,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments List */
             segments_list: {
                 [key: string]: unknown;
@@ -2226,6 +2272,13 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename for customer identification
+             */
+            original_filename?: string | null;
+            /** Call Id */
+            call_id?: string | null;
         };
         /**
          * PipelineCompareRequest
@@ -2282,6 +2335,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
         };
         /**
          * PipelineCompareResponse
@@ -2386,6 +2444,16 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
+            /**
+             * Call Id
+             * @description Server-issued call id from POST /transcribe; reused for report persistence
+             */
+            call_id?: string | null;
         };
         /**
          * PipelineResponse
@@ -2470,6 +2538,19 @@ export interface components {
              * @default full
              */
             mode: string;
+            /** @description Resolved customer routing context when a registry is active */
+            customer?: components["schemas"]["CustomerRef"] | null;
+            /**
+             * Call Id
+             * @description Server-issued call identity for persisted artifacts
+             */
+            call_id?: string | null;
+            /**
+             * Persisted
+             * @description True when report + customer metadata were written to the call store
+             * @default false
+             */
+            persisted: boolean;
         };
         /**
          * PredictiveResult
@@ -2544,6 +2625,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments */
             segments: {
                 [key: string]: unknown;
@@ -2922,6 +3008,11 @@ export interface components {
              */
             groq_eu_residency: boolean;
             /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
+            /**
              * Segments List
              * @description List of calls to index/search over
              */
@@ -3105,6 +3196,11 @@ export interface components {
              */
             audio_path: string;
             /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
+            /**
              * Word Timestamps
              * @default true
              */
@@ -3142,6 +3238,13 @@ export interface components {
             partial_analysis?: {
                 [key: string]: unknown;
             } | null;
+            /** @description Resolved customer routing context when a registry is active */
+            customer?: components["schemas"]["CustomerRef"] | null;
+            /**
+             * Call Id
+             * @description Server-issued call identity for persisted artifacts
+             */
+            call_id?: string | null;
         };
         /**
          * UnavailableResult
@@ -3186,6 +3289,8 @@ export interface components {
              * @description File size in bytes
              */
             size_bytes: number;
+            /** @description Resolved customer context when a customer registry is active */
+            customer?: components["schemas"]["CustomerRef"] | null;
             /** Timestamp */
             timestamp: string;
         };

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from .analysis.intent_utils import intents_as_tuples
-from .core.models import CallAnalysisReport, Segment
+from .core.errors import ASR_EMPTY_TRANSCRIPT, TranscriptionError
+from .core.models import CallAnalysisReport, Segment, Transcript
 from .core.status import get_status_reporter
 from .core.tracing import span
 from .pipeline_steps import (
@@ -72,6 +74,10 @@ class CallAnalysisPipeline:
         cache: Any | None = None,
         async_analyzers: bool = False,
         allow_heuristic_superseded: bool = False,
+        qa_scorecard: str | None = None,
+        customer_id: str | None = None,
+        config_fingerprint: str | None = None,
+        transcript_hook: Callable[[Transcript], None] | None = None,
     ) -> None:
         self.sentiment_model = sentiment_model
         self.intent_backend = intent_backend
@@ -91,6 +97,10 @@ class CallAnalysisPipeline:
         self.provider = provider
         self.groq_eu_residency = groq_eu_residency
         self.async_analyzers = async_analyzers
+        self.qa_scorecard = qa_scorecard or "standard_support_v1"
+        self.customer_id = customer_id
+        self.config_fingerprint = config_fingerprint
+        self.transcript_hook = transcript_hook
 
         # Task 3.2.3: profile-driven LLM defaults (callcenter enables by default)
         try:
@@ -154,6 +164,7 @@ class CallAnalysisPipeline:
             llm_model=self.llm_model,
             llm_api_key=self.llm_api_key,
             groq_eu_residency=self.groq_eu_residency,
+            qa_scorecard=self.qa_scorecard,
         )
 
     def _run_fas4_enrichment(
@@ -313,7 +324,7 @@ class CallAnalysisPipeline:
         initial_prompt: str | None = None,
         preprocess: bool = False,
         preprocess_mode: str | None = None,
-        strict_asr: bool = False,
+        strict_asr: bool = True,
     ) -> CallAnalysisReport:
         """Analyze a call from an audio file.
 
@@ -323,7 +334,8 @@ class CallAnalysisPipeline:
             language: Language code for ASR.
             run_diarization: Whether to run speaker diarization.
             selected_analyzers: Optional list of analyzer names to run. Runs all by default.
-            strict_asr: If True, re-raise ASR failures instead of returning an empty report.
+            strict_asr: If True (default), re-raise ASR failures and reject empty
+                transcripts. Pass False only for explicit library degrade experiments.
 
         Returns:
             CallAnalysisReport with full analysis.
@@ -378,7 +390,6 @@ class CallAnalysisPipeline:
                 status.error("pipeline", "transcribe", f"Transkribering misslyckades: {e}")
                 if strict_asr:
                     raise
-                from .core.models import Transcript
 
                 transcript = Transcript(
                     model=self.asr_model,
@@ -389,6 +400,19 @@ class CallAnalysisPipeline:
                     segments=[],
                     diarization={"segments": [], "backend": "failed", "error": str(e)},
                 )
+
+        has_speech = any(
+            str(getattr(segment, "text", "") or "").strip()
+            for segment in (transcript.segments or [])
+        )
+        if strict_asr and not has_speech:
+            raise TranscriptionError(
+                "Transcription contained no speech that can be analyzed.",
+                error_code=ASR_EMPTY_TRANSCRIPT,
+            )
+
+        if has_speech and self.transcript_hook is not None:
+            self.transcript_hook(transcript)
 
         # --- Fas 4.4.1: Early PII Redaction (before ANY local analyzers or LLM) ---
         transcript.segments, results, _pii_log = self._run_local_analysis(

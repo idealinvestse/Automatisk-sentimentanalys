@@ -99,6 +99,8 @@ export type PipelineReport = Omit<
   llm_judge?: Record<string, unknown>;
   risks?: Record<string, unknown>;
   insights?: Record<string, unknown>;
+  call_id?: string | null;
+  customer?: CustomerRef | null;
   /** Typed view of `results` (Fas 5). Null when no analyzers ran. */
   analyzer_results?: AnalyzerResults | null;
   /** Graceful-degradation reasons from the API. */
@@ -507,15 +509,27 @@ export interface EdgeAnalysisResult {
   limitations: string[];
 }
 
+/** Customer routing context resolved from the original filename. */
+export interface CustomerRef {
+  customer_id: string;
+  display_name: string;
+  analyzer_profile: string;
+  registry_version: number;
+  config_fingerprint: string;
+}
+
 /** Response shape of POST /transcribe. */
 export interface TranscribeResponse {
   transcript: Record<string, unknown>;
   timestamp: string;
+  customer?: CustomerRef | null;
+  call_id?: string | null;
 }
 
 /** Request shape of POST /transcribe (subset of backend AsrParamsMixin). */
 export interface TranscribeRequest {
   audio_path: string;
+  original_filename?: string;
   backend?: string;
   model?: string;
   device?: string;
@@ -546,6 +560,7 @@ export interface UploadResponse {
   audio_path: string;
   filename: string;
   size_bytes: number;
+  customer?: CustomerRef | null;
   timestamp: string;
 }
 
@@ -1063,6 +1078,7 @@ export class ApiClient {
       report?: Record<string, unknown>;
       meta?: Record<string, unknown>;
       created_at?: string;
+      customer_id?: string;
     },
   ) {
     return this.post<T>("/calls", { id, ...body });

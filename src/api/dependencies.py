@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Annotated, cast
 
 from fastapi import HTTPException, Request, Security
@@ -75,6 +76,10 @@ def create_pipeline(
     groq_eu_residency: bool = False,
     async_analyzers: bool = False,
     analysis_perspective: str | None = None,
+    qa_scorecard: str | None = None,
+    customer_id: str | None = None,
+    config_fingerprint: str | None = None,
+    transcript_hook: Callable[..., None] | None = None,
 ) -> CallAnalysisPipeline:
     # Cost/quality-aware paid model pick from analysis perspective menu
     if analysis_perspective and not llm_model:
@@ -114,4 +119,8 @@ def create_pipeline(
         groq_eu_residency=groq_eu_residency,
         cache=cache,
         async_analyzers=async_analyzers,
+        qa_scorecard=qa_scorecard,
+        customer_id=customer_id,
+        config_fingerprint=config_fingerprint,
+        transcript_hook=transcript_hook,
     )

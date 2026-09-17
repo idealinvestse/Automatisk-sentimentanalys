@@ -14,8 +14,22 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
+from ..call_persistence import (
+    customer_ref,
+    fail_reason_from_exc,
+    get_call_store,
+    persist_call_artifact,
+    persist_intake_file,
+)
+from ..dependencies import create_pipeline
 from ..error_responses import PUBLIC_ERROR_DETAIL
-from ..helpers import asr_kwargs_from, transcribe_helper
+from ..helpers import (
+    asr_kwargs_from,
+    require_usable_transcript,
+    resolve_customer_context,
+    resolve_customer_or_422,
+    transcribe_helper,
+)
 from ..path_validation import resolve_and_validate_audio_paths, validate_audio_path
 from ..router_errors import run_route
 from ..schemas import (
@@ -29,6 +43,7 @@ from ..schemas import (
     TranscribeResponse,
     UploadResponse,
 )
+from ..settings import get_api_settings
 from ..transcription_events import JOB_HEADER, get_hub
 from ..transcription_jobs import TranscriptionJob, get_job_registry
 
@@ -60,10 +75,12 @@ def _job_id(request: Request) -> str | None:
     return request.headers.get(JOB_HEADER)
 
 
-def _register_job(request: Request, job_id: str | None, kind: str) -> TranscriptionJob | None:
+def _register_job(
+    request: Request, job_id: str | None, kind: str, **meta: Any
+) -> TranscriptionJob | None:
     if not job_id:
         return None
-    return get_job_registry(request.app).register(job_id, kind)
+    return get_job_registry(request.app).register(job_id, kind, **meta)
 
 
 def _cancel_check(request: Request, job_id: str | None) -> bool:
@@ -136,8 +153,6 @@ async def upload_audio_file(
     Maximum file size: API_MAX_UPLOAD_SIZE_MB (default 200 MB).
     Old files are cleaned up after API_UPLOAD_RETENTION_DAYS (default 7 days).
     """
-    from ..settings import get_api_settings
-
     settings = get_api_settings()
 
     # Validate media root is configured
@@ -156,6 +171,10 @@ async def upload_audio_file(
             status_code=400,
             detail=f"Unsupported file format: {file_ext}. Allowed: {', '.join(sorted(allowed_extensions))}",
         )
+
+    # Resolve customer routing context from the ORIGINAL filename before the
+    # file is written — rejected identities must not leave artifacts on disk.
+    customer = resolve_customer_or_422(original_name)
 
     # Create uploads directory if it doesn't exist
     upload_dir = Path(settings.media_root) / "uploads"
@@ -220,6 +239,7 @@ async def upload_audio_file(
         audio_path=validated_path,
         filename=original_name,
         size_bytes=total_bytes,
+        customer=customer_ref(customer),
         timestamp=utc_now_iso(),
     )
 
@@ -230,8 +250,16 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
     job_id = _job_id(request)
     hub = get_hub(request.app)
     registry = get_job_registry(request.app)
-    _register_job(request, job_id, "transcribe")
     fname = file_display_name(req.audio_path)
+    # Original filename is authoritative for customer identity; the stored
+    # (uuid-prefixed, sanitized) name is only a fallback.
+    customer = resolve_customer_or_422(req.original_filename or Path(req.audio_path).name)
+    _register_job(
+        request,
+        job_id,
+        "transcribe",
+        **({"customer": customer.model_dump(mode="json")} if customer else {}),
+    )
     logger.info("Transcribing %s (backend=%s model=%s)", req.audio_path, req.backend, req.model)
     hub.log(job_id=job_id, level="INFO", msg=f"Startar transkribering: {fname}", file=fname)
     hub.progress(job_id=job_id, processed=0, total=1, current_file=fname, progress=0.0)
@@ -243,8 +271,14 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
                 raise asyncio.CancelledError("Job cancelled")
             tr = await asyncio.to_thread(
                 transcribe_helper,
-                **asr_kwargs_from(req, audio_path=req.audio_path, preprocess=req.preprocess),
+                **asr_kwargs_from(
+                    req,
+                    audio_path=req.audio_path,
+                    preprocess=req.preprocess,
+                    customer=customer,
+                ),
             )
+            require_usable_transcript(tr)
             if _cancel_check(request, job_id):
                 raise asyncio.CancelledError("Job cancelled")
             n_seg = len(tr.get("segments") or [])
@@ -257,13 +291,15 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
             hub.progress(job_id=job_id, processed=1, total=1, current_file=fname, progress=1.0)
             partial_snapshot: dict[str, Any] | None = None
             if req.run_partial_analysis and tr.get("segments"):
-                from ..dependencies import create_pipeline
-
                 pipe = create_pipeline(
                     cache=request.app.state.cache,
-                    profile="callcenter",
+                    profile=customer.analyzer_profile if customer is not None else "callcenter",
                     use_mistral_llm=False,
                     deep_analysis=False,
+                    customer_id=customer.customer_id if customer is not None else None,
+                    config_fingerprint=(
+                        customer.config_fingerprint if customer is not None else None
+                    ),
                 )
                 partial_report = await asyncio.to_thread(
                     pipe.analyze_segments_partial,
@@ -284,6 +320,15 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
                         "sentiment_count": partial_snapshot["sentiment_count"],
                     }
                 )
+            persisted = persist_call_artifact(
+                get_call_store(request),
+                status="transcribed",
+                transcript=tr,
+                customer=customer,
+                original_filename=req.original_filename,
+                audio_path=req.audio_path,
+                route="transcribe",
+            )
             hub.done(job_id=job_id, ok=1, failed=0)
             if job_id:
                 registry.complete(job_id, status="completed")
@@ -291,6 +336,8 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
                 transcript=tr,
                 timestamp=utc_now_iso(),
                 partial_analysis=partial_snapshot,
+                customer=customer_ref(customer),
+                call_id=persisted.get("id"),
             )
         except asyncio.CancelledError:
             hub.log(job_id=job_id, level="WARNING", msg="Avbruten", file=fname)
@@ -303,6 +350,18 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
             hub.done(job_id=job_id, ok=0, failed=1)
             if job_id:
                 registry.complete(job_id, status="failed")
+            try:
+                persist_call_artifact(
+                    get_call_store(request),
+                    status="failed",
+                    customer=customer,
+                    original_filename=req.original_filename,
+                    audio_path=req.audio_path,
+                    route="transcribe",
+                    fail_reason=fail_reason_from_exc(err),
+                )
+            except Exception:
+                logger.exception("Failed to persist transcribe failure provenance")
             raise
         finally:
             hub.status(job_id=job_id, is_running=False)
@@ -332,11 +391,38 @@ async def batch_transcribe(
         logger.info("Batch transcribing %d file(s) with %d worker(s)", total, req.workers)
         hub.log(job_id=job_id, level="INFO", msg=f"Batch startar – {total} filer")
         hub.status(job_id=job_id, is_running=True, total=total, processed=0)
+        store = get_call_store(request)
 
         def _worker(p: str) -> dict:
             fname = file_display_name(p)
-            hub.log(job_id=job_id, level="INFO", msg=f"Bearbetar {fname}...", file=fname)
-            return transcribe_helper(**asr_kwargs_from(req, audio_path=p))
+            # Per-file customer gate: controlled modes reject unknown/ambiguous
+            # identities per item instead of aborting the whole batch.
+            ctx = None
+            try:
+                ctx = resolve_customer_context(Path(p).name)
+                hub.log(job_id=job_id, level="INFO", msg=f"Bearbetar {fname}...", file=fname)
+                result = transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
+                require_usable_transcript(result)
+                persist_intake_file(
+                    store,
+                    audio_path=p,
+                    route="batch_transcribe",
+                    status="transcribed",
+                    transcript=result,
+                    customer=ctx,
+                )
+                return result
+            except Exception as exc:
+                persist_intake_file(
+                    store,
+                    audio_path=p,
+                    route="batch_transcribe",
+                    status="failed",
+                    customer=ctx,
+                    error=exc,
+                    must_succeed=False,
+                )
+                raise
 
         def _on_complete(
             path: str,

@@ -24,6 +24,11 @@ class BaseAnalysisError(Exception):
         self.details: dict[str, Any] = dict(details or {})
 
 
+ASR_INIT_FAILED = "asr_init_failed"
+ASR_DECODE_FAILED = "asr_decode_failed"
+ASR_EMPTY_TRANSCRIPT = "asr_empty_transcript"
+
+
 class TranscriptionError(BaseAnalysisError):
     """Raised when audio transcription fails."""
 

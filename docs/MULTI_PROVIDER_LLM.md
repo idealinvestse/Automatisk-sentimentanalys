@@ -69,6 +69,20 @@ Allowed `provider` values:
 - `src/llm/router_client.py` — analyzer-compatible adapter
 - `src/pipeline_steps.py` — wires providers into holistic LLM path
 
+## Kundstyrd routing (operatörspilot)
+
+**Landat (Etapp 2-kläm):** `clamp_execution_policy` avvisar request som vidgar kundens ASR-provider, cloud-fallback eller LLM-allowlist (HTTP 422). Request får bara smalna.
+
+**Kvar (Etapp 4):** klassificerad fallback, delad försök/budget per jobb, och att `MultiProviderRouter._provider_order()` inte lägger till providers utanför den klämdan listan.
+
+I operatörspiloten (Läge A) styrs provider-användning av **kundorganisationens profil** (se [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) §0):
+
+- Kundprofilen definierar en **strikt tillåtelselista** av providers/modeller. I kundstyrt läge får routern inte lägga till andra konfigurerade providers (nuvarande `_provider_order()`-beteende) — detta är en känd to-be-ändring.
+- Request-parametrar (`provider`, `analysis_perspective`, `llm_model`) kan **snäva in** men aldrig vidga kundens tillåtelse.
+- Fallback mellan lokal och extern bearbetning utlöses endast av klassificerade tekniska fel/kapacitetsbrist, aldrig av policy-/auth-/lagringsfel.
+- Försök och budget samlas per jobb över alla delanrop (holistic, QA, judge, compare, insights).
+- Tillåten extern behandling (text/råljud) är ett **produktpolicy-beslut** — inte ett påstående om leverantörens retention, underprocessorer eller juridiska godkännande.
+
 ## Analysis perspectives (paid, cost-aware)
 
 Selectable profiles for different analysis goals. Each profile has

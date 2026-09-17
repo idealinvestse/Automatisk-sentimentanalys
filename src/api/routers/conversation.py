@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from ...caching import AggregateCache
 from ...core.serialization import utc_now_iso
 from ..batch import run_batch
+from ..call_persistence import get_call_store
 from ..dependencies import get_cache
+from ..helpers import resolve_customer_context, resolve_customer_or_422
 from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
 from ..schemas import (
@@ -30,6 +33,7 @@ router = APIRouter(tags=["Conversation"])
 @router.post("/analyze_conversation", response_model=AnalyzeConversationResponse)
 async def analyze_conversation(
     req: AnalyzeConversationRequest,
+    request: Request,
     cache: Annotated[AggregateCache, Depends(get_cache)],
 ) -> AnalyzeConversationResponse:
     """Transcribe a call and run sentiment analysis per segment."""
@@ -41,8 +45,22 @@ async def analyze_conversation(
         req.use_full_pipeline,
     )
 
+    # Original filename is authoritative for customer identity; the stored
+    # (uuid-prefixed, sanitized) name is only a fallback.
+    customer = resolve_customer_or_422(req.original_filename or Path(req.audio_path).name)
+    store = get_call_store(request)
+
     async def _do() -> AnalyzeConversationResponse:
-        return await asyncio.to_thread(run_analyze_conversation, req, cache=cache)
+        resp = await asyncio.to_thread(
+            run_analyze_conversation,
+            req,
+            cache=cache,
+            customer=customer,
+            call_store=store,
+        )
+        if customer is not None:
+            resp.meta["customer"] = customer.model_dump(mode="json")
+        return resp
 
     return await run_route("analyze_conversation", _do)
 
@@ -50,8 +68,11 @@ async def analyze_conversation(
 @router.post("/batch_analyze_conversation", response_model=BatchAnalyzeConversationResponse)
 async def batch_analyze_conversation(
     req: BatchAnalyzeConversationRequest,
+    request: Request,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
 ) -> BatchAnalyzeConversationResponse:
     """Analyze sentiment for multiple conversation audio files."""
+    store = get_call_store(request)
 
     async def _do() -> BatchAnalyzeConversationResponse:
         files = resolve_and_validate_audio_paths(
@@ -66,7 +87,15 @@ async def batch_analyze_conversation(
         )
 
         def _worker(p: str) -> tuple:
-            tr, segs, meta, _pipe = run_batch_analyze_file(req, p)
+            # Per-file customer gate: controlled modes reject unknown/ambiguous
+            # identities per item instead of aborting the whole batch.
+            ctx = resolve_customer_context(Path(p).name)
+            tr, segs, meta, _pipe = run_batch_analyze_file(
+                req, p, cache=cache, customer=ctx, call_store=store
+            )
+            if ctx is not None:
+                meta = dict(meta or {})
+                meta["customer"] = ctx.model_dump(mode="json")
             return tr, segs, meta
 
         raw = await asyncio.to_thread(
