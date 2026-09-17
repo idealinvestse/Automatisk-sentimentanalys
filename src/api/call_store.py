@@ -121,12 +121,21 @@ class CallStore:
         return [doc for _, doc in items[:limit]]
 
     def find_by_idempotency(self, key: str | None) -> dict[str, Any] | None:
-        """Return the first stored call matching an idempotency key."""
+        """Return the stored call matching an idempotency key.
+
+        Scans every record. ``list(limit=500)`` is a UI window and must not
+        hide older keys.
+        """
         if not key:
             return None
-        for doc in self.list(limit=500):
-            if doc.get("idempotency_key") == key:
-                return doc
+        with self._lock:
+            for path in self._root.glob("*.json"):
+                try:
+                    doc = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if doc.get("idempotency_key") == key:
+                    return doc
         return None
 
     def delete(self, call_id: str) -> bool:

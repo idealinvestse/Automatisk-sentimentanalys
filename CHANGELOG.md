@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fas4 + compare kundkläm** — `/agent_performance`, insights/QA/alerts/search och `/analyze_pipeline/compare` resolvar `original_filename` (även när fältet saknas) och kläms mot kundpolicy.
 
 ### Fixed
+- **Tyst LLM-request ärver kund/profil** — `clamp_execution_policy(requested_llm_enabled=None)` stänger inte längre av holistisk LLM. `/analyze_conversation` med `use_full_pipeline` följer `customer.llm.enabled` (första allowlist-provider) eller callcenter-profilens default. Explicit `False` tvingar fortfarande av.
+- **CallStore-idempotens bortom 500 poster** — `find_by_idempotency` skannar hela lagret, inte `list(limit=500)`.
 - **Lyckade batch/scan-jobb kräver store-skrivning** — `persist_intake_file` höjer vid persistfel för completed/transcribed; fail-provenance är fortfarande best-effort.
 
 ### Added

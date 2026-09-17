@@ -52,7 +52,7 @@ def apply_customer_policy(
     *,
     requested_asr_provider: str = "local",
     requested_cloud_fallback: bool = False,
-    requested_llm_enabled: bool = False,
+    requested_llm_enabled: bool | None = None,
     requested_llm_provider: str | None = None,
     requested_profile: str | None = None,
 ) -> CustomerExecutionPolicy:
@@ -71,7 +71,9 @@ def apply_customer_policy(
 
 
 def apply_llm_ceiling(pipe: CallAnalysisPipeline, policy: CustomerExecutionPolicy) -> None:
-    """Keep profile defaults from re-enabling LLM beyond the customer ceiling."""
+    """Apply the customer LLM ceiling; ``None`` leaves profile defaults intact."""
+    if policy.llm_enabled is None:
+        return
     if not policy.llm_enabled:
         pipe.use_mistral_llm = False
         pipe.deep_analysis = False

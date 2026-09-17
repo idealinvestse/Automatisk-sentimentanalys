@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import patch
 
 import pytest
@@ -151,6 +152,28 @@ def test_call_store_idempotency_and_customer_fields(tmp_path) -> None:
     first_anon = store.save(new_call_id(), {"status": "completed", "transcript": {"n": 1}})
     second_anon = store.save(new_call_id(), {"status": "completed", "transcript": {"n": 2}})
     assert first_anon["id"] != second_anon["id"]
+
+
+def test_find_by_idempotency_beyond_list_window(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    key = call_idempotency_key("0042", "old.wav", "fp-old")
+    old = store.save(
+        new_call_id(),
+        {"status": "transcribed", "customer_id": "0042", "idempotency_key": key},
+    )
+    for i in range(500):
+        store.save(
+            f"extra-{i:04d}",
+            {"status": "completed", "idempotency_key": f"other-{i}"},
+        )
+    old_path = tmp_path / "calls" / f"{old['id']}.json"
+    old_path.touch()
+    os.utime(old_path, (1_000_000, 1_000_000))
+    newest = {doc["id"] for doc in store.list(limit=500)}
+    assert old["id"] not in newest
+    found = store.find_by_idempotency(key)
+    assert found is not None
+    assert found["id"] == old["id"]
 
 
 def test_persist_call_artifact_idempotent_and_transcript_before_report(tmp_path) -> None:

@@ -694,6 +694,32 @@ class TestCustomerExecutionPolicy:
         assert policy.llm_enabled is True
         assert policy.llm_provider == "lmstudio"
 
+    def test_silent_request_inherits_customer_llm(self) -> None:
+        ctx = resolve_customer("kund-0042_x.wav", _registry())
+        policy = clamp_execution_policy(ctx)
+        assert policy.llm_enabled is True
+        assert policy.llm_provider == "lmstudio"
+
+    def test_silent_request_without_customer_inherits_profile(self) -> None:
+        policy = clamp_execution_policy(None, requested_profile="callcenter")
+        assert policy.llm_enabled is None
+        assert policy.llm_provider is None
+
+    def test_explicit_false_forces_llm_off_despite_customer(self) -> None:
+        ctx = resolve_customer("kund-0042_x.wav", _registry())
+        policy = clamp_execution_policy(ctx, requested_llm_enabled=False)
+        assert policy.llm_enabled is False
+        assert policy.llm_provider is None
+
+    def test_silent_request_inherits_disabled_customer_llm(self) -> None:
+        ctx = resolve_customer(
+            "kund-0042_x.wav",
+            _registry(customers={"0042": _profile(llm={"enabled": False})}),
+        )
+        policy = clamp_execution_policy(ctx)
+        assert policy.llm_enabled is False
+        assert policy.llm_provider is None
+
 
 class TestFailClosedAndPipelineWiring:
     def _client(self):

@@ -270,6 +270,7 @@ When changing analyzers or heuristics, do not skip golden + quality gates. Do no
 - Do not skip customer resolve on Fas4/compare when `original_filename` is missing; required mode must 422.
 - Do not swallow store-write failures on completed batch/scan jobs (`persist_intake_file(..., must_succeed=True)`).
 - Do not let a request widen a customer's ASR provider, cloud fallback, or LLM allowlist.
+- Do not treat a silent LLM request as "LLM off". `requested_llm_enabled=None` inherits the customer allowlist or profile default; only an explicit `False` forces the ceiling off. `/analyze_conversation` full pipeline has no LLM fields and must inherit.
 - Do not invent a filename convention or set `customers.mode: required` — R04 is Oscar-owned; default install stays `disabled`.
 - Do not treat filename customer-id as authentication.
 - Do not remove graceful fallback logic for optional analyzers (pyannote, whisperx, LLM).

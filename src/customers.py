@@ -366,11 +366,49 @@ class CustomerExecutionPolicy(BaseModel):
     qa_scorecard: str
     asr_provider: Literal["local", "cloud"]
     cloud_fallback_local: bool
-    llm_enabled: bool
+    llm_enabled: bool | None = None
     llm_provider: str | None = None
     anonymize_before_llm: bool = True
     customer_id: str | None = None
     config_fingerprint: str | None = None
+
+
+def _clamp_llm_policy(
+    customer: CustomerContext | None,
+    *,
+    requested_llm_enabled: bool | None,
+    requested_llm_provider: str | None,
+) -> tuple[bool | None, str | None]:
+    """Resolve LLM on/off + provider. ``None`` request inherits customer or profile."""
+    req_llm = (requested_llm_provider or "").strip().lower() or None
+    if customer is None:
+        if requested_llm_enabled is None:
+            return None, None
+        llm_on = bool(requested_llm_enabled)
+        return llm_on, req_llm if llm_on else None
+
+    if requested_llm_enabled is False:
+        return False, None
+
+    allow = list(customer.llm.provider_allowlist)
+    if requested_llm_enabled is None:
+        if not customer.llm.enabled or not allow:
+            return False, None
+        if req_llm and req_llm not in allow:
+            raise CustomerPolicyError(
+                f"LLM provider {req_llm!r} is not in the allowlist for customer "
+                f"{customer.customer_id!r}"
+            )
+        return True, req_llm or allow[0]
+
+    if not customer.llm.enabled:
+        raise CustomerPolicyError(f"LLM is not enabled for customer {customer.customer_id!r}")
+    if not req_llm or req_llm not in set(allow):
+        raise CustomerPolicyError(
+            f"LLM provider {req_llm!r} is not in the allowlist for customer "
+            f"{customer.customer_id!r}"
+        )
+    return True, req_llm
 
 
 def clamp_execution_policy(
@@ -378,23 +416,28 @@ def clamp_execution_policy(
     *,
     requested_asr_provider: str = "local",
     requested_cloud_fallback: bool = False,
-    requested_llm_enabled: bool = False,
+    requested_llm_enabled: bool | None = None,
     requested_llm_provider: str | None = None,
     requested_profile: str | None = None,
 ) -> CustomerExecutionPolicy:
     """Apply customer policy as a ceiling over request parameters.
 
     When no customer is resolved (registry disabled / optional without ID),
-    the request is used unchanged. A resolved customer always selects the
-    analyzer profile and QA scorecard. ASR/LLM requests that exceed the
-    customer allowlist raise :class:`CustomerPolicyError`.
+    the request is used unchanged. A silent LLM request (``None``) inherits
+    the customer allowlist, or leaves profile defaults untouched. A resolved
+    customer always selects the analyzer profile and QA scorecard. ASR/LLM
+    requests that exceed the customer allowlist raise
+    :class:`CustomerPolicyError`.
     """
     req_asr = (requested_asr_provider or "local").strip().lower()
     if req_asr not in {"local", "cloud"}:
         req_asr = "local"
-    req_llm = (requested_llm_provider or "").strip().lower() or None
     fallback = bool(requested_cloud_fallback)
-    llm_on = bool(requested_llm_enabled)
+    llm_enabled, llm_provider = _clamp_llm_policy(
+        customer,
+        requested_llm_enabled=requested_llm_enabled,
+        requested_llm_provider=requested_llm_provider,
+    )
 
     if customer is None:
         profile = (requested_profile or "callcenter").strip().lower() or "callcenter"
@@ -403,8 +446,8 @@ def clamp_execution_policy(
             qa_scorecard=DEFAULT_QA_SCORECARD,
             asr_provider=req_asr,  # type: ignore[arg-type]
             cloud_fallback_local=fallback,
-            llm_enabled=llm_on,
-            llm_provider=req_llm,
+            llm_enabled=llm_enabled,
+            llm_provider=llm_provider,
             anonymize_before_llm=True,
         )
 
@@ -420,23 +463,13 @@ def clamp_execution_policy(
         "cloud" if req_asr == "cloud" and customer.asr.provider == "cloud" else "local"
     )
 
-    if llm_on and not customer.llm.enabled:
-        raise CustomerPolicyError(f"LLM is not enabled for customer {customer.customer_id!r}")
-    if llm_on:
-        allow = set(customer.llm.provider_allowlist)
-        if not req_llm or req_llm not in allow:
-            raise CustomerPolicyError(
-                f"LLM provider {req_llm!r} is not in the allowlist for customer "
-                f"{customer.customer_id!r}"
-            )
-
     return CustomerExecutionPolicy(
         analyzer_profile=customer.analyzer_profile,
         qa_scorecard=customer.qa_scorecard or DEFAULT_QA_SCORECARD,
         asr_provider=asr_provider,
         cloud_fallback_local=fallback and customer.asr.allow_cloud_fallback,
-        llm_enabled=llm_on,
-        llm_provider=req_llm if llm_on else None,
+        llm_enabled=llm_enabled,
+        llm_provider=llm_provider,
         anonymize_before_llm=customer.llm.anonymize_before_llm,
         customer_id=customer.customer_id,
         config_fingerprint=customer.config_fingerprint,
