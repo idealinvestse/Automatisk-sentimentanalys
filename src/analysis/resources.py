@@ -11,9 +11,10 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 if TYPE_CHECKING:
     import torch
 
+    from ..sentiment import SentimentPipeline
+
 from ..core.device import normalize_device_spec
 from ..intent import IntentClassifier
-from ..sentiment import SentimentPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ class ModelResourcePool:
         device: int | str | torch.device | None = None,
         return_all_scores: bool = False,
     ) -> SentimentPipeline:
+        # Heavy transformers stack; keep heuristic intent tests importable.
+        from ..sentiment import SentimentPipeline
+
         device_arg, device_key = normalize_device_spec(device or "auto")
         key = ("sentiment", model_name, device_key, str(return_all_scores))
         return self._get_or_create(

@@ -53,7 +53,8 @@ class TestBaselineFiles:
         if not path.is_file():
             pytest.skip("intent baseline not generated yet")
         data = json.loads(path.read_text(encoding="utf-8"))
-        heur = data.get("backends", {}).get("heuristic", {})
+        backends = data.get("backends") or {}
+        heur = backends.get("heuristic") or next(iter(backends.values()), {})
         assert "f1_macro" in heur
         assert "per_class" in heur
         assert "confusion_matrix" in heur

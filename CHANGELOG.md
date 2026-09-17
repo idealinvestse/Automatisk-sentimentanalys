@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fas4 + compare kundkläm** — `/agent_performance`, insights/QA/alerts/search och `/analyze_pipeline/compare` resolvar `original_filename` (även när fältet saknas) och kläms mot kundpolicy.
 
 ### Fixed
-- **CI docker/mypy/fail-closed-mocks** — Dockerfile kopierar inte längre saknad rot-`ROADMAP.md` (filen ligger i `docs/`). Mypy-narrowing i CallStore, pipeline-steg, LM Studio och `/calls`. ASR-hjälpartester skickar användbart tal så fail-closed inte kastar. `/analyze_pipeline` behandlar `llm_enabled=None` som arv, inte av. API-lagertester täcker fail-closed-helpers och kör `test_customer_profiles.py` så täckningen når 90 %.
+- **CI docker/mypy/fail-closed-mocks** — Dockerfile kopierar inte längre saknad rot-`ROADMAP.md` (filen ligger i `docs/`). Staging-compose tillåter saknad `.env`. Mypy pin 1.16.1. Training-extra får pandas/typer. ASR-hjälpartester skickar användbart tal. `/analyze_pipeline` behandlar `llm_enabled=None` som arv. API-lagertester kör `test_customer_profiles.py` så täckningen når 90 %.
 - **Tyst LLM-request ärver kund/profil** — `clamp_execution_policy(requested_llm_enabled=None)` stänger inte längre av holistisk LLM. `/analyze_conversation` med `use_full_pipeline` följer `customer.llm.enabled` (första allowlist-provider) eller callcenter-profilens default. Explicit `False` tvingar fortfarande av.
 - **CallStore-idempotens bortom 500 poster** — `find_by_idempotency` skannar hela lagret, inte `list(limit=500)`.
 - **Lyckade batch/scan-jobb kräver store-skrivning** — `persist_intake_file` höjer vid persistfel för completed/transcribed; fail-provenance är fortfarande best-effort.

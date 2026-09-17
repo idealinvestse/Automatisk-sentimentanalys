@@ -163,6 +163,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[min,api,install,dev]"
+          pip install "mypy==1.16.1"
 
       - name: Mypy (src)
         run: mypy src --config-file pyproject.toml
@@ -233,10 +234,10 @@ jobs:
       - name: Install training deps
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[training,min,dev]"
+          pip install -e ".[training,min,cli,dev]"
 
       - name: Fine-tune config and corpus tests
-        run: pytest tests/test_finetune.py tests/test_train_intent.py tests/test_validate_intent_corpus.py -q
+        run: pytest tests/test_finetune.py tests/test_train_intent.py tests/test_validate_intent_corpus.py -q --benchmark-disable
 
       - name: Validate domain corpus
         run: python scripts/validate_domain_corpus.py data/callcenter_val.csv --min-rows 500
@@ -272,7 +273,7 @@ jobs:
             --output reports/intent_baseline.json --min-macro-f1 0.75
 
       - name: Intent and DATA-01 workflow tests
-        run: pytest tests/test_intent_model_backend.py tests/test_import_domain_corpus.py tests/test_quality_gate.py -q
+        run: pytest tests/test_intent_model_backend.py tests/test_import_domain_corpus.py tests/test_quality_gate.py -q --benchmark-disable
 
       - name: Benchmark analyzers (fast heuristic sentiment)
         run: |
