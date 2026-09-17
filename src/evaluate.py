@@ -582,34 +582,35 @@ def evaluate_llm_quality(
         if should_use_any_llm(segs, llm_ctx):
             deep_path_hits += 1
         for run in range(2):
-            out = (
-                analyzer.analyze_full_conversation(
+            payload: dict[str, Any]
+            if analyzer is not None:
+                payload = analyzer.analyze_full_conversation(
                     segments=segs,
                     role_map={"SPEAKER_0": "customer", "SPEAKER_1": "agent"},
                 )
-                if analyzer is not None
-                else {
+            else:
+                payload = {
                     "fallback": True,
                     "meta": {"llm_used": False, "fallback_reason": "live_llm_disabled"},
                 }
-            )
-            meta = out.get("meta", {})
+            meta_raw = payload.get("meta", {})
+            meta: dict[str, Any] = meta_raw if isinstance(meta_raw, dict) else {}
             cost = meta.get("cost_usd") or 0.0
             costs.append(cost)
-            if meta.get("llm_used") is False or out.get("fallback"):
+            if meta.get("llm_used") is False or payload.get("fallback"):
                 fallbacks += 1
-            if out.get("actionable_summary"):
+            if payload.get("actionable_summary"):
                 has_actionable += 1
             schema_ok = False
             try:
-                CallLLMOutput.model_validate(out)
+                CallLLMOutput.model_validate(payload)
                 schema_ok = True
                 schema_pass += 1
             except ValidationError:
                 pass
             ev = 0
             for k in ("trajectory", "refined_aspects", "root_cause", "agent_assessment"):
-                val = out.get(k) or {}
+                val = payload.get(k) or {}
                 if isinstance(val, dict) and val.get("evidence_spans"):
                     ev += len(val["evidence_spans"])
                 if isinstance(val, list):
@@ -626,7 +627,7 @@ def evaluate_llm_quality(
                     "cost_usd": cost,
                     "cached": meta.get("cached", False),
                     "llm_used": meta.get("llm_used", False),
-                    "has_actionable": bool(out.get("actionable_summary")),
+                    "has_actionable": bool(payload.get("actionable_summary")),
                     "evidence_count": ev,
                     "schema_valid": schema_ok,
                 }

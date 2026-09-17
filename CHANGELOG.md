@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fas4 + compare kundkläm** — `/agent_performance`, insights/QA/alerts/search och `/analyze_pipeline/compare` resolvar `original_filename` (även när fältet saknas) och kläms mot kundpolicy.
 
 ### Fixed
+- **CI unit Fas4/sklearn/auth-isolation** — Fas4-KPI-tester matchar `score_agreement` och `heuristic: evidence_or_rationale`. `LearnedBlender.fit_sklearn` skickar inte borttaget `LogisticRegression(multi_class=...)`. API-settings-cache nollställer auth/media-env så `/status`-tester inte får 401. `evaluate llm-quality` typas som `dict` för mypy.
 - **CI docker/mypy/fail-closed-mocks** — Dockerfile kopierar inte längre saknad rot-`ROADMAP.md` (filen ligger i `docs/`). Staging-compose tillåter saknad `.env`. Preference-gate skippar utan pydantic. Mypy pin 1.16.1. Dev-extra får pydantic; training-extra får pandas/typer. ASR-hjälpartester skickar användbart tal. `/analyze_pipeline` behandlar `llm_enabled=None` som arv. API-lagertester kör `test_customer_profiles.py` så täckningen når 90 %.
 - **Tyst LLM-request ärver kund/profil** — `clamp_execution_policy(requested_llm_enabled=None)` stänger inte längre av holistisk LLM. `/analyze_conversation` med `use_full_pipeline` följer `customer.llm.enabled` (första allowlist-provider) eller callcenter-profilens default. Explicit `False` tvingar fortfarande av.
 - **CallStore-idempotens bortom 500 poster** — `find_by_idempotency` skannar hela lagret, inte `list(limit=500)`.

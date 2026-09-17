@@ -14,7 +14,11 @@ from src.evaluate import (
 
 class TestFas4KPIs:
     def test_qa_score_consistency_empty(self):
-        assert compute_qa_score_consistency([]) == {"agreement": 0.0, "n": 0}
+        assert compute_qa_score_consistency([]) == {
+            "agreement": 0.0,
+            "n": 0,
+            "score_agreement": None,
+        }
 
     def test_qa_score_consistency_passed(self):
         qa = [
@@ -39,7 +43,7 @@ class TestFas4KPIs:
         recs = [{"evidence_spans": ["x"]}, {"text": "no evidence"}]
         result = compute_coaching_precision(recs)
         assert result["precision"] == 0.5
-        assert result["note"] == "heuristic: has_evidence"
+        assert result["note"] == "heuristic: evidence_or_rationale"
 
     def test_hot_topic_recall(self):
         agg = {"hot_topics": [{"topic": "Faktura"}, {"topic": "Support"}]}

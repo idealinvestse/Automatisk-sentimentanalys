@@ -216,8 +216,8 @@ class LearnedBlender:
         le = LabelEncoder()
         y = le.fit_transform(labels)
 
+        # sklearn ≥1.7 removed multi_class; lbfgs is multinomial for 3+ classes.
         clf = LogisticRegression(
-            multi_class="multinomial",
             solver="lbfgs",
             max_iter=max_iter,
             random_state=42,
