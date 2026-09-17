@@ -969,6 +969,10 @@ class PipelineCompareRequest(BaseModel):
         pattern=r"^(openrouter|groq|mistral|nvidia|cerebras|lmstudio|auto|free_sequential|sv_optimal|router)$",
     )
     groq_eu_residency: bool = False
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
+    )
 
     @field_validator("segments")
     @classmethod
@@ -1152,6 +1156,10 @@ class Fas4LlmFlags(BaseModel):
     groq_eu_residency: bool = Field(
         False,
         description="GDPR gate for Groq: affirm EU data residency (default: OFF).",
+    )
+    original_filename: str | None = Field(
+        None,
+        description="Original upload filename; used for customer identification when a customer registry is active",
     )
 
 

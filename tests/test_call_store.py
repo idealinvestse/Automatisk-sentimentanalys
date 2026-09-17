@@ -239,6 +239,36 @@ def test_persist_intake_file_skips_missing_store(tmp_path) -> None:
     assert doc["provenance"]["original_filename"] == "kund-demo.wav"
 
 
+def test_persist_intake_file_completed_raises_on_store_error(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    with (
+        patch.object(store, "save", side_effect=OSError("disk full")),
+        pytest.raises(OSError, match="disk full"),
+    ):
+        persist_intake_file(
+            store,
+            audio_path="kund-demo.wav",
+            route="batch_transcribe",
+            status="transcribed",
+            transcript={"segments": [{"text": "hej"}]},
+        )
+
+
+def test_persist_intake_file_failed_is_best_effort(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    with patch.object(store, "save", side_effect=OSError("disk full")):
+        assert (
+            persist_intake_file(
+                store,
+                audio_path="kund-demo.wav",
+                route="batch_transcribe",
+                status="failed",
+                must_succeed=False,
+            )
+            is None
+        )
+
+
 def test_batch_transcribe_persists_ok_and_failed(monkeypatch, tmp_path) -> None:
     monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
     monkeypatch.setenv("API_STATE_DIR", str(tmp_path))

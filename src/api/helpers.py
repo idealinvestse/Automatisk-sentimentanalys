@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import HTTPException
-
 from ..core.errors import (
     ASR_DECODE_FAILED,
     ASR_EMPTY_TRANSCRIPT,
@@ -25,6 +23,7 @@ from ..customers import (
 from ..pipeline import CallAnalysisPipeline
 from ..transcription.factory import resolve_preprocess_mode
 from ..transcription.router import AsrRouter
+from .error_responses import CodedHTTPException
 from .schemas import AsrParamsMixin
 
 logger = logging.getLogger(__name__)
@@ -45,7 +44,7 @@ def resolve_customer_or_422(filename: str | None) -> CustomerContext | None:
     try:
         return resolve_customer_context(filename)
     except CustomerResolutionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise CodedHTTPException(422, str(exc), error_code=exc.error_code) from exc
 
 
 def apply_customer_policy(
@@ -68,7 +67,7 @@ def apply_customer_policy(
             requested_profile=requested_profile,
         )
     except CustomerPolicyError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise CodedHTTPException(422, str(exc), error_code=exc.error_code) from exc
 
 
 def apply_llm_ceiling(pipe: CallAnalysisPipeline, policy: CustomerExecutionPolicy) -> None:

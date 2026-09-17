@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from types import SimpleNamespace
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -64,23 +65,12 @@ def _fas4_pipeline(
     cache: AggregateCache,
     header_key: str | None,
 ) -> CallAnalysisPipeline:
-    return create_pipeline(
-        cache=cache,
-        profile=req.profile,
-        use_mistral_llm=req.use_mistral_llm,
-        llm_model=req.llm_model,
-        deep_analysis=req.deep_analysis,
-        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
-        provider=getattr(req, "provider", "openrouter"),
-        groq_eu_residency=getattr(req, "groq_eu_residency", False),
-    )
+    customer = _resolve_pipeline_customer(req)
+    return _pipeline_from_request(req, cache, header_key, customer)
 
 
 def _resolve_pipeline_customer(req: Any) -> CustomerContext | None:
-    filename = getattr(req, "original_filename", None)
-    if not filename:
-        return None
-    return resolve_customer_or_422(filename)
+    return resolve_customer_or_422(getattr(req, "original_filename", None))
 
 
 def _pipeline_from_request(
@@ -391,23 +381,31 @@ async def analyze_pipeline_compare(
     total_cost = 0.0
     total_time = 0.0
     budget_exceeded = False
+    customer = _resolve_pipeline_customer(req)
 
     async def _do() -> PipelineCompareResponse:
         nonlocal total_cost, total_time, budget_exceeded
         for model in req.models:
             if budget_exceeded:
                 break
-            pipe = create_pipeline(
-                cache=cache,
-                profile=req.profile,
-                sentiment_model=req.sentiment_model,
-                device=req.device,
-                use_mistral_llm=True,
-                llm_model=model,
-                deep_analysis=req.deep_analysis,
-                llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
-                provider=req.provider,
-                groq_eu_residency=req.groq_eu_residency,
+            pipe = _pipeline_from_request(
+                SimpleNamespace(
+                    profile=req.profile,
+                    sentiment_model=req.sentiment_model,
+                    device=req.device,
+                    use_mistral_llm=True,
+                    llm_model=model,
+                    deep_analysis=req.deep_analysis,
+                    llm_api_key=req.llm_api_key,
+                    provider=req.provider,
+                    groq_eu_residency=req.groq_eu_residency,
+                    async_analyzers=False,
+                    analysis_perspective=None,
+                    original_filename=req.original_filename,
+                ),
+                cache,
+                header_key,
+                customer,
             )
             report = await asyncio.to_thread(
                 pipe.analyze_segments,

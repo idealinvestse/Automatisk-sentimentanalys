@@ -87,7 +87,7 @@ test("unknown customer id is rejected at upload", async ({ page }) => {
       contentType: "application/json",
       body: JSON.stringify({
         detail: "Unknown customer id '9999'",
-        error_code: "validation_error",
+        error_code: "unknown_customer",
       }),
     }),
   );

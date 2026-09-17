@@ -262,7 +262,10 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def handle_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
-        if exc.status_code == 401:
+        coded = getattr(exc, "error_code", None)
+        if isinstance(coded, str) and coded.strip():
+            code = coded.strip()
+        elif exc.status_code == 401:
             code = ERROR_CODE_UNAUTHORIZED
         elif exc.status_code == 429:
             code = ERROR_CODE_RATE_LIMITED

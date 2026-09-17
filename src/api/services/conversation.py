@@ -316,5 +316,6 @@ def run_batch_analyze_file(
             status="failed",
             customer=customer,
             error=exc,
+            must_succeed=False,
         )
         raise

@@ -11,7 +11,7 @@
 **Core Philosophy**:
 - **Hybrid-first**: Local models + heuristics are the default/fast/private path. Mistral (via OpenRouter) is used selectively for high-value reasoning.
 - **Graceful degradation**: Missing optional components (pyannote, whisperx, etc.) must fall back automatically. This does **not** apply to empty/failed ASR on API paths.
-- **Fail-closed ASR (API)**: `strict_asr=True` and noll användbara segment är fel (`asr_empty_transcript`). Ingen QA/coaching-rapport och ingen LLM på tomt transkript.
+- **Fail-closed ASR**: `analyze_audio(..., strict_asr=True)` is the default. Noll användbara segment är fel (`asr_empty_transcript`). Ingen QA/coaching-rapport och ingen LLM på tomt transkript. Pass `strict_asr=False` only for explicit library degrade experiments.
 - **Privacy by design**: Explicit logging of external LLM calls. Early PII redaction for callcenter profile.
 - **Extensibility**: Registry-based analyzers and clear plugin points.
 - **Production realism**: Error isolation, caching, and non-fatal failures where possible.
@@ -265,7 +265,10 @@ When changing analyzers or heuristics, do not skip golden + quality gates. Do no
 
 ## 11. What NOT to Do
 
-- Do not restore silent empty-ASR fallback on API paths (`analyze_audio` without `strict_asr=True`, or skipping `require_usable_transcript`).
+- Do not restore silent empty-ASR fallback (`analyze_audio(..., strict_asr=False)` on operator/API/CLI paths, or skipping `require_usable_transcript`).
+- Do not treat customer 422s as generic `validation_error` — keep the dedicated `error_code` values.
+- Do not skip customer resolve on Fas4/compare when `original_filename` is missing; required mode must 422.
+- Do not swallow store-write failures on completed batch/scan jobs (`persist_intake_file(..., must_succeed=True)`).
 - Do not let a request widen a customer's ASR provider, cloud fallback, or LLM allowlist.
 - Do not invent a filename convention or set `customers.mode: required` — R04 is Oscar-owned; default install stays `disabled`.
 - Do not treat filename customer-id as authentication.

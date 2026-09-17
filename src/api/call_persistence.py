@@ -124,8 +124,14 @@ def persist_intake_file(
     report: dict[str, Any] | None = None,
     customer: CustomerContext | None = None,
     error: BaseException | None = None,
+    must_succeed: bool = True,
 ) -> dict[str, Any] | None:
-    """Best-effort persist for batch/scan workers. Never raises to the caller."""
+    """Persist a batch/scan artifact.
+
+    Completed/transcribed jobs require a successful store write
+    (``must_succeed=True``). Failure-provenance writes are best-effort
+    (``must_succeed=False``) so the original worker error stays visible.
+    """
     if store is None:
         return None
     try:
@@ -142,4 +148,6 @@ def persist_intake_file(
         )
     except Exception:
         logger.exception("Failed to persist intake artifact for %s via %s", audio_path, route)
+        if must_succeed:
+            raise
         return None

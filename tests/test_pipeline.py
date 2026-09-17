@@ -89,13 +89,24 @@ class TestCallAnalysisPipeline:
             assert "intent" in d["intent_results"][0]
             assert "confidence" in d["intent_results"][0]
 
-    def test_analyze_audio_missing_file(self, monkeypatch):
-        """Should gracefully handle missing audio files."""
+    def test_analyze_audio_missing_file_is_fail_closed(self, monkeypatch):
+        """Default analyze_audio must not yield an empty QA report."""
         self._mock_sentiment(monkeypatch)
-        report = self.pipe.analyze_audio("/nonexistent/audio.wav")
+        with (
+            patch(
+                "src.pipeline.AsrRouter.transcribe",
+                side_effect=FileNotFoundError("missing audio"),
+            ),
+            pytest.raises(FileNotFoundError, match="missing audio"),
+        ):
+            self.pipe.analyze_audio("/nonexistent/audio.wav")
+
+    def test_analyze_audio_opt_in_empty_report(self, monkeypatch):
+        """Library callers may opt in to the legacy empty-report fallback."""
+        self._mock_sentiment(monkeypatch)
+        report = self.pipe.analyze_audio("/nonexistent/audio.wav", strict_asr=False)
         assert isinstance(report, CallAnalysisReport)
         assert report.segments == []
-        # Diarization is attempted even when transcription fails; it returns an empty result
         assert report.diarization is not None
         assert report.diarization.get("segments") == []
 
@@ -109,7 +120,7 @@ class TestCallAnalysisPipeline:
             ),
             pytest.raises(RuntimeError, match="asr down"),
         ):
-            self.pipe.analyze_audio("dummy.wav", strict_asr=True)
+            self.pipe.analyze_audio("dummy.wav")
 
     def test_analyze_audio_strict_asr_empty_transcript(self, monkeypatch):
         """API/operator path must not produce a QA report from silence."""
@@ -129,7 +140,7 @@ class TestCallAnalysisPipeline:
             patch("src.pipeline.AsrRouter.transcribe", return_value=empty),
             pytest.raises(TranscriptionError) as err,
         ):
-            self.pipe.analyze_audio("dummy.wav", strict_asr=True)
+            self.pipe.analyze_audio("dummy.wav")
         assert err.value.error_code == ASR_EMPTY_TRANSCRIPT
 
     def test_analyze_segments_with_mistral_flag_accepts_and_merges(self, monkeypatch):

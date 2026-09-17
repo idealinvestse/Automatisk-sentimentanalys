@@ -126,6 +126,7 @@ def _run_scan_process(
                 status="failed",
                 customer=ctx,
                 error=exc,
+                must_succeed=False,
             )
             raise
 
@@ -151,6 +152,7 @@ def _run_scan_process(
                 status="failed",
                 customer=ctx,
                 error=exc,
+                must_succeed=False,
             )
             raise
 

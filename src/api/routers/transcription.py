@@ -21,6 +21,7 @@ from ..call_persistence import (
     persist_call_artifact,
     persist_intake_file,
 )
+from ..dependencies import create_pipeline
 from ..error_responses import PUBLIC_ERROR_DETAIL
 from ..helpers import (
     asr_kwargs_from,
@@ -42,6 +43,7 @@ from ..schemas import (
     TranscribeResponse,
     UploadResponse,
 )
+from ..settings import get_api_settings
 from ..transcription_events import JOB_HEADER, get_hub
 from ..transcription_jobs import TranscriptionJob, get_job_registry
 
@@ -151,8 +153,6 @@ async def upload_audio_file(
     Maximum file size: API_MAX_UPLOAD_SIZE_MB (default 200 MB).
     Old files are cleaned up after API_UPLOAD_RETENTION_DAYS (default 7 days).
     """
-    from ..settings import get_api_settings
-
     settings = get_api_settings()
 
     # Validate media root is configured
@@ -291,8 +291,6 @@ async def transcribe(req: TranscribeRequest, request: Request) -> TranscribeResp
             hub.progress(job_id=job_id, processed=1, total=1, current_file=fname, progress=1.0)
             partial_snapshot: dict[str, Any] | None = None
             if req.run_partial_analysis and tr.get("segments"):
-                from ..dependencies import create_pipeline
-
                 pipe = create_pipeline(
                     cache=request.app.state.cache,
                     profile=customer.analyzer_profile if customer is not None else "callcenter",
@@ -422,6 +420,7 @@ async def batch_transcribe(
                     status="failed",
                     customer=ctx,
                     error=exc,
+                    must_succeed=False,
                 )
                 raise
 

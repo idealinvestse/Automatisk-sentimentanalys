@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from ..core.errors import (
@@ -34,6 +34,14 @@ CONFIGURATION_ERROR_DETAIL = "Invalid configuration."
 LLM_ERROR_DETAIL = "LLM request failed. Please try again later."
 TRANSCRIPTION_ERROR_DETAIL = "Transcription failed. Please try again later."
 ANALYSIS_ERROR_DETAIL = "Analysis failed. Please try again later."
+
+
+class CodedHTTPException(HTTPException):
+    """HTTPException that carries a stable ``error_code`` for the API envelope."""
+
+    def __init__(self, status_code: int, detail: Any, *, error_code: str) -> None:
+        super().__init__(status_code=status_code, detail=detail)
+        self.error_code = error_code
 
 
 def request_id_from(request: Request) -> str | None:

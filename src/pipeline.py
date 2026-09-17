@@ -324,7 +324,7 @@ class CallAnalysisPipeline:
         initial_prompt: str | None = None,
         preprocess: bool = False,
         preprocess_mode: str | None = None,
-        strict_asr: bool = False,
+        strict_asr: bool = True,
     ) -> CallAnalysisReport:
         """Analyze a call from an audio file.
 
@@ -334,7 +334,8 @@ class CallAnalysisPipeline:
             language: Language code for ASR.
             run_diarization: Whether to run speaker diarization.
             selected_analyzers: Optional list of analyzer names to run. Runs all by default.
-            strict_asr: If True, re-raise ASR failures instead of returning an empty report.
+            strict_asr: If True (default), re-raise ASR failures and reject empty
+                transcripts. Pass False only for explicit library degrade experiments.
 
         Returns:
             CallAnalysisReport with full analysis.

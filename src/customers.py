@@ -39,9 +39,13 @@ CUSTOMER_ID_GROUP = "customer_id"
 class CustomerResolutionError(Exception):
     """Base class for customer identity resolution failures."""
 
+    error_code = "customer_resolution_error"
+
 
 class MissingCustomerIdError(CustomerResolutionError):
     """No customer identifier could be extracted from the filename."""
+
+    error_code = "missing_customer_id"
 
     def __init__(self, filename: str | None) -> None:
         self.filename = filename
@@ -50,6 +54,8 @@ class MissingCustomerIdError(CustomerResolutionError):
 
 class AmbiguousCustomerIdError(CustomerResolutionError):
     """Multiple distinct customer identifiers found in the filename."""
+
+    error_code = "ambiguous_customer_id"
 
     def __init__(self, filename: str | None, candidates: list[str]) -> None:
         self.filename = filename
@@ -60,6 +66,8 @@ class AmbiguousCustomerIdError(CustomerResolutionError):
 class UnknownCustomerError(CustomerResolutionError):
     """The extracted identifier does not match any registered customer."""
 
+    error_code = "unknown_customer"
+
     def __init__(self, customer_id: str) -> None:
         self.customer_id = customer_id
         super().__init__(f"Unknown customer identifier {customer_id!r}")
@@ -67,6 +75,8 @@ class UnknownCustomerError(CustomerResolutionError):
 
 class DisabledCustomerError(CustomerResolutionError):
     """The resolved customer exists but is disabled."""
+
+    error_code = "disabled_customer"
 
     def __init__(self, customer_id: str) -> None:
         self.customer_id = customer_id
@@ -76,9 +86,13 @@ class DisabledCustomerError(CustomerResolutionError):
 class InvalidCustomerRegistryError(CustomerResolutionError):
     """Registry configuration is invalid at resolve time."""
 
+    error_code = "invalid_customer_registry"
+
 
 class CustomerPolicyError(CustomerResolutionError):
     """Request tried to widen a customer's allowed processing policy."""
+
+    error_code = "customer_policy_violation"
 
 
 class CustomerMode(StrEnum):

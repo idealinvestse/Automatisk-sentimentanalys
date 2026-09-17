@@ -877,6 +877,11 @@ export interface components {
              */
             groq_eu_residency: boolean;
             /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
+            /**
              * Segments List
              * @description List of segment lists (one per call)
              */
@@ -958,6 +963,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments List */
             segments_list?: {
                 [key: string]: unknown;
@@ -2097,6 +2107,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments List */
             segments_list: {
                 [key: string]: unknown;
@@ -2320,6 +2335,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
         };
         /**
          * PipelineCompareResponse
@@ -2605,6 +2625,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /** Segments */
             segments: {
                 [key: string]: unknown;
@@ -2982,6 +3007,11 @@ export interface components {
              * @default false
              */
             groq_eu_residency: boolean;
+            /**
+             * Original Filename
+             * @description Original upload filename; used for customer identification when a customer registry is active
+             */
+            original_filename?: string | null;
             /**
              * Segments List
              * @description List of calls to index/search over

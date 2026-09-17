@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Agentguide efter Etapp 2/3** — `docs/LLM_AGENT_GUIDE.md` dokumenterar fail-closed ASR, kundkläm och CallStore så agenter inte återinför tyst tom-ASR-fallback. `docs/WINDOWS_INSTALL.md` pekar på `customers.mode: disabled` tills R04.
 - **Batch/scan-persistens** — `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process` och light `/analyze_conversation` skriver CallStore-artefakter (ok + fail-orsak) med samma idempotens som enkeluppladdningen.
+- **`analyze_audio` fail-closed default** — `strict_asr=True` är nu default; tom QA-rapport kräver explicit `strict_asr=False`.
+- **Kund-422 är inte längre `validation_error`** — `missing_customer_id`, `unknown_customer`, `ambiguous_customer_id`, `disabled_customer`, `invalid_customer_registry`, `customer_policy_violation`.
+- **Fas4 + compare kundkläm** — `/agent_performance`, insights/QA/alerts/search och `/analyze_pipeline/compare` resolvar `original_filename` (även när fältet saknas) och kläms mot kundpolicy.
+
+### Fixed
+- **Lyckade batch/scan-jobb kräver store-skrivning** — `persist_intake_file` höjer vid persistfel för completed/transcribed; fail-provenance är fortfarande best-effort.
 
 ### Added
 - **Fail-closed ASR + Etapp 2-wiring + Etapp 3 persistens** — API-vägar (`analyze_audio`, `/transcribe`, conversation) misslyckas vid ASR-fel eller noll användbara segment (`asr_empty_transcript` → 422); ingen tom QA-rapport. Fryst `CustomerContext` styr `analyzer_profile`, QA-scorecard och klämd ASR/LLM-policy (request får bara smalna). Rapportcache `report:v3` inkluderar kund+fingerprint. Serverutfärdat `call_id`, transkript persisteras före LLM, idempotens `customer+källa+fingerprint`. Webui visar resolverad kund och använder server-id + kundprofil i `analyzePipeline`.

@@ -69,6 +69,16 @@ class TestNormalizeCustomerId:
         assert normalize_customer_id("") == ""
 
 
+class TestCustomerErrorCodes:
+    def test_stable_codes(self) -> None:
+        assert MissingCustomerIdError("x.wav").error_code == "missing_customer_id"
+        assert AmbiguousCustomerIdError("x.wav", ["a", "b"]).error_code == "ambiguous_customer_id"
+        assert UnknownCustomerError("9999").error_code == "unknown_customer"
+        assert DisabledCustomerError("0042").error_code == "disabled_customer"
+        assert InvalidCustomerRegistryError("bad").error_code == "invalid_customer_registry"
+        assert CustomerPolicyError("widen").error_code == "customer_policy_violation"
+
+
 class TestExtractCustomerIds:
     def test_single_match_normalized(self) -> None:
         assert extract_customer_ids("kund-0042_samtal.wav", [PATTERN]) == ["0042"]
@@ -383,6 +393,7 @@ class TestUploadCustomerResolution:
             files={"file": ("kund-9999_samtal.wav", io.BytesIO(_AUDIO), "audio/wav")},
         )
         assert r.status_code == 422
+        assert r.json()["error_code"] == "unknown_customer"
         uploads = tmp_path / "media" / "uploads"
         leftover = list(uploads.glob("*")) if uploads.is_dir() else []
         assert leftover == []
@@ -401,6 +412,7 @@ class TestUploadCustomerResolution:
             files={"file": ("samtal.wav", io.BytesIO(_AUDIO), "audio/wav")},
         )
         assert r.status_code == 422
+        assert r.json()["error_code"] == "missing_customer_id"
 
     def test_upload_disabled_mode_unchanged(self, customer_env, tmp_path: Path) -> None:
         customer_env({"mode": "disabled", "id_patterns": [], "customers": {}})
@@ -483,6 +495,7 @@ class TestTranscribeCustomerResolution:
                 },
             )
         assert r.status_code == 422
+        assert r.json()["error_code"] == "unknown_customer"
 
     def test_transcribe_job_meta_carries_customer(self, customer_env, tmp_path: Path) -> None:
         self._registry_env(customer_env)
@@ -738,6 +751,36 @@ class TestFailClosedAndPipelineWiring:
             },
         )
         assert widen.status_code == 422
+        assert widen.json()["error_code"] == "customer_policy_violation"
+
+        missing = client.post(
+            "/analyze_pipeline",
+            json={"segments": [{"text": "hej", "start": 0, "end": 1}]},
+        )
+        assert missing.status_code == 422
+        assert missing.json()["error_code"] == "missing_customer_id"
+
+        unknown_fas4 = client.post(
+            "/agent_performance/Agent-1",
+            json={
+                "segments_list": [[{"text": "hej"}]],
+                "agent_id": "Agent-1",
+                "original_filename": "kund-9999_samtal.wav",
+            },
+        )
+        assert unknown_fas4.status_code == 422
+        assert unknown_fas4.json()["error_code"] == "unknown_customer"
+
+        unknown_compare = client.post(
+            "/analyze_pipeline/compare",
+            json={
+                "segments": [{"text": "hej"}],
+                "models": ["mistralai/mistral-small-3.1-24b-instruct"],
+                "original_filename": "kund-9999_samtal.wav",
+            },
+        )
+        assert unknown_compare.status_code == 422
+        assert unknown_compare.json()["error_code"] == "unknown_customer"
 
         captured: dict = {}
 

@@ -2034,6 +2034,18 @@
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "segments_list": {
             "items": {
               "items": {
@@ -2156,6 +2168,18 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "segments_list": {
             "anyOf": [
@@ -4568,6 +4592,18 @@
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
           },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
+          },
           "segments_list": {
             "items": {
               "items": {
@@ -5039,6 +5075,18 @@
             "type": "boolean",
             "title": "Groq Eu Residency",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           }
         },
         "type": "object",
@@ -5510,6 +5558,18 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "segments": {
             "items": {
@@ -6211,6 +6271,18 @@
             "title": "Groq Eu Residency",
             "description": "GDPR gate for Groq: affirm EU data residency (default: OFF).",
             "default": false
+          },
+          "original_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Filename",
+            "description": "Original upload filename; used for customer identification when a customer registry is active"
           },
           "segments_list": {
             "items": {
