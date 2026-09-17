@@ -42,6 +42,8 @@ huggingface-cli login
 
 > **Cloud STT (opt-in)**: Local ASR is the default. To use Deepgram, install `pip install -e ".[cloud-stt]"`, set `DEEPGRAM_API_KEY`, and set `asr.provider: cloud` in config. Raw audio leaves the machine only with this explicit opt-in. See [SECURITY.md](../SECURITY.md).
 
+> **Kundregister**: `customers.mode` i `user_config.yaml` (mall i `configs/install_defaults.yaml`) är `disabled` tills R04. Resolvern och policyklämmen finns i `src/customers.py` — sätt inte `required` och gissa inget filnamnsformat. Identiteten är routingkontext, inte inloggning.
+
 ## Legacy / Windows-specific Methods
 
 For users who prefer a more integrated Windows experience, the following options are still supported:
