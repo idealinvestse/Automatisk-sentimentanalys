@@ -6,8 +6,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
-from src.api.call_store import CallStore
+from src.api.call_persistence import persist_call_artifact
+from src.api.call_store import CallStore, call_idempotency_key, new_call_id
 from src.api.settings import get_api_settings
+from src.customers import CustomerAsrPolicy, CustomerContext, CustomerLlmPolicy
 
 
 def test_call_store_roundtrip(tmp_path) -> None:
@@ -96,3 +98,125 @@ def test_calls_delete_missing_and_lazy_store(monkeypatch, tmp_path) -> None:
     assert listed.status_code == 200
     missing = client.delete("/calls/does-not-exist")
     assert missing.status_code == 404
+
+
+def test_calls_api_issues_server_id_when_omitted(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    monkeypatch.setenv("API_STATE_DIR", str(tmp_path))
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+    created = client.post(
+        "/calls",
+        json={"transcript": {"title": "Ny"}, "report": {"mode": "full"}},
+    )
+    assert created.status_code == 200
+    issued = created.json()["id"]
+    assert issued
+    assert issued != "Ny"
+    assert client.get(f"/calls/{issued}").status_code == 200
+
+
+def test_call_store_idempotency_and_customer_fields(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    key = call_idempotency_key("0042", "kund-0042_a.wav", "abc123")
+    first = store.save(
+        new_call_id(),
+        {
+            "status": "transcribed",
+            "customer_id": "0042",
+            "idempotency_key": key,
+            "transcript": {"segments": [{"text": "hej"}]},
+            "provenance": {"original_filename": "kund-0042_a.wav", "route": "transcribe"},
+        },
+    )
+    found = store.find_by_idempotency(key)
+    assert found is not None
+    assert found["id"] == first["id"]
+    assert found["customer_id"] == "0042"
+    updated = store.save(
+        first["id"],
+        {
+            "status": "completed",
+            "report": {"mode": "full"},
+            "idempotency_key": key,
+            "customer_id": "0042",
+        },
+    )
+    assert updated["id"] == first["id"]
+    assert updated["status"] == "completed"
+    assert updated["transcript"]["segments"][0]["text"] == "hej"
+    assert call_idempotency_key(None, "", None) is None
+    first_anon = store.save(new_call_id(), {"status": "completed", "transcript": {"n": 1}})
+    second_anon = store.save(new_call_id(), {"status": "completed", "transcript": {"n": 2}})
+    assert first_anon["id"] != second_anon["id"]
+
+
+def test_persist_call_artifact_idempotent_and_transcript_before_report(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    customer = CustomerContext(
+        customer_id="0042",
+        display_name="Testkund AB",
+        analyzer_profile="callcenter",
+        qa_scorecard="standard_support_v1",
+        asr=CustomerAsrPolicy(),
+        llm=CustomerLlmPolicy(),
+        registry_version=1,
+        config_fingerprint="fp-1",
+        source_filename="kund-0042_a.wav",
+    )
+    first = persist_call_artifact(
+        store,
+        status="transcribed",
+        transcript={"segments": [{"text": "hej"}]},
+        customer=customer,
+        original_filename="kund-0042_a.wav",
+        route="transcribe",
+    )
+    second = persist_call_artifact(
+        store,
+        status="completed",
+        report={"mode": "full"},
+        customer=customer,
+        original_filename="kund-0042_a.wav",
+        route="analyze_pipeline",
+    )
+    assert first["id"] == second["id"]
+    assert second["status"] == "completed"
+    assert second["transcript"]["segments"][0]["text"] == "hej"
+    assert second["report"]["mode"] == "full"
+    assert second["customer_id"] == "0042"
+    assert second["meta"]["customer"]["config_fingerprint"] == "fp-1"
+    assert second["provenance"]["original_filename"] == "kund-0042_a.wav"
+    assert second["provenance"]["config_fingerprint"] == "fp-1"
+    other = persist_call_artifact(
+        store,
+        status="completed",
+        transcript={"segments": [{"text": "annan"}]},
+        customer=customer.model_copy(update={"config_fingerprint": "fp-2"}),
+        original_filename="kund-0042_a.wav",
+        route="analyze_pipeline",
+    )
+    assert other["id"] != first["id"]
+    failed = persist_call_artifact(
+        store,
+        status="failed",
+        customer=customer,
+        original_filename="kund-0042_b.wav",
+        route="transcribe",
+        fail_reason="asr_empty_transcript",
+    )
+    assert failed["status"] == "failed"
+    assert failed["provenance"]["fail_reason"] == "asr_empty_transcript"
+
+
+def test_call_store_merges_meta_without_dropping_customer(tmp_path) -> None:
+    store = CallStore(tmp_path)
+    call_id = new_call_id()
+    store.save(
+        call_id,
+        {"meta": {"customer": {"customer_id": "0042"}}, "customer_id": "0042"},
+    )
+    updated = store.save(call_id, {"meta": {"source": "webui"}})
+    assert updated["meta"]["customer"]["customer_id"] == "0042"
+    assert updated["meta"]["source"] == "webui"
+    assert updated["customer_id"] == "0042"

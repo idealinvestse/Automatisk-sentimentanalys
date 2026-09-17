@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
 import threading
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,29 @@ _SAFE_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def new_call_id() -> str:
+    """Issue a server-owned stable call identifier."""
+    return uuid.uuid4().hex
+
+
+def call_idempotency_key(
+    customer_id: str | None,
+    source: str,
+    config_fingerprint: str | None,
+) -> str | None:
+    """Idempotency key: customer + source filename + frozen config fingerprint.
+
+    Returns ``None`` when there is no customer and no source name — otherwise
+    every anonymous ``/analyze_pipeline`` call would collide on the same key.
+    """
+    cid = (customer_id or "").strip().lower()
+    name = Path(source or "").name.strip()
+    if not cid and not name:
+        return None
+    raw = f"{cid or '-'}|{name or '-'}|{(config_fingerprint or '-').strip()}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
 class CallStore:
@@ -35,13 +60,36 @@ class CallStore:
     def save(self, call_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Upsert a call record. Returns the stored document."""
         path = self._path(call_id)
+        existing = self.get(call_id)
+        created_at = payload.get("created_at") or (existing or {}).get("created_at") or _utc_now()
+        existing_meta = dict((existing or {}).get("meta") or {})
+        incoming_meta = payload.get("meta")
+        meta = {**existing_meta, **incoming_meta} if incoming_meta is not None else existing_meta
+        existing_prov = dict((existing or {}).get("provenance") or {})
+        incoming_prov = payload.get("provenance")
+        provenance = (
+            {**existing_prov, **incoming_prov} if incoming_prov is not None else existing_prov
+        )
         doc = {
             "id": call_id,
-            "created_at": payload.get("created_at") or _utc_now(),
+            "created_at": created_at,
             "updated_at": _utc_now(),
-            "transcript": payload.get("transcript") or {},
-            "report": payload.get("report") or {},
-            "meta": payload.get("meta") or {},
+            "customer_id": payload.get("customer_id")
+            if payload.get("customer_id") is not None
+            else (existing or {}).get("customer_id"),
+            "status": payload.get("status") or (existing or {}).get("status") or "completed",
+            "idempotency_key": payload.get("idempotency_key")
+            or (existing or {}).get("idempotency_key"),
+            "transcript": payload.get("transcript")
+            if payload.get("transcript") is not None
+            else (existing or {}).get("transcript")
+            or {},
+            "report": payload.get("report")
+            if payload.get("report") is not None
+            else (existing or {}).get("report")
+            or {},
+            "meta": meta,
+            "provenance": provenance,
         }
         with self._lock:
             path.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -71,6 +119,15 @@ class CallStore:
                     continue
         items.sort(key=lambda x: x[0], reverse=True)
         return [doc for _, doc in items[:limit]]
+
+    def find_by_idempotency(self, key: str | None) -> dict[str, Any] | None:
+        """Return the first stored call matching an idempotency key."""
+        if not key:
+            return None
+        for doc in self.list(limit=500):
+            if doc.get("idempotency_key") == key:
+                return doc
+        return None
 
     def delete(self, call_id: str) -> bool:
         path = self._path(call_id)

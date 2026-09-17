@@ -21,6 +21,7 @@ import {
   isDirectApiEnabled,
   type TranscribeRequest,
   type PipelineReport,
+  type CustomerRef,
 } from "@/lib/api/client";
 import { notifyApiError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,16 @@ const LEVEL_CLASS: Record<string, string> = {
   error: "text-destructive",
 };
 
+function requireServerCallId(...ids: Array<string | null | undefined>): string {
+  const id = ids.find((value) => typeof value === "string" && value.trim().length > 0);
+  if (!id) {
+    throw new ApiError(
+      "Analysen saknar serverutfärdat samtals-ID och sparades inte i dashboard.",
+    );
+  }
+  return id;
+}
+
 export default function TranscriptionPage() {
   const labEnabled = isDirectApiEnabled();
   const { status, logs, progress, done, partialAnalysis, connect, disconnect, clearLogs } =
@@ -53,11 +64,15 @@ export default function TranscriptionPage() {
   const [jobIdInput, setJobIdInput] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [useLocalLlm, setUseLocalLlm] = React.useState(false);
+  const [resolvedCustomer, setResolvedCustomer] = React.useState<CustomerRef | null>(null);
   const [analysisSegments, setAnalysisSegments] = React.useState<unknown[]>([]);
   const [pendingCall, setPendingCall] = React.useState<{
     title: string;
     durationS: number;
     segments: Array<{ speaker: string; text: string; start: number; end: number }>;
+    customer: CustomerRef | null;
+    callId: string | null;
+    profile: string;
   } | null>(null);
   const logEndRef = React.useRef<HTMLDivElement>(null);
   const addRealCall = useCallsStore((state) => state.addRealCall);
@@ -67,9 +82,14 @@ export default function TranscriptionPage() {
       if (!selectedFile) throw new ApiError("Välj en ljudfil att ladda upp");
       // Upload file first
       const uploadResult = await apiClient.upload(selectedFile);
+      const uploadedCustomer = uploadResult.customer ?? null;
+      if (uploadedCustomer) {
+        setResolvedCustomer(uploadedCustomer);
+      }
       // Then transcribe using the returned path
       const req: TranscribeRequest = {
         audio_path: uploadResult.audio_path,
+        original_filename: uploadResult.filename,
         backend: "faster",
         model: "kb-whisper-large",
         language: "sv",
@@ -95,26 +115,44 @@ export default function TranscriptionPage() {
         );
       }
 
+      const customer = uploadResult.customer ?? transcribeResult.customer ?? null;
+      setResolvedCustomer(customer);
+      const profile = customer?.analyzer_profile ?? "callcenter";
+      const callId = transcribeResult.call_id ?? null;
+      const customerLabel = customer?.display_name || customer?.customer_id || "Okänd";
+
       // Calculate duration from segments
       const durationS = segments.length > 0 ? segments[segments.length - 1].end : 0;
 
       if (labEnabled && useLocalLlm) {
         setAnalysisSegments(segments);
-        setPendingCall({ title: selectedFile.name, durationS, segments });
+        setPendingCall({
+          title: selectedFile.name,
+          durationS,
+          segments,
+          customer,
+          callId,
+          profile,
+        });
         return transcribeResult;
       }
 
       // Run pipeline analysis
-      const report = await apiClient.analyzePipeline<PipelineReport>(segments, { profile: "callcenter" });
+      const report = await apiClient.analyzePipeline<PipelineReport>(segments, {
+        profile,
+        original_filename: uploadResult.filename,
+        call_id: callId,
+      });
 
-      // Save to store
+      // Server-issued call id is the only identity; never invent `real-${Date.now()}`.
       const call = {
         transcript: {
-          id: `real-${Date.now()}`,
+          id: requireServerCallId(report.call_id, callId),
           title: selectedFile.name,
           meta: {
             agent: "Okänd",
-            customer: "Okänd",
+            customer: customerLabel,
+            customer_id: customer?.customer_id,
             duration_s: durationS,
             category: "uppladdad",
           },
@@ -142,13 +180,16 @@ export default function TranscriptionPage() {
       if (!pendingCall) return;
       try {
         const report = await apiClient.getAnalysisJobResult(jobId);
+        const customerLabel =
+          pendingCall.customer?.display_name || pendingCall.customer?.customer_id || "Okänd";
         addRealCall({
           transcript: {
-            id: `real-${Date.now()}`,
+            id: requireServerCallId(report.call_id, pendingCall.callId),
             title: pendingCall.title,
             meta: {
               agent: "Okänd",
-              customer: "Okänd",
+              customer: customerLabel,
+              customer_id: pendingCall.customer?.customer_id,
               duration_s: pendingCall.durationS,
               category: "uppladdad",
             },
@@ -263,7 +304,10 @@ export default function TranscriptionPage() {
               id="audio-file"
               type="file"
               accept=".wav,.mp3,.m4a,.flac,.ogg,.webm,.opus"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setSelectedFile(e.target.files?.[0] ?? null);
+                setResolvedCustomer(null);
+              }}
               disabled={transcribeMutation.isPending}
             />
             {selectedFile && (
@@ -271,6 +315,15 @@ export default function TranscriptionPage() {
                 Vald fil: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
               </p>
             )}
+            {resolvedCustomer ? (
+              <p className="text-xs text-muted-foreground">
+                Kund: <span className="font-medium text-foreground">{resolvedCustomer.display_name}</span>
+                {" "}
+                <span className="font-mono">({resolvedCustomer.customer_id})</span>
+                {" · "}
+                profil {resolvedCustomer.analyzer_profile}
+              </p>
+            ) : null}
           </div>
           <Button
             onClick={() => transcribeMutation.mutate()}

@@ -11,8 +11,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from ...alerting import AlertEngine
 from ...caching import AggregateCache
 from ...core.serialization import utc_now_iso
+from ...customers import CustomerContext
 from ...pipeline import CallAnalysisPipeline
 from ...profiles import resolve_profile
+from ..call_persistence import customer_ref, get_call_store, persist_call_artifact, report_as_dict
+from ..call_store import call_idempotency_key
 from ..dependencies import (
     create_pipeline,
     get_alert_engine,
@@ -20,6 +23,7 @@ from ..dependencies import (
     get_openrouter_header_key,
     resolve_llm_api_key,
 )
+from ..helpers import apply_customer_policy, apply_llm_ceiling, resolve_customer_or_422
 from ..router_errors import run_route
 from ..schemas import (
     AgentPerformanceRequest,
@@ -72,28 +76,58 @@ def _fas4_pipeline(
     )
 
 
+def _resolve_pipeline_customer(req: Any) -> CustomerContext | None:
+    filename = getattr(req, "original_filename", None)
+    if not filename:
+        return None
+    return resolve_customer_or_422(filename)
+
+
+def _pipeline_from_request(
+    req: Any,
+    cache: AggregateCache,
+    header_key: str | None,
+    customer: CustomerContext | None,
+) -> CallAnalysisPipeline:
+    llm_requested = bool(getattr(req, "use_mistral_llm", False) or getattr(req, "deep_analysis", False))
+    policy = apply_customer_policy(
+        customer,
+        requested_llm_enabled=llm_requested,
+        requested_llm_provider=getattr(req, "provider", None),
+        requested_profile=getattr(req, "profile", None),
+    )
+    pipe = create_pipeline(
+        cache=cache,
+        profile=policy.analyzer_profile,
+        sentiment_model=getattr(req, "sentiment_model", None),
+        device=getattr(req, "device", "auto"),
+        use_mistral_llm=policy.llm_enabled and bool(getattr(req, "use_mistral_llm", False)),
+        llm_model=getattr(req, "llm_model", None),
+        deep_analysis=policy.llm_enabled and bool(getattr(req, "deep_analysis", False)),
+        llm_api_key=resolve_llm_api_key(getattr(req, "llm_api_key", None), header_key),
+        provider=policy.llm_provider or getattr(req, "provider", "openrouter"),
+        groq_eu_residency=getattr(req, "groq_eu_residency", False),
+        async_analyzers=getattr(req, "async_analyzers", False),
+        analysis_perspective=getattr(req, "analysis_perspective", None) if policy.llm_enabled else None,
+        qa_scorecard=policy.qa_scorecard,
+        customer_id=policy.customer_id,
+        config_fingerprint=policy.config_fingerprint,
+    )
+    apply_llm_ceiling(pipe, policy)
+    return pipe
+
+
 @router.post("/analyze_pipeline", response_model=PipelineResponse)
 async def analyze_pipeline(
     req: PipelineRequest,
+    request: Request,
     cache: Annotated[AggregateCache, Depends(get_cache)],
     header_key: Annotated[str | None, Depends(get_openrouter_header_key)] = None,
 ) -> PipelineResponse:
     """Run the full call analysis pipeline on pre-transcribed segments."""
     logger.info("Running full pipeline on %d segment(s)", len(req.segments))
-    pipe = create_pipeline(
-        cache=cache,
-        profile=req.profile,
-        sentiment_model=req.sentiment_model,
-        device=req.device,
-        use_mistral_llm=req.use_mistral_llm,
-        llm_model=req.llm_model,
-        deep_analysis=req.deep_analysis,
-        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
-        provider=req.provider,
-        groq_eu_residency=req.groq_eu_residency,
-        async_analyzers=req.async_analyzers,
-        analysis_perspective=getattr(req, "analysis_perspective", None),
-    )
+    customer = _resolve_pipeline_customer(req)
+    pipe = _pipeline_from_request(req, cache, header_key, customer)
 
     async def _do() -> PipelineResponse:
         report = await asyncio.to_thread(
@@ -101,7 +135,22 @@ async def analyze_pipeline(
             req.segments,
             req.selected_analyzers,
         )
-        return _report_to_pipeline_response(report)
+        stored = persist_call_artifact(
+            get_call_store(request),
+            status="completed",
+            call_id=req.call_id,
+            transcript={"segments": req.segments},
+            report=report_as_dict(report),
+            customer=customer,
+            original_filename=req.original_filename,
+            route="analyze_pipeline",
+        )
+        return _report_to_pipeline_response(
+            report,
+            customer=customer,
+            call_id=stored.get("id"),
+            persisted=True,
+        )
 
     return await run_route("analyze_pipeline", _do)
 
@@ -116,12 +165,19 @@ async def create_analysis_job(
     """Submit a PII-redacted long-context LM Studio analysis."""
     if idempotency_key and len(idempotency_key) > 128:
         raise HTTPException(status_code=400, detail="Idempotency-Key must be at most 128 characters")
+    customer = _resolve_pipeline_customer(req)
+    policy = apply_customer_policy(
+        customer,
+        requested_llm_enabled=True,
+        requested_llm_provider="lmstudio",
+        requested_profile=req.profile,
+    )
     try:
         from ...llm.pii_redactor import redact_segments
 
         redacted_segments, pii_log = redact_segments(
             req.segments,
-            profile_name=req.profile,
+            profile_name=policy.analyzer_profile,
             return_log=True,
             force=True,
         )
@@ -132,29 +188,63 @@ async def create_analysis_job(
 
     payload = req.model_dump()
     payload["segments"] = redacted_segments
+    payload["profile"] = policy.analyzer_profile
+    store = get_call_store(request)
+    persist_call_artifact(
+        store,
+        status="transcribed",
+        call_id=req.call_id,
+        transcript={"segments": redacted_segments},
+        customer=customer,
+        original_filename=req.original_filename,
+        route="analysis_jobs",
+    )
 
     def _runner(job_payload: dict[str, Any]) -> dict[str, Any]:
         pipe = create_pipeline(
             cache=cache,
-            profile=str(job_payload["profile"]),
+            profile=policy.analyzer_profile,
             sentiment_model=job_payload.get("sentiment_model"),
             device="cpu",
             use_mistral_llm=True,
             llm_model=job_payload.get("llm_model"),
             deep_analysis=True,
             provider="lmstudio",
+            qa_scorecard=policy.qa_scorecard,
+            customer_id=policy.customer_id,
+            config_fingerprint=policy.config_fingerprint,
         )
         report = pipe.analyze_segments(
             job_payload["segments"],
             job_payload.get("selected_analyzers"),
         )
-        return _report_to_pipeline_response(report).model_dump(mode="json")
+        stored = persist_call_artifact(
+            store,
+            status="completed",
+            call_id=req.call_id,
+            transcript={"segments": job_payload["segments"]},
+            report=report_as_dict(report),
+            customer=customer,
+            original_filename=req.original_filename,
+            route="analysis_jobs",
+        )
+        return _report_to_pipeline_response(
+            report,
+            customer=customer,
+            call_id=stored.get("id"),
+            persisted=True,
+        ).model_dump(mode="json")
 
+    job_key = idempotency_key or call_idempotency_key(
+        policy.customer_id,
+        req.original_filename or "",
+        policy.config_fingerprint,
+    )
     try:
         job = request.app.state.analysis_jobs.submit(
             payload,
             _runner,
-            idempotency_key=idempotency_key,
+            idempotency_key=job_key,
         )
     except OverflowError as exc:
         raise HTTPException(status_code=429, detail="Analysis job queue is full") from exc
@@ -205,18 +295,8 @@ async def analyze_pipeline_partial(
         len(req.segments),
         req.reconcile,
     )
-    pipe = create_pipeline(
-        cache=cache,
-        profile=req.profile,
-        sentiment_model=req.sentiment_model,
-        device=req.device,
-        use_mistral_llm=req.use_mistral_llm,
-        llm_model=req.llm_model,
-        deep_analysis=req.deep_analysis,
-        llm_api_key=resolve_llm_api_key(req.llm_api_key, header_key),
-        provider=req.provider,
-        groq_eu_residency=req.groq_eu_residency,
-    )
+    customer = _resolve_pipeline_customer(req)
+    pipe = _pipeline_from_request(req, cache, header_key, customer)
 
     async def _do() -> PipelineResponse:
         report = await asyncio.to_thread(
@@ -226,12 +306,18 @@ async def analyze_pipeline_partial(
             selected_analyzers=req.selected_analyzers,
             reconcile=req.reconcile,
         )
-        return _report_to_pipeline_response(report)
+        return _report_to_pipeline_response(report, customer=customer, call_id=req.call_id)
 
     return await run_route("analyze_pipeline_partial", _do)
 
 
-def _report_to_pipeline_response(report: Any) -> PipelineResponse:
+def _report_to_pipeline_response(
+    report: Any,
+    *,
+    customer: CustomerContext | None = None,
+    call_id: str | None = None,
+    persisted: bool = False,
+) -> PipelineResponse:
     from ..degradation import collect_degraded_reasons
 
     degraded = collect_degraded_reasons(report)
@@ -251,6 +337,9 @@ def _report_to_pipeline_response(report: Any) -> PipelineResponse:
         analyzer_results=build_analyzer_results(report.results),
         degraded=degraded,
         mode="degraded" if degraded else "full",
+        customer=customer_ref(customer),
+        call_id=call_id,
+        persisted=persisted,
     )
 
 

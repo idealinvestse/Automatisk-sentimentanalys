@@ -46,15 +46,15 @@ Läge A och B är separata driftformer. Att ett läge tillåter en handling bety
 | 5 | Huvudflöden | docs/ARCHITECTURE.md | Uppdaterad |
 | 6 | Analyskatalog | docs/ANALYZER_STRATEGY.md | Befintlig tiers-modell |
 | 7 | AI-/modellstyrning | docs/MULTI_PROVIDER_LLM.md, docs/LM_STUDIO_LOCAL.md | Uppdaterad; kundstyrd routing policy är to-be (Etapp 4) |
-| 8 | Konfiguration | docs/WINDOWS_INSTALL.md + `src/install/config_schema.py` | Befintlig; kundregister to-be (Etapp 2) |
-| 9 | Data och proveniens | SECURITY.md, docs/DATA_01_CORPUS_SPEC.md | Uppdaterad; artefaktproveniens to-be (Etapp 3) |
+| 8 | Konfiguration | docs/WINDOWS_INSTALL.md + `src/install/config_schema.py` + `src/customers.py` | Etapp 2 landad (resolver + kläm). Default `mode: disabled` tills R04. |
+| 9 | Data och proveniens | SECURITY.md, docs/DATA_01_CORPUS_SPEC.md, `src/api/call_store.py` | Etapp 3 landad: server-call-id, transkript före LLM, fingerprint i store. |
 | 10 | Integritet och juridik | SECURITY.md, denna runbook | Uppdaterad; DPIA/avtalsläge för valda leverantörer är öppet (R05) |
 | 11 | Säkerhet och åtkomst | SECURITY.md | Uppdaterad; användaridentitet/fleranvändaråtkomst är öppen fråga |
 | 12 | Persistens och återställning | docs/PRODUCTION_CHECKLIST.md | Uppdaterad; RPO/RTO ej satta |
 | 13 | Vetenskaplig validering | docs/DATA_01_CORPUS_SPEC.md, docs/DEVELOPMENT.md | DATA-01 levereras externt av Oscar |
 | 14 | Test- och releasebevis | docs/DEVELOPMENT.md, docs/PRODUCTION_CHECKLIST.md | Gatestatus (PASS/FAIL/SKIP/BLOCKED/NOT RUN) separeras i Etapp 7 |
 | 15 | Drift och kapacitet | docs/PRODUCTION_CHECKLIST.md, docs/WINDOWS_INSTALL.md | Kapacitetsmål ej satta (R01) |
-| 16 | UX och tillit | docs/FE_BE_HARMONY_2026-07-17.md | Befintlig; kundkontext i UI to-be (Etapp 6) |
+| 16 | UX och tillit | docs/FE_BE_HARMONY_2026-07-17.md | Kundbadge på transkriberingssidan landad; dashboard-polish (Etapp 6) kvar |
 | 17 | Integration och distribution | README.md, docs/WINDOWS_INSTALL.md | Befintlig |
 | 18 | Leverans- och dokumentstyrning | Denna runbook §0 | Uppdaterad |
 

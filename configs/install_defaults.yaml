@@ -60,3 +60,34 @@ runtime:
     api_base_url: "http://127.0.0.1:8000"
     storage_secret: ""
     dev_mode: true
+
+# Kundregister (filnamnsbaserad kundidentitet → organisationskonfiguration).
+# Identiteten är routingkontext — inte autentisering eller behörighet.
+# mode: disabled | optional | required
+#   disabled — resolvern används inte (bakåtkompatibelt standardvärde)
+#   optional — fil utan ID körs utan kundkontext, men ett ID måste vara känt
+#   required — varje fil måste matcha ett känt, aktiverat kund-ID
+# id_patterns: regex med namngiven grupp (?P<customer_id>...), matchas mot
+# filnamnets basnamn (skiftlägesokänsligt). Konkret filnamnsformat beslutas
+# av operatören — gissa ingen konvention.
+# customers:
+#   <kund-id>:                 # normaliseras till gemener
+#     display_name: "..."
+#     enabled: true
+#     analyzer_profile: callcenter      # måste finnas i PROFILE_SPECS
+#     qa_scorecard: standard_support_v1 # fil under configs/qa_scorecards/
+#     aliases: []                       # alternativa ID:n → samma kund
+#     asr:
+#       provider: local                 # local | cloud
+#       allow_cloud_fallback: false
+#       cloud_provider: null            # krävs vid cloud/fallback (deepgram)
+#     llm:
+#       enabled: false                  # true kräver explicit allowlist
+#       provider_allowlist: []          # t.ex. [lmstudio, openrouter]
+#       anonymize_before_llm: true
+#       cost_budget_per_call: 0.08
+#       max_attempts: 3
+customers:
+  mode: disabled
+  id_patterns: []
+  customers: {}

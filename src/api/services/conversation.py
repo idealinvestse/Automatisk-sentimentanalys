@@ -2,22 +2,38 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ...caching import AggregateCache
 from ...core.serialization import map_results_to_segment_dicts, texts_from_segments, utc_now_iso
+from ...customers import CustomerContext
 from ...pipeline import CallAnalysisPipeline
 from ...sentiment import analyze_smart
-from ..helpers import asr_kwargs_from, transcribe_helper
+from ..call_persistence import fail_reason_from_exc, persist_call_artifact, report_as_dict
+from ..call_store import CallStore
+from ..helpers import (
+    apply_customer_policy,
+    apply_llm_ceiling,
+    asr_kwargs_from,
+    require_usable_transcript,
+    transcribe_helper,
+)
 from ..schemas import (
     AnalyzeConversationRequest,
     AnalyzeConversationResponse,
     SegmentSentiment,
 )
 
+logger = logging.getLogger(__name__)
 
-def _sentiment_profile(req: Any) -> str:
-    return getattr(req, "sentiment_profile", None) or "callcenter"
+
+def _sentiment_profile(req: Any, customer: CustomerContext | None = None) -> str:
+    policy = apply_customer_policy(
+        customer,
+        requested_profile=getattr(req, "sentiment_profile", None) or "callcenter",
+    )
+    return policy.analyzer_profile
 
 
 def _build_segment_sentiments(
@@ -29,13 +45,19 @@ def _build_segment_sentiments(
     return [SegmentSentiment(**d) for d in dicts]
 
 
-def _light_analyze(req: AnalyzeConversationRequest) -> AnalyzeConversationResponse:
-    tr = transcribe_helper(**asr_kwargs_from(req, audio_path=req.audio_path))
+def _light_analyze(
+    req: AnalyzeConversationRequest,
+    customer: CustomerContext | None,
+) -> AnalyzeConversationResponse:
+    tr = transcribe_helper(
+        **asr_kwargs_from(req, audio_path=req.audio_path, customer=customer)
+    )
+    require_usable_transcript(tr)
     segments = tr.get("segments", []) or []
     tr_texts = texts_from_segments(segments)
     results, meta = analyze_smart(
         tr_texts,
-        profile=_sentiment_profile(req),
+        profile=_sentiment_profile(req, customer),
         model_name=req.sentiment_model,
         device=req.device,
         batch_size=16,
@@ -59,17 +81,44 @@ def _light_analyze(req: AnalyzeConversationRequest) -> AnalyzeConversationRespon
 def _full_pipeline_analyze(
     req: AnalyzeConversationRequest,
     cache: AggregateCache | None,
+    customer: CustomerContext | None,
+    call_store: CallStore | None = None,
 ) -> AnalyzeConversationResponse:
+    policy = apply_customer_policy(
+        customer,
+        requested_asr_provider=req.provider,
+        requested_cloud_fallback=req.cloud_fallback_local,
+        requested_profile=req.sentiment_profile,
+    )
+
+    def _persist_transcript(transcript: Any) -> None:
+        if call_store is None:
+            return
+        persist_call_artifact(
+            call_store,
+            status="transcribed",
+            transcript=transcript.to_dict() if hasattr(transcript, "to_dict") else dict(transcript),
+            customer=customer,
+            original_filename=req.original_filename,
+            audio_path=req.audio_path,
+            route="analyze_conversation",
+        )
+
     pipe = CallAnalysisPipeline(
         sentiment_model=req.sentiment_model or "cardiffnlp/twitter-xlm-roberta-base-sentiment",
         device=req.device,
-        profile=_sentiment_profile(req),
+        profile=policy.analyzer_profile,
         asr_backend=req.backend,
         asr_model=req.model,
-        asr_provider=req.provider,
-        cloud_fallback_local=req.cloud_fallback_local,
+        asr_provider=policy.asr_provider,
+        cloud_fallback_local=policy.cloud_fallback_local,
         cache=cache,
+        qa_scorecard=policy.qa_scorecard,
+        customer_id=policy.customer_id,
+        config_fingerprint=policy.config_fingerprint,
+        transcript_hook=_persist_transcript if call_store is not None else None,
     )
+    apply_llm_ceiling(pipe, policy)
     report = pipe.analyze_audio(
         audio_path=req.audio_path,
         num_speakers=req.num_speakers,
@@ -77,6 +126,7 @@ def _full_pipeline_analyze(
         run_diarization=req.diarize,
         hotwords=req.hotwords,
         initial_prompt=req.initial_prompt,
+        strict_asr=True,
     )
     segments = report.segments or []
     tr_texts = texts_from_segments(segments)
@@ -93,7 +143,21 @@ def _full_pipeline_analyze(
         "model": req.sentiment_model or pipe.sentiment_model,
         "pipeline": True,
         "processing_time_s": report.processing_time_s,
+        "qa_scorecard": policy.qa_scorecard,
     }
+    if call_store is not None:
+        persisted = persist_call_artifact(
+            call_store,
+            status="completed",
+            transcript=transcript,
+            report=report_as_dict(report),
+            customer=customer,
+            original_filename=req.original_filename,
+            audio_path=req.audio_path,
+            route="analyze_conversation",
+        )
+        meta["call_id"] = persisted.get("id")
+        meta["persisted"] = True
     return AnalyzeConversationResponse(
         transcript=transcript,
         segment_sentiments=seg_out,
@@ -103,14 +167,45 @@ def _full_pipeline_analyze(
     )
 
 
+def _persist_run_failure(
+    store: CallStore | None,
+    customer: CustomerContext | None,
+    req: AnalyzeConversationRequest,
+    exc: BaseException,
+    *,
+    route: str,
+) -> None:
+    if store is None:
+        return
+    try:
+        persist_call_artifact(
+            store,
+            status="failed",
+            customer=customer,
+            original_filename=req.original_filename,
+            audio_path=req.audio_path,
+            route=route,
+            fail_reason=fail_reason_from_exc(exc),
+        )
+    except Exception:
+        logger.exception("Failed to persist conversation failure provenance")
+
+
 def run_analyze_conversation(
     req: AnalyzeConversationRequest,
     *,
     cache: AggregateCache | None = None,
+    customer: CustomerContext | None = None,
+    call_store: CallStore | None = None,
 ) -> AnalyzeConversationResponse:
-    if req.use_full_pipeline:
-        return _full_pipeline_analyze(req, cache)
-    return _light_analyze(req)
+    route = "analyze_conversation"
+    try:
+        if req.use_full_pipeline:
+            return _full_pipeline_analyze(req, cache, customer, call_store)
+        return _light_analyze(req, customer)
+    except Exception as exc:
+        _persist_run_failure(call_store, customer, req, exc, route=route)
+        raise
 
 
 def _scan_to_conversation_request(req: Any, audio_path: str) -> AnalyzeConversationRequest:
@@ -137,6 +232,7 @@ def _scan_to_conversation_request(req: Any, audio_path: str) -> AnalyzeConversat
         return_all_scores=getattr(req, "return_all_scores", True),
         provider=getattr(req, "provider", "local"),
         cloud_fallback_local=getattr(req, "cloud_fallback_local", False),
+        original_filename=getattr(req, "original_filename", None),
     )
 
 
@@ -145,19 +241,26 @@ def run_batch_analyze_file(
     audio_path: str,
     *,
     cache: AggregateCache | None = None,
+    customer: CustomerContext | None = None,
+    call_store: CallStore | None = None,
 ) -> tuple[dict[str, Any], list[SegmentSentiment], dict[str, Any], dict[str, Any] | None]:
     """Single-file worker for batch/scan conversation analysis."""
     if getattr(req, "use_full_pipeline", False):
         conv_req = _scan_to_conversation_request(req, audio_path)
-        resp = run_analyze_conversation(conv_req, cache=cache)
+        resp = run_analyze_conversation(
+            conv_req, cache=cache, customer=customer, call_store=call_store
+        )
         return resp.transcript, resp.segment_sentiments, resp.meta, resp.pipeline_results
 
-    tr = transcribe_helper(**asr_kwargs_from(req, audio_path=audio_path))
+    tr = transcribe_helper(
+        **asr_kwargs_from(req, audio_path=audio_path, customer=customer)
+    )
+    require_usable_transcript(tr)
     segments = tr.get("segments", []) or []
     tr_texts = texts_from_segments(segments)
     results, meta = analyze_smart(
         tr_texts,
-        profile=_sentiment_profile(req),
+        profile=_sentiment_profile(req, customer),
         model_name=req.sentiment_model,
         device=req.device,
         batch_size=getattr(req, "sentiment_batch_size", 16),

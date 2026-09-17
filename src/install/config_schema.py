@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..customers import CustomerRegistry
+
 
 class InstallProfile(StrEnum):
     """Pip requirement bundle installed in the environment."""
@@ -148,6 +150,7 @@ class UserConfig(BaseModel):
     llm: LlmConfig = Field(default_factory=LlmConfig)
     services: ServicesConfig = Field(default_factory=ServicesConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    customers: CustomerRegistry = Field(default_factory=CustomerRegistry)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     portable_mode: bool = False
 

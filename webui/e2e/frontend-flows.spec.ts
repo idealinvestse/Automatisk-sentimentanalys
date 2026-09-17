@@ -46,6 +46,66 @@ test("testlab runs the partial pipeline path", async ({ page }) => {
   await expect(page.getByText("Partial metadata")).toBeVisible();
 });
 
+test("resolved customer is shown after upload", async ({ page }) => {
+  await page.route("**/upload", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audio_path: "uploads/kund-demo.wav",
+        filename: "kund-demo.wav",
+        size_bytes: 8,
+        timestamp: new Date().toISOString(),
+        customer: {
+          customer_id: "demo",
+          display_name: "Demokund",
+          analyzer_profile: "callcenter",
+          registry_version: 1,
+          config_fingerprint: "fp-demo",
+        },
+      }),
+    }),
+  );
+  await page.goto("/transcription");
+
+  await page.locator("#audio-file").setInputFiles({
+    name: "kund-demo.wav",
+    mimeType: "audio/wav",
+    buffer: Buffer.from("RIFFtest"),
+  });
+  await page.getByRole("button", { name: "Ladda upp och transkribera" }).click();
+
+  await expect(page.getByText(/Kund:/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Demokund")).toBeVisible();
+  await expect(page.getByText(/\(demo\)/)).toBeVisible();
+});
+
+test("unknown customer id is rejected at upload", async ({ page }) => {
+  await page.route("**/upload", (r) =>
+    r.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({
+        detail: "Unknown customer id '9999'",
+        error_code: "validation_error",
+      }),
+    }),
+  );
+  await page.goto("/transcription");
+
+  await page.locator("#audio-file").setInputFiles({
+    name: "kund-9999.wav",
+    mimeType: "audio/wav",
+    buffer: Buffer.from("RIFFtest"),
+  });
+  await page.getByRole("button", { name: "Ladda upp och transkribera" }).click();
+
+  await expect(page.getByText(/Upload failed|Unknown customer|HTTP 422/i)).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText(/Kund:/)).toHaveCount(0);
+});
+
 test("empty ASR output explains why pipeline analysis was skipped", async ({ page }) => {
   await page.route("**/api/backend/transcribe", (route) =>
     route.fulfill({

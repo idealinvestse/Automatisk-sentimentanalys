@@ -69,7 +69,11 @@ Allowed `provider` values:
 - `src/llm/router_client.py` — analyzer-compatible adapter
 - `src/pipeline_steps.py` — wires providers into holistic LLM path
 
-## Kundstyrd routing (operatörspilot — to-be, Etapp 4)
+## Kundstyrd routing (operatörspilot)
+
+**Landat (Etapp 2-kläm):** `clamp_execution_policy` avvisar request som vidgar kundens ASR-provider, cloud-fallback eller LLM-allowlist (HTTP 422). Request får bara smalna.
+
+**Kvar (Etapp 4):** klassificerad fallback, delad försök/budget per jobb, och att `MultiProviderRouter._provider_order()` inte lägger till providers utanför den klämdan listan.
 
 I operatörspiloten (Läge A) styrs provider-användning av **kundorganisationens profil** (se [PILOT_RUNBOOK.md](PILOT_RUNBOOK.md) §0):
 

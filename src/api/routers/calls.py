@@ -7,8 +7,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from ..call_store import CallStore
-from ..settings import get_api_settings
+from ..call_persistence import get_call_store
+from ..call_store import new_call_id
 
 router = APIRouter(prefix="/calls", tags=["Calls"])
 
@@ -16,11 +16,13 @@ router = APIRouter(prefix="/calls", tags=["Calls"])
 class CallUpsertRequest(BaseModel):
     """Store or update an analyzed call."""
 
-    id: str = Field(..., min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")
+    id: str | None = Field(None, min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$")
     transcript: dict[str, Any] = Field(default_factory=dict)
     report: dict[str, Any] = Field(default_factory=dict)
     meta: dict[str, Any] = Field(default_factory=dict)
     created_at: str | None = None
+    customer_id: str | None = None
+    status: str | None = None
 
 
 class CallListResponse(BaseModel):
@@ -28,13 +30,8 @@ class CallListResponse(BaseModel):
     count: int
 
 
-def _store(request: Request) -> CallStore:
-    store = getattr(request.app.state, "call_store", None)
-    if store is None:
-        settings = get_api_settings()
-        store = CallStore(settings.state_dir)
-        request.app.state.call_store = store
-    return store
+def _store(request: Request):
+    return get_call_store(request)
 
 
 @router.get("", response_model=CallListResponse)
@@ -59,7 +56,7 @@ async def get_call(call_id: str, request: Request) -> dict[str, Any]:
 @router.put("/{call_id}")
 async def upsert_call(call_id: str, body: CallUpsertRequest, request: Request) -> dict[str, Any]:
     """Create or update a saved call (id in path must match body.id)."""
-    if body.id != call_id:
+    if body.id is not None and body.id != call_id:
         raise HTTPException(status_code=422, detail="Path id must match body.id")
     try:
         return _store(request).save(
@@ -69,6 +66,8 @@ async def upsert_call(call_id: str, body: CallUpsertRequest, request: Request) -
                 "report": body.report,
                 "meta": body.meta,
                 "created_at": body.created_at,
+                "customer_id": body.customer_id,
+                "status": body.status,
             },
         )
     except ValueError as exc:
@@ -78,14 +77,17 @@ async def upsert_call(call_id: str, body: CallUpsertRequest, request: Request) -
 @router.post("")
 async def create_call(body: CallUpsertRequest, request: Request) -> dict[str, Any]:
     """Create or update a saved call."""
+    call_id = body.id or new_call_id()
     try:
         return _store(request).save(
-            body.id,
+            call_id,
             {
                 "transcript": body.transcript,
                 "report": body.report,
                 "meta": body.meta,
                 "created_at": body.created_at,
+                "customer_id": body.customer_id,
+                "status": body.status or "completed",
             },
         )
     except ValueError as exc:

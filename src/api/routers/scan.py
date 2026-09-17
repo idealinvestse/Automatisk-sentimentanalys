@@ -15,7 +15,7 @@ from ...caching import AggregateCache
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
 from ..dependencies import get_cache
-from ..helpers import asr_kwargs_from, transcribe_helper
+from ..helpers import asr_kwargs_from, resolve_customer_context, transcribe_helper
 from ..path_validation import resolve_and_validate_audio_paths
 from ..router_errors import run_route
 from ..schemas import ScanItem, ScanProcessRequest, ScanProcessResponse
@@ -101,12 +101,19 @@ def _run_scan_process(
     )
 
     def _do_transcribe(p: str) -> dict[str, Any]:
-        return transcribe_helper(**asr_kwargs_from(req, audio_path=p))
+        # Per-file customer gate: scanned filenames are the original names.
+        ctx = resolve_customer_context(os.path.basename(p))
+        return transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
 
     def _do_analyze(p: str) -> dict[str, Any]:
-        tr, seg_out, meta, pipe_results = run_batch_analyze_file(req, p, cache=cache)
+        ctx = resolve_customer_context(os.path.basename(p))
+        tr, seg_out, meta, pipe_results = run_batch_analyze_file(
+            req, p, cache=cache, customer=ctx
+        )
         seg_dicts = [s.model_dump() for s in seg_out]
         out: dict[str, Any] = {"transcript": tr, "segment_sentiments": seg_dicts, "meta": meta}
+        if ctx is not None:
+            out["customer"] = ctx.model_dump(mode="json")
         if pipe_results is not None:
             out["pipeline_results"] = pipe_results
         return out

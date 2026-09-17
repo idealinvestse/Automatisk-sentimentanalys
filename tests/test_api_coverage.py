@@ -112,7 +112,7 @@ def test_batch_transcribe_ok_and_worker_error(audio_file):
 
     def fake_helper(audio_path, **_kwargs):
         if audio_path == a:
-            return {"segments": [], "model": "t"}
+            return {"segments": [{"text": "hej"}], "model": "t"}
         raise ValueError("fail b")
 
     with (
@@ -416,7 +416,7 @@ def test_helpers_transcribe_helper():
         mock_router_cls.return_value.transcribe.return_value = mock_transcript
         from src.api.helpers import transcribe_helper
 
-        out = transcribe_helper(audio_path="/tmp/x.wav")
+        out = transcribe_helper(audio_path="/tmp/x.wav", require_speech=False)
     assert out == {"segments": [], "provider": "local"}
 
 

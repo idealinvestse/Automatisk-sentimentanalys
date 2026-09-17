@@ -23,6 +23,7 @@ from ..alerting import AlertEngine
 from ..alerting_state import AlertingStateManager
 from ..caching import AggregateCache
 from ..core.errors import (
+    ASR_EMPTY_TRANSCRIPT,
     AnalysisError,
     BaseAnalysisError,
     ConfigurationError,
@@ -301,12 +302,20 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(TranscriptionError)
     async def handle_transcription_error(request: Request, exc: TranscriptionError) -> JSONResponse:
-        logger.error("Transcription error: %s", exc)
+        empty = exc.error_code == ASR_EMPTY_TRANSCRIPT
+        if not empty:
+            logger.error("Transcription error: %s", exc)
         return error_response(
             request,
-            500,
+            422 if empty else 500,
             public_detail(
-                exc, dev_prefix="Transcription failed", public=TRANSCRIPTION_ERROR_DETAIL
+                exc,
+                dev_prefix="Transcription failed",
+                public=(
+                    "Transcription contained no speech that can be analyzed."
+                    if empty
+                    else TRANSCRIPTION_ERROR_DETAIL
+                ),
             ),
             error_code=error_code_for(exc),
         )

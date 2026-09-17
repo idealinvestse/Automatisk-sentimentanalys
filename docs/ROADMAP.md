@@ -6,7 +6,7 @@ This document provides a high-level overview of the project's maturity and futur
 
 **Version**: 0.5.1
 
-The project has reached **v0.5 production-ready beta**. Fas 4 (Call Center Backend) is complete. v0.5 adds DATA-01 import workflow, Docker staging with observability, model A/B compare (API + webui), INSIGHT-02 test coverage, CI mypy/staging gates, and GPU verification tooling.
+The project is an **operatörspilot under uppbyggnad** (v0.5.1-linje). Fas 4-backend finns, men kvalitetsbevis (DATA-01) och L7–L9 är öppna — etiketten “production-ready beta” ska inte läsas som kundklar drift.
 
 > **Note:** The test suite is continuously extended. Use `pytest --collect-only -q` for the authoritative current count; CI is the merge gate.
 
@@ -77,8 +77,8 @@ Frontend ↔ backend harmony: **[docs/FE_BE_HARMONY_2026-07-17.md](FE_BE_HARMONY
 
 | Priority | Area | Description |
 |----------|------|-------------|
-| High | **Operatörspilot — kundkontext** (Läge A) | Kund-ID-resolver från originalfilnamn, versionssatt kundregister i install-schema, fryst kundkonfiguration per jobb (Etapp 2 i planen) |
-| High | **Operatörspilot — lokal datalivscykel** (Läge A) | Beständiga artefakter/transkript/rapporter per kund, bakgrundsjobbet äger kundflödet, idempotens per kund+källa+config (Etapp 3) |
+| High | **Operatörspilot — kundkontext** (Läge A) | ✅ Etapp 2: resolver, fryst kontext, profil/scorecard-wiring, ASR/LLM-kläm (smalna only). Skarp `required` väntar på R04. |
+| High | **Operatörspilot — lokal datalivscykel** (Läge A) | ✅ Etapp 3: server-`call_id`, transkript före LLM, persist + idempotens customer+källa+fingerprint |
 | High | **Operatörspilot — exekveringspolicy** (Läge A) | Kundstyrd ASR/LLM-routing med strikt tillåtelselista, klassificerad fallback, gemensam försök-/budgetkontext (Etapp 4) |
 | High | **Operatörspilot — GPU/resurser** (Läge A) | Gemensam resursreservation ASR/LLM, verifierad CUDA-enhet och modellavlastning på RTX 5070 (Etapp 5) |
 | High | **Real corpus** | Replace synthetic DATA-01 bundle (`generate_pilot_corpus.py`) with anonymized telephony via `--pilot-gate` — [DATA_01_CORPUS_SPEC.md](DATA_01_CORPUS_SPEC.md) |

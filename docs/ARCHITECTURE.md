@@ -38,11 +38,11 @@ Ljudfil
 
 | Komponent | As-is | To-be |
 |-----------|-------|-------|
-| Kundidentifiering | `resolve_profile()` väljer *generisk* analysprofil (callcenter/sales/…); okänd profil → `default` | Kund-ID-resolver från originalfilnamn → kundorganisationsregister med fryst konfiguration; okänd kund stoppar kundstyrt flöde |
-| Persistens | `/calls`-store + browser-store sparar godtyckligt `meta`; transkriptionssidan sparar ASR-segment separat från redigerad rapport | Serverägd kund-/samtalsidentitet; ASR-text sparat lokalt före extern analys; jobb ej `completed` förrän rapport + metadata persisterats |
-| Routing | Provider väljs per request; `MultiProviderRouter` kan lägga till andra konfigurerade providers | Kundprofilens tillåtelselista är strikt; request-params/analysis-perspectives kan inte vidga den; klassificerad fallback med försökstak |
+| Kundidentifiering | **Etapp 2 landad:** resolver + fryst `CustomerContext` på intag; `analyzer_profile` och `qa_scorecard` styr pipeline/QA. Request får bara smalna ASR/LLM (kläm i `clamp_execution_policy`). Okänd kund → hårdfel. Default `customers.mode: disabled` tills R04. | Full klassificerad fallback + delad budget (Etapp 4) |
+| Persistens | **Etapp 3 landad:** serverutfärdat `call_id`, transkript persisteras före LLM (`transcript_hook` / `/transcribe`), rapport + `meta.customer` + fingerprint i `CallStore`. Idempotens `customer+källa+fingerprint`. Jobb `completed` efter store-skrivning. | RPO/RTO och per-kund kataloglayout kan förfinas |
+| Routing | ASR/LLM-request kläms mot kundens allowlist (vidgning → 422). `MultiProviderRouter` kan fortfarande lägga till providers *inom* den klämdan kedjan. | Klassificerad fallback + försökstak (Etapp 4) |
 | GPU-resurser | ASR och LM Studio har separata lås; laddade modeller ligger kvar i VRAM | Gemensam resursreservation per tungt steg; verifierbar modellavlastning; faktisk CUDA-enhet rapporteras |
-| Cache | Rapportcache-key saknar kundidentitet; aggregat nycklas på agent/window/antal | Kund- och configversion i alla cache-/aggregatnycklar |
+| Cache | Rapportcache-key `report:v3` inkluderar `customer_id` + `config_fingerprint` | Aggregatnycklar kan följa samma mönster |
 
 Dessa komponenter implementeras etappvis; denna tabell uppdateras när respektive etapp landar. Beteendet ovan är **mål**, inte nuvarande implementation, om inte raden i tabellen anger annat.
 

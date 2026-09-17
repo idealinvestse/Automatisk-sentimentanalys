@@ -111,6 +111,27 @@ class TestCallAnalysisPipeline:
         ):
             self.pipe.analyze_audio("dummy.wav", strict_asr=True)
 
+    def test_analyze_audio_strict_asr_empty_transcript(self, monkeypatch):
+        """API/operator path must not produce a QA report from silence."""
+        from src.core.errors import ASR_EMPTY_TRANSCRIPT, TranscriptionError
+        from src.core.models import Transcript
+
+        self._mock_sentiment(monkeypatch)
+        empty = Transcript(
+            model="kb-whisper-large",
+            backend="faster",
+            language="sv",
+            duration=0.0,
+            processing_time=0.0,
+            segments=[],
+        )
+        with (
+            patch("src.pipeline.AsrRouter.transcribe", return_value=empty),
+            pytest.raises(TranscriptionError) as err,
+        ):
+            self.pipe.analyze_audio("dummy.wav", strict_asr=True)
+        assert err.value.error_code == ASR_EMPTY_TRANSCRIPT
+
     def test_analyze_segments_with_mistral_flag_accepts_and_merges(self, monkeypatch):
         """Pipeline accepts Mistral flags and surfaces llm in report (even if it falls back)."""
         self._mock_sentiment(monkeypatch)

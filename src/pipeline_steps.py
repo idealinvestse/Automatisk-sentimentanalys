@@ -36,6 +36,7 @@ class PipelineLLMContext:
     llm_model: str | None
     llm_api_key: str | None
     groq_eu_residency: bool
+    qa_scorecard: str = "standard_support_v1"
 
 
 def apply_early_pii_redaction(
@@ -699,6 +700,7 @@ def _run_fas4_enrichment_body(
             profile_name=ctx.profile,
             use_llm=use_llm_qa,
             analyzer=qa_analyzer,
+            scorecard_path=ctx.qa_scorecard or "standard_support_v1",
         )
         results["qa"] = qa_res
         results["compliance_qa"] = qa_res
