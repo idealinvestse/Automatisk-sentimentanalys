@@ -23,3 +23,16 @@ def _clear_asr_cache() -> None:
     except ImportError:
         # torch not installed, skip cache clearing (ASR tests will fail gracefully)
         pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_api_settings_cache():
+    """Drop cached API settings so media-root/auth env does not leak."""
+    try:
+        from src.api.settings import get_api_settings
+    except ImportError:
+        yield
+        return
+    get_api_settings.cache_clear()
+    yield
+    get_api_settings.cache_clear()
