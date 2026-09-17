@@ -68,8 +68,11 @@ async def analyze_conversation(
 @router.post("/batch_analyze_conversation", response_model=BatchAnalyzeConversationResponse)
 async def batch_analyze_conversation(
     req: BatchAnalyzeConversationRequest,
+    request: Request,
+    cache: Annotated[AggregateCache, Depends(get_cache)],
 ) -> BatchAnalyzeConversationResponse:
     """Analyze sentiment for multiple conversation audio files."""
+    store = get_call_store(request)
 
     async def _do() -> BatchAnalyzeConversationResponse:
         files = resolve_and_validate_audio_paths(
@@ -87,7 +90,9 @@ async def batch_analyze_conversation(
             # Per-file customer gate: controlled modes reject unknown/ambiguous
             # identities per item instead of aborting the whole batch.
             ctx = resolve_customer_context(Path(p).name)
-            tr, segs, meta, _pipe = run_batch_analyze_file(req, p, customer=ctx)
+            tr, segs, meta, _pipe = run_batch_analyze_file(
+                req, p, cache=cache, customer=ctx, call_store=store
+            )
             if ctx is not None:
                 meta = dict(meta or {})
                 meta["customer"] = ctx.model_dump(mode="json")

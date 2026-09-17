@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
-from src.api.call_persistence import persist_call_artifact
+from src.api.call_persistence import persist_call_artifact, persist_intake_file
 from src.api.call_store import CallStore, call_idempotency_key, new_call_id
 from src.api.settings import get_api_settings
 from src.customers import CustomerAsrPolicy, CustomerContext, CustomerLlmPolicy
@@ -220,3 +222,54 @@ def test_call_store_merges_meta_without_dropping_customer(tmp_path) -> None:
     assert updated["meta"]["customer"]["customer_id"] == "0042"
     assert updated["meta"]["source"] == "webui"
     assert updated["customer_id"] == "0042"
+
+
+def test_persist_intake_file_skips_missing_store(tmp_path) -> None:
+    assert persist_intake_file(None, audio_path="x.wav", route="batch_transcribe", status="failed") is None
+    store = CallStore(tmp_path)
+    doc = persist_intake_file(
+        store,
+        audio_path="kund-demo.wav",
+        route="batch_transcribe",
+        status="transcribed",
+        transcript={"segments": [{"text": "hej"}]},
+    )
+    assert doc is not None
+    assert doc["provenance"]["route"] == "batch_transcribe"
+    assert doc["provenance"]["original_filename"] == "kund-demo.wav"
+
+
+def test_batch_transcribe_persists_ok_and_failed(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("SENTIMENT_API_KEY", raising=False)
+    monkeypatch.setenv("API_STATE_DIR", str(tmp_path))
+    get_api_settings.cache_clear()
+    client = TestClient(create_app())
+    ok_path = str(tmp_path / "ok.wav")
+    bad_path = str(tmp_path / "bad.wav")
+
+    def fake_helper(audio_path, **_kwargs):
+        if audio_path == ok_path:
+            return {"segments": [{"text": "hej"}], "model": "t"}
+        raise ValueError("fail b")
+
+    with (
+        patch(
+            "src.api.routers.transcription.resolve_and_validate_audio_paths",
+            return_value=[ok_path, bad_path],
+        ),
+        patch("src.api.routers.transcription.transcribe_helper", side_effect=fake_helper),
+    ):
+        r = client.post(
+            "/batch_transcribe",
+            json={"audio_paths": [ok_path, bad_path], "workers": 1},
+        )
+    assert r.status_code == 200
+    assert r.json()["ok"] == 1
+    assert r.json()["failed"] == 1
+    store = CallStore(tmp_path)
+    docs = store.list(limit=20)
+    statuses = {doc.get("status") for doc in docs}
+    assert "transcribed" in statuses
+    assert "failed" in statuses
+    routes = {doc.get("provenance", {}).get("route") for doc in docs}
+    assert "batch_transcribe" in routes

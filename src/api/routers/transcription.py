@@ -19,6 +19,7 @@ from ..call_persistence import (
     fail_reason_from_exc,
     get_call_store,
     persist_call_artifact,
+    persist_intake_file,
 )
 from ..error_responses import PUBLIC_ERROR_DETAIL
 from ..helpers import (
@@ -392,16 +393,37 @@ async def batch_transcribe(
         logger.info("Batch transcribing %d file(s) with %d worker(s)", total, req.workers)
         hub.log(job_id=job_id, level="INFO", msg=f"Batch startar – {total} filer")
         hub.status(job_id=job_id, is_running=True, total=total, processed=0)
+        store = get_call_store(request)
 
         def _worker(p: str) -> dict:
             fname = file_display_name(p)
             # Per-file customer gate: controlled modes reject unknown/ambiguous
             # identities per item instead of aborting the whole batch.
-            ctx = resolve_customer_context(Path(p).name)
-            hub.log(job_id=job_id, level="INFO", msg=f"Bearbetar {fname}...", file=fname)
-            result = transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
-            require_usable_transcript(result)
-            return result
+            ctx = None
+            try:
+                ctx = resolve_customer_context(Path(p).name)
+                hub.log(job_id=job_id, level="INFO", msg=f"Bearbetar {fname}...", file=fname)
+                result = transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
+                require_usable_transcript(result)
+                persist_intake_file(
+                    store,
+                    audio_path=p,
+                    route="batch_transcribe",
+                    status="transcribed",
+                    transcript=result,
+                    customer=ctx,
+                )
+                return result
+            except Exception as exc:
+                persist_intake_file(
+                    store,
+                    audio_path=p,
+                    route="batch_transcribe",
+                    status="failed",
+                    customer=ctx,
+                    error=exc,
+                )
+                raise
 
         def _on_complete(
             path: str,

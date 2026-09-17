@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import Request
@@ -111,3 +112,34 @@ def persist_call_artifact(
             "created_at": (existing or {}).get("created_at"),
         },
     )
+
+
+def persist_intake_file(
+    store: CallStore | None,
+    *,
+    audio_path: str,
+    route: str,
+    status: str,
+    transcript: dict[str, Any] | None = None,
+    report: dict[str, Any] | None = None,
+    customer: CustomerContext | None = None,
+    error: BaseException | None = None,
+) -> dict[str, Any] | None:
+    """Best-effort persist for batch/scan workers. Never raises to the caller."""
+    if store is None:
+        return None
+    try:
+        return persist_call_artifact(
+            store,
+            status=status,
+            transcript=transcript,
+            report=report,
+            customer=customer,
+            original_filename=Path(audio_path).name,
+            audio_path=audio_path,
+            route=route,
+            fail_reason=fail_reason_from_exc(error) if error is not None else None,
+        )
+    except Exception:
+        logger.exception("Failed to persist intake artifact for %s via %s", audio_path, route)
+        return None

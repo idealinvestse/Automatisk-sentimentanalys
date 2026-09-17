@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from ...caching import AggregateCache
@@ -10,7 +11,12 @@ from ...core.serialization import map_results_to_segment_dicts, texts_from_segme
 from ...customers import CustomerContext
 from ...pipeline import CallAnalysisPipeline
 from ...sentiment import analyze_smart
-from ..call_persistence import fail_reason_from_exc, persist_call_artifact, report_as_dict
+from ..call_persistence import (
+    fail_reason_from_exc,
+    persist_call_artifact,
+    persist_intake_file,
+    report_as_dict,
+)
 from ..call_store import CallStore
 from ..helpers import (
     apply_customer_policy,
@@ -48,6 +54,7 @@ def _build_segment_sentiments(
 def _light_analyze(
     req: AnalyzeConversationRequest,
     customer: CustomerContext | None,
+    call_store: CallStore | None = None,
 ) -> AnalyzeConversationResponse:
     tr = transcribe_helper(
         **asr_kwargs_from(req, audio_path=req.audio_path, customer=customer)
@@ -69,6 +76,20 @@ def _light_analyze(
         lexicon_weight=req.lexicon_weight,
     )
     seg_out = _build_segment_sentiments(tr_texts, results, segments)
+    if call_store is not None:
+        persisted = persist_call_artifact(
+            call_store,
+            status="completed",
+            transcript=tr,
+            report={"mode": "light"},
+            customer=customer,
+            original_filename=req.original_filename,
+            audio_path=req.audio_path,
+            route="analyze_conversation",
+        )
+        meta = dict(meta or {})
+        meta["call_id"] = persisted.get("id")
+        meta["persisted"] = True
     return AnalyzeConversationResponse(
         transcript=tr,
         segment_sentiments=seg_out,
@@ -202,7 +223,7 @@ def run_analyze_conversation(
     try:
         if req.use_full_pipeline:
             return _full_pipeline_analyze(req, cache, customer, call_store)
-        return _light_analyze(req, customer)
+        return _light_analyze(req, customer, call_store)
     except Exception as exc:
         _persist_run_failure(call_store, customer, req, exc, route=route)
         raise
@@ -232,7 +253,7 @@ def _scan_to_conversation_request(req: Any, audio_path: str) -> AnalyzeConversat
         return_all_scores=getattr(req, "return_all_scores", True),
         provider=getattr(req, "provider", "local"),
         cloud_fallback_local=getattr(req, "cloud_fallback_local", False),
-        original_filename=getattr(req, "original_filename", None),
+        original_filename=getattr(req, "original_filename", None) or Path(audio_path).name,
     )
 
 
@@ -252,24 +273,48 @@ def run_batch_analyze_file(
         )
         return resp.transcript, resp.segment_sentiments, resp.meta, resp.pipeline_results
 
-    tr = transcribe_helper(
-        **asr_kwargs_from(req, audio_path=audio_path, customer=customer)
-    )
-    require_usable_transcript(tr)
-    segments = tr.get("segments", []) or []
-    tr_texts = texts_from_segments(segments)
-    results, meta = analyze_smart(
-        tr_texts,
-        profile=_sentiment_profile(req, customer),
-        model_name=req.sentiment_model,
-        device=req.device,
-        batch_size=getattr(req, "sentiment_batch_size", 16),
-        normalize=True,
-        return_all_scores=True,
-        max_length=None,
-        clean=True,
-        lexicon_file=req.lexicon_file,
-        lexicon_weight=req.lexicon_weight,
-    )
-    seg_out = _build_segment_sentiments(tr_texts, results, segments)
-    return tr, seg_out, meta, None
+    try:
+        tr = transcribe_helper(
+            **asr_kwargs_from(req, audio_path=audio_path, customer=customer)
+        )
+        require_usable_transcript(tr)
+        segments = tr.get("segments", []) or []
+        tr_texts = texts_from_segments(segments)
+        results, meta = analyze_smart(
+            tr_texts,
+            profile=_sentiment_profile(req, customer),
+            model_name=req.sentiment_model,
+            device=req.device,
+            batch_size=getattr(req, "sentiment_batch_size", 16),
+            normalize=True,
+            return_all_scores=True,
+            max_length=None,
+            clean=True,
+            lexicon_file=req.lexicon_file,
+            lexicon_weight=req.lexicon_weight,
+        )
+        seg_out = _build_segment_sentiments(tr_texts, results, segments)
+        persisted = persist_intake_file(
+            call_store,
+            audio_path=audio_path,
+            route="batch_analyze_conversation",
+            status="completed",
+            transcript=tr,
+            report={"mode": "light"},
+            customer=customer,
+        )
+        if persisted is not None:
+            meta = dict(meta or {})
+            meta["call_id"] = persisted.get("id")
+            meta["persisted"] = True
+        return tr, seg_out, meta, None
+    except Exception as exc:
+        persist_intake_file(
+            call_store,
+            audio_path=audio_path,
+            route="batch_analyze_conversation",
+            status="failed",
+            customer=customer,
+            error=exc,
+        )
+        raise

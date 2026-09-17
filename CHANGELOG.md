@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Agentguide efter Etapp 2/3** — `docs/LLM_AGENT_GUIDE.md` dokumenterar fail-closed ASR, kundkläm och CallStore så agenter inte återinför tyst tom-ASR-fallback. `docs/WINDOWS_INSTALL.md` pekar på `customers.mode: disabled` tills R04.
+- **Batch/scan-persistens** — `/batch_transcribe`, `/batch_analyze_conversation`, `/scan_process` och light `/analyze_conversation` skriver CallStore-artefakter (ok + fail-orsak) med samma idempotens som enkeluppladdningen.
 
 ### Added
 - **Fail-closed ASR + Etapp 2-wiring + Etapp 3 persistens** — API-vägar (`analyze_audio`, `/transcribe`, conversation) misslyckas vid ASR-fel eller noll användbara segment (`asr_empty_transcript` → 422); ingen tom QA-rapport. Fryst `CustomerContext` styr `analyzer_profile`, QA-scorecard och klämd ASR/LLM-policy (request får bara smalna). Rapportcache `report:v3` inkluderar kund+fingerprint. Serverutfärdat `call_id`, transkript persisteras före LLM, idempotens `customer+källa+fingerprint`. Webui visar resolverad kund och använder server-id + kundprofil i `analyzePipeline`.

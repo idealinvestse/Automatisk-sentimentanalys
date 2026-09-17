@@ -14,6 +14,8 @@ from fastapi import APIRouter, Depends, Request
 from ...caching import AggregateCache
 from ...core.serialization import utc_now_iso
 from ..batch import file_display_name, run_batch
+from ..call_persistence import get_call_store, persist_intake_file
+from ..call_store import CallStore
 from ..dependencies import get_cache
 from ..helpers import asr_kwargs_from, resolve_customer_context, transcribe_helper
 from ..path_validation import resolve_and_validate_audio_paths
@@ -66,6 +68,7 @@ def _run_scan_process(
     hub: Any,
     cache: AggregateCache | None,
     registry: TranscriptionJobRegistry | None = None,
+    call_store: CallStore | None = None,
 ) -> ScanProcessResponse:
     """Synchronous scan body — executed in a worker thread from the async handler."""
     files = resolve_and_validate_audio_paths(
@@ -102,21 +105,54 @@ def _run_scan_process(
 
     def _do_transcribe(p: str) -> dict[str, Any]:
         # Per-file customer gate: scanned filenames are the original names.
-        ctx = resolve_customer_context(os.path.basename(p))
-        return transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
+        ctx = None
+        try:
+            ctx = resolve_customer_context(os.path.basename(p))
+            result = transcribe_helper(**asr_kwargs_from(req, audio_path=p, customer=ctx))
+            persist_intake_file(
+                call_store,
+                audio_path=p,
+                route="scan_process",
+                status="transcribed",
+                transcript=result,
+                customer=ctx,
+            )
+            return result
+        except Exception as exc:
+            persist_intake_file(
+                call_store,
+                audio_path=p,
+                route="scan_process",
+                status="failed",
+                customer=ctx,
+                error=exc,
+            )
+            raise
 
     def _do_analyze(p: str) -> dict[str, Any]:
-        ctx = resolve_customer_context(os.path.basename(p))
-        tr, seg_out, meta, pipe_results = run_batch_analyze_file(
-            req, p, cache=cache, customer=ctx
-        )
-        seg_dicts = [s.model_dump() for s in seg_out]
-        out: dict[str, Any] = {"transcript": tr, "segment_sentiments": seg_dicts, "meta": meta}
-        if ctx is not None:
-            out["customer"] = ctx.model_dump(mode="json")
-        if pipe_results is not None:
-            out["pipeline_results"] = pipe_results
-        return out
+        ctx = None
+        try:
+            ctx = resolve_customer_context(os.path.basename(p))
+            tr, seg_out, meta, pipe_results = run_batch_analyze_file(
+                req, p, cache=cache, customer=ctx, call_store=call_store
+            )
+            seg_dicts = [s.model_dump() for s in seg_out]
+            out: dict[str, Any] = {"transcript": tr, "segment_sentiments": seg_dicts, "meta": meta}
+            if ctx is not None:
+                out["customer"] = ctx.model_dump(mode="json")
+            if pipe_results is not None:
+                out["pipeline_results"] = pipe_results
+            return out
+        except Exception as exc:
+            persist_intake_file(
+                call_store,
+                audio_path=p,
+                route="scan_process",
+                status="failed",
+                customer=ctx,
+                error=exc,
+            )
+            raise
 
     worker_fn = _do_transcribe if req.operation == "transcribe" else _do_analyze
 
@@ -253,6 +289,14 @@ async def scan_process(
         registry.register(job_id, "scan_process", directory=req.directory, operation=req.operation)
 
     async def _do() -> ScanProcessResponse:
-        return await asyncio.to_thread(_run_scan_process, req, job_id, hub, cache, registry)
+        return await asyncio.to_thread(
+            _run_scan_process,
+            req,
+            job_id,
+            hub,
+            cache,
+            registry,
+            get_call_store(request),
+        )
 
     return await run_route("scan_process", _do)
