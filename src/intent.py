@@ -477,9 +477,7 @@ class IntentClassifier:
         return label, round(confidence, 3)
 
 
-def generate_intent_dataset(
-    n_samples_per_intent: int = 50, seed: int = 42
-) -> list[dict[str, Any]]:
+def generate_intent_dataset(n_samples_per_intent: int = 50, seed: int = 42) -> list[dict[str, Any]]:
     """Generate synthetic intent dataset for testing and baseline training (deprecated).
 
     .. deprecated:: 0.5.1

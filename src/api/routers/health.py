@@ -27,7 +27,9 @@ async def ready(request: Request) -> JSONResponse:
     settings = get_api_settings()
     checks: dict[str, Any] = {
         "auth_configured": bool(settings.api_key) if settings.production else True,
-        "media_root": bool(settings.media_root) if (settings.production or settings.require_media_root) else True,
+        "media_root": bool(settings.media_root)
+        if (settings.production or settings.require_media_root)
+        else True,
     }
     cache = getattr(request.app.state, "cache", None)
     if settings.use_redis_cache:

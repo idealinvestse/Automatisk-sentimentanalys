@@ -220,9 +220,7 @@ def test_smoke_fails_on_empty_transcript(mock_transcribe, _mock_requires_ml, tmp
         processing_time=0.1,
         segments=[],
     )
-    report = run_scenario(
-        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
-    )
+    report = run_scenario("smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu")
     assert report.summary.get("n_failed") == 1
     assert "empty transcript" in (report.files[0].error or "")
 
@@ -241,9 +239,7 @@ def test_smoke_fails_on_missing_expected_phrases(mock_transcribe, _mock_requires
         processing_time=0.1,
         segments=[Segment(start=0.0, end=1.0, text="Välkommen till växeln")],
     )
-    report = run_scenario(
-        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
-    )
+    report = run_scenario("smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu")
     assert report.files[0].ok is False
     assert "missing expected phrases" in (report.files[0].error or "")
 
@@ -262,9 +258,7 @@ def test_smoke_passes_expected_phrases_casefold(mock_transcribe, _mock_requires_
         processing_time=0.1,
         segments=[Segment(start=0.0, end=1.0, text="välkommen   till växeln idag")],
     )
-    report = run_scenario(
-        "smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu"
-    )
+    report = run_scenario("smoke", audio_root=audio_root, pack_ids=["sv_callcenter"], device="cpu")
     assert report.files[0].ok is True
 
 

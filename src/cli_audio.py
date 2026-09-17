@@ -35,7 +35,9 @@ def register_audio_commands(app: typer.Typer) -> None:
             "-b",
             help="ASR backends whose models should be pre-downloaded",
         ),
-        model: str = typer.Option(DEFAULT_ASR_MODEL, "--model", "-m", help="ASR model name or alias"),
+        model: str = typer.Option(
+            DEFAULT_ASR_MODEL, "--model", "-m", help="ASR model name or alias"
+        ),
         device: str = typer.Option(
             "cpu", "--device", help="Device used for prefetch (cpu recommended)"
         ),
@@ -81,7 +83,6 @@ def register_audio_commands(app: typer.Typer) -> None:
             raise typer.Exit(0)
         console.print("[red]ASR-uppsättning misslyckades delvis – se steg ovan[/red]")
         raise typer.Exit(1)
-
 
     @app.command("transcribe")
     def transcribe_cmd(
@@ -269,7 +270,6 @@ def register_audio_commands(app: typer.Typer) -> None:
             f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
         )
 
-
     @app.command("analyze-call")
     def analyze_call_cmd(
         inputs: list[str] = typer.Argument(..., help="Audio files, directories or globs"),
@@ -285,7 +285,9 @@ def register_audio_commands(app: typer.Typer) -> None:
         vad: bool = typer.Option(True),
         word_timestamps: bool = typer.Option(False),
         chunk_length_s: int = typer.Option(30, min=5, max=60),
-        revision: str | None = typer.Option(None, help="KB-Whisper revision: standard|strict|subtitle"),
+        revision: str | None = typer.Option(
+            None, help="KB-Whisper revision: standard|strict|subtitle"
+        ),
         diarize: bool = typer.Option(False, "--diarize", help="Run speaker diarization"),
         num_speakers: int | None = typer.Option(
             None, "--num-speakers", help="Expected number of speakers"
@@ -407,7 +409,9 @@ def register_audio_commands(app: typer.Typer) -> None:
         )
         if provider == "lmstudio" and device != "cpu":
             device = "cpu"
-            console.print("[yellow]LM Studio-profil: ASR och lokala analyzers körs på CPU.[/yellow]")
+            console.print(
+                "[yellow]LM Studio-profil: ASR och lokala analyzers körs på CPU.[/yellow]"
+            )
         pipeline = CallAnalysisPipeline(
             sentiment_model=sentiment_model,
             device=device,
@@ -457,7 +461,9 @@ def register_audio_commands(app: typer.Typer) -> None:
         ) as progress:
             task = progress.add_task("Analyzing", total=len(files))
             for idx_file, path in enumerate(files, start=1):
-                progress.update(task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}")
+                progress.update(
+                    task, description=f"[{idx_file}/{len(files)}] {os.path.basename(path)}"
+                )
                 try:
                     parsed_hotwords = parse_asr_hotwords(
                         hotwords,
@@ -614,7 +620,6 @@ def register_audio_commands(app: typer.Typer) -> None:
             f"[bold]Completed[/bold]: ok={ok}, failed={fail}, total={len(files)} | elapsed={time.time() - start_all:.2f}s"
         )
 
-
     @app.command("edge-analyze")
     def edge_analyze_cmd(
         text: str | None = typer.Option(None, "--text", "-t", help="Text to analyze offline"),
@@ -629,7 +634,9 @@ def register_audio_commands(app: typer.Typer) -> None:
 
         setup_logging(log_level)
         if audio:
-            transcriber = get_transcriber(backend="faster", model_name=DEFAULT_ASR_MODEL, device="cpu")
+            transcriber = get_transcriber(
+                backend="faster", model_name=DEFAULT_ASR_MODEL, device="cpu"
+            )
             transcript = transcriber.transcribe(audio_path=audio, language="sv", diarize=False)
             segments = [s.to_dict() for s in (transcript.segments or [])]
             result = analyze_segments_offline(segments, profile=profile)
@@ -640,7 +647,6 @@ def register_audio_commands(app: typer.Typer) -> None:
             raise typer.Exit(1)
         console.print_json(json.dumps(result.model_dump(), ensure_ascii=False, indent=2))
 
-
     @app.command("scan-openrouter-models")
     def scan_openrouter_models_cmd(
         output: str = typer.Option(
@@ -649,7 +655,9 @@ def register_audio_commands(app: typer.Typer) -> None:
             "-o",
             help="Sökväg att spara katalogen till",
         ),
-        show_top: int = typer.Option(10, "--show-top", "-n", help="Visa de N billigaste modellerna"),
+        show_top: int = typer.Option(
+            10, "--show-top", "-n", help="Visa de N billigaste modellerna"
+        ),
         log_level: str = typer.Option("INFO", help="Logging level"),
     ) -> None:
         """Scanna OpenRouter efter modeller och spara katalog med kostnad."""
@@ -674,7 +682,6 @@ def register_audio_commands(app: typer.Typer) -> None:
             p = m["pricing"]
             table.add_row(m["id"], f"{p['prompt_per_million_usd']:.4f}")
         console.print(table)
-
 
     if __name__ == "__main__":
         app()

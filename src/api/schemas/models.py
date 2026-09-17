@@ -137,7 +137,9 @@ class TranscribeResponse(BaseModel):
     customer: CustomerRef | None = Field(
         None, description="Resolved customer routing context when a registry is active"
     )
-    call_id: str | None = Field(None, description="Server-issued call identity for persisted artifacts")
+    call_id: str | None = Field(
+        None, description="Server-issued call identity for persisted artifacts"
+    )
 
 
 class TranscribeJobStatus(BaseModel):
@@ -502,7 +504,8 @@ class PipelineRequest(BaseModel):
         description="Original upload filename; used for customer identification when a customer registry is active",
     )
     call_id: str | None = Field(
-        None, description="Server-issued call id from POST /transcribe; reused for report persistence"
+        None,
+        description="Server-issued call id from POST /transcribe; reused for report persistence",
     )
 
     @field_validator("segments")
@@ -935,8 +938,12 @@ class PipelineResponse(BaseModel):
     customer: CustomerRef | None = Field(
         None, description="Resolved customer routing context when a registry is active"
     )
-    call_id: str | None = Field(None, description="Server-issued call identity for persisted artifacts")
-    persisted: bool = Field(False, description="True when report + customer metadata were written to the call store")
+    call_id: str | None = Field(
+        None, description="Server-issued call identity for persisted artifacts"
+    )
+    persisted: bool = Field(
+        False, description="True when report + customer metadata were written to the call store"
+    )
 
 
 class PipelineCompareRequest(BaseModel):

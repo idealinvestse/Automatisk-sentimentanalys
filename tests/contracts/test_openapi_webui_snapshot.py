@@ -53,9 +53,7 @@ def test_webui_openapi_matches_live_contract() -> None:
     )
 
     changed_operations = sorted(
-        path
-        for path in live_paths & checked_paths
-        if live["paths"][path] != checked["paths"][path]
+        path for path in live_paths & checked_paths if live["paths"][path] != checked["paths"][path]
     )
     assert not changed_operations, (
         f"webui/openapi.json operation drift: changed={changed_operations}"

@@ -248,7 +248,10 @@ def test_call_store_merges_meta_without_dropping_customer(tmp_path) -> None:
 
 
 def test_persist_intake_file_skips_missing_store(tmp_path) -> None:
-    assert persist_intake_file(None, audio_path="x.wav", route="batch_transcribe", status="failed") is None
+    assert (
+        persist_intake_file(None, audio_path="x.wav", route="batch_transcribe", status="failed")
+        is None
+    )
     store = CallStore(tmp_path)
     doc = persist_intake_file(
         store,

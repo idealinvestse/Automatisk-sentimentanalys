@@ -258,7 +258,7 @@ def _fake_pipeline_report(**overrides):
     fake.llm = overrides.get("llm", {"meta": {"cost_usd": 0.01}})
     fake.results = overrides.get("results", {"qa": {"overall_qa_score": 82}})
     fake.segments = overrides.get("segments", [])
-    fake.diarization = overrides.get("diarization", None)
+    fake.diarization = overrides.get("diarization")
     return fake
 
 

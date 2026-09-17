@@ -112,7 +112,9 @@ def _check_semantic_deps(report: PreflightReport) -> None:
         report.add(
             f"semantic_{mod}",
             True,
-            f"Semantic dep {mod} installed" if ok else f"Semantic dep {mod} missing (keyword fallback)",
+            f"Semantic dep {mod} installed"
+            if ok
+            else f"Semantic dep {mod} missing (keyword fallback)",
             "" if ok else "pip install -e '.[semantic]' for vector search",
         )
 

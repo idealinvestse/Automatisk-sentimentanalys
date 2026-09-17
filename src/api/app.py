@@ -118,7 +118,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         if request.url.path == "/analysis/jobs":
             content_length = request.headers.get("content-length")
-            if content_length and content_length.isdigit() and int(content_length) > 2 * 1024 * 1024:
+            if (
+                content_length
+                and content_length.isdigit()
+                and int(content_length) > 2 * 1024 * 1024
+            ):
                 return JSONResponse(
                     status_code=413,
                     content={"detail": "Analysis job payload exceeds 2 MiB"},

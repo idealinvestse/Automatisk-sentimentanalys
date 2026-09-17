@@ -56,9 +56,7 @@ def _light_analyze(
     customer: CustomerContext | None,
     call_store: CallStore | None = None,
 ) -> AnalyzeConversationResponse:
-    tr = transcribe_helper(
-        **asr_kwargs_from(req, audio_path=req.audio_path, customer=customer)
-    )
+    tr = transcribe_helper(**asr_kwargs_from(req, audio_path=req.audio_path, customer=customer))
     require_usable_transcript(tr)
     segments = tr.get("segments", []) or []
     tr_texts = texts_from_segments(segments)
@@ -274,9 +272,7 @@ def run_batch_analyze_file(
         return resp.transcript, resp.segment_sentiments, resp.meta, resp.pipeline_results
 
     try:
-        tr = transcribe_helper(
-            **asr_kwargs_from(req, audio_path=audio_path, customer=customer)
-        )
+        tr = transcribe_helper(**asr_kwargs_from(req, audio_path=audio_path, customer=customer))
         require_usable_transcript(tr)
         segments = tr.get("segments", []) or []
         tr_texts = texts_from_segments(segments)

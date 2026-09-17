@@ -60,9 +60,7 @@ def prefer_aspect_claims(results: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         spans_raw = item.get("evidence_spans")
-        item_spans: list[dict[str, Any]] | None = (
-            spans_raw if isinstance(spans_raw, list) else None
-        )
+        item_spans: list[dict[str, Any]] | None = spans_raw if isinstance(spans_raw, list) else None
         if not item_spans and item.get("evidence"):
             item_spans = [
                 {

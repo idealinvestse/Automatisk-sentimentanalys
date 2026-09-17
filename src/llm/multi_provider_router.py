@@ -126,7 +126,9 @@ class MultiProviderRouter:
         self.profile = RouterProfile(str(profile))
         self.tier = RoutingTier(str(tier).lower()) if not isinstance(tier, RoutingTier) else tier
         cat_cfg = self.cfg.get("catalog") or {}
-        state_path = Path(cat_cfg.get("rate_state_file") or "data/model_catalogs/rate_limit_state.json")
+        state_path = Path(
+            cat_cfg.get("rate_state_file") or "data/model_catalogs/rate_limit_state.json"
+        )
         self.rates = RateLimitTracker(state_path)
 
     # ------------------------------------------------------------------ select
@@ -259,9 +261,9 @@ class MultiProviderRouter:
             attempts_left -= 1
             try:
                 choice = self.select_route(
-                    prefer_provider=None if not tried else next(
-                        (p for p in self._provider_order() if p not in tried), None
-                    )
+                    prefer_provider=None
+                    if not tried
+                    else next((p for p in self._provider_order() if p not in tried), None)
                 )
             except LLMError as exc:
                 last_err = exc
@@ -347,7 +349,9 @@ class MultiProviderRouter:
                     choice.provider, float(prof.get("cooldown_seconds_on_429") or 60)
                 )
             # one failover hop
-            text, meta = self._chat_failover_once(messages, exclude=choice.provider, max_tokens=max_tokens, temperature=temperature)
+            text, meta = self._chat_failover_once(
+                messages, exclude=choice.provider, max_tokens=max_tokens, temperature=temperature
+            )
             return text, meta
 
     def _chat_failover_once(

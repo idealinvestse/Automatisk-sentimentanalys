@@ -82,12 +82,10 @@ class CallStore:
             or (existing or {}).get("idempotency_key"),
             "transcript": payload.get("transcript")
             if payload.get("transcript") is not None
-            else (existing or {}).get("transcript")
-            or {},
+            else (existing or {}).get("transcript") or {},
             "report": payload.get("report")
             if payload.get("report") is not None
-            else (existing or {}).get("report")
-            or {},
+            else (existing or {}).get("report") or {},
             "meta": meta,
             "provenance": provenance,
         }

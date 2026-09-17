@@ -79,7 +79,9 @@ def _pipeline_from_request(
     header_key: str | None,
     customer: CustomerContext | None,
 ) -> CallAnalysisPipeline:
-    llm_requested = bool(getattr(req, "use_mistral_llm", False) or getattr(req, "deep_analysis", False))
+    llm_requested = bool(
+        getattr(req, "use_mistral_llm", False) or getattr(req, "deep_analysis", False)
+    )
     policy = apply_customer_policy(
         customer,
         requested_llm_enabled=llm_requested,
@@ -98,7 +100,9 @@ def _pipeline_from_request(
         provider=policy.llm_provider or getattr(req, "provider", "openrouter"),
         groq_eu_residency=getattr(req, "groq_eu_residency", False),
         async_analyzers=getattr(req, "async_analyzers", False),
-        analysis_perspective=getattr(req, "analysis_perspective", None) if policy.llm_enabled else None,
+        analysis_perspective=getattr(req, "analysis_perspective", None)
+        if policy.llm_enabled
+        else None,
         qa_scorecard=policy.qa_scorecard,
         customer_id=policy.customer_id,
         config_fingerprint=policy.config_fingerprint,
@@ -154,7 +158,9 @@ async def create_analysis_job(
 ) -> AnalysisJobStatusResponse:
     """Submit a PII-redacted long-context LM Studio analysis."""
     if idempotency_key and len(idempotency_key) > 128:
-        raise HTTPException(status_code=400, detail="Idempotency-Key must be at most 128 characters")
+        raise HTTPException(
+            status_code=400, detail="Idempotency-Key must be at most 128 characters"
+        )
     customer = _resolve_pipeline_customer(req)
     policy = apply_customer_policy(
         customer,
@@ -172,7 +178,9 @@ async def create_analysis_job(
             force=True,
         )
     except Exception as exc:
-        raise HTTPException(status_code=422, detail="PII redaction failed; analysis job rejected") from exc
+        raise HTTPException(
+            status_code=422, detail="PII redaction failed; analysis job rejected"
+        ) from exc
     if pii_log.error:
         raise HTTPException(status_code=422, detail="PII redaction failed; analysis job rejected")
 

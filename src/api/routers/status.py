@@ -87,7 +87,11 @@ async def health_detail(request: Request) -> dict[str, Any]:
         degraded_reasons.append("media_root_missing")
     if settings.use_redis_cache and not checks["redis_reachable"]:
         degraded_reasons.append("redis_unreachable")
-    if hub is not None and getattr(hub, "backend", "memory") == "memory" and settings.use_redis_cache:
+    if (
+        hub is not None
+        and getattr(hub, "backend", "memory") == "memory"
+        and settings.use_redis_cache
+    ):
         degraded_reasons.append("ws_hub_memory_fallback")
 
     status = "degraded" if degraded_reasons else "ok"
@@ -107,7 +111,9 @@ async def health_detail(request: Request) -> dict[str, Any]:
             "backend": getattr(hub, "backend", "unknown") if hub is not None else "unavailable",
         },
         "ws_tickets": {
-            "backend": getattr(tickets, "backend", "unknown") if tickets is not None else "unavailable",
+            "backend": getattr(tickets, "backend", "unknown")
+            if tickets is not None
+            else "unavailable",
         },
         "recent_events": get_status_reporter().recent_events(limit=5),
     }

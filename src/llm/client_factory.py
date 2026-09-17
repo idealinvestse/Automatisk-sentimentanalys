@@ -11,10 +11,15 @@ from .provider_secrets import get_provider_api_key, load_provider_config
 LOCAL_LLM_PROVIDERS = frozenset({"lmstudio"})
 ROUTER_PROVIDERS = frozenset({"auto", "free_sequential", "sv_optimal", "router"})
 DIRECT_COMPAT_PROVIDERS = frozenset({"mistral", "nvidia", "cerebras"})
-KNOWN_PROVIDERS = LOCAL_LLM_PROVIDERS | ROUTER_PROVIDERS | DIRECT_COMPAT_PROVIDERS | {
-    "openrouter",
-    "groq",
-}
+KNOWN_PROVIDERS = (
+    LOCAL_LLM_PROVIDERS
+    | ROUTER_PROVIDERS
+    | DIRECT_COMPAT_PROVIDERS
+    | {
+        "openrouter",
+        "groq",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -96,9 +101,7 @@ def resolve_llm_client(
         default_base = "https://openrouter.ai/api/v1" if provider == "openrouter" else ""
         base_url = str(spec.get("base_url") or default_base)
         curated = spec.get("curated_sv") or {}
-        compat_model = model or (
-            curated.get("balanced") if isinstance(curated, dict) else None
-        )
+        compat_model = model or (curated.get("balanced") if isinstance(curated, dict) else None)
         if not compat_model:
             raise ConfigurationError(f"No model configured for provider={provider}")
         compat_client = OpenAICompatClient(

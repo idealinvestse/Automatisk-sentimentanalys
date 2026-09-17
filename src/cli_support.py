@@ -47,9 +47,7 @@ def parse_asr_hotwords(
         with open(default_hw_path, encoding="utf-8") as f:
             lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
         if lines:
-            console.print(
-                f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]"
-            )
+            console.print(f"[cyan]Auto-loaded {len(lines)} hotwords from {default_hw_path}[/cyan]")
             return lines
     except Exception:
         pass

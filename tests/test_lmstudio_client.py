@@ -92,9 +92,7 @@ def test_lmstudio_model_status_reports_loaded_context() -> None:
                     "max_context_length": 262144,
                     "quantization": {"name": "Q4_K_S"},
                     "capabilities": {"reasoning": {"default": "on"}},
-                    "loaded_instances": [
-                        {"id": "the-model", "config": {"context_length": 35072}}
-                    ],
+                    "loaded_instances": [{"id": "the-model", "config": {"context_length": 35072}}],
                 }
             ]
         },
@@ -112,20 +110,27 @@ def test_lmstudio_preflight_warns_but_does_not_fail_on_reasoning_on() -> None:
         default_model="the-model",
         enable_cache=False,
     )
-    with patch.object(client, "model_status", return_value=type(
-        "Status",
-        (),
-        {
-            "loaded": True,
-            "loaded_context": 70000,
-            "max_context": 262144,
-            "model": "the-model",
-            "instance_id": "the-model",
-            "quantization": "Q4_K_S",
-            "reasoning_default": "on",
-            "to_dict": lambda self: {"reasoning_default": "on"},
-        },
-    )()), patch.object(client, "count_chat_tokens", return_value=100):
+    with (
+        patch.object(
+            client,
+            "model_status",
+            return_value=type(
+                "Status",
+                (),
+                {
+                    "loaded": True,
+                    "loaded_context": 70000,
+                    "max_context": 262144,
+                    "model": "the-model",
+                    "instance_id": "the-model",
+                    "quantization": "Q4_K_S",
+                    "reasoning_default": "on",
+                    "to_dict": lambda self: {"reasoning_default": "on"},
+                },
+            )(),
+        ),
+        patch.object(client, "count_chat_tokens", return_value=100),
+    ):
         budget = client._preflight(
             [{"role": "user", "content": "hej"}],
             model="the-model",

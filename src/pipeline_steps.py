@@ -459,7 +459,9 @@ def _llm_credentials_available(ctx: PipelineLLMContext) -> bool:
         try:
             from .llm.provider_secrets import get_provider_api_key
 
-            return bool(get_provider_api_key(provider if provider != "openrouter" else "openrouter"))
+            return bool(
+                get_provider_api_key(provider if provider != "openrouter" else "openrouter")
+            )
         except Exception:
             return False
     try:
@@ -485,9 +487,7 @@ def run_groq_holistic(
         role_map = results.get("role") or {}
         seg_dicts = _segments_to_dicts(segments)
         pii_info = results.get("pii_redaction")
-        pii_redacted = bool(
-            isinstance(pii_info, dict) and pii_info.get("total_redacted", 0) > 0
-        )
+        pii_redacted = bool(isinstance(pii_info, dict) and pii_info.get("total_redacted", 0) > 0)
         profile_anon = _profile_anonymize_before_llm(ctx.profile)
 
         if not ctx.groq_eu_residency and not pii_redacted and not profile_anon:
