@@ -98,6 +98,7 @@ jobs:
             tests/test_batch.py \
             tests/test_status_api.py \
             tests/test_call_store.py \
+            tests/test_customer_profiles.py \
             tests/test_ready_and_degradation.py \
             tests/test_llm_profiles_api.py \
             tests/test_api_auth_matrix.py \

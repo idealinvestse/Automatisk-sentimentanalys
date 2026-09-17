@@ -88,21 +88,20 @@ def _pipeline_from_request(
         requested_llm_provider=getattr(req, "provider", None),
         requested_profile=getattr(req, "profile", None),
     )
+    llm_allowed = policy.llm_enabled is not False
     pipe = create_pipeline(
         cache=cache,
         profile=policy.analyzer_profile,
         sentiment_model=getattr(req, "sentiment_model", None),
         device=getattr(req, "device", "auto"),
-        use_mistral_llm=policy.llm_enabled and bool(getattr(req, "use_mistral_llm", False)),
+        use_mistral_llm=llm_allowed and bool(getattr(req, "use_mistral_llm", False)),
         llm_model=getattr(req, "llm_model", None),
-        deep_analysis=policy.llm_enabled and bool(getattr(req, "deep_analysis", False)),
+        deep_analysis=llm_allowed and bool(getattr(req, "deep_analysis", False)),
         llm_api_key=resolve_llm_api_key(getattr(req, "llm_api_key", None), header_key),
-        provider=policy.llm_provider or getattr(req, "provider", "openrouter"),
+        provider=policy.llm_provider or getattr(req, "provider", None) or "openrouter",
         groq_eu_residency=getattr(req, "groq_eu_residency", False),
         async_analyzers=getattr(req, "async_analyzers", False),
-        analysis_perspective=getattr(req, "analysis_perspective", None)
-        if policy.llm_enabled
-        else None,
+        analysis_perspective=getattr(req, "analysis_perspective", None) if llm_allowed else None,
         qa_scorecard=policy.qa_scorecard,
         customer_id=policy.customer_id,
         config_fingerprint=policy.config_fingerprint,

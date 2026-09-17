@@ -87,6 +87,8 @@ def test_call_store_invalid_id_and_corrupt_files(tmp_path) -> None:
     (tmp_path / "calls" / "broken.json").write_text("{not-json", encoding="utf-8")
     assert store.get("broken") is None
     assert store.list(limit=10) == []
+    assert store.find_by_idempotency(None) is None
+    assert store.find_by_idempotency("missing-key") is None
     assert store.delete("missing") is False
 
 

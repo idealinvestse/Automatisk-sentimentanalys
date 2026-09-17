@@ -34,7 +34,6 @@ COPY configs/ ./configs/
 COPY data/ ./data/
 COPY samples/ ./samples/
 COPY docs/ ./docs/
-COPY ROADMAP.md ./
 
 # Create necessary directories
 RUN mkdir -p /cache/hf /app/outputs /app/models /app/state

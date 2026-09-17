@@ -249,7 +249,8 @@ def should_run_llm_qa(
         return False
     if not isinstance(llm_result, dict):
         return False
-    meta = llm_result.get("meta") if isinstance(llm_result.get("meta"), dict) else {}
+    meta_raw = llm_result.get("meta")
+    meta: dict[str, Any] = meta_raw if isinstance(meta_raw, dict) else {}
     if meta.get("llm_used"):
         return True
     reason = str(meta.get("llm_fallback_reason") or llm_result.get("llm_fallback_reason") or "")
@@ -298,14 +299,14 @@ def _resolve_mistral_compat_client(
         spec = (cfg.get("providers") or {}).get(provider) or {}
         curated = (spec.get("curated_sv") or {}) if isinstance(spec.get("curated_sv"), dict) else {}
         model = model or curated.get("balanced") or curated.get("fast") or "mistral-small-latest"
-        client = OpenAICompatClient(
+        compat_client = OpenAICompatClient(
             provider=provider,
             api_key=ctx.llm_api_key or get_provider_api_key(provider, config=cfg),
             base_url=str(spec.get("base_url") or ""),
             default_model=model,
             extra_headers=dict(spec.get("headers_extra") or {}),
         )
-        return client, model
+        return compat_client, model
 
     resolved = resolve_llm_client(
         "openrouter",
@@ -407,7 +408,13 @@ def _lmstudio_ready(ctx: PipelineLLMContext) -> dict[str, Any] | None:
             model=ctx.llm_model,
             api_key=ctx.llm_api_key,
         )
-        status = resolved.client.model_status()
+        lm_client = resolved.client
+        if lm_client is None:
+            return _holistic_fallback_payload(
+                reason="lmstudio_unreachable",
+                provider="lmstudio",
+            )
+        status = lm_client.model_status()
         if not status.loaded:
             return _holistic_fallback_payload(
                 reason="lmstudio_model_not_loaded",
@@ -663,9 +670,11 @@ def _run_fas4_enrichment_body(
 
         creds_ok = _llm_credentials_available(ctx)
         # Avoid retry storms: QA LLM only after a successful holistic call.
+        llm_payload = results.get("llm")
+        llm_for_qa: dict[str, Any] = llm_payload if isinstance(llm_payload, dict) else {}
         use_llm_qa = should_run_llm_qa(
             ctx,
-            results.get("llm") if isinstance(results.get("llm"), dict) else {},
+            llm_for_qa,
             credentials_available=creds_ok,
         )
         qa_analyzer: Any | None = None

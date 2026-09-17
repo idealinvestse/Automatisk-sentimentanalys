@@ -129,11 +129,11 @@ class CallStore:
         with self._lock:
             for path in self._root.glob("*.json"):
                 try:
-                    doc = json.loads(path.read_text(encoding="utf-8"))
+                    loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError):
                     continue
-                if doc.get("idempotency_key") == key:
-                    return doc
+                if loaded.get("idempotency_key") == key:
+                    return loaded
         return None
 
     def delete(self, call_id: str) -> bool:

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from ..call_persistence import get_call_store
-from ..call_store import new_call_id
+from ..call_store import CallStore, new_call_id
 
 router = APIRouter(prefix="/calls", tags=["Calls"])
 
@@ -30,7 +30,7 @@ class CallListResponse(BaseModel):
     count: int
 
 
-def _store(request: Request):
+def _store(request: Request) -> CallStore:
     return get_call_store(request)
 
 
